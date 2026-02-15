@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
@@ -15,13 +16,9 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
 
         private static final int BG = 0xEE0F0F1A;
         private static final int BORDER = 0xFF6C63FF;
-        private static final int HEADER = 0xFF1A1A30;
-        private static final int SECTION = 0x88222240;
         private static final int GOLD = 0xFFFFD700;
         private static final int GREEN = 0xFF00FF88;
-        private static final int CYAN = 0xFF55FFFF;
         private static final int GRAY = 0xFFAAAAAA;
-        private static final int WHITE = 0xFFE0E0E0;
 
         private int scrollOffset = 0;
         private static final int ITEMS_PER_PAGE = 12; // 3 cols x 4 rows
@@ -68,8 +65,6 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
                                 .bounds(x + 140, y + 25, 60, 20).build());
 
                 // Global Info
-                int balance = menu.getBalance(); // Get from menu container
-                NumberFormat nf = NumberFormat.getInstance(new Locale("id", "ID"));
 
                 // --- TAB CONTENT ---
                 switch (currentTab) {
@@ -93,12 +88,19 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
 
         private void initDashboard(int x, int y) {
                 // Management Buttons
-                addRenderableWidget(Button.builder(Component.literal("👔 Rekrut Staff (Rp2k)"), b -> cmd("hire"))
-                                .bounds(x + 20, y + 80, 130, 20).build());
+                addRenderableWidget(
+                                Button.builder(Component.literal("🧹 Rekrut Janitor (Rp2k)"), b -> cmd("hire janitor"))
+                                                .bounds(x + 20, y + 80, 130, 20).build());
+                addRenderableWidget(
+                                Button.builder(Component.literal("🥩 Rekrut Keeper (Rp2k)"), b -> cmd("hire zookeeper"))
+                                                .bounds(x + 160, y + 80, 130, 20).build());
+
                 addRenderableWidget(Button.builder(Component.literal("📡 Upgrade Radius (Rp5k)"), b -> cmd("upgrade"))
-                                .bounds(x + 160, y + 80, 130, 20).build());
-                addRenderableWidget(Button.builder(Component.literal("🔄 Refresh Data"), b -> cmd("refresh"))
                                 .bounds(x + 20, y + 110, 130, 20).build());
+
+                // Refresh button just forces update, no cost.
+                addRenderableWidget(Button.builder(Component.literal("🔄 Refresh Data"), b -> cmd("refresh"))
+                                .bounds(x + 160, y + 110, 130, 20).build());
         }
 
         private void initAnimalShop(int x, int y) {
@@ -108,7 +110,9 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
                         var entry = animalList.get(i);
                         var data = entry.getValue();
                         String label = data.displayName + " (" + (data.price / 1000) + "k)";
-                        addRenderableWidget(Button.builder(Component.literal(label), b -> cmd("buy " + entry.getKey()))
+                        // Quote the ID: "buy \"minecraft:cow\" ..."
+                        addRenderableWidget(Button
+                                        .builder(Component.literal(label), b -> cmd("buy \"" + entry.getKey() + "\""))
                                         .bounds(btnX, btnY, 95, 20).build());
                 });
         }
@@ -117,13 +121,27 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
                 renderGrid(x + 10, y + 60, shopItemList.size(), (i, btnX, btnY) -> {
                         var entry = shopItemList.get(i);
                         var data = entry.getValue();
-                        String label = data.displayName + " (" + data.price + ")";
-                        // Buy 1 item, amount = 1
+
+                        // Render Item Icon Logic (Using a custom button or overlay)
+                        // Since we can't easily add a complex widget here without a class, we will use
+                        // a label with spacing
+                        // and render the item manually in renderBg or similar.
+                        // Actually, standard buttons don't support items easily.
+                        // We'll trust the user can read text for now, but to fix "item gada gambar",
+                        // we need to implement a render method that draws items over the buttons.
+                        // See render method below.
+
+                        String label = data.displayName;
                         addRenderableWidget(Button
-                                        .builder(Component.literal(label), b -> cmd("buyitem " + entry.getKey() + " 1"))
-                                        .bounds(btnX, btnY, 95, 20).build());
+                                        .builder(Component.literal(label),
+                                                        b -> cmd("buyitem \"" + entry.getKey() + "\" 1"))
+                                        .bounds(btnX + 20, btnY, 75, 20) // Shift right for icon
+                                        .tooltip(Tooltip.create(Component.literal("Price: Rp " + data.price)))
+                                        .build());
                 });
         }
+
+        // Removed initMarketing
 
         private interface GridRenderer {
                 void renderItem(int index, int x, int y);
@@ -138,7 +156,10 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
 
                 // Pagination Controls
                 int maxPages = (totalItems + ITEMS_PER_PAGE - 1) / ITEMS_PER_PAGE;
-                int currentPage = scrollOffset + 1;
+
+                // Show grid only if tab matches
+                if (currentTab != 1 && currentTab != 2)
+                        return;
 
                 int navY = startY + (4 * (btnH + gapY)) + 5;
                 addRenderableWidget(Button.builder(Component.literal("< Prev"), b -> {
@@ -161,8 +182,8 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
 
                 for (int i = startIdx; i < endIdx; i++) {
                         int idx = i - startIdx;
-                        int row = idx / cols;
                         int col = idx % cols;
+                        int row = idx / cols;
 
                         int btnX = startX + col * (btnW + gapX);
                         int btnY = startY + row * (btnH + gapY);
@@ -180,26 +201,13 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
                         return;
                 }
 
-                // Format command with coords
-                String c = "zoocmd " + action;
-                if (!action.contains("buyitem")) {
-                        // Append coords for standard commands if not already handled
-                        // buyitem already has arguments from button callback? NO.
-                        // Wait, standard buy also needs coords.
-                        // Let's standardise: append coords to ALL commands
-                        c = c + " " + pos.getX() + " " + pos.getY() + " " + pos.getZ();
-                } else {
-                        // buyitem <id> <amount> <x> <y> <z>
-                        // Action passed is "buyitem id amount"
-                        c = c + " " + pos.getX() + " " + pos.getY() + " " + pos.getZ();
-                }
+                String c = "zoocmd " + action + " " + pos.getX() + " " + pos.getY() + " " + pos.getZ();
 
                 var conn = Minecraft.getInstance().getConnection();
                 if (conn != null)
                         conn.sendCommand(c);
 
-                // Don't close screen for shop actions to allow multiple buys
-                if (action.contains("buy") || action.equals("upgrade")) {
+                if (action.contains("buy") || action.equals("upgrade") || action.contains("hire")) {
                         // Stay open
                 } else {
                         onClose();
@@ -238,7 +246,34 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
                 };
                 g.drawString(font, tabTitle, x + 15, y + 65, GRAY);
 
-                // Tooltip logic for items/animals could be added here
+                // Render Item Icons for Shop Tab (Tab 2)
+                if (currentTab == 2) {
+                        renderItemIcons(g, x + 10, y + 60);
+                }
+        }
+
+        private void renderItemIcons(GuiGraphics g, int startX, int startY) {
+                int cols = 3;
+                int btnW = 95;
+                int btnH = 20;
+                int gapX = 5;
+                int gapY = 5;
+                int startIdx = scrollOffset * ITEMS_PER_PAGE;
+                int endIdx = Math.min(startIdx + ITEMS_PER_PAGE, shopItemList.size());
+
+                for (int i = startIdx; i < endIdx; i++) {
+                        int idx = i - startIdx;
+                        int row = idx / cols;
+                        int col = idx % cols;
+                        int btnX = startX + col * (btnW + gapX);
+                        int btnY = startY + row * (btnH + gapY);
+
+                        var entry = shopItemList.get(i);
+                        var data = entry.getValue();
+
+                        // Draw Item Icon
+                        g.renderItem(new net.minecraft.world.item.ItemStack(data.item), btnX + 2, btnY + 2);
+                }
         }
 
         @Override

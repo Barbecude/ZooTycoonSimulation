@@ -39,6 +39,7 @@ public class ZooComputerBlockEntity extends BlockEntity implements MenuProvider 
         @Override
         public int get(int index) {
             int bal = getBalanceGlobal();
+            ZooData data = (level instanceof ServerLevel sl) ? ZooData.get(sl) : new ZooData();
             return switch (index) {
                 case 0 -> (bal >> 16) & 0xFFFF;
                 case 1 -> bal & 0xFFFF;
@@ -47,17 +48,20 @@ public class ZooComputerBlockEntity extends BlockEntity implements MenuProvider 
                 case 4 -> cachedVisitorCount;
                 case 5 -> cachedTrashCount;
                 case 6 -> scanRadius;
+                case 7 -> data.getTicketPrice();
+                case 8 -> data.getMarketingLevel();
                 default -> 0;
             };
         }
 
         @Override
         public void set(int index, int value) {
+            // Client side set not strictly needed as packets handle commands
         }
 
         @Override
         public int getCount() {
-            return 7;
+            return 9; // Increased from 7
         }
     };
 
@@ -144,31 +148,6 @@ public class ZooComputerBlockEntity extends BlockEntity implements MenuProvider 
         if (state.getValue(ZooComputerBlock.ACTIVE) != active) {
             level.setBlock(pos, state.setValue(ZooComputerBlock.ACTIVE, active), 3);
         }
-
-        // Spawn Visitor di Gate (BALANCED SPAWN RATE)
-        // Visitor Spawning Logic moved to forceUpdate()
-
-        // The following code block was moved into forceUpdate()
-        // if (be.hasGate && be.cachedAnimalCount >= 2 && be.cachedVisitorCount <
-        // targetVisitors
-        // && be.cachedVisitorCount < maxVisitors) {
-        // VisitorEntity visitor = IndoZooTycoon.VISITOR_ENTITY.get().create(server);
-        // if (visitor != null) {
-        // visitor.setGatePos(gatePos);
-        // visitor.moveTo(gatePos.getX() + 0.5, gatePos.getY(), gatePos.getZ() + 0.5, 0,
-        // 0);
-        // server.addFreshEntity(visitor);
-        // }
-        // }
-
-        // FORCE visitors to leave if timeout (cleanup stuck visitors)
-        // The following code block was moved into forceUpdate()
-        // for (VisitorEntity v : server.getEntitiesOfClass(VisitorEntity.class, area))
-        // {
-        // if (v.isTimeToLeave()) {
-        // v.forceLeave(); // Force navigation to gate
-        // }
-        // }
     }
 
     /**
@@ -178,6 +157,7 @@ public class ZooComputerBlockEntity extends BlockEntity implements MenuProvider 
         if (level == null || level.isClientSide)
             return;
         ServerLevel server = (ServerLevel) level;
+        ZooData data = ZooData.get(server);
 
         // Scan for Zone Markers
         scanForZoneMarkers(server, worldPosition);
@@ -232,19 +212,41 @@ public class ZooComputerBlockEntity extends BlockEntity implements MenuProvider 
         this.cachedTrashCount = trash;
 
         // Economy
-        int profit = (this.cachedAnimalCount * 500) - (this.cachedStaffCount * 200) - (this.cachedTrashCount * 100);
+        // Operational Costs (Upkeep)
+        int upkeep = (this.cachedStaffCount * 50) + (this.cachedAnimalCount * 10);
+        // Passive Donations (kecil)
+        int donations = (this.cachedAnimalCount * 20);
+
+        int profit = donations - upkeep;
         addBalanceGlobal(profit);
 
-        // Visitor Spawning Logic
-        if (this.hasGate && this.cachedAnimalCount >= 2 && this.cachedVisitorCount < (this.cachedAnimalCount / 2)
-                && this.cachedVisitorCount < Math.min(this.cachedAnimalCount * 2, 20)) {
+        // Visitor Spawning Logic & Ticket Sales
+        int ticketPrice = data.getTicketPrice();
+        int marketing = data.getMarketingLevel();
+
+        // Max visitor capacity increases with Marketing
+        // Base 10 + (Level * 10). Level 1 = 20, Level 5 = 60.
+        int maxVisitors = 10 + (marketing * 10);
+
+        // High ticket price penalty
+        if (ticketPrice > 50)
+            maxVisitors = (int) (maxVisitors * 0.7);
+        if (ticketPrice > 100)
+            maxVisitors = (int) (maxVisitors * 0.5); // Very expensive
+
+        // Cap absolute max to avoid lag
+        maxVisitors = Math.min(maxVisitors, 50);
+
+        if (this.hasGate && this.cachedAnimalCount >= 2 && this.cachedVisitorCount < maxVisitors) {
             VisitorEntity visitor = IndoZooTycoon.VISITOR_ENTITY.get().create(server);
             if (visitor != null) {
-                // Must handle if gatePos is null (e.g. gate removed)
                 if (gatePos != null) {
                     visitor.setGatePos(gatePos);
                     visitor.moveTo(gatePos.getX() + 0.5, gatePos.getY(), gatePos.getZ() + 0.5, 0, 0);
                     server.addFreshEntity(visitor);
+
+                    // Ticket Revenue!
+                    addBalanceGlobal(ticketPrice);
                 }
             }
         }

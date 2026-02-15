@@ -89,15 +89,51 @@ public class StaffEntity extends PathfinderMob {
         this.goalSelector.addGoal(3, new OpenDoorGoal(this, true));
         this.goalSelector.addGoal(4, new RefillFoodGoal(this));
         this.goalSelector.addGoal(5, new FeedAnimalGoal(this));
-        this.goalSelector.addGoal(6, new RandomStrollGoal(this, 0.8D));
-        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 8.0F));
-        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(6, new RideVehicleGoal(this));
+        this.goalSelector.addGoal(7, new RandomStrollGoal(this, 0.8D));
+        this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 8.0F));
+        this.goalSelector.addGoal(9, new RandomLookAroundGoal(this));
     }
 
+    // --- DRIVING LOGIC ---
     @Override
     public void tick() {
         super.tick();
-        // Custom movement logic if needed
+
+        // Driving Logic for Janitors
+        if (this.isPassenger() && this.getVehicle() != null && getRole() == 0) {
+            net.minecraft.world.entity.Entity vehicle = this.getVehicle();
+            if (isDriveable(vehicle)) {
+                // Force rotation to match staff (who is "steering")
+                vehicle.setYRot(this.getYRot());
+                vehicle.setYBodyRot(this.getYRot());
+
+                // Simple cruise control: Move forward
+                // Unless inhibited by walls
+                if (this.horizontalCollision) {
+                    this.setYRot(this.getYRot() + 180); // Turn around
+                } else if (this.random.nextInt(40) == 0) {
+                    this.setYRot(this.getYRot() + (this.random.nextInt(60) - 30)); // Slight turn
+                }
+
+                // Apply velocity
+                float speed = 0.25F; // Cruising speed
+                var look = this.calculateViewVector(0, this.getYRot());
+                // Preserve Y motion (gravity)
+                vehicle.setDeltaMovement(look.x * speed, vehicle.getDeltaMovement().y, look.z * speed);
+            }
+        }
+    }
+
+    private boolean isDriveable(net.minecraft.world.entity.Entity e) {
+        if (e == null)
+            return false;
+        String id = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(e.getType()).toString()
+                .toLowerCase();
+        String name = e.getDisplayName().getString().toLowerCase();
+        return (id.contains("cart") || id.contains("vehicle") || id.contains("jeep")
+                || id.contains("atv") || id.contains("car") || id.contains("rover")
+                || name.contains("cart") || name.contains("mobil") || name.contains("vehicle"));
     }
 
     @Override
@@ -125,6 +161,64 @@ public class StaffEntity extends PathfinderMob {
     }
 
     // --- INNER GOALS ---
+
+    static class RideVehicleGoal extends Goal {
+        private final StaffEntity staff;
+        private net.minecraft.world.entity.Entity targetVehicle;
+
+        public RideVehicleGoal(StaffEntity staff) {
+            this.staff = staff;
+            this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE));
+        }
+
+        @Override
+        public boolean canUse() {
+            // Only Janitor drives
+            if (staff.getRole() != 0)
+                return false;
+            // Don't switch if already riding
+            if (staff.isPassenger())
+                return false;
+            // Chance to look for car
+            if (staff.getRandom().nextFloat() > 0.02F)
+                return false;
+
+            // Find nearby vehicle
+            java.util.List<net.minecraft.world.entity.Entity> vehicles = staff.level().getEntities(staff,
+                    staff.getBoundingBox().inflate(10), e -> staff.isDriveable(e) && !e.isVehicle());
+
+            if (!vehicles.isEmpty()) {
+                // Pick closest
+                vehicles.sort(java.util.Comparator.comparingDouble(staff::distanceToSqr));
+                this.targetVehicle = vehicles.get(0);
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public void start() {
+            staff.getNavigation().moveTo(targetVehicle, 1.2D);
+        }
+
+        @Override
+        public void tick() {
+            if (targetVehicle != null && !targetVehicle.isRemoved()) {
+                if (staff.distanceToSqr(targetVehicle) < 4.0D) {
+                    staff.startRiding(targetVehicle);
+                    staff.getNavigation().stop();
+                } else {
+                    staff.getNavigation().moveTo(targetVehicle, 1.2D);
+                }
+            }
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return targetVehicle != null && !targetVehicle.isRemoved() && !targetVehicle.isVehicle()
+                    && !staff.isPassenger();
+        }
+    }
 
     static class CleanTrashGoal extends Goal {
         private final StaffEntity staff;
@@ -155,6 +249,11 @@ public class StaffEntity extends PathfinderMob {
 
         @Override
         public void start() {
+            // Updated: Dismount if riding to clean
+            if (staff.isPassenger()) {
+                staff.stopRiding();
+            }
+
             staff.getNavigation().moveTo(targetPos.getX(), targetPos.getY(), targetPos.getZ(), 1.0D);
             workTimer = 0;
             staff.setAnimState(0);

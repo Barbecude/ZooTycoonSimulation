@@ -229,6 +229,17 @@ public class VisitorEntity extends PathfinderMob {
 
     // --- INNER GOALS ---
 
+    @Override
+    protected net.minecraft.world.InteractionResult mobInteract(Player player,
+            net.minecraft.world.InteractionHand hand) {
+        if (!this.level().isClientSide) {
+            String status = "Visitor [" + getVariant() + "] | Hunger: " + getHunger() + "% | Thirst: " + getThirst()
+                    + "%";
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(status));
+        }
+        return net.minecraft.world.InteractionResult.sidedSuccess(this.level().isClientSide);
+    }
+
     static class FindFacilityGoal extends Goal {
         private final VisitorEntity visitor;
         private final String type; // "food" or "drink"
@@ -272,6 +283,11 @@ public class VisitorEntity extends PathfinderMob {
         }
 
         @Override
+        public void stop() {
+            targetPos = null;
+        }
+
+        @Override
         public void tick() {
             if (targetPos == null)
                 return;
@@ -284,14 +300,27 @@ public class VisitorEntity extends PathfinderMob {
                         visitor.setHunger(0);
                     else
                         visitor.setThirst(0);
+
+                    // NEW: Pay for service
+                    if (!visitor.level().isClientSide) {
+                        ZooData.get(visitor.level()).addBalance(15);
+                        visitor.playSound(net.minecraft.sounds.SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0F, 1.0F);
+                    }
+
                     targetPos = null; // Done
+                }
+            } else {
+                // Keep moving if path lost
+                if (visitor.getNavigation().isDone()) {
+                    visitor.getNavigation().moveTo(targetPos.getX(), targetPos.getY(), targetPos.getZ(), 1.0D);
                 }
             }
         }
 
         @Override
         public boolean canContinueToUse() {
-            return targetPos != null;
+            return targetPos != null && visitor.level().getBlockState(targetPos).is(
+                    type.equals("food") ? IndoZooTycoon.FOOD_STALL_BLOCK.get() : IndoZooTycoon.DRINK_STALL_BLOCK.get());
         }
     }
 

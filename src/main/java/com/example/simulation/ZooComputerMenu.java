@@ -21,7 +21,9 @@ public class ZooComputerMenu extends AbstractContainerMenu {
     public static final int DATA_VISITORS = 4;
     public static final int DATA_TRASH = 5;
     public static final int DATA_RADIUS = 6;
-    public static final int DATA_SIZE = 7;
+    // 0-1: Balance, 2: Animals, 3: Staff, 4: Visitors, 5: Trash, 6: Radius, 7:
+    // Ticket, 8: Marketing
+    private static final int DATA_COUNT = 9;
 
     // Server constructor
     public ZooComputerMenu(int id, Inventory inv, BlockPos pos, ContainerData data) {
@@ -32,8 +34,21 @@ public class ZooComputerMenu extends AbstractContainerMenu {
     }
 
     // Client constructor (from network)
-    public ZooComputerMenu(int id, Inventory inv, FriendlyByteBuf buf) {
-        this(id, inv, buf.readBlockPos(), new SimpleContainerData(DATA_SIZE));
+    public ZooComputerMenu(int id, Inventory inv, net.minecraft.network.FriendlyByteBuf buf) {
+        this(id, inv, buf.readBlockPos(), new net.minecraft.world.inventory.SimpleContainerData(DATA_COUNT));
+    }
+
+    // Client constructor (local)
+    public ZooComputerMenu(int id, Inventory inv) {
+        this(id, inv, BlockPos.ZERO, new net.minecraft.world.inventory.SimpleContainerData(DATA_COUNT));
+    }
+
+    public int getTicketPrice() {
+        return this.data.get(7);
+    }
+
+    public int getMarketingLevel() {
+        return this.data.get(8);
     }
 
     @Override
