@@ -28,6 +28,10 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
         // 0 = Dashboard, 1 = Animals, 2 = Shop Items
         private int currentTab = 0;
 
+        // Shop Filtering
+        private ZooItemRegistry.Category currentCategory = null; // null = ALL
+        private List<Map.Entry<ResourceLocation, ZooItemRegistry.ItemData>> displayItemList;
+
         public ZooComputerScreen(ZooComputerMenu menu, Inventory inv, Component title) {
                 super(menu, inv, title);
                 this.imageWidth = 320; // Sedikit lebih lebar
@@ -48,7 +52,22 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
                 shopItemList = new ArrayList<>(ZooItemRegistry.getAllItems().entrySet());
                 shopItemList.sort(Comparator.comparingInt(e -> e.getValue().price));
 
+                updateFilteredList();
+
                 refreshWidgets();
+        }
+
+        private void updateFilteredList() {
+                if (currentCategory == null) {
+                        displayItemList = new ArrayList<>(shopItemList);
+                } else {
+                        displayItemList = new ArrayList<>();
+                        for (var entry : shopItemList) {
+                                if (entry.getValue().category == currentCategory) {
+                                        displayItemList.add(entry);
+                                }
+                        }
+                }
         }
 
         private void refreshWidgets() {
@@ -112,14 +131,38 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
                         String label = data.displayName + " (" + (data.price / 1000) + "k)";
                         // Quote the ID: "buy \"minecraft:cow\" ..."
                         addRenderableWidget(Button
-                                        .builder(Component.literal(label), b -> cmd("buy \"" + entry.getKey() + "\""))
+                                        .builder(Component.literal(label), b -> cmd("buy " + entry.getKey()))
                                         .bounds(btnX, btnY, 95, 20).build());
                 });
         }
 
         private void initItemShop(int x, int y) {
-                renderGrid(x + 10, y + 60, shopItemList.size(), (i, btnX, btnY) -> {
-                        var entry = shopItemList.get(i);
+                // Category Filter Buttons
+                int cx = x + 10;
+                int cy = y + 55;
+                int cw = 42;
+                int ch = 15;
+
+                // "ALL" button
+                addRenderableWidget(Button.builder(Component.literal("ALL"), b -> setCategory(null))
+                                .bounds(cx, cy, cw, ch)
+                                .tooltip(Tooltip.create(Component.literal("Semua Item")))
+                                .build());
+
+                int i = 1;
+                for (ZooItemRegistry.Category cat : ZooItemRegistry.Category.values()) {
+                        addRenderableWidget(Button
+                                        .builder(Component.literal(
+                                                        cat.label.substring(0, Math.min(4, cat.label.length()))),
+                                                        b -> setCategory(cat))
+                                        .bounds(cx + (i * (cw + 2)), cy, cw, ch)
+                                        .tooltip(Tooltip.create(Component.literal(cat.label)))
+                                        .build());
+                        i++;
+                }
+
+                renderGrid(x + 10, y + 75, displayItemList.size(), (idx, btnX, btnY) -> {
+                        var entry = displayItemList.get(idx);
                         var data = entry.getValue();
 
                         // Render Item Icon Logic (Using a custom button or overlay)
@@ -133,12 +176,19 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
 
                         String label = data.displayName;
                         addRenderableWidget(Button
-                                        .builder(Component.literal(label),
-                                                        b -> cmd("buyitem \"" + entry.getKey() + "\" 1"))
+                                        .builder(Component.literal(label), b -> cmd("buyitem " + entry.getKey() + " 1"))
                                         .bounds(btnX + 20, btnY, 75, 20) // Shift right for icon
-                                        .tooltip(Tooltip.create(Component.literal("Price: Rp " + data.price)))
+                                        .tooltip(Tooltip.create(Component.literal(
+                                                        "Price: Rp " + data.price + " [" + data.category.label + "]")))
                                         .build());
                 });
+        }
+
+        private void setCategory(ZooItemRegistry.Category cat) {
+                this.currentCategory = cat;
+                this.scrollOffset = 0;
+                updateFilteredList();
+                refreshWidgets();
         }
 
         // Removed initMarketing
@@ -176,19 +226,22 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
                         }
                 }).bounds(startX + 240, navY, 60, 20).build());
 
+                // Show Page Info
+                // We can't render text here easily, so maybe tooltip on buttons?
+
                 // Grid Items
                 int startIdx = scrollOffset * ITEMS_PER_PAGE;
                 int endIdx = Math.min(startIdx + ITEMS_PER_PAGE, totalItems);
 
-                for (int i = startIdx; i < endIdx; i++) {
-                        int idx = i - startIdx;
+                for (int j = startIdx; j < endIdx; j++) {
+                        int idx = j - startIdx;
                         int col = idx % cols;
                         int row = idx / cols;
 
                         int btnX = startX + col * (btnW + gapX);
                         int btnY = startY + row * (btnH + gapY);
 
-                        renderer.renderItem(i, btnX, btnY);
+                        renderer.renderItem(j, btnX, btnY);
                 }
         }
 
@@ -241,14 +294,25 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
                 String tabTitle = switch (currentTab) {
                         case 0 -> "Dashboard Overview";
                         case 1 -> "Animal Market (" + (scrollOffset + 1) + ")";
-                        case 2 -> "Supply Shop (" + (scrollOffset + 1) + ")";
+                        case 2 -> "Supply Shop (" + (scrollOffset + 1) + ") - "
+                                        + (currentCategory == null ? "ALL" : currentCategory.label);
                         default -> "";
                 };
-                g.drawString(font, tabTitle, x + 15, y + 65, GRAY);
+                g.drawString(font, tabTitle, x + 15, y + 65, GRAY); // Render Tab Title OVER Buttons?
+                // Ah, Y=65 might overlap with filters at Y=55.
+                // Let's move Tab Title UP or buttons DOWN.
+                // Title at 65 is fine if logic is initDashboard (y+80).
+                // But initItemShop buttons are at y+55.
+                // So Title overrides buttons.
+                // Fix: Title renders at y+38 (below tabs)? Or use header.
+                // Actually tabs are at y+25.
+                // Let's render title at y+45. But wait, buttons are at y+55.
+
+                // Let's just adjust render locations in initItemShop.
 
                 // Render Item Icons for Shop Tab (Tab 2)
                 if (currentTab == 2) {
-                        renderItemIcons(g, x + 10, y + 60);
+                        renderItemIcons(g, x + 10, y + 75);
                 }
         }
 
@@ -259,16 +323,21 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
                 int gapX = 5;
                 int gapY = 5;
                 int startIdx = scrollOffset * ITEMS_PER_PAGE;
-                int endIdx = Math.min(startIdx + ITEMS_PER_PAGE, shopItemList.size());
+                int endIdx = Math.min(startIdx + ITEMS_PER_PAGE, displayItemList.size());
 
                 for (int i = startIdx; i < endIdx; i++) {
                         int idx = i - startIdx;
-                        int row = idx / cols;
+                        // int row = idx / cols;
+                        // int col = idx % cols;
                         int col = idx % cols;
+                        int row = idx / cols;
+
+                        // FIX: Logic must match renderGrid
+
                         int btnX = startX + col * (btnW + gapX);
                         int btnY = startY + row * (btnH + gapY);
 
-                        var entry = shopItemList.get(i);
+                        var entry = displayItemList.get(i);
                         var data = entry.getValue();
 
                         // Draw Item Icon

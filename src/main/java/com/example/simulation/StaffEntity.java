@@ -82,14 +82,16 @@ public class StaffEntity extends PathfinderMob {
         // Zookeeper Logic (Role 1): Prioritize Animals
         // Janitor Logic (Role 0): Prioritize Cleaning (TODO: Add cleanup logic later)
 
-        // Interaction Goals (Priority High so they stop moving)
+        // Interaction Goals
         this.goalSelector.addGoal(1, new InteractVisitorGoal(this));
-        this.goalSelector.addGoal(2, new CleanTrashGoal(this));
 
-        this.goalSelector.addGoal(3, new OpenDoorGoal(this, true));
-        this.goalSelector.addGoal(4, new RefillFoodGoal(this));
-        this.goalSelector.addGoal(5, new FeedAnimalGoal(this));
-        this.goalSelector.addGoal(6, new RideVehicleGoal(this));
+        // Ride Vehicle (Priority 2 - same as Clean, but logic handles switching)
+        this.goalSelector.addGoal(2, new RideVehicleGoal(this));
+        this.goalSelector.addGoal(3, new CleanTrashGoal(this));
+
+        this.goalSelector.addGoal(4, new OpenDoorGoal(this, true));
+        this.goalSelector.addGoal(5, new RefillFoodGoal(this));
+        this.goalSelector.addGoal(6, new FeedAnimalGoal(this));
         this.goalSelector.addGoal(7, new RandomStrollGoal(this, 0.8D));
         this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(9, new RandomLookAroundGoal(this));
@@ -104,22 +106,26 @@ public class StaffEntity extends PathfinderMob {
         if (this.isPassenger() && this.getVehicle() != null && getRole() == 0) {
             net.minecraft.world.entity.Entity vehicle = this.getVehicle();
             if (isDriveable(vehicle)) {
-                // Force rotation to match staff (who is "steering")
+                // Force rotation to match staff
                 vehicle.setYRot(this.getYRot());
-                vehicle.setYBodyRot(this.getYRot());
 
-                // Simple cruise control: Move forward
-                // Unless inhibited by walls
+                // Simulate Player Input (Pressing W)
+                this.setZza(1.0F);
+                this.yBodyRot = this.getYRot();
+
+                // If vehicle is LivingEntity, this might be enough.
+                // If not, apply manual velocity.
+
+                // Simple cruise control
                 if (this.horizontalCollision) {
-                    this.setYRot(this.getYRot() + 180); // Turn around
+                    this.setYRot(this.getYRot() + 180);
                 } else if (this.random.nextInt(40) == 0) {
-                    this.setYRot(this.getYRot() + (this.random.nextInt(60) - 30)); // Slight turn
+                    this.setYRot(this.getYRot() + (this.random.nextInt(60) - 30));
                 }
 
-                // Apply velocity
-                float speed = 0.25F; // Cruising speed
+                // Manual fallback for non-living vehicles
+                float speed = 0.3F;
                 var look = this.calculateViewVector(0, this.getYRot());
-                // Preserve Y motion (gravity)
                 vehicle.setDeltaMovement(look.x * speed, vehicle.getDeltaMovement().y, look.z * speed);
             }
         }
@@ -131,9 +137,11 @@ public class StaffEntity extends PathfinderMob {
         String id = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(e.getType()).toString()
                 .toLowerCase();
         String name = e.getDisplayName().getString().toLowerCase();
-        return (id.contains("cart") || id.contains("vehicle") || id.contains("jeep")
-                || id.contains("atv") || id.contains("car") || id.contains("rover")
-                || name.contains("cart") || name.contains("mobil") || name.contains("vehicle"));
+        // Expanded list
+        return (id.contains("cart") || id.contains("vehicle") || id.contains("jeep") || id.contains("atv")
+                || id.contains("car") || id.contains("rover") || id.contains("scooter")
+                || name.contains("cart") || name.contains("mobil") || name.contains("vehicle")
+                || name.contains("motor"));
     }
 
     @Override

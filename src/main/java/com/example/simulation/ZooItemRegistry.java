@@ -9,56 +9,67 @@ import java.util.*;
 public class ZooItemRegistry {
     private static final Map<ResourceLocation, ItemData> ITEM_CATALOG = new LinkedHashMap<>();
 
+    public enum Category {
+        UTILITY("Utilitas"),
+        BUILDING("Bangunan"),
+        DECOR("Dekorasi"),
+        VEHICLE("Kendaraan"),
+        FOOD("Makanan"),
+        MISC("Lainnya");
+
+        public final String label;
+
+        Category(String label) {
+            this.label = label;
+        }
+    }
+
     public static class ItemData {
         public final Item item;
         public final String displayName;
         public final int price;
+        public final Category category;
 
-        public ItemData(Item item, String name, int price) {
+        public ItemData(Item item, String name, int price, Category category) {
             this.item = item;
             this.displayName = name;
             this.price = price;
+            this.category = category;
         }
     }
 
     public static void initialize() {
         // Register Basic Zoo Items
-        registerItem("minecraft:oak_fence", "Oak Fence", 50);
-        registerItem("minecraft:iron_bars", "Iron Bars", 150);
-        registerItem("minecraft:glass", "Glass", 100);
+        registerItem("minecraft:oak_fence", "Oak Fence", 25, Category.BUILDING);
+        registerItem("minecraft:iron_bars", "Iron Bars", 50, Category.BUILDING);
+        registerItem("minecraft:glass", "Glass", 30, Category.BUILDING);
+        registerItem("minecraft:torch", "Torch", 10, Category.UTILITY);
 
         // Food
-        registerItem("minecraft:apple", "Apple", 20);
-        registerItem("minecraft:wheat", "Wheat", 15);
-        registerItem("minecraft:beef", "Beef", 50);
+        registerItem("minecraft:apple", "Apple", 10, Category.FOOD);
+        registerItem("minecraft:wheat", "Wheat", 10, Category.FOOD);
+        registerItem("minecraft:beef", "Beef", 20, Category.FOOD);
 
-        // Logic to detect ZAWA items if loaded
+        // Auto-detect ZAWA Items
         if (ZAWAIntegration.isZAWALoaded()) {
-            // Manual overrides first (specific prices)
-            registerOptionalItem("zawa:zoo_kibble", "General Kibble", 100);
-            registerOptionalItem("zawa:carnivore_kibble", "Carnivore Kibble", 150);
-            // ... (keep manual ones if desired, or let auto handle them?)
-            // Better to let auto handle rest, but keep manual for custom prices/names if
-            // needed.
-            // Actually, let's just use auto-registration for EVERYTHING not manually added.
-
             for (Map.Entry<net.minecraft.resources.ResourceKey<Item>, Item> entry : ForgeRegistries.ITEMS
                     .getEntries()) {
                 ResourceLocation id = entry.getKey().location();
+
+                // Only process ZAWA (or other mods if needed)
                 if (id.getNamespace().equals("zawa")) {
                     if (ITEM_CATALOG.containsKey(id))
-                        continue; // Skip if already registered manually
+                        continue; // Skip if logical duplicate
 
                     String path = id.getPath();
-                    if (path.contains("spawn_egg"))
-                        continue; // Skip spawn eggs (sold via Animal tab)
-                    if (path.contains("admin"))
-                        continue; // Skip admin items
+                    if (path.contains("spawn_egg") || path.contains("admin"))
+                        continue;
 
                     String name = formatName(path);
-                    int price = estimatePrice(path);
+                    Category cat = determineCategory(path);
+                    int price = estimatePrice(path, cat);
 
-                    ITEM_CATALOG.put(id, new ItemData(entry.getValue(), name, price));
+                    ITEM_CATALOG.put(id, new ItemData(entry.getValue(), name, price, cat));
                 }
             }
         }
@@ -80,39 +91,66 @@ public class ZooItemRegistry {
         return sb.toString().trim();
     }
 
-    private static int estimatePrice(String path) {
-        if (path.contains("kibble") || path.contains("food") || path.contains("fruit") || path.contains("meat"))
-            return 120;
-        if (path.contains("fence") || path.contains("wall") || path.contains("bars"))
-            return 200;
-        if (path.contains("glass") || path.contains("pane"))
-            return 150;
-        if (path.contains("net") || path.contains("gun") || path.contains("rifle"))
-            return 1500;
+    // Heuristic for Category
+    private static Category determineCategory(String path) {
+        if (path.contains("fence") || path.contains("wall") || path.contains("glass") || path.contains("pane")
+                || path.contains("planks") || path.contains("concrete") || path.contains("wire"))
+            return Category.BUILDING;
+
         if (path.contains("cart") || path.contains("vehicle") || path.contains("jeep") || path.contains("atv")
-                || path.contains("car") || path.contains("rover") || path.contains("transport"))
-            return 5000;
-        if (path.contains("bench") || path.contains("trash") || path.contains("lamp"))
-            return 500;
-        if (path.contains("enrichment") || path.contains("toy") || path.contains("ball"))
-            return 350;
-        if (path.contains("plush"))
-            return 50;
-        return 500; // Default fallback
+                || path.contains("car") || path.contains("rover") || path.contains("transport")
+                || path.contains("scooter"))
+            return Category.VEHICLE;
+
+        if (path.contains("kibble") || path.contains("food") || path.contains("fruit") || path.contains("meat")
+                || path.contains("fish") || path.contains("diet"))
+            return Category.FOOD;
+
+        if (path.contains("bench") || path.contains("trash") || path.contains("lamp") || path.contains("sign")
+                || path.contains("painting") || path.contains("flower") || path.contains("plant")
+                || path.contains("plush"))
+            return Category.DECOR;
+
+        if (path.contains("net") || path.contains("gun") || path.contains("rifle") || path.contains("tool")
+                || path.contains("wand") || path.contains("bucket"))
+            return Category.UTILITY;
+
+        return Category.MISC;
     }
 
-    private static void registerItem(String idStr, String name, int price) {
+    // Heuristic for Price
+    private static int estimatePrice(String path, Category cat) {
+        // High priority override
+        if (cat == Category.VEHICLE)
+            return 5000;
+
+        if (path.contains("net") || path.contains("gun") || path.contains("rifle"))
+            return 1500;
+        if (path.contains("bench"))
+            return 150;
+        if (path.contains("trash"))
+            return 100;
+        if (path.contains("lamp"))
+            return 120;
+
+        return switch (cat) {
+            case BUILDING -> 25; // Cheap building blocks
+            case FOOD -> 15; // Cheap food
+            case DECOR -> 200; // Moderate decoration
+            case UTILITY -> 300; // Tools
+            case MISC -> 100;
+            default -> 100;
+        };
+    }
+
+    private static void registerItem(String idStr, String name, int price, Category cat) {
         ResourceLocation id = ResourceLocation.tryParse(idStr);
         if (id != null && ForgeRegistries.ITEMS.containsKey(id)) {
             Item item = ForgeRegistries.ITEMS.getValue(id);
             if (item != null) {
-                ITEM_CATALOG.put(id, new ItemData(item, name, price));
+                ITEM_CATALOG.put(id, new ItemData(item, name, price, cat));
             }
         }
-    }
-
-    private static void registerOptionalItem(String idStr, String name, int price) {
-        registerItem(idStr, name, price);
     }
 
     public static ItemData getItem(String idStr) {
@@ -122,7 +160,6 @@ public class ZooItemRegistry {
         } else {
             id = ResourceLocation.tryParse("minecraft:" + idStr);
         }
-
         return ITEM_CATALOG.get(id);
     }
 
