@@ -1,0 +1,331 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.8/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :
+Java: 21.0.9, JVM: 21.0.9+10-LTS (Eclipse Adoptium), Arch: amd64
+
+> Task :compileJava
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:328: error: class, interface, enum, or record expected
+    private static int buyAnimal(CommandSourceStack src, ResourceLocation parsedId, int x, int y, int z) {
+                   ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:331: error: class, interface, enum, or record expected
+    }
+    ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:335: error: class, interface, enum, or record expected
+        BlockEntity be = level.getBlockEntity(new BlockPos(x, y, z));
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:336: error: class, interface, enum, or record expected
+        if (!(be instanceof ZooComputerBlockEntity comp)) {
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:338: error: class, interface, enum, or record expected
+            return 0;
+            ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:339: error: class, interface, enum, or record expected
+        }
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:342: error: class, interface, enum, or record expected
+        if (data == null) {
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:344: error: class, interface, enum, or record expected
+            return 0;
+            ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:345: error: class, interface, enum, or record expected
+        }
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:350: error: class, interface, enum, or record expected
+            return 0;
+            ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:351: error: class, interface, enum, or record expected
+        }
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:354: error: class, interface, enum, or record expected
+        Entity entity = data.entityType.create(level);
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:355: error: class, interface, enum, or record expected
+        if (entity != null) {
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:357: error: class, interface, enum, or record expected
+            level.addFreshEntity(entity);
+            ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:358: error: class, interface, enum, or record expected
+        }
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:360: error: class, interface, enum, or record expected
+        if (data instanceof ZAWAIntegration.ZAWAAnimalData zawaData) {
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:362: error: class, interface, enum, or record expected
+        }
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:363: error: class, interface, enum, or record expected
+        final String finalMsg = msg;
+              ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:364: error: class, interface, enum, or record expected
+        src.sendSuccess(() -> Component.literal(finalMsg).withStyle(ChatFormatting.GREEN), false);
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:365: error: class, interface, enum, or record expected
+        return 1;
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:366: error: class, interface, enum, or record expected
+    }
+    ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:371: error: class, interface, enum, or record expected
+        BlockEntity be = level.getBlockEntity(new BlockPos(x, y, z));
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:372: error: class, interface, enum, or record expected
+        if (!(be instanceof ZooComputerBlockEntity comp))
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:375: error: class, interface, enum, or record expected
+        ZooItemRegistry.ItemData data = ZooItemRegistry.getItem(itemId.toString());
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:376: error: class, interface, enum, or record expected
+        if (data == null) {
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:378: error: class, interface, enum, or record expected
+            return 0;
+            ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:379: error: class, interface, enum, or record expected
+        }
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:382: error: class, interface, enum, or record expected
+        if (comp.getBalance() < totalCost) {
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:385: error: class, interface, enum, or record expected
+            return 0;
+            ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:386: error: class, interface, enum, or record expected
+        }
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:389: error: class, interface, enum, or record expected
+        ItemStack stack = new ItemStack(data.item, amount);
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:390: error: class, interface, enum, or record expected
+        ItemEntity itemEntity = new ItemEntity(level, x + 0.5, y + 1.5, z + 0.5, stack);
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:391: error: class, interface, enum, or record expected
+        itemEntity.setDeltaMovement(0, 0.2, 0);
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:392: error: class, interface, enum, or record expected
+        level.addFreshEntity(itemEntity);
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:394: error: class, interface, enum, or record expected
+        src.sendSuccess(() -> Component.literal("Berhasil beli " + amount + "x " + data.displayName)
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:396: error: class, interface, enum, or record expected
+        return 1;
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:397: error: class, interface, enum, or record expected
+    }
+    ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:401: error: class, interface, enum, or record expected
+        BlockEntity be = level.getBlockEntity(new BlockPos(x, y, z));
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:402: error: class, interface, enum, or record expected
+        if (!(be instanceof ZooComputerBlockEntity comp))
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:405: error: class, interface, enum, or record expected
+        int cost = 2000;
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:406: error: class, interface, enum, or record expected
+        if (comp.getBalance() < cost) {
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:408: error: class, interface, enum, or record expected
+            return 0;
+            ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:409: error: class, interface, enum, or record expected
+        }
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:411: error: class, interface, enum, or record expected
+        StaffEntity staff = IndoZooTycoon.STAFF_ENTITY.get().create(level);
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:412: error: class, interface, enum, or record expected
+        if (staff != null) {
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:414: error: class, interface, enum, or record expected
+            staff.setRole(role); // 0 = Janitor, 1 = Zookeeper
+            ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:415: error: class, interface, enum, or record expected
+            level.addFreshEntity(staff);
+            ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:416: error: class, interface, enum, or record expected
+        }
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:419: error: class, interface, enum, or record expected
+        return 1;
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:420: error: class, interface, enum, or record expected
+    }
+    ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:424: error: class, interface, enum, or record expected
+        BlockEntity be = level.getBlockEntity(new BlockPos(x, y, z));
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:425: error: class, interface, enum, or record expected
+        if (!(be instanceof ZooComputerBlockEntity comp))
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:427: error: class, interface, enum, or record expected
+        if (comp.getBalance() < 5000) {
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:429: error: class, interface, enum, or record expected
+            return 0;
+            ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:430: error: class, interface, enum, or record expected
+        }
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:432: error: class, interface, enum, or record expected
+        int newR = comp.getScanRadius() + 10;
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:433: error: class, interface, enum, or record expected
+        comp.setScanRadius(newR);
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:434: error: class, interface, enum, or record expected
+        src.sendSuccess(() -> Component.literal("Lahan di-upgrade! Radius: " + newR).withStyle(ChatFormatting.GREEN),
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:436: error: class, interface, enum, or record expected
+        return 1;
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:437: error: class, interface, enum, or record expected
+    }
+    ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:441: error: class, interface, enum, or record expected
+        BlockEntity be = level.getBlockEntity(new BlockPos(x, y, z));
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:442: error: class, interface, enum, or record expected
+        if (be instanceof ZooComputerBlockEntity comp) {
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:444: error: class, interface, enum, or record expected
+            src.sendSuccess(() -> Component.literal("Saldo ditambah: Rp " + amount).withStyle(ChatFormatting.GREEN),
+            ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:446: error: class, interface, enum, or record expected
+            return 1;
+            ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:447: error: class, interface, enum, or record expected
+        }
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:449: error: class, interface, enum, or record expected
+    }
+    ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:453: error: class, interface, enum, or record expected
+        BlockEntity be = level.getBlockEntity(new BlockPos(x, y, z));
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:454: error: class, interface, enum, or record expected
+        if (be instanceof ZooComputerBlockEntity computer) {
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:456: error: class, interface, enum, or record expected
+            src.sendSuccess(() -> Component.literal("Progress di-reset!").withStyle(ChatFormatting.RED), true);
+            ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:457: error: class, interface, enum, or record expected
+            return 1;
+            ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:458: error: class, interface, enum, or record expected
+        }
+        ^
+C:\Users\chill\Documents\zooTycoonSimulation\src\main\java\com\example\simulation\ZooCommand.java:460: error: class, interface, enum, or record expected
+    }
+    ^
+72 errors
+
+> Task :compileJava FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileJava'.
+> Compilation failed; see the compiler error output for details.
+
+* Try:
+> Run with --info option to get more log output.
+> Run with --scan to get full insights.
+
+* Exception is:
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':compileJava'.
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:130)
+	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:282)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:128)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:116)
+	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+	at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:331)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:318)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:314)
+	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:80)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:314)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:463)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:380)
+	at org.gradle.execution.plan.DefaultPlanExecutor.process(DefaultPlanExecutor.java:116)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.executeWithServices(DefaultTaskExecutionGraph.java:138)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.execute(DefaultTaskExecutionGraph.java:123)
+	at org.gradle.execution.SelectedTaskExecutionAction.execute(SelectedTaskExecutionAction.java:35)
+	at org.gradle.execution.DryRunBuildExecutionAction.execute(DryRunBuildExecutionAction.java:51)
+	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:54)
+	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:43)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor.execute(BuildOperationFiringBuildWorkerExecutor.java:40)
+	at org.gradle.internal.build.DefaultBuildLifecycleController.lambda$executeTasks$10(DefaultBuildLifecycleController.java:313)
+	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
+	at org.gradle.internal.model.StateTransitionController.lambda$tryTransition$8(StateTransitionController.java:177)
+	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:44)
+	at org.gradle.internal.model.StateTransitionController.tryTransition(StateTransitionController.java:177)
+	at org.gradle.internal.build.DefaultBuildLifecycleController.executeTasks(DefaultBuildLifecycleController.java:304)
+	at org.gradle.internal.build.DefaultBuildWorkGraphController$DefaultBuildWorkGraph.runWork(DefaultBuildWorkGraphController.java:220)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:264)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:128)
+	at org.gradle.composite.internal.DefaultBuildController.doRun(DefaultBuildController.java:181)
+	at org.gradle.composite.internal.DefaultBuildController.access$000(DefaultBuildController.java:50)
+	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.lambda$run$0(DefaultBuildController.java:198)
+	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:80)
+	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.run(DefaultBuildController.java:198)
+	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
+Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Compilation failed; see the compiler error output for details.
+	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:61)
+	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:41)
+	at org.gradle.api.internal.tasks.compile.daemon.AbstractIsolatedCompilerWorkerExecutor$CompilerWorkAction.execute(AbstractIsolatedCompilerWorkerExecutor.java:78)
+	at org.gradle.workers.internal.DefaultWorkerServer.execute(DefaultWorkerServer.java:63)
+	at org.gradle.workers.internal.AbstractClassLoaderWorker$1.create(AbstractClassLoaderWorker.java:54)
+	at org.gradle.workers.internal.AbstractClassLoaderWorker$1.create(AbstractClassLoaderWorker.java:48)
+	at org.gradle.internal.classloader.ClassLoaderUtils.executeInClassloader(ClassLoaderUtils.java:100)
+	at org.gradle.workers.internal.AbstractClassLoaderWorker.executeInClassLoader(AbstractClassLoaderWorker.java:48)
+	at org.gradle.workers.internal.FlatClassLoaderWorker.run(FlatClassLoaderWorker.java:32)
+	at org.gradle.workers.internal.FlatClassLoaderWorker.run(FlatClassLoaderWorker.java:22)
+	at org.gradle.workers.internal.WorkerDaemonServer.run(WorkerDaemonServer.java:102)
+	at org.gradle.workers.internal.WorkerDaemonServer.run(WorkerDaemonServer.java:71)
+	at org.gradle.process.internal.worker.request.WorkerAction$1.call(WorkerAction.java:146)
+	at org.gradle.process.internal.worker.child.WorkerLogEventListener.withWorkerLoggingProtocol(WorkerLogEventListener.java:41)
+	at org.gradle.process.internal.worker.request.WorkerAction.lambda$run$0(WorkerAction.java:143)
+	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:80)
+	at org.gradle.process.internal.worker.request.WorkerAction.run(WorkerAction.java:135)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:36)
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:24)
+	at org.gradle.internal.remote.internal.hub.MessageHubBackedObjectConnection$DispatchWrapper.dispatch(MessageHubBackedObjectConnection.java:182)
+	at org.gradle.internal.remote.internal.hub.MessageHubBackedObjectConnection$DispatchWrapper.dispatch(MessageHubBackedObjectConnection.java:164)
+	at org.gradle.internal.remote.internal.hub.MessageHub$Handler.run(MessageHub.java:414)
+	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
+
+
+BUILD FAILED in 24s
+1 actionable task: 1 executed

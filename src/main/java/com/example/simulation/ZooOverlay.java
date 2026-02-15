@@ -29,164 +29,77 @@ public class ZooOverlay {
         if (mc.player == null || mc.level == null)
             return;
 
-        // 1. Draw Balance (Original Logic)
-        drawBalance(mc, gfx);
+        // 1. Draw Balance (Existing) - Moved slightly down to make room for generic
+        // info or vice versa
+        // Let's keep balance at (10, 10) for now, and put Entity Info below it or above
+        // it.
+        // User requested "ujung kiri" (top left) for entity info.
+        // We will prioritize Entity Info at the very top (y=5), and move Balance down
+        // if needed.
 
-        // 2. Draw Mob Info if Looking at Animal
+        // Render Entity Info FIRST (Top Left)
         if (mc.hitResult instanceof EntityHitResult ehr && ehr.getType() == HitResult.Type.ENTITY) {
             Entity target = ehr.getEntity();
-            if (target instanceof Animal animal) {
-                drawAnimalInfo(mc, gfx, animal, w, h);
+            if (target instanceof LivingEntity living) { // Show for all living entities (mobs, players, animals)
+                drawEntityInfo(mc, gfx, living);
             }
         }
+
+        // Render Balance below Entity Info space (approx y=40 to avoid overlap if
+        // entity is shown)
+        // Or keep it fixed. Let's put Balance at y=50 to be safe and clean.
+        drawBalance(mc, gfx, 5, 50);
     };
 
-    private static void drawBalance(Minecraft mc, GuiGraphics gfx) {
+    private static void drawEntityInfo(Minecraft mc, GuiGraphics gfx, LivingEntity entity) {
+        int x = 5;
+        int y = 5;
+
+        // 1. Entity Name
+        Component name = entity.getDisplayName();
+
+        // 2. Mod Name (Source)
+        ResourceLocation registryName = ForgeRegistries.ENTITY_TYPES.getKey(entity.getType());
+        String modId = "Minecraft";
+        if (registryName != null) {
+            modId = registryName.getNamespace();
+            // Capitalize first letter logic or specific overrides
+            if (modId.equals("minecraft")) {
+                modId = "Minecraft";
+            } else if (modId.equals("alexsmobs")) {
+                modId = "Alex's Mobs";
+            } else if (modId.equals(IndoZooTycoon.MODID)) {
+                modId = "IndoZoo Tycoon";
+            } else {
+                // Capitalize first letter
+                modId = modId.substring(0, 1).toUpperCase() + modId.substring(1);
+            }
+        }
+
+        // Render WITHOUT background (clean text)
+        // Name (White/colored based on type?) - Let's use White/Yellow
+        gfx.drawString(mc.font, name, x, y, 0xFFFFFF, true);
+
+        // Mod Name (Gray/Subtle) below name
+        gfx.drawString(mc.font, modId, x, y + 10, 0xAAAAAA, true);
+    }
+
+    private static void drawBalance(Minecraft mc, GuiGraphics gfx, int x, int y) {
+        // Only draw if we find a computer (optional check)
         ZooComputerBlockEntity comp = findNearestComputer(mc.level, mc.player.blockPosition());
         if (comp == null)
             return;
 
         NumberFormat nf = NumberFormat.getInstance(new Locale("id", "ID"));
-        int x = 10, y = 10;
 
-        // Background
-        gfx.fill(x - 5, y - 5, x + 150, y + 20, 0xAA000000); // 0xAA for semi-transparent
-        gfx.fill(x - 5, y - 5, x + 150, y - 3, 0xFF6C63FF); // Header strip
+        // Background (Partial, since user wanted "no bg" for entity, but didn't specify
+        // for balance.
+        // But let's keep balance style consistent or minimal).
+        // Let's make balance minimal too to match the "clean" aesthetic requested.
+        // gfx.fill(x - 2, y - 2, x + 120, y + 12, 0x88000000);
 
         // Text
-        gfx.drawString(mc.font, "💰 Saldo: Rp " + nf.format(comp.getBalance()), x, y + 2, 0xFF55FF55, true);
-    }
-
-    private static void drawAnimalInfo(Minecraft mc, GuiGraphics gfx, Animal animal, int w, int h) {
-        int centerX = w / 2;
-        int centerY = h / 2;
-        int panelWidth = 140;
-        int panelHeight = 50; // Dynamic height based on content
-        int x = centerX + 20; // Offset significantly to the right of crosshair
-        int y = centerY - 25;
-
-        // Background Panel
-        gfx.fill(x, y, x + panelWidth, y + panelHeight, 0xCC000000);
-
-        // --- 1. Name & Category ---
-        ResourceLocation id = ForgeRegistries.ENTITY_TYPES.getKey(animal.getType());
-        String name = animal.getDisplayName().getString();
-        String category = "Vanilla";
-        int nameColor = 0xFFFFFF;
-
-        // Check ZAWA Integration
-        if (ZAWAIntegration.isZAWALoaded() && id != null && ZAWAIntegration.isZAWAAnimal(id)) {
-            ZAWAIntegration.ZAWAAnimalData data = ZAWAIntegration.getZAWAAnimal(id);
-            if (data != null) {
-                category = data.category.toUpperCase();
-                nameColor = 0xFFD700; // Gold for ZAWA animals
-            }
-        }
-
-        // Draw Name
-        gfx.drawString(mc.font, name, x + 5, y + 5, nameColor, true);
-
-        // Draw Category Tag
-        float scale = 0.7f;
-        gfx.pose().pushPose();
-        gfx.pose().scale(scale, scale, 1.0f);
-        gfx.drawString(mc.font, "[" + category + "]", (int) ((x + 5) / scale), (int) ((y + 15) / scale), 0xAAAAAA,
-                true);
-        gfx.pose().popPose();
-
-        // --- 2. Health Bar ---
-        float health = animal.getHealth();
-        float maxHealth = animal.getMaxHealth();
-        int healthPercentage = (int) ((health / maxHealth) * 100);
-
-        int barX = x + 5;
-        int barY = y + 25;
-        int filledWidth = (int) ((health / maxHealth) * (panelWidth - 10));
-
-        // Bar Background
-        gfx.fill(barX, barY, barX + panelWidth - 10, barY + 5, 0xFF333333);
-        // Bar Foreground (Color based on health)
-        int healthColor = healthPercentage > 50 ? 0xFF00FF00 : (healthPercentage > 20 ? 0xFFFFFF00 : 0xFFFF0000);
-        gfx.fill(barX, barY, barX + filledWidth, barY + 5, healthColor);
-
-        // Health Text
-        gfx.pose().pushPose();
-        gfx.pose().scale(scale, scale, 1.0f);
-        gfx.drawString(mc.font, "HP: " + (int) health + "/" + (int) maxHealth, (int) ((barX) / scale),
-                (int) ((barY + 7) / scale), 0xFFDDDD, true);
-        gfx.pose().popPose();
-
-        // --- ZAWA SPECIFIC STATS ---
-        if (ZAWAIntegration.isZAWALoaded() && ZAWAIntegration.isZAWAAnimal(id)) {
-            drawZAWAStatus(mc, gfx, animal, barX, barY + 15, scale);
-        }
-
-        // --- 3. Interaction Hint ---
-        if (animal.isBaby()) {
-            gfx.pose().pushPose();
-            gfx.pose().scale(scale, scale, 1.0f);
-            gfx.drawString(mc.font, "(Baby)", (int) ((x + panelWidth - 30) / scale), (int) ((y + 5) / scale), 0xFFAAFF,
-                    true);
-            gfx.pose().popPose();
-        }
-    }
-
-    private static void drawZAWAStatus(Minecraft mc, GuiGraphics gfx, Animal animal, int x, int y, float scale) {
-        // Read NBT Data safely
-        net.minecraft.nbt.CompoundTag nbt = new net.minecraft.nbt.CompoundTag();
-        try {
-            animal.saveWithoutId(nbt);
-        } catch (Exception e) {
-            return; // Fail safe
-        }
-
-        // Try to read common ZAWA tags
-        // Hunger: usually 0-100 or 0-1000
-        int hunger = nbt.contains("Hunger") ? nbt.getInt("Hunger")
-                : (nbt.contains("hunger") ? nbt.getInt("hunger") : -1);
-        // Enrichment: usually 0-100
-        int enrichment = nbt.contains("Enrichment") ? nbt.getInt("Enrichment")
-                : (nbt.contains("enrichment") ? nbt.getInt("enrichment") : -1);
-
-        int yOffset = 0;
-
-        if (hunger != -1) {
-            // Normalize assuming max is 100 or check logic
-            // Usually hunger goes UP as they get hungry, or standard Minecraft food logic
-            // (20 max)
-            // Let's assume standard 0-100 scale for modded animals
-            int max = 100;
-            int w = 80;
-            int h = 4;
-
-            gfx.fill(x, y + yOffset, x + w, y + yOffset + h, 0xFF330000);
-            int fill = (int) ((hunger / (float) max) * w);
-            // Red bar for hunger
-            gfx.fill(x, y + yOffset, x + fill, y + yOffset + h, 0xFFFF5555);
-
-            gfx.pose().pushPose();
-            gfx.pose().scale(scale, scale, 1.0f);
-            gfx.drawString(mc.font, "Hunger", (int) ((x + w + 5) / scale), (int) ((y + yOffset) / scale), 0xFFFFFF,
-                    true);
-            gfx.pose().popPose();
-            yOffset += 8;
-        }
-
-        if (enrichment != -1) {
-            int max = 100;
-            int w = 80;
-            int h = 4;
-
-            gfx.fill(x, y + yOffset, x + w, y + yOffset + h, 0xFF000033);
-            int fill = (int) ((enrichment / (float) max) * w);
-            // Blue/Purple bar for enrichment
-            gfx.fill(x, y + yOffset, x + fill, y + yOffset + h, 0xFF5555FF);
-
-            gfx.pose().pushPose();
-            gfx.pose().scale(scale, scale, 1.0f);
-            gfx.drawString(mc.font, "Fun", (int) ((x + w + 5) / scale), (int) ((y + yOffset) / scale), 0xFFFFFF, true);
-            gfx.pose().popPose();
-        }
+        gfx.drawString(mc.font, "💰 Rp " + nf.format(comp.getBalance()), x, y, 0xFF55FF55, true);
     }
 
     private static ZooComputerBlockEntity findNearestComputer(Level level, BlockPos center) {

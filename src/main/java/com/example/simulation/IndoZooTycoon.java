@@ -65,6 +65,9 @@ public class IndoZooTycoon {
         public static final RegistryObject<Item> ANIMAL_FEEDER_ITEM = ITEMS.register("animal_feeder",
                         () -> new BlockItem(ANIMAL_FEEDER_BLOCK.get(), new Item.Properties()));
 
+        public static final RegistryObject<Item> CAPTURE_CAGE_ITEM = ITEMS.register("capture_cage",
+                        CaptureCageItem::new);
+
         // Entities
         public static final RegistryObject<EntityType<StaffEntity>> STAFF_ENTITY = ENTITY_TYPES.register("staff",
                         () -> EntityType.Builder.of(StaffEntity::new, MobCategory.CREATURE).sized(0.6F, 1.95F)
@@ -109,6 +112,7 @@ public class IndoZooTycoon {
                                                 output.accept(FOOD_STALL_ITEM.get());
                                                 output.accept(DRINK_STALL_ITEM.get());
                                                 output.accept(ANIMAL_FEEDER_ITEM.get());
+                                                output.accept(CAPTURE_CAGE_ITEM.get());
                                                 output.accept(STAFF_SPAWN_EGG.get());
                                                 output.accept(VISITOR_SPAWN_EGG.get());
                                         })

@@ -34,6 +34,8 @@ public class ClientEvents {
         public static void onClientSetup(FMLClientSetupEvent event) {
             event.enqueueWork(() -> {
                 MenuScreens.register(IndoZooTycoon.ZOO_COMPUTER_MENU.get(), ZooComputerScreen::new);
+                net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(IndoZooTycoon.TRASH_BLOCK.get(),
+                        net.minecraft.client.renderer.RenderType.cutout());
             });
         }
 
@@ -58,23 +60,28 @@ public class ClientEvents {
 
             // Visitor renderer - Dynamic Texture & Player Model
             event.registerEntityRenderer(IndoZooTycoon.VISITOR_ENTITY.get(),
-                    ctx -> new HumanoidMobRenderer<VisitorEntity, HumanoidModel<VisitorEntity>>(
-                            ctx, new HumanoidModel<>(ctx.bakeLayer(ModelLayers.PLAYER)), 0.5f) {
-                        @Override
-                        public ResourceLocation getTextureLocation(VisitorEntity entity) {
-                            return new ResourceLocation(IndoZooTycoon.MODID,
-                                    "textures/entity/visitor/visitor_" + entity.getVariant() + ".png");
-                        }
-
-                        @Override
-                        protected void scale(VisitorEntity entity, com.mojang.blaze3d.vertex.PoseStack poseStack,
-                                float partialTickTime) {
-                            if (entity.isChildVisitor()) {
-                                poseStack.scale(0.6F, 0.6F, 0.6F); // Force visual resize to 60%
-                            } else {
-                                super.scale(entity, poseStack, partialTickTime);
+                    ctx -> {
+                        var renderer = new HumanoidMobRenderer<VisitorEntity, HumanoidModel<VisitorEntity>>(
+                                ctx, new HumanoidModel<>(ctx.bakeLayer(ModelLayers.PLAYER)), 0.5f) {
+                            @Override
+                            public ResourceLocation getTextureLocation(VisitorEntity entity) {
+                                // Reverted to use custom textures
+                                return new ResourceLocation(IndoZooTycoon.MODID,
+                                        "textures/entity/visitor/visitor_" + entity.getVariant() + ".png");
                             }
-                        }
+
+                            @Override
+                            protected void scale(VisitorEntity entity, com.mojang.blaze3d.vertex.PoseStack poseStack,
+                                    float partialTickTime) {
+                                if (entity.isChildVisitor()) {
+                                    poseStack.scale(0.6F, 0.6F, 0.6F); // Force visual resize to 60%
+                                } else {
+                                    super.scale(entity, poseStack, partialTickTime);
+                                }
+                            }
+                        };
+                        renderer.addLayer(new VisitorMoodLayer(renderer));
+                        return renderer;
                     });
         }
     }

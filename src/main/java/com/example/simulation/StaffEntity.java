@@ -78,23 +78,19 @@ public class StaffEntity extends PathfinderMob {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
+        this.goalSelector.addGoal(1, new OpenDoorGoal(this, true));
 
-        // Zookeeper Logic (Role 1): Prioritize Animals
-        // Janitor Logic (Role 0): Prioritize Cleaning (TODO: Add cleanup logic later)
-
-        // Interaction Goals
-        this.goalSelector.addGoal(1, new InteractVisitorGoal(this));
-
-        // Ride Vehicle (Priority 2 - same as Clean, but logic handles switching)
+        // Role 0 (Janitor)
         this.goalSelector.addGoal(2, new RideVehicleGoal(this));
         this.goalSelector.addGoal(3, new CleanTrashGoal(this));
 
-        this.goalSelector.addGoal(4, new OpenDoorGoal(this, true));
-        this.goalSelector.addGoal(5, new RefillFoodGoal(this));
-        this.goalSelector.addGoal(6, new FeedAnimalGoal(this));
-        this.goalSelector.addGoal(7, new RandomStrollGoal(this, 0.8D));
-        this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 8.0F));
-        this.goalSelector.addGoal(9, new RandomLookAroundGoal(this));
+        // Role 1 (Zookeeper)
+        this.goalSelector.addGoal(2, new InteractVisitorGoal(this));
+        // Feeding removed as per user request "hanya menjelaskan"
+
+        this.goalSelector.addGoal(5, new RandomStrollGoal(this, 0.8D));
+        this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 8.0F));
+        this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
     }
 
     // --- DRIVING LOGIC ---
@@ -396,6 +392,10 @@ public class StaffEntity extends PathfinderMob {
 
         @Override
         public boolean canUse() {
+            // Only Zookeeper (Role 1) explains
+            if (staff.getRole() != 1)
+                return false;
+
             if (staff.getRandom().nextFloat() < 0.01F) { // Check 1% per tick
                 VisitorEntity nearby = staff.level().getNearestEntity(VisitorEntity.class,
                         TargetingConditions.forNonCombat().range(4.0D).selector(entity -> {

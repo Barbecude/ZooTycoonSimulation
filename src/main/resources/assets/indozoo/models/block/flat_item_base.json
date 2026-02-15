@@ -1,0 +1,16 @@
+{
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "#layer0"
+  },
+  "elements": [
+    {
+      "from": [ 3, 0.05, 3 ],
+      "to": [ 13, 0.05, 13 ],
+      "faces": {
+        "up":    { "uv": [ 0, 0, 16, 16 ], "texture": "#layer0", "tintindex": 0 },
+        "down":  { "uv": [ 0, 0, 16, 16 ], "texture": "#layer0", "tintindex": 0 }
+      }
+    }
+  ]
+}

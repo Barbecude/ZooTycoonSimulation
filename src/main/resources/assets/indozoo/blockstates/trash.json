@@ -1,0 +1,28 @@
+{
+  "variants": {
+    "variant=0": [
+      { "model": "indozoo:block/trash_bone", "y": 0 },
+      { "model": "indozoo:block/trash_bone", "y": 90 },
+      { "model": "indozoo:block/trash_bone", "y": 180 },
+      { "model": "indozoo:block/trash_bone", "y": 270 }
+    ],
+    "variant=1": [
+      { "model": "indozoo:block/trash_flesh", "y": 0 },
+      { "model": "indozoo:block/trash_flesh", "y": 90 },
+      { "model": "indozoo:block/trash_flesh", "y": 180 },
+      { "model": "indozoo:block/trash_flesh", "y": 270 }
+    ],
+    "variant=2": [
+      { "model": "indozoo:block/trash_paper", "y": 0 },
+      { "model": "indozoo:block/trash_paper", "y": 90 },
+      { "model": "indozoo:block/trash_paper", "y": 180 },
+      { "model": "indozoo:block/trash_paper", "y": 270 }
+    ],
+    "variant=3": [
+      { "model": "indozoo:block/trash_leaf", "y": 0 },
+      { "model": "indozoo:block/trash_leaf", "y": 90 },
+      { "model": "indozoo:block/trash_leaf", "y": 180 },
+      { "model": "indozoo:block/trash_leaf", "y": 270 }
+    ]
+  }
+}

@@ -1,7 +1,9 @@
 package com.example.simulation;
 
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.SpawnEggItem;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.*;
@@ -15,7 +17,8 @@ public class ZooItemRegistry {
         DECOR("Dekorasi"),
         VEHICLE("Kendaraan"),
         FOOD("Makanan"),
-        MISC("Lainnya");
+        ANIMAL("Hewan"),
+        MYTHICAL("Hewan Langka");
 
         public final String label;
 
@@ -47,31 +50,69 @@ public class ZooItemRegistry {
 
         // Food
         registerItem("minecraft:apple", "Apple", 10, Category.FOOD);
-        registerItem("minecraft:wheat", "Wheat", 10, Category.FOOD);
+        registerItem("minecraft:wheat", "Wheat", 15, Category.FOOD);
         registerItem("minecraft:beef", "Beef", 20, Category.FOOD);
+        registerItem("minecraft:carrot", "Golden Carrot", 5000, Category.FOOD);
+        registerItem("minecraft:hay_block", "Hay Bale", 40, Category.FOOD);
 
-        // Auto-detect ZAWA Items
-        if (ZAWAIntegration.isZAWALoaded()) {
-            for (Map.Entry<net.minecraft.resources.ResourceKey<Item>, Item> entry : ForgeRegistries.ITEMS
-                    .getEntries()) {
-                ResourceLocation id = entry.getKey().location();
+        // --- DYNAMIC SCANNING ---
+        for (Map.Entry<net.minecraft.resources.ResourceKey<Item>, Item> entry : ForgeRegistries.ITEMS.getEntries()) {
+            ResourceLocation id = entry.getKey().location();
+            Item item = entry.getValue();
+            String path = id.getPath();
+            String namespace = id.getNamespace();
 
-                // Only process ZAWA (or other mods if needed)
-                if (id.getNamespace().equals("zawa")) {
-                    if (ITEM_CATALOG.containsKey(id))
-                        continue; // Skip if logical duplicate
+            // 1. SPAWN EGGS (Animals)
+            if (item instanceof SpawnEggItem egg) {
+                EntityType<?> type = egg.getType(null);
+                if (type.getCategory() == net.minecraft.world.entity.MobCategory.CREATURE ||
+                        type.getCategory() == net.minecraft.world.entity.MobCategory.AMBIENT ||
+                        type.getCategory() == net.minecraft.world.entity.MobCategory.WATER_CREATURE) {
 
-                    String path = id.getPath();
-                    if (path.contains("spawn_egg") || path.contains("admin"))
-                        continue;
+                    // Check for Mythical (Alex's Mobs special handling)
+                    Category cat = Category.ANIMAL;
+                    if (namespace.equals("alexsmobs")) {
+                        if (path.contains("mimicube") || path.contains("void_worm"))
+                            continue; // Exclude boss
+                        if (path.contains("dragon") || path.contains("serpent") || path.contains("guster")) {
+                            cat = Category.MYTHICAL;
+                        }
+                    }
 
-                    String name = formatName(path);
-                    Category cat = determineCategory(path);
-                    int price = estimatePrice(path, cat);
+                    int price = (cat == Category.MYTHICAL) ? 5000 : 500;
+                    ITEM_CATALOG.put(id, new ItemData(item, formatName(path.replace("_spawn_egg", "")), price, cat));
+                }
+                continue; // Done with this item
+            }
 
-                    ITEM_CATALOG.put(id, new ItemData(entry.getValue(), name, price, cat));
+            // 2. ZAWA Capture Cage & Others
+            if (namespace.equals("zawa")) {
+                if (path.equals("capture_cage") || path.equals("catching_net")) { // Use Zawa's cage
+                    ITEM_CATALOG.put(id, new ItemData(item, "Capture Cage (Universal)", 1000, Category.UTILITY));
+                } else if (path.equals("kibble") || path.contains("food")) {
+                    ITEM_CATALOG.put(id, new ItemData(item, formatName(path), 50, Category.FOOD));
                 }
             }
+
+            // 3. VEHICLES (Simple Keyword Search)
+            if (path.contains("cart") || path.contains("vehicle") || path.contains("jeep") || path.contains("atv")
+                    || path.contains("scooter")) {
+                ITEM_CATALOG.put(id, new ItemData(item, formatName(path), 3000, Category.VEHICLE));
+            }
+
+            // 4. FOOD BLOCKS/ITEMS
+            if (path.contains("kibble") || path.contains("hay") || path.contains("carrot")) {
+                if (!ITEM_CATALOG.containsKey(id)) {
+                    ITEM_CATALOG.put(id, new ItemData(item, formatName(path), 20, Category.FOOD));
+                }
+            }
+        }
+
+        // Ensure OUR items are there
+        if (IndoZooTycoon.CAPTURE_CAGE_ITEM.isPresent()) {
+            // Fallback if ZAWA not present or user wants ours
+            ITEM_CATALOG.put(IndoZooTycoon.CAPTURE_CAGE_ITEM.getId(), new ItemData(
+                    IndoZooTycoon.CAPTURE_CAGE_ITEM.get(), "Capture Cage (IndoZoo)", 1000, Category.UTILITY));
         }
 
         System.out.println("[IndoZoo] Registered " + ITEM_CATALOG.size() + " shop items.");
@@ -91,58 +132,6 @@ public class ZooItemRegistry {
         return sb.toString().trim();
     }
 
-    // Heuristic for Category
-    private static Category determineCategory(String path) {
-        if (path.contains("fence") || path.contains("wall") || path.contains("glass") || path.contains("pane")
-                || path.contains("planks") || path.contains("concrete") || path.contains("wire"))
-            return Category.BUILDING;
-
-        if (path.contains("cart") || path.contains("vehicle") || path.contains("jeep") || path.contains("atv")
-                || path.contains("car") || path.contains("rover") || path.contains("transport")
-                || path.contains("scooter"))
-            return Category.VEHICLE;
-
-        if (path.contains("kibble") || path.contains("food") || path.contains("fruit") || path.contains("meat")
-                || path.contains("fish") || path.contains("diet"))
-            return Category.FOOD;
-
-        if (path.contains("bench") || path.contains("trash") || path.contains("lamp") || path.contains("sign")
-                || path.contains("painting") || path.contains("flower") || path.contains("plant")
-                || path.contains("plush"))
-            return Category.DECOR;
-
-        if (path.contains("net") || path.contains("gun") || path.contains("rifle") || path.contains("tool")
-                || path.contains("wand") || path.contains("bucket"))
-            return Category.UTILITY;
-
-        return Category.MISC;
-    }
-
-    // Heuristic for Price
-    private static int estimatePrice(String path, Category cat) {
-        // High priority override
-        if (cat == Category.VEHICLE)
-            return 5000;
-
-        if (path.contains("net") || path.contains("gun") || path.contains("rifle"))
-            return 1500;
-        if (path.contains("bench"))
-            return 150;
-        if (path.contains("trash"))
-            return 100;
-        if (path.contains("lamp"))
-            return 120;
-
-        return switch (cat) {
-            case BUILDING -> 25; // Cheap building blocks
-            case FOOD -> 15; // Cheap food
-            case DECOR -> 200; // Moderate decoration
-            case UTILITY -> 300; // Tools
-            case MISC -> 100;
-            default -> 100;
-        };
-    }
-
     private static void registerItem(String idStr, String name, int price, Category cat) {
         ResourceLocation id = ResourceLocation.tryParse(idStr);
         if (id != null && ForgeRegistries.ITEMS.containsKey(id)) {
@@ -153,17 +142,13 @@ public class ZooItemRegistry {
         }
     }
 
-    public static ItemData getItem(String idStr) {
-        ResourceLocation id;
-        if (idStr.contains(":")) {
-            id = ResourceLocation.tryParse(idStr);
-        } else {
-            id = ResourceLocation.tryParse("minecraft:" + idStr);
-        }
-        return ITEM_CATALOG.get(id);
-    }
-
+    // ... helper methods
     public static Map<ResourceLocation, ItemData> getAllItems() {
         return Collections.unmodifiableMap(ITEM_CATALOG);
+    }
+
+    public static ItemData getItem(String idStr) {
+        ResourceLocation id = ResourceLocation.tryParse(idStr.contains(":") ? idStr : "minecraft:" + idStr);
+        return ITEM_CATALOG.get(id);
     }
 }

@@ -36,9 +36,39 @@ public class VisitorEntity extends PathfinderMob {
     private static final EntityDataAccessor<Integer> THIRST = SynchedEntityData.defineId(VisitorEntity.class,
             EntityDataSerializers.INT);
 
+    // Fields
     private BlockPos gatePos = null;
     private int stayTime = 0; // Seberapa lama sudah di zoo
     private static final int MAX_STAY = 2400; // 2 menit
+
+    // Moods
+    public enum Mood {
+        HAPPY("Senang", 0x00FF00),
+        NEUTRAL("Biasa", 0xFFFF00),
+        TOILET("Kebelet Pipis", 0xFFA500),
+        AMAZED("Takjub", 0x00FFFF),
+        ADORED("Gemas", 0xFF69B4);
+
+        public final String label;
+        public final int color;
+
+        Mood(String label, int color) {
+            this.label = label;
+            this.color = color;
+        }
+    }
+
+    private Mood currentMood = Mood.HAPPY;
+    private int moodTimer = 0;
+
+    public Mood getMood() {
+        return currentMood;
+    }
+
+    public void setMood(Mood mood, int duration) {
+        this.currentMood = mood;
+        this.moodTimer = duration;
+    }
 
     public VisitorEntity(EntityType<? extends VisitorEntity> type, Level level) {
         super(type, level);
@@ -140,6 +170,18 @@ public class VisitorEntity extends PathfinderMob {
             if (this.tickCount % 600 == 0) { // Every 30 seconds
                 setHunger(Math.min(100, getHunger() + 5));
                 setThirst(Math.min(100, getThirst() + 8));
+
+                // Mood Logic Check - Toilet
+                if (this.getRandom().nextFloat() < 0.1F) { // 10% chance every 30s
+                    setMood(Mood.TOILET, 600);
+                }
+            }
+
+            if (moodTimer > 0) {
+                moodTimer--;
+                if (moodTimer == 0) {
+                    setMood(Mood.HAPPY, 0); // Revert to happy
+                }
             }
 
             // Logic: Drop Trash (Random Chance: 0.05% per tick)
@@ -233,12 +275,16 @@ public class VisitorEntity extends PathfinderMob {
     protected net.minecraft.world.InteractionResult mobInteract(Player player,
             net.minecraft.world.InteractionHand hand) {
         if (!this.level().isClientSide) {
-            String status = "Visitor [" + getVariant() + "] | Hunger: " + getHunger() + "% | Thirst: " + getThirst()
-                    + "%";
-            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(status));
+            String status = "Visitor [" + getVariant() + "]\n" +
+                    "Mood: " + getMood().label + "\n" +
+                    "Hunger: " + getHunger() + "% | Thirst: " + getThirst() + "%";
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(status)
+                    .withStyle(net.minecraft.ChatFormatting.YELLOW));
         }
         return net.minecraft.world.InteractionResult.sidedSuccess(this.level().isClientSide);
     }
+
+    // ...
 
     static class FindFacilityGoal extends Goal {
         private final VisitorEntity visitor;
@@ -362,8 +408,25 @@ public class VisitorEntity extends PathfinderMob {
                     visitor.getNavigation().moveTo(target, 1.0D);
                 }
                 visitor.getLookControl().setLookAt(target, 30, 30);
-                if (watchTimer > 0)
+                if (watchTimer > 0) {
                     watchTimer--;
+                    // Mood Trigger Logic
+                    if (watchTimer % 20 == 0) {
+                        float width = target.getBbWidth();
+                        if (width > 1.5F) {
+                            visitor.setMood(Mood.AMAZED, 100);
+                        } else if (width < 0.8F || target.isBaby()) {
+                            visitor.setMood(Mood.ADORED, 100);
+                        }
+
+                        net.minecraft.resources.ResourceLocation id = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES
+                                .getKey(target.getType());
+                        if (id != null && (id.getPath().contains("dragon") || id.getPath().contains("wither")
+                                || id.getPath().contains("serpent"))) {
+                            visitor.setMood(Mood.AMAZED, 200);
+                        }
+                    }
+                }
             }
         }
 
