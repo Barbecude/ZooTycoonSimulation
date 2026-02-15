@@ -1,0 +1,128 @@
+{
+    "parent": "minecraft:block/block",
+    "ambientocclusion": false,
+    "textures": {
+        "body": "minecraft:block/smooth_stone",
+        "screen": "minecraft:block/black_concrete",
+        "particle": "minecraft:block/smooth_stone"
+    },
+    "elements": [
+        {
+            "name": "base",
+            "from": [
+                3,
+                0,
+                5
+            ],
+            "to": [
+                13,
+                1,
+                11
+            ],
+            "faces": {
+                "north": {
+                    "texture": "#body"
+                },
+                "south": {
+                    "texture": "#body"
+                },
+                "east": {
+                    "texture": "#body"
+                },
+                "west": {
+                    "texture": "#body"
+                },
+                "up": {
+                    "texture": "#body"
+                },
+                "down": {
+                    "texture": "#body"
+                }
+            }
+        },
+        {
+            "name": "pole",
+            "from": [
+                7,
+                1,
+                7
+            ],
+            "to": [
+                9,
+                5,
+                9
+            ],
+            "faces": {
+                "north": {
+                    "texture": "#body"
+                },
+                "south": {
+                    "texture": "#body"
+                },
+                "east": {
+                    "texture": "#body"
+                },
+                "west": {
+                    "texture": "#body"
+                },
+                "up": {
+                    "texture": "#body"
+                },
+                "down": {
+                    "texture": "#body"
+                }
+            }
+        },
+        {
+            "name": "monitor_frame",
+            "from": [
+                1,
+                5,
+                7
+            ],
+            "to": [
+                15,
+                15,
+                10
+            ],
+            "faces": {
+                "north": {
+                    "texture": "#body"
+                },
+                "south": {
+                    "texture": "#body"
+                },
+                "east": {
+                    "texture": "#body"
+                },
+                "west": {
+                    "texture": "#body"
+                },
+                "up": {
+                    "texture": "#body"
+                },
+                "down": {
+                    "texture": "#body"
+                }
+            }
+        },
+        {
+            "name": "screen",
+            "from": [
+                2,
+                6,
+                6.5
+            ],
+            "to": [
+                14,
+                14,
+                7
+            ],
+            "faces": {
+                "north": {
+                    "texture": "#screen"
+                }
+            }
+        }
+    ]
+}

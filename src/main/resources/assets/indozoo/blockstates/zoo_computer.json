@@ -1,5 +1,34 @@
 {
   "variants": {
-    "": { "model": "indozoo:block/zoo_computer" }
+    "active=false,facing=north": {
+      "model": "indozoo:block/zoo_computer_off"
+    },
+    "active=false,facing=south": {
+      "model": "indozoo:block/zoo_computer_off",
+      "y": 180
+    },
+    "active=false,facing=east": {
+      "model": "indozoo:block/zoo_computer_off",
+      "y": 90
+    },
+    "active=false,facing=west": {
+      "model": "indozoo:block/zoo_computer_off",
+      "y": 270
+    },
+    "active=true,facing=north": {
+      "model": "indozoo:block/zoo_computer_on"
+    },
+    "active=true,facing=south": {
+      "model": "indozoo:block/zoo_computer_on",
+      "y": 180
+    },
+    "active=true,facing=east": {
+      "model": "indozoo:block/zoo_computer_on",
+      "y": 90
+    },
+    "active=true,facing=west": {
+      "model": "indozoo:block/zoo_computer_on",
+      "y": 270
+    }
   }
 }

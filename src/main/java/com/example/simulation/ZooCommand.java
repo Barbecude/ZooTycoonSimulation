@@ -8,194 +8,215 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.animal.Animal;
-import net.minecraft.world.entity.animal.Chicken;
-import net.minecraft.world.entity.animal.Cow;
-import net.minecraft.world.entity.animal.Pig;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
-/**
- * ZooCommand — Handler untuk /zoocmd
- *
- * Sub-commands (dipanggil via Clickable Chat):
- * /zoocmd buy <animal> <x> <y> <z> — Beli hewan (spawn di atas komputer)
- * /zoocmd hire <x> <y> <z> — Rekrut Staff
- * /zoocmd upgrade <x> <y> <z> — Upgrade radius scan
- */
 public class ZooCommand {
-
-    private static final long HIRE_COST = 2000;
-    private static final long UPGRADE_COST = 5000;
-    private static final int UPGRADE_INCREMENT = 10;
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("zoocmd")
-                // /zoocmd buy <animal> <x> <y> <z>
                 .then(Commands.literal("buy")
-                        .then(Commands.argument("animal", StringArgumentType.string())
+                        .then(Commands.argument("animal_id", StringArgumentType.string())
                                 .then(Commands.argument("x", IntegerArgumentType.integer())
                                         .then(Commands.argument("y", IntegerArgumentType.integer())
                                                 .then(Commands.argument("z", IntegerArgumentType.integer())
-                                                        .executes(ctx -> buyAnimal(
-                                                                ctx.getSource(),
-                                                                StringArgumentType.getString(ctx, "animal"),
+                                                        .executes(ctx -> buyAnimal(ctx.getSource(),
+                                                                StringArgumentType.getString(ctx, "animal_id"),
                                                                 IntegerArgumentType.getInteger(ctx, "x"),
                                                                 IntegerArgumentType.getInteger(ctx, "y"),
                                                                 IntegerArgumentType.getInteger(ctx, "z"))))))))
-
-                // /zoocmd hire <x> <y> <z>
+                .then(Commands.literal("buyitem")
+                        .then(Commands.argument("item_id", StringArgumentType.string())
+                                .then(Commands.argument("amount", IntegerArgumentType.integer())
+                                        .then(Commands.argument("x", IntegerArgumentType.integer())
+                                                .then(Commands.argument("y", IntegerArgumentType.integer())
+                                                        .then(Commands.argument("z", IntegerArgumentType.integer())
+                                                                .executes(ctx -> buyItem(ctx.getSource(),
+                                                                        StringArgumentType.getString(ctx, "item_id"),
+                                                                        IntegerArgumentType.getInteger(ctx, "amount"),
+                                                                        IntegerArgumentType.getInteger(ctx, "x"),
+                                                                        IntegerArgumentType.getInteger(ctx, "y"),
+                                                                        IntegerArgumentType.getInteger(ctx, "z")))))))))
                 .then(Commands.literal("hire")
                         .then(Commands.argument("x", IntegerArgumentType.integer())
                                 .then(Commands.argument("y", IntegerArgumentType.integer())
                                         .then(Commands.argument("z", IntegerArgumentType.integer())
-                                                .executes(ctx -> hireStaff(
-                                                        ctx.getSource(),
+                                                .executes(ctx -> hireStaff(ctx.getSource(),
                                                         IntegerArgumentType.getInteger(ctx, "x"),
                                                         IntegerArgumentType.getInteger(ctx, "y"),
                                                         IntegerArgumentType.getInteger(ctx, "z")))))))
-
-                // /zoocmd upgrade <x> <y> <z>
                 .then(Commands.literal("upgrade")
                         .then(Commands.argument("x", IntegerArgumentType.integer())
                                 .then(Commands.argument("y", IntegerArgumentType.integer())
                                         .then(Commands.argument("z", IntegerArgumentType.integer())
-                                                .executes(ctx -> upgradeLand(
-                                                        ctx.getSource(),
+                                                .executes(ctx -> upgradeLand(ctx.getSource(),
+                                                        IntegerArgumentType.getInteger(ctx, "x"),
+                                                        IntegerArgumentType.getInteger(ctx, "y"),
+                                                        IntegerArgumentType.getInteger(ctx, "z")))))))
+                .then(Commands.literal("addmoney")
+                        .then(Commands.argument("amount", IntegerArgumentType.integer())
+                                .then(Commands.argument("x", IntegerArgumentType.integer())
+                                        .then(Commands.argument("y", IntegerArgumentType.integer())
+                                                .then(Commands.argument("z", IntegerArgumentType.integer())
+                                                        .executes(ctx -> addMoney(ctx.getSource(),
+                                                                IntegerArgumentType.getInteger(ctx, "amount"),
+                                                                IntegerArgumentType.getInteger(ctx, "x"),
+                                                                IntegerArgumentType.getInteger(ctx, "y"),
+                                                                IntegerArgumentType.getInteger(ctx, "z"))))))))
+                .then(Commands.literal("reset")
+                        .then(Commands.argument("x", IntegerArgumentType.integer())
+                                .then(Commands.argument("y", IntegerArgumentType.integer())
+                                        .then(Commands.argument("z", IntegerArgumentType.integer())
+                                                .executes(ctx -> resetZoo(ctx.getSource(),
                                                         IntegerArgumentType.getInteger(ctx, "x"),
                                                         IntegerArgumentType.getInteger(ctx, "y"),
                                                         IntegerArgumentType.getInteger(ctx, "z"))))))));
     }
 
-    // ========== Buy Animal ==========
-
-    private static int buyAnimal(CommandSourceStack source, String animalName,
-            int x, int y, int z) {
-        ServerLevel level = source.getLevel();
-        BlockPos pos = new BlockPos(x, y, z);
-        BlockEntity be = level.getBlockEntity(pos);
-
-        if (!(be instanceof ZooComputerBlockEntity computer)) {
-            source.sendFailure(Component.literal("❌ Komputer tidak ditemukan di posisi tersebut!"));
+    private static int buyAnimal(CommandSourceStack src, String animalId, int x, int y, int z) {
+        ServerLevel level = src.getLevel();
+        BlockEntity be = level.getBlockEntity(new BlockPos(x, y, z));
+        if (!(be instanceof ZooComputerBlockEntity comp)) {
+            src.sendFailure(Component.literal("Komputer tidak ditemukan!"));
             return 0;
         }
 
-        // Tentukan harga & tipe hewan
-        long cost;
-        EntityType<? extends Animal> entityType;
-        switch (animalName.toLowerCase()) {
-            case "chicken" -> {
-                cost = 1000;
-                entityType = EntityType.CHICKEN;
-            }
-            case "cow" -> {
-                cost = 3000;
-                entityType = EntityType.COW;
-            }
-            case "pig" -> {
-                cost = 2000;
-                entityType = EntityType.PIG;
-            }
-            case "sheep" -> {
-                cost = 2500;
-                entityType = EntityType.SHEEP;
-            }
-            case "horse" -> {
-                cost = 8000;
-                entityType = EntityType.HORSE;
-            }
-            default -> {
-                source.sendFailure(Component.literal("❌ Hewan '" + animalName + "' tidak tersedia!"));
-                return 0;
-            }
-        }
+        // Parse ID (bisa "minecraft:cow" atau shortcuts "cow")
+        ResourceLocation id = parseAnimalId(animalId);
+        AnimalRegistry.AnimalData data = AnimalRegistry.getAnimal(id);
 
-        // Cek saldo
-        if (computer.getBalance() < cost) {
-            source.sendFailure(Component.literal("❌ Saldo tidak cukup! Butuh Rp" + cost)
-                    .withStyle(ChatFormatting.RED));
+        if (data == null) {
+            src.sendFailure(Component.literal("Hewan '" + animalId + "' tidak tersedia!"));
             return 0;
         }
 
-        // Kurangi saldo & spawn hewan di atas komputer (Y + 2)
-        computer.addBalance(-cost);
-        Animal animal = entityType.create(level);
-        if (animal != null) {
-            animal.moveTo(pos.getX() + 0.5, pos.getY() + 2, pos.getZ() + 0.5, 0, 0);
-            level.addFreshEntity(animal);
+        if (comp.getBalance() < data.price) {
+            src.sendFailure(
+                    Component.literal("Saldo tidak cukup! Butuh Rp " + data.price).withStyle(ChatFormatting.RED));
+            return 0;
         }
 
-        source.sendSuccess(() -> Component.literal("✅ " + capitalize(animalName)
-                + " berhasil dikirim! (Rp" + cost + ")")
+        comp.addBalance(-data.price);
+        Entity entity = data.entityType.create(level);
+        if (entity != null) {
+            entity.moveTo(x + 0.5, y + 2, z + 0.5, 0, 0);
+            level.addFreshEntity(entity);
+        }
+        String msg = "Berhasil beli " + data.displayName + "! (Rp " + data.price + ")";
+        if (data instanceof ZAWAIntegration.ZAWAAnimalData zawaData) {
+            msg += " [" + zawaData.category.toUpperCase() + "]";
+        }
+
+        final String finalMsg = msg;
+        src.sendSuccess(() -> Component.literal(finalMsg).withStyle(ChatFormatting.GREEN), false);
+        return 1;
+    }
+
+    private static ResourceLocation parseAnimalId(String input) {
+        if (input.contains(":")) {
+            return ResourceLocation.tryParse(input);
+        } else {
+            return ResourceLocation.fromNamespaceAndPath("minecraft", input.toLowerCase());
+        }
+    }
+
+    private static int buyItem(CommandSourceStack src, String itemId, int amount, int x, int y, int z) {
+        ServerLevel level = src.getLevel();
+        BlockEntity be = level.getBlockEntity(new BlockPos(x, y, z));
+
+        if (!(be instanceof ZooComputerBlockEntity comp)) {
+            src.sendFailure(Component.literal("Komputer tidak ditemukan!"));
+            return 0;
+        }
+
+        ZooItemRegistry.ItemData data = ZooItemRegistry.getItem(itemId);
+        if (data == null) {
+            src.sendFailure(Component.literal("Item '" + itemId + "' tidak tersedia di toko!"));
+            return 0;
+        }
+
+        int totalCost = data.price * amount;
+
+        if (comp.getBalance() < totalCost) {
+            src.sendFailure(
+                    Component.literal("Saldo tidak cukup! Butuh Rp " + totalCost).withStyle(ChatFormatting.RED));
+            return 0;
+        }
+
+        comp.addBalance(-totalCost);
+
+        // Spawn item at target location (slightly above computer or at target coords)
+        ItemStack stack = new ItemStack(data.item, amount);
+        ItemEntity itemEntity = new ItemEntity(level, x + 0.5, y + 1.5, z + 0.5, stack);
+        itemEntity.setDeltaMovement(0, 0.2, 0); // Pop up slightly
+        level.addFreshEntity(itemEntity);
+
+        src.sendSuccess(() -> Component
+                .literal("Berhasil beli " + amount + "x " + data.displayName + "! (Rp " + totalCost + ")")
                 .withStyle(ChatFormatting.GREEN), false);
         return 1;
     }
 
-    // ========== Hire Staff ==========
-
-    private static int hireStaff(CommandSourceStack source, int x, int y, int z) {
-        ServerLevel level = source.getLevel();
-        BlockPos pos = new BlockPos(x, y, z);
-        BlockEntity be = level.getBlockEntity(pos);
-
-        if (!(be instanceof ZooComputerBlockEntity computer)) {
-            source.sendFailure(Component.literal("❌ Komputer tidak ditemukan!"));
+    private static int hireStaff(CommandSourceStack src, int x, int y, int z) {
+        ServerLevel level = src.getLevel();
+        BlockEntity be = level.getBlockEntity(new BlockPos(x, y, z));
+        if (!(be instanceof ZooComputerBlockEntity comp))
+            return 0;
+        if (comp.getBalance() < 2000) {
+            src.sendFailure(Component.literal("Saldo tidak cukup!").withStyle(ChatFormatting.RED));
             return 0;
         }
-
-        if (computer.getBalance() < HIRE_COST) {
-            source.sendFailure(Component.literal("❌ Saldo tidak cukup! Butuh Rp" + HIRE_COST)
-                    .withStyle(ChatFormatting.RED));
-            return 0;
-        }
-
-        computer.addBalance(-HIRE_COST);
+        comp.addBalance(-2000);
         StaffEntity staff = IndoZooTycoon.STAFF_ENTITY.get().create(level);
         if (staff != null) {
-            staff.moveTo(pos.getX() + 1.5, pos.getY(), pos.getZ() + 1.5, 0, 0);
+            staff.moveTo(x + 1.5, y, z + 1.5, 0, 0);
             level.addFreshEntity(staff);
         }
-
-        source.sendSuccess(() -> Component.literal("✅ Zookeeper berhasil direkrut! (Rp" + HIRE_COST + ")")
-                .withStyle(ChatFormatting.GREEN), false);
+        src.sendSuccess(() -> Component.literal("Zookeeper direkrut!").withStyle(ChatFormatting.GREEN), false);
         return 1;
     }
 
-    // ========== Upgrade Land ==========
-
-    private static int upgradeLand(CommandSourceStack source, int x, int y, int z) {
-        ServerLevel level = source.getLevel();
-        BlockPos pos = new BlockPos(x, y, z);
-        BlockEntity be = level.getBlockEntity(pos);
-
-        if (!(be instanceof ZooComputerBlockEntity computer)) {
-            source.sendFailure(Component.literal("❌ Komputer tidak ditemukan!"));
+    private static int upgradeLand(CommandSourceStack src, int x, int y, int z) {
+        ServerLevel level = src.getLevel();
+        BlockEntity be = level.getBlockEntity(new BlockPos(x, y, z));
+        if (!(be instanceof ZooComputerBlockEntity comp))
+            return 0;
+        if (comp.getBalance() < 5000) {
+            src.sendFailure(Component.literal("Saldo tidak cukup!").withStyle(ChatFormatting.RED));
             return 0;
         }
-
-        if (computer.getBalance() < UPGRADE_COST) {
-            source.sendFailure(Component.literal("❌ Saldo tidak cukup! Butuh Rp" + UPGRADE_COST)
-                    .withStyle(ChatFormatting.RED));
-            return 0;
-        }
-
-        computer.addBalance(-UPGRADE_COST);
-        int newRadius = computer.getScanRadius() + UPGRADE_INCREMENT;
-        computer.setScanRadius(newRadius);
-
-        source.sendSuccess(() -> Component.literal("✅ Lahan di-upgrade! Radius: "
-                + newRadius + " blok (Rp" + UPGRADE_COST + ")")
-                .withStyle(ChatFormatting.GREEN), false);
+        comp.addBalance(-5000);
+        int newR = comp.getScanRadius() + 10;
+        comp.setScanRadius(newR);
+        src.sendSuccess(() -> Component.literal("Lahan di-upgrade! Radius: " + newR).withStyle(ChatFormatting.GREEN),
+                false);
         return 1;
     }
 
-    // ========== Utility ==========
+    private static int addMoney(CommandSourceStack src, int amount, int x, int y, int z) {
+        ServerLevel level = src.getLevel();
+        BlockEntity be = level.getBlockEntity(new BlockPos(x, y, z));
+        if (be instanceof ZooComputerBlockEntity comp) {
+            comp.addBalance(amount);
+            src.sendSuccess(() -> Component.literal("Saldo ditambah: Rp " + amount).withStyle(ChatFormatting.GREEN),
+                    false);
+            return 1;
+        }
+        return 0;
+    }
 
-    private static String capitalize(String s) {
-        if (s == null || s.isEmpty())
-            return s;
-        return s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase();
+    private static int resetZoo(CommandSourceStack src, int x, int y, int z) {
+        ServerLevel level = src.getLevel();
+        BlockEntity be = level.getBlockEntity(new BlockPos(x, y, z));
+        if (be instanceof ZooComputerBlockEntity computer) {
+            computer.resetProgress();
+            src.sendSuccess(() -> Component.literal("Progress di-reset!").withStyle(ChatFormatting.RED), true);
+            return 1;
+        }
+        return 0;
     }
 }

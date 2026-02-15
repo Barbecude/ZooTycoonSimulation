@@ -74,7 +74,7 @@ public class RefillFoodGoal extends Goal {
         if (dist < 6.25) {
             BlockEntity be = staff.level().getBlockEntity(targetComputerPos);
             if (be instanceof ZooComputerBlockEntity computer) {
-                long cost = ZooComputerBlockEntity.getFoodCost();
+                int cost = ZooComputerBlockEntity.getFoodCost();
                 if (computer.getBalance() >= cost) {
                     computer.addBalance(-cost); // Kurangi saldo bos
                     staff.setFoodStock(REFILL_AMOUNT);

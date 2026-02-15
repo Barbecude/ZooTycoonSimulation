@@ -9,21 +9,10 @@ import net.minecraft.world.phys.AABB;
 import java.util.EnumSet;
 import java.util.List;
 
-/**
- * FeedAnimalGoal — Staff AI Prioritas 2
- *
- * Logika:
- * "Adakah hewan di radius 15 blok yang belum InLove?"
- * Jika Ada → Jalan ke hewan → Heal + Partikel hati
- * Jika Tidak → Idle (biarkan Wander goal ambil alih)
- */
 public class FeedAnimalGoal extends Goal {
-
     private final StaffEntity staff;
     private Animal targetAnimal = null;
     private int feedCooldown = 0;
-
-    private static final double SEARCH_RANGE = 15.0D;
 
     public FeedAnimalGoal(StaffEntity staff) {
         this.staff = staff;
@@ -38,92 +27,44 @@ public class FeedAnimalGoal extends Goal {
             feedCooldown--;
             return false;
         }
-
-        // Cari hewan terdekat yang belum InLove
         targetAnimal = findHungryAnimal();
         return targetAnimal != null;
     }
 
     @Override
-    public boolean canContinueToUse() {
-        return targetAnimal != null
-                && targetAnimal.isAlive()
-                && staff.hasFood()
-                && staff.distanceToSqr(targetAnimal) < (SEARCH_RANGE * SEARCH_RANGE * 4);
-    }
-
-    @Override
-    public void start() {
-        if (targetAnimal != null) {
-            staff.getNavigation().moveTo(targetAnimal, 1.0D);
-        }
-    }
-
-    @Override
     public void tick() {
-        if (targetAnimal == null || !targetAnimal.isAlive())
+        if (targetAnimal == null)
             return;
+        staff.getNavigation().moveTo(targetAnimal, 1.2D);
+        staff.getLookControl().setLookAt(targetAnimal, 30, 30);
 
-        staff.getLookControl().setLookAt(targetAnimal, 30.0F, 30.0F);
-
-        double dist = staff.distanceToSqr(targetAnimal);
-
-        // Sudah dekat hewan (≤ 2 blok)
-        if (dist < 4.0) {
-            // Beri makan → Heal hewan + Partikel hati
+        if (staff.distanceToSqr(targetAnimal) < 5.0) {
             staff.consumeOneFood();
+            targetAnimal.heal(5.0F);
 
-            // Heal hewan
-            targetAnimal.heal(4.0F);
-
-            // Set InLove (partikel hati otomatis muncul)
-            targetAnimal.setInLove(null);
-
-            // Extra: spawn partikel hati di server
-            if (staff.level() instanceof ServerLevel serverLevel) {
-                serverLevel.sendParticles(ParticleTypes.HEART,
-                        targetAnimal.getX(), targetAnimal.getY() + 1.0,
-                        targetAnimal.getZ(), 5,
-                        0.3, 0.3, 0.3, 0.0);
+            // HANYA BIKIN LOVE JIKA BELUM INLOVE (AUTO SYNC DENGAN SEMUA MOD HEWAN)
+            if (!targetAnimal.isInLove()) {
+                targetAnimal.setInLove(null);
             }
 
-            // Animasi tangan (swing arm)
+            if (staff.level() instanceof ServerLevel server) {
+                server.sendParticles(ParticleTypes.HAPPY_VILLAGER, targetAnimal.getX(), targetAnimal.getY() + 1,
+                        targetAnimal.getZ(), 10, 0.5, 0.5, 0.5, 0.05);
+            }
             staff.swing(staff.getUsedItemHand());
-
-            targetAnimal = null; // Cari hewan berikutnya
-            feedCooldown = 40; // Tunggu 2 detik sebelum beri makan lagi
-        } else {
-            // Belum sampai, terus jalan
-            staff.getNavigation().moveTo(targetAnimal, 1.0D);
+            targetAnimal = null;
+            feedCooldown = 200; // Cooldown 10 detik agar tidak spam!
         }
     }
 
-    @Override
-    public void stop() {
-        targetAnimal = null;
-        staff.getNavigation().stop();
-    }
-
-    /**
-     * Cari hewan (Animal.class) di radius SEARCH_RANGE yang belum InLove.
-     * Kompatibel dengan semua mod karena menggunakan Animal.class!
-     */
     private Animal findHungryAnimal() {
-        AABB searchBox = staff.getBoundingBox().inflate(SEARCH_RANGE);
-        List<Animal> animals = staff.level().getEntitiesOfClass(Animal.class, searchBox);
-
-        Animal nearest = null;
-        double nearestDist = Double.MAX_VALUE;
-
-        for (Animal animal : animals) {
-            if (animal.isInLove())
-                continue; // Sudah kenyang / InLove
-            double d = staff.distanceToSqr(animal);
-            if (d < nearestDist) {
-                nearestDist = d;
-                nearest = animal;
+        List<Animal> animals = staff.level().getEntitiesOfClass(Animal.class, staff.getBoundingBox().inflate(15));
+        for (Animal a : animals) {
+            // Syarat: Darah kurang, atau belum InLove, dan tidak sedang cooldown
+            if (a.getHealth() < a.getMaxHealth() || !a.isInLove()) {
+                return a;
             }
         }
-        return nearest;
+        return null;
     }
 }
