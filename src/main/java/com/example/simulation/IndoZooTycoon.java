@@ -68,6 +68,22 @@ public class IndoZooTycoon {
         public static final RegistryObject<Item> CAPTURE_CAGE_ITEM = ITEMS.register("capture_cage",
                         CaptureCageItem::new);
 
+        public static final RegistryObject<Item> BIOME_CHANGER_ITEM = ITEMS.register("biome_changer",
+                        BiomeChangerItem::new);
+
+        public static final RegistryObject<Block> RESTROOM_BLOCK = BLOCKS.register("restroom",
+                        RestroomBlock::new);
+        public static final RegistryObject<Item> RESTROOM_ITEM = ITEMS.register("restroom",
+                        () -> new BlockItem(RESTROOM_BLOCK.get(), new Item.Properties()));
+
+        public static final RegistryObject<Block> ZOO_BANNER_BLOCK = BLOCKS.register("zoo_banner",
+                        ZooBannerBlock::new);
+        public static final RegistryObject<Item> ZOO_BANNER_ITEM = ITEMS.register("zoo_banner",
+                        () -> new BlockItem(ZOO_BANNER_BLOCK.get(), new Item.Properties()));
+
+        public static final RegistryObject<Item> ANIMAL_TAG_ITEM = ITEMS.register("animal_tag",
+                        AnimalTagItem::new);
+
         // Entities
         public static final RegistryObject<EntityType<StaffEntity>> STAFF_ENTITY = ENTITY_TYPES.register("staff",
                         () -> EntityType.Builder.of(StaffEntity::new, MobCategory.CREATURE).sized(0.6F, 1.95F)
@@ -83,16 +99,16 @@ public class IndoZooTycoon {
                         () -> new ForgeSpawnEggItem(VISITOR_ENTITY, 0xF1C40F, 0xE67E22, new Item.Properties()));
 
         // Block Entity
-        public static final RegistryObject<BlockEntityType<ZooComputerBlockEntity>> ZOO_COMPUTER_BE = BLOCK_ENTITIES
-                        .register("zoo_computer",
-                                        () -> BlockEntityType.Builder
-                                                        .of(ZooComputerBlockEntity::new, ZOO_COMPUTER_BLOCK.get())
-                                                        .build(null));
-
         public static final RegistryObject<BlockEntityType<AnimalFeederBlockEntity>> ANIMAL_FEEDER_BE = BLOCK_ENTITIES
                         .register("animal_feeder",
                                         () -> BlockEntityType.Builder
                                                         .of(AnimalFeederBlockEntity::new, ANIMAL_FEEDER_BLOCK.get())
+                                                        .build(null));
+
+        public static final RegistryObject<BlockEntityType<ZooComputerBlockEntity>> ZOO_COMPUTER_BE = BLOCK_ENTITIES
+                        .register("zoo_computer",
+                                        () -> BlockEntityType.Builder
+                                                        .of(ZooComputerBlockEntity::new, ZOO_COMPUTER_BLOCK.get())
                                                         .build(null));
 
         // Menu
@@ -104,7 +120,6 @@ public class IndoZooTycoon {
         public static final RegistryObject<CreativeModeTab> ZOO_TAB = CREATIVE_TABS.register("zoo_tab",
                         () -> CreativeModeTab.builder()
                                         .title(Component.literal("IndoZoo Tycoon"))
-                                        .icon(() -> ZOO_COMPUTER_ITEM.get().getDefaultInstance())
                                         .displayItems((params, output) -> {
                                                 output.accept(ZOO_COMPUTER_ITEM.get());
                                                 output.accept(ZONE_MARKER_ITEM.get());
@@ -113,6 +128,10 @@ public class IndoZooTycoon {
                                                 output.accept(DRINK_STALL_ITEM.get());
                                                 output.accept(ANIMAL_FEEDER_ITEM.get());
                                                 output.accept(CAPTURE_CAGE_ITEM.get());
+                                                output.accept(BIOME_CHANGER_ITEM.get());
+                                                output.accept(RESTROOM_ITEM.get());
+                                                output.accept(ZOO_BANNER_ITEM.get());
+                                                output.accept(ANIMAL_TAG_ITEM.get());
                                                 output.accept(STAFF_SPAWN_EGG.get());
                                                 output.accept(VISITOR_SPAWN_EGG.get());
                                         })
@@ -131,12 +150,12 @@ public class IndoZooTycoon {
 
                 // Register config
                 ZooConfig.register();
+                PacketHandler.register();
         }
 
         private void onCommonSetup(net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent event) {
                 event.enqueueWork(() -> {
                         AnimalRegistry.initialize();
-                        ZAWAIntegration.initialize();
                         ZooItemRegistry.initialize();
                 });
         }

@@ -35,6 +35,9 @@ public class VisitorEntity extends PathfinderMob {
             EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> THIRST = SynchedEntityData.defineId(VisitorEntity.class,
             EntityDataSerializers.INT);
+    // Mood Sync
+    private static final EntityDataAccessor<Integer> MOOD = SynchedEntityData.defineId(VisitorEntity.class,
+            EntityDataSerializers.INT);
 
     // Fields
     private BlockPos gatePos = null;
@@ -44,10 +47,12 @@ public class VisitorEntity extends PathfinderMob {
     // Moods
     public enum Mood {
         HAPPY("Senang", 0x00FF00),
-        NEUTRAL("Biasa", 0xFFFF00),
+        NEUTRAL("Biasa", 0xFFFFFF),
         TOILET("Kebelet Pipis", 0xFFA500),
         AMAZED("Takjub", 0x00FFFF),
-        ADORED("Gemas", 0xFF69B4);
+        ADORED("Gemas", 0xFF69B4),
+        HUNGRY("Lapar", 0xFF0000),
+        THIRSTY("Haus", 0x0000FF);
 
         public final String label;
         public final int color;
@@ -58,15 +63,23 @@ public class VisitorEntity extends PathfinderMob {
         }
     }
 
-    private Mood currentMood = Mood.HAPPY;
     private int moodTimer = 0;
+    private int toiletTimer = 0; // Tracks duration of TOILET mood
 
     public Mood getMood() {
-        return currentMood;
+        int ordinal = this.entityData.get(MOOD);
+        if (ordinal < 0 || ordinal >= Mood.values().length) {
+            return Mood.NEUTRAL;
+        }
+        return Mood.values()[ordinal];
     }
 
     public void setMood(Mood mood, int duration) {
-        this.currentMood = mood;
+        Mood current = getMood();
+        if (current == mood && this.moodTimer > duration)
+            return; // Keep longer duration
+
+        this.entityData.set(MOOD, mood.ordinal());
         this.moodTimer = duration;
     }
 
@@ -81,6 +94,7 @@ public class VisitorEntity extends PathfinderMob {
         this.entityData.define(IS_CHILD, false);
         this.entityData.define(HUNGER, 0);
         this.entityData.define(THIRST, 0);
+        this.entityData.define(MOOD, Mood.NEUTRAL.ordinal());
     }
 
     public int getVariant() {
@@ -138,9 +152,7 @@ public class VisitorEntity extends PathfinderMob {
         if (PehkuiIntegration.isPehkuiLoaded()) {
             PehkuiIntegration.resizeEntity(this, scale);
         } else {
-            // Fallback? Vanilla doesn't support easy dynamic resize without restart or ugly
-            // hacks.
-            // Just ignore if Pehkui missing.
+            // Fallback?
         }
     }
 
@@ -170,17 +182,50 @@ public class VisitorEntity extends PathfinderMob {
             if (this.tickCount % 600 == 0) { // Every 30 seconds
                 setHunger(Math.min(100, getHunger() + 5));
                 setThirst(Math.min(100, getThirst() + 8));
+            }
 
-                // Mood Logic Check - Toilet
-                if (this.getRandom().nextFloat() < 0.1F) { // 10% chance every 30s
-                    setMood(Mood.TOILET, 600);
+            // Dynamic Mood Updates (More frequent check: every 5s)
+            if (this.tickCount % 100 == 0) {
+                if (getHunger() > 70) {
+                    setMood(Mood.HUNGRY, 120);
+                } else if (getThirst() > 70) {
+                    setMood(Mood.THIRSTY, 120);
+                } else if (this.getRandom().nextFloat() < 0.15F) { // 15% chance for random mood
+                    if (this.getRandom().nextBoolean())
+                        setMood(Mood.HAPPY, 100);
+                    else
+                        setMood(Mood.NEUTRAL, 100);
                 }
+
+                // Toilet override
+                if (this.getRandom().nextFloat() < 0.05F) {
+                    setMood(Mood.TOILET, 1200);
+                }
+            }
+
+            // TOILET MOOD LOGIC
+            if (getMood() == Mood.TOILET) {
+                toiletTimer++;
+                // If not found in 30 seconds (600 ticks)
+                if (toiletTimer > 600) {
+                    // Force leave and deduct money
+                    ZooData data = ZooData.get(this.level());
+                    int penalty = data.getTicketPrice();
+                    data.addBalance(-penalty);
+                    this.forceLeave();
+                }
+            } else {
+                toiletTimer = 0;
             }
 
             if (moodTimer > 0) {
                 moodTimer--;
                 if (moodTimer == 0) {
-                    setMood(Mood.HAPPY, 0); // Revert to happy
+                    if (getMood() != Mood.TOILET) {
+                        setMood(Mood.NEUTRAL, 0);
+                    } else {
+                        // Keep TOILET mood until resolved or forced left
+                    }
                 }
             }
 
@@ -188,7 +233,10 @@ public class VisitorEntity extends PathfinderMob {
             if (this.getRandom().nextFloat() < 0.0005F) {
                 BlockPos pos = this.blockPosition();
                 if (this.level().getBlockState(pos).isAir()) {
-                    this.level().setBlock(pos, IndoZooTycoon.TRASH_BLOCK.get().defaultBlockState(), 3);
+                    int variant = this.getRandom().nextInt(4);
+                    this.level().setBlock(pos,
+                            IndoZooTycoon.TRASH_BLOCK.get().defaultBlockState().setValue(TrashBlock.VARIANT, variant),
+                            3);
                 }
             }
         }
@@ -202,6 +250,7 @@ public class VisitorEntity extends PathfinderMob {
         // Critical Needs
         this.goalSelector.addGoal(2, new FindFacilityGoal(this, "food"));
         this.goalSelector.addGoal(2, new FindFacilityGoal(this, "drink"));
+        this.goalSelector.addGoal(2, new FindFacilityGoal(this, "toilet"));
 
         this.goalSelector.addGoal(3, new OpenDoorGoal(this, true));
         this.goalSelector.addGoal(4, new WatchAnimalsGoal(this));
@@ -227,10 +276,24 @@ public class VisitorEntity extends PathfinderMob {
             this.getNavigation().stop();
             this.getNavigation().moveTo(gatePos.getX(), gatePos.getY(), gatePos.getZ(), 1.2D);
             if (this.distanceToSqr(gatePos.getX(), gatePos.getY(), gatePos.getZ()) < 9) {
+                removeVisitorFromData();
                 this.discard();
             }
         } else {
+            removeVisitorFromData();
             this.discard();
+        }
+    }
+
+    private void removeVisitorFromData() {
+        if (!this.level().isClientSide) {
+            ZooData data = ZooData.get(this.level());
+            if (data.getVisitorCount() > 0) {
+                data.setVisitorCount(data.getVisitorCount() - 1);
+                SyncBalancePacket packet = new SyncBalancePacket(data.getBalance(), data.getTaggedAnimals(),
+                        data.getAnimalCount(), data.getStaffCount(), data.getVisitorCount());
+                PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(), packet);
+            }
         }
     }
 
@@ -247,6 +310,8 @@ public class VisitorEntity extends PathfinderMob {
         tag.putBoolean("IsChild", isChildVisitor());
         tag.putInt("Hunger", getHunger());
         tag.putInt("Thirst", getThirst());
+        tag.putInt("Mood", getMood().ordinal());
+        tag.putInt("MoodTimer", moodTimer);
     }
 
     @Override
@@ -267,6 +332,14 @@ public class VisitorEntity extends PathfinderMob {
             setHunger(tag.getInt("Hunger"));
         if (tag.contains("Thirst"))
             setThirst(tag.getInt("Thirst"));
+        if (tag.contains("Mood")) {
+            int moodIdx = tag.getInt("Mood");
+            if (moodIdx >= 0 && moodIdx < Mood.values().length) {
+                this.entityData.set(MOOD, moodIdx);
+            }
+        }
+        if (tag.contains("MoodTimer"))
+            moodTimer = tag.getInt("MoodTimer");
     }
 
     // --- INNER GOALS ---
@@ -304,14 +377,22 @@ public class VisitorEntity extends PathfinderMob {
                 return false;
             if (type.equals("drink") && visitor.getThirst() < 50)
                 return false;
-            if (visitor.getRandom().nextFloat() > 0.05F)
+            if (type.equals("toilet") && visitor.getMood() != Mood.TOILET)
+                return false;
+
+            if (!type.equals("toilet") && visitor.getRandom().nextFloat() > 0.05F)
                 return false;
 
             // Scan for facility
             BlockPos p = visitor.blockPosition();
-            net.minecraft.world.level.block.Block targetBlock = type.equals("food")
-                    ? IndoZooTycoon.FOOD_STALL_BLOCK.get()
-                    : IndoZooTycoon.DRINK_STALL_BLOCK.get();
+            net.minecraft.world.level.block.Block targetBlock;
+
+            if (type.equals("food"))
+                targetBlock = IndoZooTycoon.FOOD_STALL_BLOCK.get();
+            else if (type.equals("drink"))
+                targetBlock = IndoZooTycoon.DRINK_STALL_BLOCK.get();
+            else
+                targetBlock = IndoZooTycoon.RESTROOM_BLOCK.get();
 
             for (BlockPos pos : BlockPos.betweenClosed(p.offset(-30, -5, -30), p.offset(30, 5, 30))) {
                 if (visitor.level().getBlockState(pos).is(targetBlock)) {
@@ -321,6 +402,8 @@ public class VisitorEntity extends PathfinderMob {
             }
             return false;
         }
+
+        // Keep start() / stop() as is if matching signature
 
         @Override
         public void start() {
@@ -341,14 +424,18 @@ public class VisitorEntity extends PathfinderMob {
                 // Arrived
                 visitor.getNavigation().stop();
                 timer++;
-                if (timer > 40) { // 2 seconds to eat/drink
+                if (timer > 40) { // 2 seconds
                     if (type.equals("food"))
                         visitor.setHunger(0);
-                    else
+                    else if (type.equals("drink"))
                         visitor.setThirst(0);
+                    else if (type.equals("toilet")) {
+                        visitor.setMood(Mood.HAPPY, 100);
+                        visitor.toiletTimer = 0; // Reset rage
+                    }
 
-                    // NEW: Pay for service
-                    if (!visitor.level().isClientSide) {
+                    // Pay for service (food/drink only)
+                    if (!type.equals("toilet") && !visitor.level().isClientSide) {
                         ZooData.get(visitor.level()).addBalance(15);
                         visitor.playSound(net.minecraft.sounds.SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0F, 1.0F);
                     }
@@ -365,8 +452,15 @@ public class VisitorEntity extends PathfinderMob {
 
         @Override
         public boolean canContinueToUse() {
-            return targetPos != null && visitor.level().getBlockState(targetPos).is(
-                    type.equals("food") ? IndoZooTycoon.FOOD_STALL_BLOCK.get() : IndoZooTycoon.DRINK_STALL_BLOCK.get());
+            net.minecraft.world.level.block.Block targetBlock;
+            if (type.equals("food"))
+                targetBlock = IndoZooTycoon.FOOD_STALL_BLOCK.get();
+            else if (type.equals("drink"))
+                targetBlock = IndoZooTycoon.DRINK_STALL_BLOCK.get();
+            else
+                targetBlock = IndoZooTycoon.RESTROOM_BLOCK.get();
+
+            return targetPos != null && visitor.level().getBlockState(targetPos).is(targetBlock);
         }
     }
 
@@ -465,6 +559,15 @@ public class VisitorEntity extends PathfinderMob {
             }
 
             if (visitor.distanceToSqr(gate.getX(), gate.getY(), gate.getZ()) < 4) {
+                if (!visitor.level().isClientSide) {
+                    ZooData data = ZooData.get(visitor.level());
+                    if (data.getVisitorCount() > 0) {
+                        data.setVisitorCount(data.getVisitorCount() - 1);
+                        SyncBalancePacket packet = new SyncBalancePacket(data.getBalance(), data.getTaggedAnimals(),
+                                data.getAnimalCount(), data.getStaffCount(), data.getVisitorCount());
+                        PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(), packet);
+                    }
+                }
                 visitor.discard();
             }
         }

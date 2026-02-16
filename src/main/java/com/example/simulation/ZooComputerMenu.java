@@ -12,7 +12,8 @@ import net.minecraft.world.item.ItemStack;
 public class ZooComputerMenu extends AbstractContainerMenu {
 
     private final ContainerData data;
-    private final BlockPos blockPos;
+
+    // BlockPos removed as this is now a global menu
 
     public static final int DATA_BAL_HI = 0;
     public static final int DATA_BAL_LO = 1;
@@ -26,21 +27,15 @@ public class ZooComputerMenu extends AbstractContainerMenu {
     private static final int DATA_COUNT = 9;
 
     // Server constructor
-    public ZooComputerMenu(int id, Inventory inv, BlockPos pos, ContainerData data) {
+    public ZooComputerMenu(int id, Inventory inv, ContainerData data) {
         super(IndoZooTycoon.ZOO_COMPUTER_MENU.get(), id);
-        this.blockPos = pos;
         this.data = data;
         addDataSlots(data);
     }
 
     // Client constructor (from network)
     public ZooComputerMenu(int id, Inventory inv, net.minecraft.network.FriendlyByteBuf buf) {
-        this(id, inv, buf.readBlockPos(), new net.minecraft.world.inventory.SimpleContainerData(DATA_COUNT));
-    }
-
-    // Client constructor (local)
-    public ZooComputerMenu(int id, Inventory inv) {
-        this(id, inv, BlockPos.ZERO, new net.minecraft.world.inventory.SimpleContainerData(DATA_COUNT));
+        this(id, inv, new net.minecraft.world.inventory.SimpleContainerData(DATA_COUNT));
     }
 
     public int getTicketPrice() {
@@ -58,20 +53,7 @@ public class ZooComputerMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return player.distanceToSqr(blockPos.getX() + 0.5,
-                blockPos.getY() + 0.5, blockPos.getZ() + 0.5) <= 64.0;
-    }
-
-    @Override
-    public boolean clickMenuButton(Player player, int id) {
-        if (id == 99) {
-            // Manual Refresh
-            if (player.level().getBlockEntity(blockPos) instanceof ZooComputerBlockEntity be) {
-                be.forceUpdate();
-                return true;
-            }
-        }
-        return super.clickMenuButton(player, id);
+        return true;
     }
 
     public int getBalance() {
@@ -100,7 +82,5 @@ public class ZooComputerMenu extends AbstractContainerMenu {
         return data.get(DATA_RADIUS);
     }
 
-    public BlockPos getBlockPos() {
-        return blockPos;
-    }
+    // getBlockPos removed
 }

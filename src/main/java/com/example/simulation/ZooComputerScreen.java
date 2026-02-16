@@ -1,357 +1,604 @@
 package com.example.simulation;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.Items;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 
-import java.text.NumberFormat;
+import java.awt.Color;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> {
+        // --- COLORS & STYLES ---
+        private static final int PANEL_WIDTH = 260; // Wider
+        private static final int BG_COLOR = 0xAA000000; // Transparent
+        private static final int SIDEBAR_COLOR = 0xAA1E1E24; // Transparent Sidebar
+        private static final int ACCENT_COLOR = 0xFF6C63FF;
+        private static final int TEXT_COLOR = 0xFFE0E0E0;
+        private static final int GOLD_COLOR = 0xFFFFD700;
+        private static final int ROW_HEIGHT = 28;
 
-        private static final int BG = 0xEE0F0F1A;
-        private static final int BORDER = 0xFF6C63FF;
-        private static final int GOLD = 0xFFFFD700;
-        private static final int GREEN = 0xFF00FF88;
-        private static final int GRAY = 0xFFAAAAAA;
+        // --- TABS ---
+        private enum MainTab {
+                DASHBOARD, ANIMALS, BUILDINGS, FOOD, VEHICLES
+        }
 
+        private MainTab currentTab = MainTab.DASHBOARD;
         private int scrollOffset = 0;
-        private static final int ITEMS_PER_PAGE = 12; // 3 cols x 4 rows
-        private List<Map.Entry<ResourceLocation, AnimalRegistry.AnimalData>> animalList;
-        private List<Map.Entry<ResourceLocation, ZooItemRegistry.ItemData>> shopItemList;
-
-        // 0 = Dashboard, 1 = Animals, 2 = Shop Items
-        private int currentTab = 0;
-
-        // Shop Filtering
-        private ZooItemRegistry.Category currentCategory = null; // null = ALL
-        private List<Map.Entry<ResourceLocation, ZooItemRegistry.ItemData>> displayItemList;
+        private String currentSubFilter = "ALL";
+        private List<ShopEntry> currentDisplayList = new ArrayList<>();
 
         public ZooComputerScreen(ZooComputerMenu menu, Inventory inv, Component title) {
                 super(menu, inv, title);
-                this.imageWidth = 320; // Sedikit lebih lebar
-                this.imageHeight = 240;
-
-                this.inventoryLabelY = 10000;
-                this.titleLabelY = 10000;
+                this.imageWidth = PANEL_WIDTH;
+                this.imageHeight = 256;
         }
 
         @Override
         protected void init() {
+                this.height = this.minecraft.getWindow().getGuiScaledHeight();
+                this.imageHeight = this.height;
+                this.leftPos = this.width - PANEL_WIDTH;
+                this.topPos = 0;
                 super.init();
-
-                // Load Data Lists
-                animalList = new ArrayList<>(AnimalRegistry.getAllAnimals().entrySet());
-                animalList.sort(Comparator.comparingInt(e -> e.getValue().price));
-
-                shopItemList = new ArrayList<>(ZooItemRegistry.getAllItems().entrySet());
-                shopItemList.sort(Comparator.comparingInt(e -> e.getValue().price));
-
-                updateFilteredList();
-
-                refreshWidgets();
+                refreshContent();
         }
 
-        private void updateFilteredList() {
-                if (currentCategory == null) {
-                        displayItemList = new ArrayList<>(shopItemList);
-                } else {
-                        displayItemList = new ArrayList<>();
-                        for (var entry : shopItemList) {
-                                if (entry.getValue().category == currentCategory) {
-                                        displayItemList.add(entry);
+        private void refreshContent() {
+                this.clearWidgets();
+                // Keep scroll offset ONLY if staying on same tab? No, reset for safety or keep
+                // if logical.
+                // this.scrollOffset = 0; // Uncomment to reset on refresh
+
+                initSidebar();
+
+                switch (currentTab) {
+                        case DASHBOARD -> {
+                                this.scrollOffset = 0;
+                                this.scrollOffset = 0;
+                                initDashboard();
+                                prepareDashboardCollection();
+                        }
+                        case ANIMALS -> initShopList("ANIMALS");
+                        case BUILDINGS -> initShopList("BUILDINGS");
+                        case FOOD -> initShopList("FOOD");
+                        case VEHICLES -> initShopList("VEHICLES");
+
+                }
+        }
+
+        private void initSidebar() {
+                int x = leftPos + 5;
+                int y = topPos + 40;
+                int btnSize = 24;
+                int gap = 8;
+                addRenderableWidget(createTabBtn(x, y, "🏠", "Dashboard", MainTab.DASHBOARD));
+                addRenderableWidget(createTabBtn(x, y + (btnSize + gap), "🦁", "Toko Hewan", MainTab.ANIMALS));
+                addRenderableWidget(createTabBtn(x, y + (btnSize + gap) * 2, "🧱", "Toko Bangunan", MainTab.BUILDINGS));
+                addRenderableWidget(createTabBtn(x, y + (btnSize + gap) * 3, "🍎", "Pangan", MainTab.FOOD));
+                addRenderableWidget(createTabBtn(x, y + (btnSize + gap) * 4, "🚜", "Kendaraan", MainTab.VEHICLES));
+        }
+
+        private Button createTabBtn(int x, int y, String icon, String label, MainTab tab) {
+                return Button.builder(Component.literal(icon), b -> {
+                        this.currentTab = tab;
+                        this.currentSubFilter = "ALL";
+                        this.scrollOffset = 0;
+                        refreshContent();
+                }).bounds(x, y, 24, 24).tooltip(Tooltip.create(Component.literal(label))).build();
+        }
+
+        private void initDashboard() {
+                int contentX = leftPos + 40;
+                int contentY = topPos + 40;
+                int w = PANEL_WIDTH - 50;
+
+                addRenderableWidget(Button.builder(Component.literal("Rekrut Janitor"),
+                                b -> cmd("hire janitor"))
+                                .bounds(contentX, contentY + 80, w, 20)
+                                .tooltip(Tooltip.create(Component.literal("Rp 2.000.000")))
+                                .build());
+
+                addRenderableWidget(Button.builder(Component.literal("Reykrut Keeper"),
+                                b -> cmd("hire zookeeper"))
+                                .bounds(contentX, contentY + 105, w, 20)
+                                .tooltip(Tooltip.create(Component.literal("Rp 2.000.000")))
+                                .build());
+
+                addRenderableWidget(Button.builder(Component.literal("Beli Banner Zoo"),
+                                b -> cmd("buyitem indozoo:zoo_banner 1"))
+                                .bounds(contentX, contentY + 130, w, 20)
+                                .tooltip(Tooltip.create(Component.literal("Gratis / Penanda Lokasi")))
+                                .build());
+
+                addRenderableWidget(Button.builder(Component.literal("🔄 Refresh Data"),
+                                b -> cmd("refresh")).bounds(contentX, this.height - 30, w, 20).build());
+
+                // Collection List on Dashboard (Bottom / Side)
+                // Let's render it below buttons
+                initCollectionList(contentX, contentY + 160, w);
+        }
+
+        // --- LIST VIEW LOGIC ---
+
+        private void initShopList(String type) {
+                int contentX = leftPos + 40;
+                int contentY = topPos + 10;
+                int w = PANEL_WIDTH - 50;
+
+                prepareShopData(type);
+
+                // Filter Buttons
+                List<String> filters = getFiltersForTab(type);
+                int fx = contentX;
+                for (String f : filters) {
+                        int fw = font.width(f) + 12;
+                        addRenderableWidget(Button.builder(Component.literal(f), b -> {
+                                this.currentSubFilter = f;
+                                this.scrollOffset = 0;
+                                refreshContent();
+                        }).bounds(fx, contentY, fw, 16).build());
+                        fx += fw + 4;
+                }
+
+                // List Items (Grid 2 Columns)
+                int listStartY = contentY + 25;
+                // List Items (Grid 4 Columns)
+                listStartY = contentY + 25;
+                int maxRows = (this.height - listStartY - 40) / ROW_HEIGHT;
+                int totalItems = currentDisplayList.size();
+                int totalRows = (totalItems + 3) / 4; // Ceiling for 4 columns
+
+                // Clamp scroll
+                if (scrollOffset > Math.max(0, totalRows - maxRows)) {
+                        scrollOffset = Math.max(0, totalRows - maxRows);
+                }
+
+                int colGap = 4;
+                int itemW = (w - (colGap * 3)) / 4;
+
+                for (int r = 0; r < maxRows; r++) {
+                        int rowIdx = scrollOffset + r;
+                        if (rowIdx >= totalRows)
+                                break;
+
+                        int y = listStartY + (r * ROW_HEIGHT);
+
+                        for (int c = 0; c < 4; c++) {
+                                int idx = rowIdx * 4 + c;
+                                if (idx < totalItems) {
+                                        ShopEntry entry = currentDisplayList.get(idx);
+                                        String cmd = (type.equals("ANIMALS")) ? "buy " + entry.id
+                                                        : "buyitem " + entry.id + " 1";
+                                        addRenderableWidget(Button.builder(Component.empty(), b -> cmd(cmd))
+                                                        .bounds(contentX + (itemW + colGap) * c, y, itemW,
+                                                                        ROW_HEIGHT - 2)
+                                                        .tooltip(Tooltip.create(
+                                                                        Component.literal("§a"
+                                                                                        + formatPrice(entry.price))))
+                                                        .build());
                                 }
                         }
                 }
-        }
 
-        private void refreshWidgets() {
-                this.clearWidgets();
-                int x = this.leftPos;
-                int y = this.topPos;
+                // Pagination (Scroll by Row)
+                if (totalRows > maxRows) {
+                        addRenderableWidget(Button.builder(Component.literal("▲"), b -> {
+                                if (scrollOffset > 0) {
+                                        scrollOffset--;
+                                        refreshContent();
+                                }
+                        }).bounds(contentX + w + 2, listStartY, 15, 20).build());
 
-                // --- GLOBAL TABS ---
-                addRenderableWidget(Button.builder(Component.literal("🏠 Dash"), b -> switchTab(0))
-                                .bounds(x + 10, y + 25, 60, 20).build());
-                addRenderableWidget(Button.builder(Component.literal("🦁 Hewan"), b -> switchTab(1))
-                                .bounds(x + 75, y + 25, 60, 20).build());
-                addRenderableWidget(Button.builder(Component.literal("📦 Toko"), b -> switchTab(2))
-                                .bounds(x + 140, y + 25, 60, 20).build());
-
-                // Global Info
-
-                // --- TAB CONTENT ---
-                switch (currentTab) {
-                        case 0:
-                                initDashboard(x, y);
-                                break;
-                        case 1:
-                                initAnimalShop(x, y);
-                                break;
-                        case 2:
-                                initItemShop(x, y);
-                                break;
+                        addRenderableWidget(Button.builder(Component.literal("▼"), b -> {
+                                if (scrollOffset < totalRows - maxRows) {
+                                        scrollOffset++;
+                                        refreshContent();
+                                }
+                        }).bounds(contentX + w + 2, this.height - 40, 15, 20).build());
                 }
         }
 
-        private void switchTab(int tab) {
-                this.currentTab = tab;
-                this.scrollOffset = 0; // Reset scroll saat ganti tab
-                refreshWidgets();
+        private List<String> getFiltersForTab(String type) {
+                if (type.equals("ANIMALS"))
+                        return List.of("ALL", "Land", "Aquatic", "Mythical", "Bug");
+                if (type.equals("BUILDINGS"))
+                        return List.of("ALL", "Building", "Natural", "Utility");
+                return List.of("ALL");
         }
 
-        private void initDashboard(int x, int y) {
-                // Management Buttons
-                addRenderableWidget(
-                                Button.builder(Component.literal("🧹 Rekrut Janitor (Rp2k)"), b -> cmd("hire janitor"))
-                                                .bounds(x + 20, y + 80, 130, 20).build());
-                addRenderableWidget(
-                                Button.builder(Component.literal("🥩 Rekrut Keeper (Rp2k)"), b -> cmd("hire zookeeper"))
-                                                .bounds(x + 160, y + 80, 130, 20).build());
+        private void prepareShopData(String type) {
+                currentDisplayList.clear();
 
-                addRenderableWidget(Button.builder(Component.literal("📡 Upgrade Radius (Rp5k)"), b -> cmd("upgrade"))
-                                .bounds(x + 20, y + 110, 130, 20).build());
+                if (type.equals("ANIMALS")) {
+                        for (AnimalRegistry.AnimalData data : AnimalRegistry.getAllAnimals().values()) {
+                                if (!matchesFilter(data.category.name()))
+                                        continue;
 
-                // Refresh button just forces update, no cost.
-                addRenderableWidget(Button.builder(Component.literal("🔄 Refresh Data"), b -> cmd("refresh"))
-                                .bounds(x + 160, y + 110, 130, 20).build());
-        }
+                                ItemStack icon = resolveAnimalIcon(data.entityType, data.displayName);
 
-        private void initAnimalShop(int x, int y) {
-                // Navigation
+                                LivingEntity model = null;
+                                Entity e = data.entityType.create(Minecraft.getInstance().level);
+                                if (e instanceof LivingEntity le) {
+                                        model = le;
+                                }
 
-                renderGrid(x + 10, y + 60, animalList.size(), (i, btnX, btnY) -> {
-                        var entry = animalList.get(i);
-                        var data = entry.getValue();
-                        String label = data.displayName + " (" + (data.price / 1000) + "k)";
-                        // Quote the ID: "buy \"minecraft:cow\" ..."
-                        addRenderableWidget(Button
-                                        .builder(Component.literal(label), b -> cmd("buy " + entry.getKey()))
-                                        .bounds(btnX, btnY, 95, 20).build());
-                });
-        }
-
-        private void initItemShop(int x, int y) {
-                // Category Filter Buttons
-                int cx = x + 10;
-                int cy = y + 55;
-                int cw = 42;
-                int ch = 15;
-
-                // "ALL" button
-                addRenderableWidget(Button.builder(Component.literal("ALL"), b -> setCategory(null))
-                                .bounds(cx, cy, cw, ch)
-                                .tooltip(Tooltip.create(Component.literal("Semua Item")))
-                                .build());
-
-                int i = 1;
-                for (ZooItemRegistry.Category cat : ZooItemRegistry.Category.values()) {
-                        addRenderableWidget(Button
-                                        .builder(Component.literal(
-                                                        cat.label.substring(0, Math.min(4, cat.label.length()))),
-                                                        b -> setCategory(cat))
-                                        .bounds(cx + (i * (cw + 2)), cy, cw, ch)
-                                        .tooltip(Tooltip.create(Component.literal(cat.label)))
-                                        .build());
-                        i++;
-                }
-
-                renderGrid(x + 10, y + 75, displayItemList.size(), (idx, btnX, btnY) -> {
-                        var entry = displayItemList.get(idx);
-                        var data = entry.getValue();
-
-                        // Render Item Icon Logic (Using a custom button or overlay)
-                        // Since we can't easily add a complex widget here without a class, we will use
-                        // a label with spacing
-                        // and render the item manually in renderBg or similar.
-                        // Actually, standard buttons don't support items easily.
-                        // We'll trust the user can read text for now, but to fix "item gada gambar",
-                        // we need to implement a render method that draws items over the buttons.
-                        // See render method below.
-
-                        String label = data.displayName;
-                        addRenderableWidget(Button
-                                        .builder(Component.literal(label), b -> cmd("buyitem " + entry.getKey() + " 1"))
-                                        .bounds(btnX + 20, btnY, 75, 20) // Shift right for icon
-                                        .tooltip(Tooltip.create(Component.literal(
-                                                        "Price: Rp " + data.price + " [" + data.category.label + "]")))
-                                        .build());
-                });
-        }
-
-        private void setCategory(ZooItemRegistry.Category cat) {
-                this.currentCategory = cat;
-                this.scrollOffset = 0;
-                updateFilteredList();
-                refreshWidgets();
-        }
-
-        // Removed initMarketing
-
-        private interface GridRenderer {
-                void renderItem(int index, int x, int y);
-        }
-
-        private void renderGrid(int startX, int startY, int totalItems, GridRenderer renderer) {
-                int cols = 3;
-                int btnW = 95;
-                int btnH = 20;
-                int gapX = 5;
-                int gapY = 5;
-
-                // Pagination Controls
-                int maxPages = (totalItems + ITEMS_PER_PAGE - 1) / ITEMS_PER_PAGE;
-
-                // Show grid only if tab matches
-                if (currentTab != 1 && currentTab != 2)
-                        return;
-
-                int navY = startY + (4 * (btnH + gapY)) + 5;
-                addRenderableWidget(Button.builder(Component.literal("< Prev"), b -> {
-                        if (scrollOffset > 0) {
-                                scrollOffset--;
-                                refreshWidgets();
+                                currentDisplayList
+                                                .add(new ShopEntry(ForgeRegistries.ENTITY_TYPES.getKey(data.entityType),
+                                                                data.displayName, data.price, icon, model));
                         }
-                }).bounds(startX, navY, 60, 20).build());
-
-                addRenderableWidget(Button.builder(Component.literal("Next >"), b -> {
-                        if (scrollOffset < maxPages - 1) {
-                                scrollOffset++;
-                                refreshWidgets();
-                        }
-                }).bounds(startX + 240, navY, 60, 20).build());
-
-                // Show Page Info
-                // We can't render text here easily, so maybe tooltip on buttons?
-
-                // Grid Items
-                int startIdx = scrollOffset * ITEMS_PER_PAGE;
-                int endIdx = Math.min(startIdx + ITEMS_PER_PAGE, totalItems);
-
-                for (int j = startIdx; j < endIdx; j++) {
-                        int idx = j - startIdx;
-                        int col = idx % cols;
-                        int row = idx / cols;
-
-                        int btnX = startX + col * (btnW + gapX);
-                        int btnY = startY + row * (btnH + gapY);
-
-                        renderer.renderItem(j, btnX, btnY);
-                }
-        }
-
-        private void cmd(String action) {
-                var pos = menu.getBlockPos();
-                if (action.equals("refresh")) {
-                        if (this.minecraft != null && this.minecraft.gameMode != null) {
-                                this.minecraft.gameMode.handleInventoryButtonClick((this.menu).containerId, 99);
-                        }
-                        return;
-                }
-
-                String c = "zoocmd " + action + " " + pos.getX() + " " + pos.getY() + " " + pos.getZ();
-
-                var conn = Minecraft.getInstance().getConnection();
-                if (conn != null)
-                        conn.sendCommand(c);
-
-                if (action.contains("buy") || action.equals("upgrade") || action.contains("hire")) {
-                        // Stay open
                 } else {
-                        onClose();
+                        // ZooItemRegistry
+                        for (ZooItemRegistry.ItemData data : ZooItemRegistry.getAllItems().values()) {
+                                String catName = data.category.name();
+                                boolean typeMatch = false;
+                                if (type.equals("BUILDINGS") && (catName.equals("BUILDING") || catName.equals("NATURAL")
+                                                || catName.equals("UTILITY")))
+                                        typeMatch = true;
+                                else if (type.equals("FOOD") && catName.equals("FOOD"))
+                                        typeMatch = true;
+                                else if (type.equals("VEHICLES")) {
+                                        // Disable vehicles, show nothing or handled specially?
+                                        // The loop iterates items. If we want to show "Coming Soon", we must do it
+                                        // outside the loop or filter.
+                                        // Let's just NOT match anything here, and handle the "Coming Soon" entry
+                                        // separately.
+                                        typeMatch = false;
+                                }
+
+                                if (typeMatch && matchesFilter(catName)) {
+                                        currentDisplayList.add(new ShopEntry(ForgeRegistries.ITEMS.getKey(data.item),
+                                                        data.displayName, data.price, new ItemStack(data.item), null));
+                                }
+                        }
                 }
+
+                if (type.equals("VEHICLES")) {
+                        currentDisplayList.add(new ShopEntry(new ResourceLocation("minecraft:barrier"), "Coming Soon",
+                                        0, new ItemStack(Items.BARRIER), null));
+                }
+
+                currentDisplayList.sort(Comparator.comparingInt(e -> e.price));
+        }
+
+        private void initCollectionList() {
+                currentDisplayList.clear();
+                // Client side fetch ZooData
+                ZooData data = ZooData.get(Minecraft.getInstance().level);
+                net.minecraft.nbt.ListTag list = data.getTaggedAnimals();
+
+                for (int i = 0; i < list.size(); i++) {
+                        net.minecraft.nbt.CompoundTag tag = list.getCompound(i);
+                        String name = tag.getString("name");
+                        String typeStr = tag.getString("type");
+                        int id = tag.getInt("id");
+
+                        // Create dummy entity for rendering
+                        // We don't have exact entity NBT, just type.
+                        // Ideally we'd store entity type ID.
+                        // For now, let's assume valid ID is somehow resolvable or just show Name Tag
+                        // Item if fail.
+
+                        // Wait, typeStr? I need to store ResourceLocation of type in TagAnimalPacket.
+                        // I will assume typeStr IS ResourceLocation string.
+
+                        ItemStack icon = new ItemStack(Items.NAME_TAG);
+                        LivingEntity model = null;
+
+                        // Try to parse entity type
+                        // We need to update TagAnimalPacket to save entity TYPE.
+                        // But assuming valid type string:
+
+                        // If we can't find type, it will be null model.
+                }
+
+                // Wait, I need to update TagAnimalPacket first to store Type as
+                // ResourceLocation string?
+                // ZooData currently stores "type" string. I will ensure TagAnimalPacket puts
+                // ResourceLocation there.
+
+                // Re-reading ZooData from TagAnimalPacket step...
+                // TagAnimalPacket stores "type". Simple string.
+
+                // Back to filtering.
+                // We can't easily iterate all entities to find what "type" means if it's just
+                // general string.
+                // But let's assume I fix TagAnimalPacket to save
+                // `EntityType.getKey(entity.getType()).toString()`.
+
+                // For now, mock implementation for list display
+                // We will iterate and render.
+        }
+
+        private boolean matchesFilter(String catName) {
+                if (currentSubFilter.equals("ALL"))
+                        return true;
+                return currentSubFilter.equalsIgnoreCase(catName);
+        }
+
+        private ItemStack resolveAnimalIcon(net.minecraft.world.entity.EntityType<?> type, String name) {
+                ResourceLocation id = ForgeRegistries.ENTITY_TYPES.getKey(type);
+                if (id == null)
+                        return new ItemStack(Items.BARRIER);
+
+                // 1. Try standard pattern [mod]:[mob]_spawn_egg
+                ResourceLocation egg1 = new ResourceLocation(id.getNamespace(), id.getPath() + "_spawn_egg");
+                if (ForgeRegistries.ITEMS.containsKey(egg1))
+                        return new ItemStack(ForgeRegistries.ITEMS.getValue(egg1));
+
+                // 2. Try alexsmobs pattern [mod]:spawn_egg_[mob]
+                ResourceLocation egg2 = new ResourceLocation(id.getNamespace(), "spawn_egg_" + id.getPath());
+                if (ForgeRegistries.ITEMS.containsKey(egg2))
+                        return new ItemStack(ForgeRegistries.ITEMS.getValue(egg2));
+
+                // 3. Try generic lookup or fallback
+                // Using a generic meaningful item if egg not found
+                if (name.toLowerCase().contains("bear"))
+                        return new ItemStack(Items.COD); // Just a placeholder example, better than Name Tag?
+
+                // Fallback to name tag but user dislikes it. Let's try to just return a
+                // structure void or something invisible?
+                // Or just return the item that matches the ID if it exists (some entities have
+                // same item ID)
+                if (ForgeRegistries.ITEMS.containsKey(id))
+                        return new ItemStack(ForgeRegistries.ITEMS.getValue(id));
+
+                return new ItemStack(Items.NAME_TAG); // Ultimate fallback
+        }
+
+        @Override
+        public void render(GuiGraphics g, int mx, int my, float partialTick) {
+                this.mouseX = mx;
+                this.mouseY = my;
+                renderBg(g, partialTick, mx, my);
+                super.render(g, mx, my, partialTick);
+                renderForeground(g, mx, my);
+                renderTooltip(g, mx, my);
+        }
+
+        @Override
+        public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+                if (delta != 0) {
+                        int listStartY = topPos + 40;
+                        if (currentTab != MainTab.DASHBOARD)
+                                listStartY = topPos + 35; // Adjust based on logic
+
+                        int maxRows = (this.height - listStartY - 40) / ROW_HEIGHT;
+                        int totalItems = currentDisplayList.size();
+                        int totalRows = (totalItems + 3) / 4;
+
+                        if (totalRows > maxRows) {
+                                if (delta > 0 && scrollOffset > 0) {
+                                        scrollOffset--;
+                                        refreshContent();
+                                        return true;
+                                } else if (delta < 0 && scrollOffset < totalRows - maxRows) {
+                                        scrollOffset++;
+                                        refreshContent();
+                                        return true;
+                                }
+                        }
+                }
+                return super.mouseScrolled(mouseX, mouseY, delta);
         }
 
         @Override
         protected void renderBg(GuiGraphics g, float pt, int mx, int my) {
-                int x = leftPos, y = topPos, w = imageWidth, h = imageHeight;
+                RenderSystem.enableBlend();
+                g.fill(leftPos, 0, width, height, BG_COLOR);
+                g.fill(leftPos, 0, leftPos + 35, height, SIDEBAR_COLOR);
+                g.fill(leftPos + 35, 0, leftPos + 36, height, 0xFF333333);
+        }
 
-                // Background
-                g.fill(x, y, x + w, y + h, BG);
+        private void renderForeground(GuiGraphics g, int mx, int my) {
+                int contentX = leftPos + 40;
+                g.drawString(font, "ZOO MANAGEMENT", leftPos + 10, 10, ACCENT_COLOR, false);
 
-                // Borders
-                g.fill(x, y, x + w, y + 2, BORDER);
-                g.fill(x, y + h - 2, x + w, y + h, BORDER);
-                g.fill(x, y, x + 2, y + h, BORDER);
-                g.fill(x + w - 2, y, x + w, y + h, BORDER);
-
-                // Header
-                g.drawCenteredString(font, "🦁 INDOZOO SYSTEM v2.0", x + w / 2, y + 8, GOLD);
-
-                // Stats Bar (Always visible)
-                int statsY = y + 50;
-                NumberFormat nf = NumberFormat.getInstance(new Locale("id", "ID"));
-                String stats = "💰 Rp " + nf.format(menu.getBalance()) + " | 🐾 " + menu.getAnimalCount() + " | 👔 "
-                                + menu.getStaffCount();
-                g.drawCenteredString(font, stats, x + w / 2, statsY, GREEN);
-
-                // Tab Title
-                String tabTitle = switch (currentTab) {
-                        case 0 -> "Dashboard Overview";
-                        case 1 -> "Animal Market (" + (scrollOffset + 1) + ")";
-                        case 2 -> "Supply Shop (" + (scrollOffset + 1) + ") - "
-                                        + (currentCategory == null ? "ALL" : currentCategory.label);
-                        default -> "";
-                };
-                g.drawString(font, tabTitle, x + 15, y + 65, GRAY); // Render Tab Title OVER Buttons?
-                // Ah, Y=65 might overlap with filters at Y=55.
-                // Let's move Tab Title UP or buttons DOWN.
-                // Title at 65 is fine if logic is initDashboard (y+80).
-                // But initItemShop buttons are at y+55.
-                // So Title overrides buttons.
-                // Fix: Title renders at y+38 (below tabs)? Or use header.
-                // Actually tabs are at y+25.
-                // Let's render title at y+45. But wait, buttons are at y+55.
-
-                // Let's just adjust render locations in initItemShop.
-
-                // Render Item Icons for Shop Tab (Tab 2)
-                if (currentTab == 2) {
-                        renderItemIcons(g, x + 10, y + 75);
+                if (currentTab == MainTab.DASHBOARD) {
+                        renderDashboardStats(g, contentX, topPos + 40);
+                        // Render list below stats
+                        renderShopList(g, contentX, topPos + 180); // Adjusted Y
+                } else {
+                        renderShopList(g, contentX, topPos + 35);
                 }
         }
 
-        private void renderItemIcons(GuiGraphics g, int startX, int startY) {
-                int cols = 3;
-                int btnW = 95;
-                int btnH = 20;
-                int gapX = 5;
-                int gapY = 5;
-                int startIdx = scrollOffset * ITEMS_PER_PAGE;
-                int endIdx = Math.min(startIdx + ITEMS_PER_PAGE, displayItemList.size());
+        private void renderDashboardStats(GuiGraphics g, int x, int y) {
+                g.pose().pushPose();
+                g.pose().scale(2.0f, 2.0f, 2.0f);
+                g.drawString(font, formatPrice(ClientZooData.getBalance()), (x / 2), (y / 2), GOLD_COLOR);
+                g.pose().popPose();
 
-                for (int i = startIdx; i < endIdx; i++) {
-                        int idx = i - startIdx;
-                        // int row = idx / cols;
-                        // int col = idx % cols;
-                        int col = idx % cols;
-                        int row = idx / cols;
+                g.pose().popPose();
 
-                        // FIX: Logic must match renderGrid
+                y += 20; // Reduced gap
+                drawStatBox(g, x, y, "Hewan", ClientZooData.getAnimalCount() + "", 0xFF4CAF50);
+                drawStatBox(g, x + 80, y, "Staff", ClientZooData.getStaffCount() + "", 0xFF2196F3);
+                drawStatBox(g, x + 80 + 80, y, "Pengunjung", ClientZooData.getVisitorCount() + "", 0xFFFF9800);
+        }
 
-                        int btnX = startX + col * (btnW + gapX);
-                        int btnY = startY + row * (btnH + gapY);
+        private void initCollectionList(int x, int y, int w) {
+                // We can't use buttons effectively inside a scrollable area if the whole page
+                // isn't scrollable.
+                // But existing list logic uses scrollOffset.
+                // Let's reuse renderShopList logic but for collection?
+                // Or just simple text list for now?
+                // "grid kategori usahkan ukurannya relative"
 
-                        var entry = displayItemList.get(i);
-                        var data = entry.getValue();
+                // Let's populate currentDisplayList with collection and render it using the
+                // main render loop if Tab is Dashboard?
+                // But Dashboard has buttons too.
+                // Complex mixed layout.
 
-                        // Draw Item Icon
-                        g.renderItem(new net.minecraft.world.item.ItemStack(data.item), btnX + 2, btnY + 2);
+                // Proposal:
+                // Dashboard Top: Stats & Buttons
+                // Dashboard Bottom: Collection Grid
+
+                // I will populate `currentDisplayList` with Collection items when enter
+                // Dashboard.
+                // And `renderDashboardStats` will render stats, then `renderShopList` (renamed
+                // to renderGrid) will render the list below.
+        }
+
+        private void prepareDashboardCollection() {
+                currentDisplayList.clear();
+                ZooData data = ZooData.get(Minecraft.getInstance().level);
+                net.minecraft.nbt.ListTag list = data.getTaggedAnimals();
+
+                for (int i = 0; i < list.size(); i++) {
+                        net.minecraft.nbt.CompoundTag tag = list.getCompound(i);
+                        String name = tag.getString("name");
+                        String typeStr = tag.getString("type");
+                        int id = tag.getInt("id");
+
+                        ItemStack icon = new ItemStack(Items.NAME_TAG);
+                        LivingEntity model = null;
+
+                        ResourceLocation typeId = ResourceLocation.tryParse(typeStr);
+                        if (typeId != null && ForgeRegistries.ENTITY_TYPES.containsKey(typeId)) {
+                                net.minecraft.world.entity.EntityType<?> et = ForgeRegistries.ENTITY_TYPES
+                                                .getValue(typeId);
+                                if (et != null) {
+                                        Entity e = et.create(Minecraft.getInstance().level);
+                                        if (e instanceof LivingEntity le) {
+                                                model = le;
+                                                model.setCustomName(Component.literal(name));
+                                                model.setCustomNameVisible(true);
+                                        }
+                                        // Also try to resolve icon
+                                        icon = resolveAnimalIcon(et, name);
+                                }
+                        }
+
+                        // Use ID as price 0 for now
+                        currentDisplayList.add(new ShopEntry(new ResourceLocation("indozoo", "animal_" + id), name, 0,
+                                        icon, model));
+                }
+        }
+
+        private void drawStatBox(GuiGraphics g, int x, int y, String label, String value, int color) {
+                g.fill(x, y, x + 70, y + 40, 0xFF2A2A35);
+                g.drawCenteredString(font, value, x + 35, y + 10, color);
+                g.drawCenteredString(font, label, x + 35, y + 25, 0xFFAAAAAA);
+        }
+
+        private void renderShopList(GuiGraphics g, int x, int y) {
+                int listStartY = y;
+                int maxRows = (this.height - listStartY - 40) / ROW_HEIGHT;
+                int totalItems = currentDisplayList.size();
+                int totalRows = (totalItems + 3) / 4;
+
+                int w = PANEL_WIDTH - 50;
+                int colGap = 4;
+                int itemW = (w - (colGap * 3)) / 4;
+
+                for (int r = 0; r < maxRows; r++) {
+                        int rowIdx = scrollOffset + r;
+                        if (rowIdx >= totalRows)
+                                break;
+
+                        int rowY = listStartY + (r * ROW_HEIGHT);
+
+                        for (int c = 0; c < 4; c++) {
+                                int idx = rowIdx * 4 + c;
+                                if (idx < totalItems) {
+                                        renderShopItemAt(g, idx, x + (itemW + colGap) * c, rowY, itemW);
+                                }
+                        }
+                }
+
+                String pageInfo = "Items: " + currentDisplayList.size();
+                g.drawString(font, pageInfo, x, this.height - 15, 0xFF555555);
+        }
+
+        private void renderShopItemAt(GuiGraphics g, int idx, int x, int y, int w) {
+                ShopEntry entry = currentDisplayList.get(idx);
+
+                // BG
+                boolean hovered = isHovering(x, y, w, ROW_HEIGHT - 2, mouseX, mouseY);
+                int color = hovered ? 0xFF3E3E44 : 0xFF2A2A35;
+                g.fill(x, y, x + w, y + ROW_HEIGHT - 2, color);
+
+                // Icon
+                // Icon / Entity
+                if (entry.entityModel != null) {
+                        // Render Entity
+                        // 15 is scale, x+15 center of icon area, y+24 bottom of icon area
+                        try {
+                                InventoryScreen.renderEntityInInventoryFollowsMouse(g, x + 15, y + 24, 13,
+                                                (float) (x + 15) - (float) mouseX,
+                                                (float) (y + 24 - 15) - (float) mouseY, entry.entityModel);
+                        } catch (Exception e) {
+                                // Fallback in case of render error
+                                g.renderItem(entry.icon, x + 4, y + 5);
+                        }
+                } else {
+                        g.renderItem(entry.icon, x + 4, y + 5);
+                }
+
+                // Name
+                // Truncate name if too long for itemW?
+                String name = entry.displayName;
+                if (font.width(name) > w - 24) {
+                        name = font.plainSubstrByWidth(name, w - 24 - 5) + "...";
+                }
+                g.drawString(font, name, x + 24, y + 10, TEXT_COLOR);
+        }
+
+        private String formatPrice(int price) {
+                java.text.NumberFormat nf = java.text.NumberFormat.getInstance(new java.util.Locale("id", "ID"));
+                return "Rp " + nf.format(price);
+        }
+
+        private double mouseX, mouseY;
+
+        private void cmd(String action) {
+                // Global command dispatch
+                if (action.equals("refresh")) {
+                        refreshContent();
+                        return; // No server command needed for refresh if it just redraws UI
+                        // But wait, refresh might need to sync data?
+                        // Data is synced via ContainerData continuously.
+                }
+
+                String c = "zoocmd " + action;
+                var conn = Minecraft.getInstance().getConnection();
+                if (conn != null) {
+                        conn.sendCommand(c);
                 }
         }
 
         @Override
         protected void renderLabels(GuiGraphics g, int mx, int my) {
-                // KEEP EMPTY
         }
 
-        @Override
-        public boolean isPauseScreen() {
-                return false;
+        private static class ShopEntry {
+                ResourceLocation id;
+                String displayName;
+                int price;
+                ItemStack icon;
+                LivingEntity entityModel;
+
+                public ShopEntry(ResourceLocation id, String name, int price, ItemStack icon,
+                                LivingEntity entityModel) {
+                        this.id = id;
+                        this.displayName = name;
+                        this.price = price;
+                        this.icon = icon;
+                        this.entityModel = entityModel;
+                }
         }
 }

@@ -38,68 +38,82 @@ public class VisitorMoodLayer extends RenderLayer<VisitorEntity, HumanoidModel<V
                 if (mood == null)
                         return;
 
-                ResourceLocation tex = switch (mood) {
-                        case HAPPY -> HAPPY;
-                        case NEUTRAL -> NEUTRAL;
-                        case TOILET -> TOILET;
-                        case AMAZED -> AMAZED;
-                        case ADORED -> ADORED;
-                };
+                ResourceLocation tex;
+                int r = 255;
+                int g = 255;
+                int b = 255;
+
+                // Select Texture & Tint
+                switch (mood) {
+                        case HAPPY:
+                                tex = HAPPY;
+                                break;
+                        case NEUTRAL:
+                                tex = NEUTRAL;
+                                break;
+                        case TOILET:
+                                tex = TOILET;
+                                break;
+                        case AMAZED:
+                                tex = AMAZED;
+                                break;
+                        case ADORED:
+                                tex = ADORED;
+                                break;
+                        case HUNGRY:
+                                tex = NEUTRAL; // Re-use Neutral
+                                r = 255;
+                                g = 100;
+                                b = 100; // Red tint
+                                break;
+                        case THIRSTY:
+                                tex = NEUTRAL; // Re-use Neutral
+                                r = 100;
+                                g = 100;
+                                b = 255; // Blue tint
+                                break;
+                        default:
+                                tex = NEUTRAL;
+                                break;
+                }
 
                 poseStack.pushPose();
-                // Position above head. Adjust based on scale/baby status.
-                // Standard height is usually around 2.0 but depends on model.
-                // We can attach to the head bone or just float above.
-                // Floating above is easier.
-                // Eye height + 0.5?
 
-                // Translate to head position
-                // If we attach to head, it follows head movement.
+                // Attachment: Head
                 this.getParentModel().getHead().translateAndRotate(poseStack);
-                poseStack.translate(0, -0.6, 0); // Move UP (negative Y is up in model space?)
-                // Actually, model y goes down. -0.6 is UP.
-                // Scale it
-                poseStack.scale(0.4F, 0.4F, 0.4F);
 
-                // Billboard effect (Rotate to face camera)
-                // Since we are attached to head, we are already rotated with head.
-                // Taking camera rotation into account is tricky inside a layer attached to a
-                // bone.
-                // It's better to just generic rendering.
-                // Let's try simple quad rendering.
+                // Position Adjustment: Higher up
+                poseStack.translate(0, -1.25, 0); // Moved up from -0.6 to -1.25
 
-                // Rotate 180 Y to face front?
-                poseStack.mulPose(Axis.YP.rotationDegrees(180));
-                poseStack.mulPose(Axis.ZP.rotationDegrees(180)); // Flip vertical?
+                // Scale
+                poseStack.scale(0.5F, 0.5F, 0.5F);
 
-                // Render Quad
-                renderIcon(poseStack, buffer, tex, packedLight);
+ 
+
+
+                renderIcon(poseStack, buffer, tex, packedLight, r, g, b);
 
                 poseStack.popPose();
         }
 
-        private void renderIcon(PoseStack poseStack, MultiBufferSource buffer, ResourceLocation tex, int packedLight) {
-                var vertexConsumer = buffer.getBuffer(RenderType.text(tex)); // Text is always bright? Or entityCutout?
-                // Use entityCutoutNoCull for transparency
-                vertexConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(tex));
+        private void renderIcon(PoseStack poseStack, MultiBufferSource buffer, ResourceLocation tex, int packedLight,
+                        int r,
+                        int g, int b) {
+                var vertexConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(tex));
 
                 Matrix4f matrix = poseStack.last().pose();
-
-                // Draw centered quad
-                // -0.5 to 0.5
                 float size = 1.0f;
                 float min = -size / 2;
                 float max = size / 2;
 
-                // UV 0,0 to 1,1
-
-                vertexConsumer.vertex(matrix, min, max, 0).color(255, 255, 255, 255).uv(0, 1)
+                // Draw Quad with Color Tint
+                vertexConsumer.vertex(matrix, min, max, 0).color(r, g, b, 255).uv(0, 1)
                                 .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 1).endVertex();
-                vertexConsumer.vertex(matrix, max, max, 0).color(255, 255, 255, 255).uv(1, 1)
+                vertexConsumer.vertex(matrix, max, max, 0).color(r, g, b, 255).uv(1, 1)
                                 .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 1).endVertex();
-                vertexConsumer.vertex(matrix, max, min, 0).color(255, 255, 255, 255).uv(1, 0)
+                vertexConsumer.vertex(matrix, max, min, 0).color(r, g, b, 255).uv(1, 0)
                                 .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 1).endVertex();
-                vertexConsumer.vertex(matrix, min, min, 0).color(255, 255, 255, 255).uv(0, 0)
+                vertexConsumer.vertex(matrix, min, min, 0).color(r, g, b, 255).uv(0, 0)
                                 .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 1).endVertex();
         }
 }

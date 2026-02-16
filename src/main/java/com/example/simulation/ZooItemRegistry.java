@@ -1,9 +1,7 @@
 package com.example.simulation;
 
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.SpawnEggItem;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.*;
@@ -14,11 +12,9 @@ public class ZooItemRegistry {
     public enum Category {
         UTILITY("Utilitas"),
         BUILDING("Bangunan"),
-        DECOR("Dekorasi"),
-        VEHICLE("Kendaraan"),
+        NATURAL("Alam"),
         FOOD("Makanan"),
-        ANIMAL("Hewan"),
-        MYTHICAL("Hewan Langka");
+        VEHICLE("Kendaraan");
 
         public final String label;
 
@@ -42,80 +38,146 @@ public class ZooItemRegistry {
     }
 
     public static void initialize() {
-        // Register Basic Zoo Items
-        registerItem("minecraft:oak_fence", "Oak Fence", 25, Category.BUILDING);
-        registerItem("minecraft:iron_bars", "Iron Bars", 50, Category.BUILDING);
-        registerItem("minecraft:glass", "Glass", 30, Category.BUILDING);
-        registerItem("minecraft:torch", "Torch", 10, Category.UTILITY);
+        ITEM_CATALOG.clear();
 
-        // Food
-        registerItem("minecraft:apple", "Apple", 10, Category.FOOD);
-        registerItem("minecraft:wheat", "Wheat", 15, Category.FOOD);
-        registerItem("minecraft:beef", "Beef", 20, Category.FOOD);
-        registerItem("minecraft:carrot", "Golden Carrot", 5000, Category.FOOD);
-        registerItem("minecraft:hay_block", "Hay Bale", 40, Category.FOOD);
+        // 1. ITEMS (Utility) -> 5k-50k
+        register(IndoZooTycoon.MODID + ":zoo_banner", "Banner Kebun Binatang", 0, Category.UTILITY);
+        register(IndoZooTycoon.MODID + ":animal_tag", "Animal Tag", 5_000, Category.UTILITY);
+        register("minecraft:scaffolding", "Scaffolding", 15_000, Category.UTILITY);
+        register("minecraft:lead", "Lead", 25_000, Category.UTILITY);
+        register("minecraft:bone_meal", "Bone Meal", 5_000, Category.UTILITY);
+        register("minecraft:white_dye", "Dye", 5_000, Category.UTILITY);
+        register("minecraft:ladder", "Ladder", 15_000, Category.UTILITY);
 
-        // --- DYNAMIC SCANNING ---
-        for (Map.Entry<net.minecraft.resources.ResourceKey<Item>, Item> entry : ForgeRegistries.ITEMS.getEntries()) {
-            ResourceLocation id = entry.getKey().location();
-            Item item = entry.getValue();
-            String path = id.getPath();
-            String namespace = id.getNamespace();
-
-            // 1. SPAWN EGGS (Animals)
-            if (item instanceof SpawnEggItem egg) {
-                EntityType<?> type = egg.getType(null);
-                if (type.getCategory() == net.minecraft.world.entity.MobCategory.CREATURE ||
-                        type.getCategory() == net.minecraft.world.entity.MobCategory.AMBIENT ||
-                        type.getCategory() == net.minecraft.world.entity.MobCategory.WATER_CREATURE) {
-
-                    // Check for Mythical (Alex's Mobs special handling)
-                    Category cat = Category.ANIMAL;
-                    if (namespace.equals("alexsmobs")) {
-                        if (path.contains("mimicube") || path.contains("void_worm"))
-                            continue; // Exclude boss
-                        if (path.contains("dragon") || path.contains("serpent") || path.contains("guster")) {
-                            cat = Category.MYTHICAL;
-                        }
-                    }
-
-                    int price = (cat == Category.MYTHICAL) ? 5000 : 500;
-                    ITEM_CATALOG.put(id, new ItemData(item, formatName(path.replace("_spawn_egg", "")), price, cat));
-                }
-                continue; // Done with this item
-            }
-
-            // 2. ZAWA Capture Cage & Others
-            if (namespace.equals("zawa")) {
-                if (path.equals("capture_cage") || path.equals("catching_net")) { // Use Zawa's cage
-                    ITEM_CATALOG.put(id, new ItemData(item, "Capture Cage (Universal)", 1000, Category.UTILITY));
-                } else if (path.equals("kibble") || path.contains("food")) {
-                    ITEM_CATALOG.put(id, new ItemData(item, formatName(path), 50, Category.FOOD));
-                }
-            }
-
-            // 3. VEHICLES (Simple Keyword Search)
-            if (path.contains("cart") || path.contains("vehicle") || path.contains("jeep") || path.contains("atv")
-                    || path.contains("scooter")) {
-                ITEM_CATALOG.put(id, new ItemData(item, formatName(path), 3000, Category.VEHICLE));
-            }
-
-            // 4. FOOD BLOCKS/ITEMS
-            if (path.contains("kibble") || path.contains("hay") || path.contains("carrot")) {
-                if (!ITEM_CATALOG.containsKey(id)) {
-                    ITEM_CATALOG.put(id, new ItemData(item, formatName(path), 20, Category.FOOD));
-                }
-            }
-        }
-
-        // Ensure OUR items are there
+        // 2. FUNCTIONAL BLOCKS -> 50k-200k
+        register("minecraft:lantern", "Lantern", 50_000, Category.UTILITY);
+        register("minecraft:flower_pot", "Pot", 15_000, Category.UTILITY);
+        register("minecraft:composter", "Composter", 35_000, Category.UTILITY);
+        register("minecraft:campfire", "Campfire", 25_000, Category.UTILITY);
         if (IndoZooTycoon.CAPTURE_CAGE_ITEM.isPresent()) {
-            // Fallback if ZAWA not present or user wants ours
-            ITEM_CATALOG.put(IndoZooTycoon.CAPTURE_CAGE_ITEM.getId(), new ItemData(
-                    IndoZooTycoon.CAPTURE_CAGE_ITEM.get(), "Capture Cage (IndoZoo)", 1000, Category.UTILITY));
+            register(IndoZooTycoon.CAPTURE_CAGE_ITEM.getId().toString(), "Mob Cage", 2_000_000, Category.UTILITY);
         }
 
-        System.out.println("[IndoZoo] Registered " + ITEM_CATALOG.size() + " shop items.");
+        // 3. BLOCKS -> 10k-50k per block
+        registerWoodVariants();
+        registerStoneVariants();
+        registerGlassVariants();
+
+        // 4. NATURAL BLOCKS -> 10k-100k
+        register("minecraft:podzol", "Podzol", 20_000, Category.NATURAL);
+        register("minecraft:gravel", "Gravel", 10_000, Category.NATURAL);
+        register("minecraft:sand", "Sand", 10_000, Category.NATURAL);
+        register("minecraft:coarse_dirt", "Coarse Dirt", 10_000, Category.NATURAL);
+        register("minecraft:fern", "Fern", 15_000, Category.NATURAL);
+        register("minecraft:dead_bush", "Dead Bush", 5_000, Category.NATURAL);
+        register("minecraft:lily_pad", "Lily Pad", 15_000, Category.NATURAL);
+        register("minecraft:kelp", "Kelp", 10_000, Category.NATURAL);
+        register("minecraft:moss_block", "Moss Block", 25_000, Category.NATURAL);
+        register("minecraft:moss_carpet", "Moss Carpet", 15_000, Category.NATURAL);
+        register("minecraft:spore_blossom", "Spore Blossom", 150_000, Category.NATURAL);
+        register("minecraft:azalea", "Azalea", 50_000, Category.NATURAL);
+        register("minecraft:flowering_azalea", "Flowering Azalea", 60_000, Category.NATURAL);
+        register("minecraft:amethyst_block", "Amethyst Block", 500_000, Category.NATURAL);
+        register("minecraft:budding_amethyst", "Budding Amethyst", 1_000_000, Category.NATURAL);
+        register("minecraft:amethyst_cluster", "Amethyst Cluster", 250_000, Category.NATURAL);
+        register("minecraft:oak_leaves", "Oak Leaves", 10_000, Category.NATURAL);
+        register("minecraft:spruce_leaves", "Spruce Leaves", 10_000, Category.NATURAL);
+        register("minecraft:birch_leaves", "Birch Leaves", 10_000, Category.NATURAL);
+        register("minecraft:jungle_leaves", "Jungle Leaves", 10_000, Category.NATURAL);
+        register("minecraft:acacia_leaves", "Acacia Leaves", 10_000, Category.NATURAL);
+        register("minecraft:dark_oak_leaves", "Dark Oak Leaves", 10_000, Category.NATURAL);
+        register("minecraft:mangrove_leaves", "Mangrove Leaves", 10_000, Category.NATURAL);
+        register("minecraft:cherry_leaves", "Cherry Leaves", 10_000, Category.NATURAL);
+        register("minecraft:azalea_leaves", "Azalea Leaves", 10_000, Category.NATURAL);
+        register("minecraft:flowering_azalea_leaves", "Flowering Azalea Leaves", 10_000, Category.NATURAL);
+
+        // Custom Biome Changer
+        register("indozoo:biome_changer", "Biome Changer", 15_000_000, Category.NATURAL);
+
+        // 5. FOOD -> 5k-50k
+        register("minecraft:wheat_seeds", "Seeds", 2_000, Category.FOOD);
+        register("minecraft:carrot", "Carrot", 5_000, Category.FOOD);
+        register("minecraft:wheat", "Wheat", 5_000, Category.FOOD);
+        register("minecraft:apple", "Apple", 5_000, Category.FOOD);
+        register("minecraft:golden_carrot", "Golden Carrot", 150_000, Category.FOOD);
+        register("minecraft:sweet_berries", "Sweet Berries", 5_000, Category.FOOD);
+        register("minecraft:bamboo", "Bamboo", 15_000, Category.FOOD);
+        register("minecraft:seagrass", "Seagrass", 5_000, Category.FOOD);
+        register("minecraft:cod", "Raw Cod", 20_000, Category.FOOD);
+        register("minecraft:salmon", "Raw Salmon", 20_000, Category.FOOD);
+
+        // 6. VEHICLES -> 10M+
+        register("minecraft:minecart", "Minecart", 10_000_000, Category.VEHICLE);
+        register("minecraft:oak_boat", "Boat", 5_000_000, Category.VEHICLE); // Wooden boat cheaper
+
+        System.out.println("[IndoZoo] Registered " + ITEM_CATALOG.size() + " factory items.");
+    }
+
+    private static void registerWoodVariants() {
+        String[] woods = { "oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "cherry", "crimson",
+                "warped" };
+        String[] types = { "planks", "fence", "fence_gate", "stairs", "slab", "log" }; // removed wood/stem distinction
+                                                                                       // for simplicity or add if
+                                                                                       // needed
+
+        for (String w : woods) {
+            String logName = w + "_log";
+            if (w.equals("crimson") || w.equals("warped"))
+                logName = w + "_stem";
+
+            for (String t : types) {
+                String name = w + "_" + t;
+                if (t.equals("log"))
+                    name = logName;
+
+                // Price variants
+                int price = 2_000;
+                if (t.equals("log"))
+                    price = 5_000;
+                else if (t.equals("fence"))
+                    price = 3_000;
+
+                register("minecraft:" + name, formatName(name), price, Category.BUILDING);
+            }
+        }
+        // Bamboo special
+        register("minecraft:bamboo_planks", "Bamboo Planks", 2_000, Category.BUILDING);
+        register("minecraft:bamboo_fence", "Bamboo Fence", 3_000, Category.BUILDING);
+        register("minecraft:bamboo_fence_gate", "Bamboo Fence Gate", 4_000, Category.BUILDING);
+        register("minecraft:bamboo_stairs", "Bamboo Stairs", 2_000, Category.BUILDING);
+        register("minecraft:bamboo_slab", "Bamboo Slab", 1_000, Category.BUILDING);
+        register("minecraft:bamboo_block", "Bamboo Block", 5_000, Category.BUILDING);
+    }
+
+    private static void registerStoneVariants() {
+        String[] stones = { "stone", "cobblestone", "stone_bricks", "mossy_cobblestone", "mossy_stone_bricks",
+                "smooth_stone", "sandstone", "red_sandstone", "brick" };
+        // Note: "brick" is item "brick" but block "bricks". "brick_stairs" etc.
+        // Actually "bricks" block.
+
+        for (String s : stones) {
+            String base = s;
+            if (s.equals("brick"))
+                base = "bricks";
+
+            register("minecraft:" + base, formatName(base), 5_000, Category.BUILDING);
+            register("minecraft:" + base + "_stairs", formatName(base + " Stairs"), 5_000, Category.BUILDING);
+            register("minecraft:" + base + "_slab", formatName(base + " Slab"), 2_500, Category.BUILDING);
+            register("minecraft:" + base + "_wall", formatName(base + " Wall"), 4_000, Category.BUILDING);
+        }
+    }
+
+    private static void registerGlassVariants() {
+        register("minecraft:glass", "Glass", 2_500, Category.BUILDING);
+        register("minecraft:glass_pane", "Glass Pane", 1_000, Category.BUILDING);
+    }
+
+    private static void register(String idStr, String name, int price, Category cat) {
+        ResourceLocation id = new ResourceLocation(idStr);
+        if (ForgeRegistries.ITEMS.containsKey(id)) {
+            Item item = ForgeRegistries.ITEMS.getValue(id);
+            ITEM_CATALOG.put(id, new ItemData(item, name, price, cat));
+        }
     }
 
     private static String formatName(String path) {
@@ -132,17 +194,6 @@ public class ZooItemRegistry {
         return sb.toString().trim();
     }
 
-    private static void registerItem(String idStr, String name, int price, Category cat) {
-        ResourceLocation id = ResourceLocation.tryParse(idStr);
-        if (id != null && ForgeRegistries.ITEMS.containsKey(id)) {
-            Item item = ForgeRegistries.ITEMS.getValue(id);
-            if (item != null) {
-                ITEM_CATALOG.put(id, new ItemData(item, name, price, cat));
-            }
-        }
-    }
-
-    // ... helper methods
     public static Map<ResourceLocation, ItemData> getAllItems() {
         return Collections.unmodifiableMap(ITEM_CATALOG);
     }

@@ -41,14 +41,15 @@ public class CaptureCageItem extends Item {
             return InteractionResult.PASS; // Cage full, do standard interaction (maybe hit?)
         }
 
-        // Check size (Small mobs only: width <= 1.0 AND height <= 1.0)
+        // Check size (Updated to strict small mobs)
         float width = target.getBbWidth();
         float height = target.getBbHeight();
 
-        if (width > 1.0F || height > 1.0F) {
+        if (width > 0.9F || height > 2.0F) {
             if (!level.isClientSide) {
                 player.displayClientMessage(
-                        Component.literal("Mob terlalu besar! (Max 1x1 block)").withStyle(ChatFormatting.RED), true);
+                        Component.literal("Mob terlalu besar! (Max 0.9x2.0 block)").withStyle(ChatFormatting.RED),
+                        true);
             }
             return InteractionResult.FAIL;
         }

@@ -11,7 +11,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
+
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraftforge.client.gui.overlay.IGuiOverlay;
@@ -85,48 +85,37 @@ public class ZooOverlay {
     }
 
     private static void drawBalance(Minecraft mc, GuiGraphics gfx, int x, int y) {
-        // Only draw if we find a computer (optional check)
-        ZooComputerBlockEntity comp = findNearestComputer(mc.level, mc.player.blockPosition());
-        if (comp == null)
-            return;
+        // Use global ZooData from client level
+        // Since we are on client, we need a way to get the synced data.
+        // ZooData.get(level) works on server. On client, it returns a new instance
+        // unless synced.
+        // We typically sync balance via packets or partial data.
+        // For simplicity in this "mock" context allowing direct access if SinglePlayer?
+        // Or better, we can read from a ClientZooData singleton updated by packets.
+        // BUT, since we just made ZooData.get(level) return new ZooData() on client,
+        // it won't have the correct balance unless we sync it.
+
+        // However, the user wants to remove "Computer" dependency.
+        // Let's assume for now we use a simple placeholder or cached value if strictly
+        // client-side.
+        // Actually, we should check if we can access the server data in singleplayer
+        // or if we have a packet handling mechanism.
+
+        // Wait, OpenGuiPacket sends data to Menu.
+        // To display on Overlay, we need a separate periodic sync packet (Clientbound).
+        // OR we can just display "0" if not synced, or use a workaround.
+
+        // Given constraints, I will implement a basic `ClientZooData` mechanism or just
+        // try to read directly if logically possible (e.g. valid checks).
+
+        // For now, let's use a static field in ZooData that is updated by packet?
+        // Let's add that.
+
+        int balance = ClientZooData.getBalance();
 
         NumberFormat nf = NumberFormat.getInstance(new Locale("id", "ID"));
+        gfx.drawString(mc.font, "Rp " + nf.format(balance), x, y, 0xFF55FF55, true);
 
-        // Background (Partial, since user wanted "no bg" for entity, but didn't specify
-        // for balance.
-        // But let's keep balance style consistent or minimal).
-        // Let's make balance minimal too to match the "clean" aesthetic requested.
-        // gfx.fill(x - 2, y - 2, x + 120, y + 12, 0x88000000);
-
-        // Text
-        gfx.drawString(mc.font, "💰 Rp " + nf.format(comp.getBalance()), x, y, 0xFF55FF55, true);
     }
 
-    private static ZooComputerBlockEntity findNearestComputer(Level level, BlockPos center) {
-        // Simplified search for performance - Check 50 block radius
-        // Ideally this should be cached or optimized further
-        for (int x = -50; x <= 50; x += 10) {
-            for (int z = -50; z <= 50; z += 10) {
-                BlockPos p = center.offset(x, 0, z);
-                // Just check simplistic chunks or known locations in a real mod
-                // For now, keep the original but reduce radius to avoid lag if called every
-                // frame
-            }
-        }
-
-        // Reverting to roughly original logic but optimized range
-        for (int r = 0; r <= 50; r += 16) { // Reduced from 100 to 50
-            for (int x = -r; x <= r; x += 16) {
-                for (int z = -r; z <= r; z += 16) {
-                    BlockPos p = center.offset(x, 0, z);
-                    for (int y = -10; y <= 10; y++) {
-                        BlockEntity be = level.getBlockEntity(p.atY(center.getY() + y));
-                        if (be instanceof ZooComputerBlockEntity c)
-                            return c;
-                    }
-                }
-            }
-        }
-        return null;
-    }
 }

@@ -114,4 +114,32 @@ public class ClientEvents {
             }
         }
     }
+
+    // ========== Client Forge Events (Input) ==========
+    @Mod.EventBusSubscriber(modid = IndoZooTycoon.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+    public static class ClientForgeEvents {
+        @SubscribeEvent
+        public static void onRightClickEmpty(
+                net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickEmpty event) {
+            handleShiftRightClick(event);
+        }
+
+        @SubscribeEvent
+        public static void onRightClickBlock(
+                net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock event) {
+            handleShiftRightClick(event);
+        }
+
+        @SubscribeEvent
+        public static void onRightClickItem(
+                net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem event) {
+            handleShiftRightClick(event);
+        }
+
+        private static void handleShiftRightClick(net.minecraftforge.event.entity.player.PlayerInteractEvent event) {
+            if (event.getLevel().isClientSide && event.getEntity().isShiftKeyDown()) {
+                PacketHandler.INSTANCE.sendToServer(new OpenGuiPacket());
+            }
+        }
+    }
 }
