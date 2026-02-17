@@ -49,8 +49,7 @@ public class VisitorMoodLayer extends RenderLayer<VisitorEntity, HumanoidModel<V
                                 tex = HAPPY;
                                 break;
                         case NEUTRAL:
-                                tex = NEUTRAL;
-                                break;
+                                return; // Don't render anything for neutral
                         case TOILET:
                                 tex = TOILET;
                                 break;
@@ -82,8 +81,8 @@ public class VisitorMoodLayer extends RenderLayer<VisitorEntity, HumanoidModel<V
                 // Attachment: Head
                 this.getParentModel().getHead().translateAndRotate(poseStack);
 
-                // Position Adjustment: Higher up
-                poseStack.translate(0, -1.25, 0); // Moved up from -0.6 to -1.25
+                // Position Adjustment: Lowered slightly from -1.25
+                poseStack.translate(0, -0.9, 0); 
 
                 // Scale
                 poseStack.scale(0.5F, 0.5F, 0.5F);

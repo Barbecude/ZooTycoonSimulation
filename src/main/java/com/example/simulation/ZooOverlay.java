@@ -49,6 +49,7 @@ public class ZooOverlay {
         // entity is shown)
         // Or keep it fixed. Let's put Balance at y=50 to be safe and clean.
         drawBalance(mc, gfx, 5, 50);
+        drawRating(mc, gfx, 5, 70); 
     };
 
     private static void drawEntityInfo(Minecraft mc, GuiGraphics gfx, LivingEntity entity) {
@@ -85,37 +86,26 @@ public class ZooOverlay {
     }
 
     private static void drawBalance(Minecraft mc, GuiGraphics gfx, int x, int y) {
-        // Use global ZooData from client level
-        // Since we are on client, we need a way to get the synced data.
-        // ZooData.get(level) works on server. On client, it returns a new instance
-        // unless synced.
-        // We typically sync balance via packets or partial data.
-        // For simplicity in this "mock" context allowing direct access if SinglePlayer?
-        // Or better, we can read from a ClientZooData singleton updated by packets.
-        // BUT, since we just made ZooData.get(level) return new ZooData() on client,
-        // it won't have the correct balance unless we sync it.
-
-        // However, the user wants to remove "Computer" dependency.
-        // Let's assume for now we use a simple placeholder or cached value if strictly
-        // client-side.
-        // Actually, we should check if we can access the server data in singleplayer
-        // or if we have a packet handling mechanism.
-
-        // Wait, OpenGuiPacket sends data to Menu.
-        // To display on Overlay, we need a separate periodic sync packet (Clientbound).
-        // OR we can just display "0" if not synced, or use a workaround.
-
-        // Given constraints, I will implement a basic `ClientZooData` mechanism or just
-        // try to read directly if logically possible (e.g. valid checks).
-
-        // For now, let's use a static field in ZooData that is updated by packet?
-        // Let's add that.
-
         int balance = ClientZooData.getBalance();
-
         NumberFormat nf = NumberFormat.getInstance(new Locale("id", "ID"));
-        gfx.drawString(mc.font, "Rp " + nf.format(balance), x, y, 0xFF55FF55, true);
+        String text = "Rp " + nf.format(balance);
 
+        int bgWidth = 100; // Adjust based on texture
+        int bgHeight = 20; // Adjust based on texture
+        
+        RenderSystem.setShaderTexture(0, new ResourceLocation("indozoo", "textures/gui/money_bg.png"));
+        RenderSystem.enableBlend();
+        
+        int drawX = x + 5;
+        int drawY = y;
+        
+        gfx.blit(new ResourceLocation("indozoo", "textures/gui/money_bg.png"), drawX, drawY, 0, 0, bgWidth, bgHeight, bgWidth, bgHeight);
+
+        int textY = drawY + (bgHeight - 8) / 2;
+        int textX = drawX + 10; 
+        
+        gfx.drawString(mc.font, text, textX, textY, 0xFFFFFFFF, false);
+        
+        RenderSystem.disableBlend();
     }
-
 }

@@ -34,7 +34,7 @@ public class IndoZooTycoon {
         public static final DeferredRegister<MenuType<?>> MENUS = DeferredRegister.create(ForgeRegistries.MENU_TYPES,
                         MODID);
         public static final DeferredRegister<CreativeModeTab> CREATIVE_TABS = DeferredRegister
-                        .create(net.minecraft.core.registries.Registries.CREATIVE_MODE_TAB, MODID);
+                        .create(new net.minecraft.resources.ResourceLocation("minecraft", "creative_mode_tab"), MODID);
 
         // Block
         public static final RegistryObject<Block> ZOO_COMPUTER_BLOCK = BLOCKS.register("zoo_computer",
@@ -76,10 +76,12 @@ public class IndoZooTycoon {
         public static final RegistryObject<Item> RESTROOM_ITEM = ITEMS.register("restroom",
                         () -> new BlockItem(RESTROOM_BLOCK.get(), new Item.Properties()));
 
+        public static final RegistryObject<Block> ZOO_WALL_BANNER_BLOCK = BLOCKS.register("zoo_wall_banner",
+                        ZooWallBannerBlock::new);
         public static final RegistryObject<Block> ZOO_BANNER_BLOCK = BLOCKS.register("zoo_banner",
                         ZooBannerBlock::new);
         public static final RegistryObject<Item> ZOO_BANNER_ITEM = ITEMS.register("zoo_banner",
-                        () -> new BlockItem(ZOO_BANNER_BLOCK.get(), new Item.Properties()));
+                        () -> new net.minecraft.world.item.BannerItem(ZOO_BANNER_BLOCK.get(), ZOO_WALL_BANNER_BLOCK.get(), new Item.Properties().stacksTo(16)));
 
         public static final RegistryObject<Item> ANIMAL_TAG_ITEM = ITEMS.register("animal_tag",
                         AnimalTagItem::new);
@@ -103,6 +105,12 @@ public class IndoZooTycoon {
                         .register("animal_feeder",
                                         () -> BlockEntityType.Builder
                                                         .of(AnimalFeederBlockEntity::new, ANIMAL_FEEDER_BLOCK.get())
+                                                        .build(null));
+
+        public static final RegistryObject<BlockEntityType<net.minecraft.world.level.block.entity.BannerBlockEntity>> ZOO_BANNER_BE = BLOCK_ENTITIES
+                        .register("zoo_banner",
+                                        () -> BlockEntityType.Builder
+                                                        .of(net.minecraft.world.level.block.entity.BannerBlockEntity::new, ZOO_BANNER_BLOCK.get(), ZOO_WALL_BANNER_BLOCK.get())
                                                         .build(null));
 
         public static final RegistryObject<BlockEntityType<ZooComputerBlockEntity>> ZOO_COMPUTER_BE = BLOCK_ENTITIES

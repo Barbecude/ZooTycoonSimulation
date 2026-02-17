@@ -83,6 +83,8 @@ public class ClientEvents {
                         renderer.addLayer(new VisitorMoodLayer(renderer));
                         return renderer;
                     });
+
+            event.registerBlockEntityRenderer(IndoZooTycoon.ZOO_BANNER_BE.get(), net.minecraft.client.renderer.blockentity.BannerRenderer::new);
         }
     }
 

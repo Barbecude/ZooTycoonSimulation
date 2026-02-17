@@ -208,10 +208,10 @@ public class VisitorEntity extends PathfinderMob {
                 toiletTimer++;
                 // If not found in 30 seconds (600 ticks)
                 if (toiletTimer > 600) {
-                    // Force leave and deduct money
+                    // Force leave and deduct rating
                     ZooData data = ZooData.get(this.level());
-                    int penalty = data.getTicketPrice();
-                    data.addBalance(-penalty);
+                    data.setRating(data.getRating() - 5);
+                    // No money deduction
                     this.forceLeave();
                 }
             } else {
@@ -291,7 +291,7 @@ public class VisitorEntity extends PathfinderMob {
             if (data.getVisitorCount() > 0) {
                 data.setVisitorCount(data.getVisitorCount() - 1);
                 SyncBalancePacket packet = new SyncBalancePacket(data.getBalance(), data.getTaggedAnimals(),
-                        data.getAnimalCount(), data.getStaffCount(), data.getVisitorCount());
+                        data.getAnimalCount(), data.getStaffCount(), data.getVisitorCount(), data.getRating());
                 PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(), packet);
             }
         }
@@ -564,7 +564,7 @@ public class VisitorEntity extends PathfinderMob {
                     if (data.getVisitorCount() > 0) {
                         data.setVisitorCount(data.getVisitorCount() - 1);
                         SyncBalancePacket packet = new SyncBalancePacket(data.getBalance(), data.getTaggedAnimals(),
-                                data.getAnimalCount(), data.getStaffCount(), data.getVisitorCount());
+                                data.getAnimalCount(), data.getStaffCount(), data.getVisitorCount(), data.getRating());
                         PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(), packet);
                     }
                 }

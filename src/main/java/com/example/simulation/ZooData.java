@@ -18,6 +18,7 @@ public class ZooData extends SavedData {
     private int staffCount = 0;
     private int visitorCount = 0;
     private int trashCount = 0;
+    private int rating = 100;
 
     // Tagged Animals List (ID, Name, Type)
     // Storing as CompoundTag list for simplicity
@@ -168,6 +169,15 @@ public class ZooData extends SavedData {
         setDirty();
     }
 
+    public int getRating() {
+        return rating;
+    }
+
+    public void setRating(int rating) {
+        this.rating = Math.max(0, Math.min(100, rating));
+        setDirty();
+    }
+
     public void updateCounts(ServerLevel level) {
         int vCount = 0;
         int sCount = 0;
@@ -213,6 +223,7 @@ public class ZooData extends SavedData {
         data.staffCount = tag.getInt("StaffCount");
         data.visitorCount = tag.getInt("VisitorCount");
         data.trashCount = tag.getInt("TrashCount");
+        if (tag.contains("Rating")) data.rating = tag.getInt("Rating");
         return data;
     }
 
@@ -232,6 +243,7 @@ public class ZooData extends SavedData {
         tag.putInt("StaffCount", staffCount);
         tag.putInt("VisitorCount", visitorCount);
         tag.putInt("TrashCount", trashCount);
+        tag.putInt("Rating", rating);
         tag.put("TaggedAnimals", taggedAnimals);
 
         return tag;

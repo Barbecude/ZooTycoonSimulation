@@ -58,13 +58,13 @@ public class AnimalRegistry {
                                                                                               // distinct
 
         // 3. MYTHICAL (Higher prices)
-        register("alexsmobs:cave_centipede", "Cave Centipede", 50_000_000, Category.MYTHICAL);
-        register("alexsmobs:seal", "Sea Bear (Seal)", 55_000_000, Category.MYTHICAL);
+        register("alexsmobs:centipede_head", "Cave Centipede", 50_000_000, Category.MYTHICAL);
+        register("alexsmobs:sea_bear", "Sea Bear", 55_000_000, Category.MYTHICAL);
         register("alexsmobs:comb_jelly", "Comb Jelly", 45_000_000, Category.MYTHICAL);
         register("alexsmobs:guster", "Guster", 60_000_000, Category.MYTHICAL);
         register("alexsmobs:tarantula_hawk", "Tarantula Hawk", 50_000_000, Category.MYTHICAL);
         register("alexsmobs:bone_serpent", "Bone Serpent", 75_000_000, Category.MYTHICAL);
-        register("alexsmobs:laviathan", "Leviathan", 100_000_000, Category.MYTHICAL);
+        register("alexsmobs:void_worm", "Leviathan", 100_000_000, Category.MYTHICAL);
         register("alexsmobs:endergrade", "Endergrade", 90_000_000, Category.MYTHICAL);
         register("alexsmobs:enderiophage", "Enderiophage", 85_000_000, Category.MYTHICAL);
 

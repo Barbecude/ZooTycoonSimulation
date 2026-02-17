@@ -20,7 +20,7 @@ public class CommonEvents {
                 
                 // Sync updated data
                 SyncBalancePacket packet = new SyncBalancePacket(data.getBalance(), data.getTaggedAnimals(),
-                        data.getAnimalCount(), data.getStaffCount(), data.getVisitorCount());
+                        data.getAnimalCount(), data.getStaffCount(), data.getVisitorCount(), data.getRating());
                 PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(), packet);
             }
         }

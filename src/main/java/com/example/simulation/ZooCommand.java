@@ -2,6 +2,7 @@ package com.example.simulation;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -18,6 +19,13 @@ public class ZooCommand {
         public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
                 dispatcher.register(
                                 Commands.literal("zoocmd")
+                                                .then(Commands.literal("rename")
+                                                                .then(Commands.argument("id", IntegerArgumentType.integer())
+                                                                                .then(Commands.argument("name", StringArgumentType.greedyString())
+                                                                                                .executes(ctx -> renameAnimal(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "id"), StringArgumentType.getString(ctx, "name"))))))
+                                                .then(Commands.literal("release")
+                                                                .then(Commands.argument("id", IntegerArgumentType.integer())
+                                                                                .executes(ctx -> releaseAnimal(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "id")))))
 
                                                 .then(Commands.literal("buy")
                                                                 .then(Commands
@@ -235,7 +243,17 @@ public class ZooCommand {
                                                                                                                                                                 .getInteger(ctx, "y"),
                                                                                                                                                 IntegerArgumentType
                                                                                                                                                                 .getInteger(ctx,
-                                                                                                                                                                                "z")))))))));
+                                                                                                                                                                                "z"),
+                                                                                                                                                null))
+                                                                                                                                .then(Commands.literal("replace")
+                                                                                                                                                .then(Commands.argument("filter", net.minecraft.commands.arguments.ResourceLocationArgument.id())
+                                                                                                                                                                .executes(ctx -> setBiome(
+                                                                                                                                                                                ctx.getSource(),
+                                                                                                                                                                                net.minecraft.commands.arguments.ResourceLocationArgument.getId(ctx, "biome_id"),
+                                                                                                                                                                                IntegerArgumentType.getInteger(ctx, "x"),
+                                                                                                                                                                                IntegerArgumentType.getInteger(ctx, "y"),
+                                                                                                                                                                                IntegerArgumentType.getInteger(ctx, "z"),
+                                                                                                                                                                                net.minecraft.commands.arguments.ResourceLocationArgument.getId(ctx, "filter")))))))))));
         }
 
         // Handlers
@@ -279,7 +297,7 @@ public class ZooCommand {
                                                 .withStyle(ChatFormatting.RED),
                                 true);
                 SyncBalancePacket packet = new SyncBalancePacket(data.getBalance(), data.getTaggedAnimals(),
-                                data.getAnimalCount(), data.getStaffCount(), data.getVisitorCount());
+                                data.getAnimalCount(), data.getStaffCount(), data.getVisitorCount(), data.getRating());
                 PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(), packet);
                 return 1;
         }
@@ -292,7 +310,7 @@ public class ZooCommand {
                                 .withStyle(ChatFormatting.GREEN),
                                 true);
                 SyncBalancePacket packet = new SyncBalancePacket(data.getBalance(), data.getTaggedAnimals(),
-                                data.getAnimalCount(), data.getStaffCount(), data.getVisitorCount());
+                                data.getAnimalCount(), data.getStaffCount(), data.getVisitorCount(), data.getRating());
                 PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(), packet);
                 return 1;
         }
@@ -326,7 +344,7 @@ public class ZooCommand {
                 // Immediate update
                 zooData.updateCounts(level);
                 SyncBalancePacket packet = new SyncBalancePacket(zooData.getBalance(), zooData.getTaggedAnimals(),
-                                zooData.getAnimalCount(), zooData.getStaffCount(), zooData.getVisitorCount());
+                                zooData.getAnimalCount(), zooData.getStaffCount(), zooData.getVisitorCount(), zooData.getRating());
                 PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(), packet);
                 return 1;
         }
@@ -374,7 +392,7 @@ public class ZooCommand {
                                 .withStyle(ChatFormatting.GREEN), false);
                 zooData.updateCounts(level);
                 SyncBalancePacket packet = new SyncBalancePacket(zooData.getBalance(), zooData.getTaggedAnimals(),
-                                zooData.getAnimalCount(), zooData.getStaffCount(), zooData.getVisitorCount());
+                                zooData.getAnimalCount(), zooData.getStaffCount(), zooData.getVisitorCount(), zooData.getRating());
                 PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(), packet);
                 return 1;
         }
@@ -402,7 +420,7 @@ public class ZooCommand {
                 // Immediate update
                 zooData.updateCounts(level);
                 SyncBalancePacket packet = new SyncBalancePacket(zooData.getBalance(), zooData.getTaggedAnimals(),
-                                zooData.getAnimalCount(), zooData.getStaffCount(), zooData.getVisitorCount());
+                                zooData.getAnimalCount(), zooData.getStaffCount(), zooData.getVisitorCount(), zooData.getRating());
                 PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(), packet);
                 return 1;
         }
@@ -484,21 +502,75 @@ public class ZooCommand {
                 return resetGlobal(src);
         }
 
-        private static int setBiome(CommandSourceStack src, ResourceLocation biomeId, int x, int y, int z) {
+        private static int setBiome(CommandSourceStack src, ResourceLocation biomeId, int x, int y, int z, ResourceLocation filter) {
                 ServerLevel level = src.getLevel();
-                int r = 31; // Increased radius (approx 63x63 area)
-                String cmd = String.format("fillbiome %d %d %d %d %d %d %s",
-                                x - r, level.getMinBuildHeight(), z - r,
-                                x + r, level.getMaxBuildHeight(), z + r,
-                                biomeId.toString());
+                int r = 15; // Decreased radius to ~31x31 area to avoid volume limits
+                
+                String cmd;
+                if (filter != null) {
+                    cmd = String.format("fillbiome %d %d %d %d %d %d %s replace %s",
+                                    x - r, level.getMinBuildHeight(), z - r,
+                                    x + r, level.getMaxBuildHeight(), z + r,
+                                    biomeId.toString(), filter.toString());
+                } else {
+                    cmd = String.format("fillbiome %d %d %d %d %d %d %s",
+                                    x - r, level.getMinBuildHeight(), z - r,
+                                    x + r, level.getMaxBuildHeight(), z + r,
+                                    biomeId.toString());
+                }
 
                 // Create source with correct level and permission level 4
                 CommandSourceStack elevatedSrc = src.withPermission(4).withLevel(level);
 
-                src.getServer().getCommands().performPrefixedCommand(elevatedSrc, cmd);
+                int result = src.getServer().getCommands().performPrefixedCommand(elevatedSrc, cmd);
+                
+                if (result == 0) {
+                     src.sendFailure(Component.literal("Gagal mengubah biome! Area mungkin terlalu besar atau chunk belum load."));
+                     return 0;
+                }
 
                 src.sendSuccess(() -> Component.literal("Set Biome: " + biomeId + " @ " + x + "," + z)
                                 .withStyle(ChatFormatting.GREEN), true);
+                return 1;
+        }
+
+        private static int renameAnimal(CommandSourceStack src, int id, String name) {
+                ServerLevel level = src.getLevel();
+                ZooData data = ZooData.get(level);
+                net.minecraft.nbt.ListTag list = data.getTaggedAnimals();
+                for (int i = 0; i < list.size(); i++) {
+                        net.minecraft.nbt.CompoundTag tag = list.getCompound(i);
+                        if (tag.getInt("id") == id) {
+                                tag.putString("name", name);
+                                data.setDirty();
+                                src.sendSuccess(() -> Component.literal("Hewan di-rename menjadi: " + name), true);
+                                SyncBalancePacket packet = new SyncBalancePacket(data.getBalance(), data.getTaggedAnimals(),
+                                                data.getAnimalCount(), data.getStaffCount(), data.getVisitorCount(), data.getRating());
+                                PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(), packet);
+                                
+                                Entity e = level.getEntity(id);
+                                if (e != null) {
+                                    e.setCustomName(Component.literal(name));
+                                    e.setCustomNameVisible(true);
+                                }
+                                return 1;
+                        }
+                }
+                return 0;
+        }
+
+        private static int releaseAnimal(CommandSourceStack src, int id) {
+                ServerLevel level = src.getLevel();
+                ZooData data = ZooData.get(level);
+                data.removeAnimal(id);
+                Entity e = level.getEntity(id);
+                if (e != null) {
+                    e.discard();
+                }
+                src.sendSuccess(() -> Component.literal("Hewan di-lepaskan!"), true);
+                SyncBalancePacket packet = new SyncBalancePacket(data.getBalance(), data.getTaggedAnimals(),
+                                data.getAnimalCount(), data.getStaffCount(), data.getVisitorCount(), data.getRating());
+                PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(), packet);
                 return 1;
         }
 }

@@ -18,6 +18,8 @@ public class BiomeChangerScreen extends Screen {
     private static final int ITEMS_PER_PAGE = 20; // 4 cols x 5 rows
     private final BlockPos targetPos;
     private int scrollOffset = 0;
+    private boolean replaceOnly = false;
+    private final String currentBiomeId;
 
     // Fixed list of "Main" biomes to avoid variants
     private static final List<String> MAIN_BIOMES = List.of(
@@ -49,6 +51,7 @@ public class BiomeChangerScreen extends Screen {
     public BiomeChangerScreen(BlockPos pos) {
         super(Component.literal("Select Biome"));
         this.targetPos = pos;
+        this.currentBiomeId = Minecraft.getInstance().level.getBiome(pos).unwrapKey().map(k -> k.location().toString()).orElse("minecraft:plains");
     }
 
     @Override
@@ -68,24 +71,6 @@ public class BiomeChangerScreen extends Screen {
 
         // Pagination
         int maxPages = (MAIN_BIOMES.size() + ITEMS_PER_PAGE - 1) / ITEMS_PER_PAGE;
-
-        // Navigation Buttons
-        this.addRenderableWidget(Button.builder(Component.literal("< Prev"), b -> {
-            if (scrollOffset > 0) {
-                scrollOffset--;
-                refreshWidgets();
-            }
-        }).bounds(x, y + 180, 60, 20).build());
-
-        this.addRenderableWidget(Button.builder(Component.literal("Next >"), b -> {
-            if (scrollOffset < maxPages - 1) {
-                scrollOffset++;
-                refreshWidgets();
-            }
-        }).bounds(x + 260, y + 180, 60, 20).build());
-
-        this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-                .bounds(x + 130, y + 180, 60, 20).build());
 
         // Grid
         int startIdx = scrollOffset * ITEMS_PER_PAGE;
@@ -107,12 +92,44 @@ public class BiomeChangerScreen extends Screen {
                     .tooltip(Tooltip.create(Component.literal(biomeId)))
                     .build());
         }
+
+        // Mode Toggle
+        String modeLabel = replaceOnly ? "Mode: Replace " + formatName(currentBiomeId) : "Mode: Fill All";
+        this.addRenderableWidget(Button.builder(Component.literal(modeLabel), b -> {
+            replaceOnly = !replaceOnly;
+            refreshWidgets();
+        }).bounds(x + 50, y + 140, 220, 20).build());
+
+        // Navigation Buttons
+        this.addRenderableWidget(Button.builder(Component.literal("< Prev"), b -> {
+            if (scrollOffset > 0) {
+                scrollOffset--;
+                refreshWidgets();
+            }
+        }).bounds(x, y + 180, 60, 20).build());
+
+        this.addRenderableWidget(Button.builder(Component.literal("Next >"), b -> {
+            if (scrollOffset < maxPages - 1) {
+                scrollOffset++;
+                refreshWidgets();
+            }
+        }).bounds(x + 260, y + 180, 60, 20).build());
+
+        this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
+                .bounds(x + 130, y + 180, 60, 20).build());
+
     }
 
     private void setBiome(String biomeId) {
         if (Minecraft.getInstance().getConnection() != null) {
-            String cmd = String.format("zoocmd setbiome %s %d %d %d",
-                    biomeId, targetPos.getX(), targetPos.getY(), targetPos.getZ());
+            String cmd;
+            if (replaceOnly) {
+                cmd = String.format("zoocmd setbiome %s %d %d %d replace %s",
+                        biomeId, targetPos.getX(), targetPos.getY(), targetPos.getZ(), currentBiomeId);
+            } else {
+                cmd = String.format("zoocmd setbiome %s %d %d %d",
+                        biomeId, targetPos.getX(), targetPos.getY(), targetPos.getZ());
+            }
             Minecraft.getInstance().getConnection().sendCommand(cmd);
         }
         this.onClose();
@@ -141,7 +158,7 @@ public class BiomeChangerScreen extends Screen {
         int y = this.height / 2 - 115;
 
         g.drawCenteredString(this.font, "Select Target Biome", x, y, 0xFFFFFF);
-        g.drawCenteredString(this.font, "Pos: " + targetPos.toShortString(), x, y + 10, 0xAAAAAA);
+        g.drawCenteredString(this.font, "Pos: " + targetPos.toShortString() + " (" + formatName(currentBiomeId) + ")", x, y + 10, 0xAAAAAA);
 
         super.render(g, mx, my, pt);
     }

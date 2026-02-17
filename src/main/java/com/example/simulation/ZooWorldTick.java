@@ -60,7 +60,7 @@ public class ZooWorldTick {
                 // Instant sync should be handled by the command that changes balance.
                 // This is a "catch-up" sync.
                 SyncBalancePacket packet = new SyncBalancePacket(data.getBalance(), data.getTaggedAnimals(), aCount,
-                        sCount, vCount);
+                        sCount, vCount, data.getRating());
                 PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(), packet);
             }
         }
