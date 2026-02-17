@@ -33,7 +33,7 @@ public class TagAnimalPacket {
             if (ctx.getDirection().getReceptionSide().isServer()) {
                 Entity entity = ctx.getSender().level().getEntity(entityId);
                 if (entity != null) {
-                    entity.setCustomName(Component.literal(customName));
+                    entity.setCustomName(Component.literal(customName).withStyle(net.minecraft.ChatFormatting.GOLD));
                     entity.setCustomNameVisible(true);
                     entity.getPersistentData().putBoolean("ZooAnimal", true);
 

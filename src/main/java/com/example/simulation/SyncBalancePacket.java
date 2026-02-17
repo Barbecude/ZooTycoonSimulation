@@ -46,16 +46,7 @@ public class SyncBalancePacket {
             ClientZooData.setAnimalCount(animalCount);
             ClientZooData.setStaffCount(staffCount);
             ClientZooData.setVisitorCount(visitorCount);
-
-            // Also sync to main client ZooData instance so GUI can read it
-            ZooData data = ZooData.get(net.minecraft.client.Minecraft.getInstance().level);
-            data.setBalance(balance);
-            data.setAnimalCount(animalCount);
-            data.setStaffCount(staffCount);
-            data.setVisitorCount(visitorCount);
-            // We need a setter for taggedAnimals or manipulation
-            data.getTaggedAnimals().clear();
-            data.getTaggedAnimals().addAll(taggedAnimals);
+            ClientZooData.setTaggedAnimals(taggedAnimals);
         });
         return true;
     }

@@ -1,0 +1,86 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.8/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :
+Java: 17.0.15, JVM: 17.0.15+6 (Eclipse Adoptium), Arch: amd64
+
+> Task :clean
+
+> Task :compileJava
+C:\Users\chill\Downloads\ZooTycoonSimulation\src\main\java\com\example\simulation\AnimalRegistry.java:81: warning: [removal] ResourceLocation(String) in ResourceLocation has been deprecated and marked for removal
+        ResourceLocation id = new ResourceLocation(idStr);
+                              ^
+C:\Users\chill\Downloads\ZooTycoonSimulation\src\main\java\com\example\simulation\CaptureCageItem.java:116: warning: [removal] ResourceLocation(String) in ResourceLocation has been deprecated and marked for removal
+        EntityType<?> type = ForgeRegistries.ENTITY_TYPES.getValue(new ResourceLocation(idStr));
+                                                                   ^
+C:\Users\chill\Downloads\ZooTycoonSimulation\src\main\java\com\example\simulation\ClientEvents.java:37: warning: [removal] setRenderLayer(Block,RenderType) in ItemBlockRenderTypes has been deprecated and marked for removal
+                net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(IndoZooTycoon.TRASH_BLOCK.get(),
+                                                                  ^
+C:\Users\chill\Downloads\ZooTycoonSimulation\src\main\java\com\example\simulation\ClientEvents.java:57: warning: [removal] ResourceLocation(String,String) in ResourceLocation has been deprecated and marked for removal
+                            return new ResourceLocation(IndoZooTycoon.MODID, "textures/entity/staff/" + role);
+                                   ^
+C:\Users\chill\Downloads\ZooTycoonSimulation\src\main\java\com\example\simulation\ClientEvents.java:69: warning: [removal] ResourceLocation(String,String) in ResourceLocation has been deprecated and marked for removal
+                                return new ResourceLocation(IndoZooTycoon.MODID,
+                                       ^
+C:\Users\chill\Downloads\ZooTycoonSimulation\src\main\java\com\example\simulation\IndoZooTycoon.java:141: warning: [removal] get() in FMLJavaModLoadingContext has been deprecated and marked for removal
+                IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
+                                                           ^
+C:\Users\chill\Downloads\ZooTycoonSimulation\src\main\java\com\example\simulation\PacketHandler.java:13: warning: [removal] ResourceLocation(String,String) in ResourceLocation has been deprecated and marked for removal
+                        new ResourceLocation(IndoZooTycoon.MODID, "main"),
+                        ^
+C:\Users\chill\Downloads\ZooTycoonSimulation\src\main\java\com\example\simulation\VisitorMoodLayer.java:17: warning: [removal] ResourceLocation(String,String) in ResourceLocation has been deprecated and marked for removal
+        private static final ResourceLocation HAPPY = new ResourceLocation(IndoZooTycoon.MODID,
+                                                      ^
+C:\Users\chill\Downloads\ZooTycoonSimulation\src\main\java\com\example\simulation\VisitorMoodLayer.java:19: warning: [removal] ResourceLocation(String,String) in ResourceLocation has been deprecated and marked for removal
+        private static final ResourceLocation NEUTRAL = new ResourceLocation(IndoZooTycoon.MODID,
+                                                        ^
+C:\Users\chill\Downloads\ZooTycoonSimulation\src\main\java\com\example\simulation\VisitorMoodLayer.java:21: warning: [removal] ResourceLocation(String,String) in ResourceLocation has been deprecated and marked for removal
+        private static final ResourceLocation TOILET = new ResourceLocation(IndoZooTycoon.MODID,
+                                                       ^
+C:\Users\chill\Downloads\ZooTycoonSimulation\src\main\java\com\example\simulation\VisitorMoodLayer.java:23: warning: [removal] ResourceLocation(String,String) in ResourceLocation has been deprecated and marked for removal
+        private static final ResourceLocation AMAZED = new ResourceLocation(IndoZooTycoon.MODID,
+                                                       ^
+C:\Users\chill\Downloads\ZooTycoonSimulation\src\main\java\com\example\simulation\VisitorMoodLayer.java:25: warning: [removal] ResourceLocation(String,String) in ResourceLocation has been deprecated and marked for removal
+        private static final ResourceLocation ADORED = new ResourceLocation(IndoZooTycoon.MODID,
+                                                       ^
+C:\Users\chill\Downloads\ZooTycoonSimulation\src\main\java\com\example\simulation\ZooComputerScreen.java:270: warning: [removal] ResourceLocation(String) in ResourceLocation has been deprecated and marked for removal
+                        currentDisplayList.add(new ShopEntry(new ResourceLocation("minecraft:barrier"), "Coming Soon",
+                                                             ^
+C:\Users\chill\Downloads\ZooTycoonSimulation\src\main\java\com\example\simulation\ZooComputerScreen.java:338: warning: [removal] ResourceLocation(String,String) in ResourceLocation has been deprecated and marked for removal
+                ResourceLocation egg1 = new ResourceLocation(id.getNamespace(), id.getPath() + "_spawn_egg");
+                                        ^
+C:\Users\chill\Downloads\ZooTycoonSimulation\src\main\java\com\example\simulation\ZooComputerScreen.java:343: warning: [removal] ResourceLocation(String,String) in ResourceLocation has been deprecated and marked for removal
+                ResourceLocation egg2 = new ResourceLocation(id.getNamespace(), "spawn_egg_" + id.getPath());
+                                        ^
+C:\Users\chill\Downloads\ZooTycoonSimulation\src\main\java\com\example\simulation\ZooComputerScreen.java:487: warning: [removal] ResourceLocation(String,String) in ResourceLocation has been deprecated and marked for removal
+                        currentDisplayList.add(new ShopEntry(new ResourceLocation("indozoo", "animal_" + id), name, 0,
+                                                             ^
+C:\Users\chill\Downloads\ZooTycoonSimulation\src\main\java\com\example\simulation\ZooConfig.java:95: warning: [removal] get() in ModLoadingContext has been deprecated and marked for removal
+                ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, COMMON_SPEC);
+                                 ^
+C:\Users\chill\Downloads\ZooTycoonSimulation\src\main\java\com\example\simulation\ZooItemRegistry.java:176: warning: [removal] ResourceLocation(String) in ResourceLocation has been deprecated and marked for removal
+        ResourceLocation id = new ResourceLocation(idStr);
+                              ^
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+18 warnings
+
+> Task :processResources
+> Task :classes
+> Task :jar
+> Task :downloadMcpConfig
+> Task :extractSrg
+> Task :createMcpToSrg
+> Task :reobfJar
+> Task :jarJar SKIPPED
+> Task :reobfJarJar SKIPPED
+> Task :assemble
+> Task :compileTestJava NO-SOURCE
+> Task :processTestResources NO-SOURCE
+> Task :testClasses UP-TO-DATE
+> Task :test NO-SOURCE
+> Task :check UP-TO-DATE
+> Task :build
+
+BUILD SUCCESSFUL in 32s
+8 actionable tasks: 8 executed

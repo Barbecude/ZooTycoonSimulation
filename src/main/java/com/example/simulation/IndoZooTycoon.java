@@ -34,7 +34,7 @@ public class IndoZooTycoon {
         public static final DeferredRegister<MenuType<?>> MENUS = DeferredRegister.create(ForgeRegistries.MENU_TYPES,
                         MODID);
         public static final DeferredRegister<CreativeModeTab> CREATIVE_TABS = DeferredRegister
-                        .create(Registries.CREATIVE_MODE_TAB, MODID);
+                        .create(net.minecraft.core.registries.Registries.CREATIVE_MODE_TAB, MODID);
 
         // Block
         public static final RegistryObject<Block> ZOO_COMPUTER_BLOCK = BLOCKS.register("zoo_computer",

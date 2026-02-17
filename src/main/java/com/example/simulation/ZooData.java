@@ -112,6 +112,17 @@ public class ZooData extends SavedData {
         setDirty();
     }
 
+    public void removeAnimal(int entityId) {
+        for (int i = 0; i < taggedAnimals.size(); i++) {
+            if (taggedAnimals.getCompound(i).getInt("id") == entityId) {
+                taggedAnimals.remove(i);
+                this.animalCount = taggedAnimals.size();
+                setDirty();
+                return;
+            }
+        }
+    }
+
     public void addAnimal(int entityId, String name, String type) {
         CompoundTag tag = new CompoundTag();
         tag.putInt("id", entityId);
@@ -119,12 +130,7 @@ public class ZooData extends SavedData {
         tag.putString("type", type);
 
         // Remove existing if any (update)
-        for (int i = 0; i < taggedAnimals.size(); i++) {
-            if (taggedAnimals.getCompound(i).getInt("id") == entityId) {
-                taggedAnimals.remove(i);
-                break;
-            }
-        }
+        removeAnimal(entityId); // Reuse remove logic
 
         taggedAnimals.add(tag);
         this.animalCount = taggedAnimals.size();
@@ -174,13 +180,12 @@ public class ZooData extends SavedData {
                 vCount++;
             if (e instanceof StaffEntity)
                 sCount++;
-            if (e instanceof net.minecraft.world.entity.animal.Animal)
-                aCount++;
         }
 
         setVisitorCount(vCount);
         setStaffCount(sCount);
-        setAnimalCount(aCount);
+        // Only count tagged animals managed by ZooData
+        setAnimalCount(this.taggedAnimals.size());
     }
 
     public static ZooData load(CompoundTag tag) {

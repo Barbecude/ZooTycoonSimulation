@@ -37,4 +37,14 @@ public class ClientZooData {
     public static void setVisitorCount(int count) {
         visitorCount = count;
     }
+
+    private static net.minecraft.nbt.ListTag taggedAnimals = new net.minecraft.nbt.ListTag();
+
+    public static net.minecraft.nbt.ListTag getTaggedAnimals() {
+        return taggedAnimals;
+    }
+
+    public static void setTaggedAnimals(net.minecraft.nbt.ListTag list) {
+        taggedAnimals = list;
+    }
 }

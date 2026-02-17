@@ -28,12 +28,18 @@ public class ZooItemRegistry {
         public final String displayName;
         public final int price;
         public final Category category;
+        public final String subCategory; // For filtering: BLOCKS, FUNCTIONAL, NATURAL, UTILITY
 
         public ItemData(Item item, String name, int price, Category category) {
+            this(item, name, price, category, null);
+        }
+        
+        public ItemData(Item item, String name, int price, Category category, String subCategory) {
             this.item = item;
             this.displayName = name;
             this.price = price;
             this.category = category;
+            this.subCategory = subCategory != null ? subCategory : "BLOCKS"; // Default to BLOCKS if not specified
         }
     }
 
@@ -49,13 +55,13 @@ public class ZooItemRegistry {
         register("minecraft:white_dye", "Dye", 5_000, Category.UTILITY);
         register("minecraft:ladder", "Ladder", 15_000, Category.UTILITY);
 
-        // 2. FUNCTIONAL BLOCKS -> 50k-200k
-        register("minecraft:lantern", "Lantern", 50_000, Category.UTILITY);
-        register("minecraft:flower_pot", "Pot", 15_000, Category.UTILITY);
-        register("minecraft:composter", "Composter", 35_000, Category.UTILITY);
-        register("minecraft:campfire", "Campfire", 25_000, Category.UTILITY);
+        // 2. FUNCTIONAL BLOCKS -> 50k-200k (with FUNCTIONAL subcategory)
+        register("minecraft:lantern", "Lantern", 50_000, Category.UTILITY, "FUNCTIONAL");
+        register("minecraft:flower_pot", "Pot", 15_000, Category.UTILITY, "FUNCTIONAL");
+        register("minecraft:composter", "Composter", 35_000, Category.UTILITY, "FUNCTIONAL");
+        register("minecraft:campfire", "Campfire", 25_000, Category.UTILITY, "FUNCTIONAL");
         if (IndoZooTycoon.CAPTURE_CAGE_ITEM.isPresent()) {
-            register(IndoZooTycoon.CAPTURE_CAGE_ITEM.getId().toString(), "Mob Cage", 2_000_000, Category.UTILITY);
+            register(IndoZooTycoon.CAPTURE_CAGE_ITEM.getId().toString(), "Mob Cage", 2_000_000, Category.UTILITY, "FUNCTIONAL");
         }
 
         // 3. BLOCKS -> 10k-50k per block
@@ -105,6 +111,12 @@ public class ZooItemRegistry {
         register("minecraft:seagrass", "Seagrass", 5_000, Category.FOOD);
         register("minecraft:cod", "Raw Cod", 20_000, Category.FOOD);
         register("minecraft:salmon", "Raw Salmon", 20_000, Category.FOOD);
+        
+        // Bug Spawn Eggs (Environmental Mobs) -> 50k-200k
+        register("alexsmobs:cockroach_spawn_egg", "Cockroach Spawn Egg", 50_000, Category.FOOD);
+        register("alexsmobs:flutter_spawn_egg", "Butterfly Spawn Egg", 100_000, Category.FOOD);
+        register("alexsmobs:caterpillar_spawn_egg", "Caterpillar Spawn Egg", 75_000, Category.FOOD);
+        register("minecraft:bee_spawn_egg", "Bee Spawn Egg", 150_000, Category.FOOD);
 
         // 6. VEHICLES -> 10M+
         register("minecraft:minecart", "Minecart", 10_000_000, Category.VEHICLE);
@@ -173,10 +185,14 @@ public class ZooItemRegistry {
     }
 
     private static void register(String idStr, String name, int price, Category cat) {
+        register(idStr, name, price, cat, null);
+    }
+    
+    private static void register(String idStr, String name, int price, Category cat, String subCategory) {
         ResourceLocation id = new ResourceLocation(idStr);
         if (ForgeRegistries.ITEMS.containsKey(id)) {
             Item item = ForgeRegistries.ITEMS.getValue(id);
-            ITEM_CATALOG.put(id, new ItemData(item, name, price, cat));
+            ITEM_CATALOG.put(id, new ItemData(item, name, price, cat, subCategory));
         }
     }
 

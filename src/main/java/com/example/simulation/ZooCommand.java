@@ -343,7 +343,6 @@ public class ZooCommand {
                                                 .withStyle(ChatFormatting.RED));
                                 return 0;
                         }
-                        zooData.setZooBannerPurchased(true);
                 }
 
                 ZooItemRegistry.ItemData data = ZooItemRegistry.getItem(itemId.toString());
@@ -364,6 +363,12 @@ public class ZooCommand {
                 ItemStack stack = new ItemStack(data.item, amount);
                 ItemEntity itemEntity = new ItemEntity(level, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, stack);
                 level.addFreshEntity(itemEntity);
+
+                // Mark banner as purchased if it is the banner
+                if (itemId.toString().equals(IndoZooTycoon.MODID + ":zoo_banner")) {
+                        zooData.setZooBannerPurchased(true);
+                }
+
                 src.sendSuccess(() -> Component
                                 .literal("Beli " + amount + "x " + data.displayName + " (-Rp " + cost + ")")
                                 .withStyle(ChatFormatting.GREEN), false);
