@@ -563,6 +563,15 @@ public class VisitorEntity extends PathfinderMob {
                     ZooData data = ZooData.get(visitor.level());
                     if (data.getVisitorCount() > 0) {
                         data.setVisitorCount(data.getVisitorCount() - 1);
+
+                        // Rating Increase Logic
+                        Mood mood = visitor.getMood();
+                        if (mood == Mood.HAPPY || mood == Mood.AMAZED || mood == Mood.ADORED) {
+                            if (visitor.getRandom().nextFloat() < 0.5f) { // 50% chance to increase
+                                data.setRating(data.getRating() + 1);
+                            }
+                        }
+
                         SyncBalancePacket packet = new SyncBalancePacket(data.getBalance(), data.getTaggedAnimals(),
                                 data.getAnimalCount(), data.getStaffCount(), data.getVisitorCount(), data.getRating());
                         PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(), packet);

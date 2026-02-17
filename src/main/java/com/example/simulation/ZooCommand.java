@@ -216,6 +216,9 @@ public class ZooCommand {
                                                                                                                                                 .getInteger(ctx, "y"),
                                                                                                                                 IntegerArgumentType
                                                                                                                                                 .getInteger(ctx, "z")))))))
+                                                .then(Commands.literal("setrating")
+                                                                .then(Commands.argument("rating", IntegerArgumentType.integer(0, 100))
+                                                                                .executes(ctx -> setRatingGlobal(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "rating")))))
 
                                                 .then(Commands.literal("setbiome")
                                                                 .then(Commands
@@ -572,5 +575,16 @@ public class ZooCommand {
                                 data.getAnimalCount(), data.getStaffCount(), data.getVisitorCount(), data.getRating());
                 PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(), packet);
                 return 1;
+        }
+
+        private static int setRatingGlobal(CommandSourceStack src, int rating) {
+            ServerLevel level = src.getLevel();
+            ZooData data = ZooData.get(level);
+            data.setRating(rating);
+            src.sendSuccess(() -> Component.literal("Rating di-set menjadi: " + rating), true);
+            SyncBalancePacket packet = new SyncBalancePacket(data.getBalance(), data.getTaggedAnimals(),
+                            data.getAnimalCount(), data.getStaffCount(), data.getVisitorCount(), data.getRating());
+            PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(), packet);
+            return 1;
         }
 }

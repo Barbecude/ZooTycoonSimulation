@@ -46,9 +46,10 @@ public class TagAnimalPacket {
                     String typeStr = (typeId != null) ? typeId.toString() : "minecraft:pig";
                     data.addAnimal(entityId, customName, typeStr);
 
-                    // Sync to client immediately for this player?
-                    // Or wait for next tick sync. Ideally sync now.
-                    // But we will rely on WorldTick for now or add a sync call here.
+                    // Sync to client immediately
+                    SyncBalancePacket sync = new SyncBalancePacket(data.getBalance(), data.getTaggedAnimals(),
+                            data.getAnimalCount(), data.getStaffCount(), data.getVisitorCount(), data.getRating());
+                    PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(), sync);
 
                     ctx.getSender().sendSystemMessage(Component.literal("Animal Tagged: " + customName));
                 }

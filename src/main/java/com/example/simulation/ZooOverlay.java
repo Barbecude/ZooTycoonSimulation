@@ -29,13 +29,6 @@ public class ZooOverlay {
         if (mc.player == null || mc.level == null)
             return;
 
-        // 1. Draw Balance (Existing) - Moved slightly down to make room for generic
-        // info or vice versa
-        // Let's keep balance at (10, 10) for now, and put Entity Info below it or above
-        // it.
-        // User requested "ujung kiri" (top left) for entity info.
-        // We will prioritize Entity Info at the very top (y=5), and move Balance down
-        // if needed.
 
         // Render Entity Info FIRST (Top Left)
         if (mc.hitResult instanceof EntityHitResult ehr && ehr.getType() == HitResult.Type.ENTITY) {
@@ -79,7 +72,7 @@ public class ZooOverlay {
 
         // Render WITHOUT background (clean text)
         // Name (White/colored based on type?) - Let's use White/Yellow
-        gfx.drawString(mc.font, name, x, y, 0xFFFFFF, true);
+        gfx.drawString(mc.font, name, x, y, 0xFF4E342E, true);
 
         // Mod Name (Gray/Subtle) below name
         gfx.drawString(mc.font, modId, x, y + 10, 0xAAAAAA, true);
@@ -108,4 +101,9 @@ public class ZooOverlay {
         
         RenderSystem.disableBlend();
     }
+    private static void drawRating(Minecraft mc, GuiGraphics gfx, int x, int y) {
+    int rating = ClientZooData.getRating();
+    String text = "Rating: " + rating + "/100";
+    gfx.drawString(mc.font, text, x, y, 0xFFFFFF, true);
+}
 }

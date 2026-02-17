@@ -112,6 +112,20 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
         refreshContent();
     }
 
+    private long lastDataUpdate = 0;
+
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        if (this.nameEditField != null) this.nameEditField.tick();
+        if (this.searchBox != null) this.searchBox.tick();
+
+        if (ClientZooData.lastUpdate > this.lastDataUpdate) {
+            this.lastDataUpdate = ClientZooData.lastUpdate;
+            refreshContent();
+        }
+    }
+
     private void refreshContent() {
         if (isRenaming) return;
 
@@ -620,7 +634,6 @@ private List<String> getFiltersForTab(String type) {
             addAnim("alexsmobs:cachalot_whale", "Cachalot Whale", 8000000, "MYTHICAL");
             addAnim("alexsmobs:tarantula_hawk", "Tarantula Hawk", 5800000, "MYTHICAL");
             addAnim("alexsmobs:bone_serpent", "Bone Serpent", 7500000, "MYTHICAL");
-            addAnim("alexsmobs:void_worm", "Leviathan", 10000000, "MYTHICAL");
             addAnim("alexsmobs:endergrade", "Endergrade", 6200000, "MYTHICAL");
             addAnim("alexsmobs:enderiophage", "Enderiophage", 6800000, "MYTHICAL");
         } 
@@ -640,6 +653,14 @@ private List<String> getFiltersForTab(String type) {
             addBlockGroup("slab", "BLOCK");
             addBlockGroup("log", "BLOCK");
             addBlockGroup("wood", "BLOCK");
+    
+            addBlockGroup("picket", "BLOCK");      // Mendukung semua Picket Fences
+addBlockGroup("stockade", "BLOCK");    // Mendukung semua Stockade Fences
+addBlockGroup("horse_fence", "BLOCK"); // Mendukung semua Horse Fences
+addBlockGroup("hedge", "BLOCK"); 
+addBlockGroup("wired", "BLOCK");       // Mendukung semua Wired Fences
+addBlockGroup("highley", "BLOCK");     // Mendukung Highley Gates
+addBlockGroup("pyramid", "BLOCK");
             addItem("minecraft:wooden_door", "Wooden Door", 200, "BLOCK");
             addItem("minecraft:oak_door", "Oak Door", 200, "BLOCK");
             addItem("minecraft:glass", "Glass", 100, "BLOCK");
