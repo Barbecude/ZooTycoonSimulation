@@ -42,7 +42,6 @@ public class ZooOverlay {
         // entity is shown)
         // Or keep it fixed. Let's put Balance at y=50 to be safe and clean.
         drawBalance(mc, gfx, 5, 50);
-        drawRating(mc, gfx, 5, 70); 
     };
 
     private static void drawEntityInfo(Minecraft mc, GuiGraphics gfx, LivingEntity entity) {
@@ -97,13 +96,8 @@ public class ZooOverlay {
         int textY = drawY + (bgHeight - 8) / 2;
         int textX = drawX + 10; 
         
-        gfx.drawString(mc.font, text, textX, textY, 0xFFFFFFFF, false);
+        gfx.drawString(mc.font, text, textX, textY, 0xFF4E342E, false);
         
         RenderSystem.disableBlend();
     }
-    private static void drawRating(Minecraft mc, GuiGraphics gfx, int x, int y) {
-    int rating = ClientZooData.getRating();
-    String text = "Rating: " + rating + "/100";
-    gfx.drawString(mc.font, text, x, y, 0xFFFFFF, true);
-}
 }

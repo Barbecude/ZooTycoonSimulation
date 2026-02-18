@@ -13,6 +13,7 @@ import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -20,7 +21,7 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import org.jetbrains.annotations.Nullable;
 
 public class StaffEntity extends PathfinderMob {
-    // 0 = Janitor, 1 = Zookeeper
+    // 0 = Janitor, 1 = Zookeeper, 2 = Security
     private static final EntityDataAccessor<Integer> ROLE = SynchedEntityData.defineId(StaffEntity.class,
             EntityDataSerializers.INT);
     // 0 = Idle, 1 = Sweeping, 2 = Greeting, 3 = Explaining
@@ -48,6 +49,11 @@ public class StaffEntity extends PathfinderMob {
 
     public void setRole(int role) {
         this.entityData.set(ROLE, role);
+        if (role == 2) {
+            this.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_SWORD));
+        } else {
+            this.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+        }
     }
 
     public int getAnimState() {
@@ -61,18 +67,19 @@ public class StaffEntity extends PathfinderMob {
     @Override
     public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason,
             @Nullable SpawnGroupData spawnData, @Nullable CompoundTag dataTag) {
-        // Randomly assign role (50/50 for now)
-        this.setRole(this.getRandom().nextBoolean() ? 1 : 0);
+        // Jika spawn alami/telur, acak role. Jika command, biasanya role di-set setelah spawn.
+        if (reason == MobSpawnType.NATURAL || reason == MobSpawnType.SPAWN_EGG) {
+            this.setRole(this.getRandom().nextInt(3)); // 0, 1, or 2
+        }
         return super.finalizeSpawn(level, difficulty, reason, spawnData, dataTag);
     }
-
-    // ... rest of logic ...
 
     public static AttributeSupplier.Builder createAttributes() {
         return PathfinderMob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 20.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.35D)
-                .add(Attributes.FOLLOW_RANGE, 48.0D);
+                .add(Attributes.FOLLOW_RANGE, 48.0D)
+                .add(Attributes.ATTACK_DAMAGE, 5.0D); // Tambahan agar Security bisa menyerang
     }
 
     @Override
@@ -86,7 +93,23 @@ public class StaffEntity extends PathfinderMob {
 
         // Role 1 (Zookeeper)
         this.goalSelector.addGoal(2, new InteractVisitorGoal(this));
-        // Feeding removed as per user request "hanya menjelaskan"
+        this.goalSelector.addGoal(3, new RefillFeederGoal(this));
+
+        // Role 2 (Security) - Melee Attack
+        this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.2D, false) {
+            @Override
+            public boolean canUse() {
+                return super.canUse() && StaffEntity.this.getRole() == 2;
+            }
+        });
+
+        // Target Goal: Security only targets Monsters
+        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, net.minecraft.world.entity.monster.Monster.class, 10, true, false, null) {
+            @Override
+            public boolean canUse() {
+                return super.canUse() && StaffEntity.this.getRole() == 2;
+            }
+        });
 
         this.goalSelector.addGoal(5, new RandomStrollGoal(this, 0.8D));
         this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 8.0F));
@@ -102,24 +125,16 @@ public class StaffEntity extends PathfinderMob {
         if (this.isPassenger() && this.getVehicle() != null && getRole() == 0) {
             net.minecraft.world.entity.Entity vehicle = this.getVehicle();
             if (isDriveable(vehicle)) {
-                // Force rotation to match staff
                 vehicle.setYRot(this.getYRot());
-
-                // Simulate Player Input (Pressing W)
                 this.setZza(1.0F);
                 this.yBodyRot = this.getYRot();
 
-                // If vehicle is LivingEntity, this might be enough.
-                // If not, apply manual velocity.
-
-                // Simple cruise control
                 if (this.horizontalCollision) {
                     this.setYRot(this.getYRot() + 180);
                 } else if (this.random.nextInt(40) == 0) {
                     this.setYRot(this.getYRot() + (this.random.nextInt(60) - 30));
                 }
 
-                // Manual fallback for non-living vehicles
                 float speed = 0.3F;
                 var look = this.calculateViewVector(0, this.getYRot());
                 vehicle.setDeltaMovement(look.x * speed, vehicle.getDeltaMovement().y, look.z * speed);
@@ -128,12 +143,9 @@ public class StaffEntity extends PathfinderMob {
     }
 
     private boolean isDriveable(net.minecraft.world.entity.Entity e) {
-        if (e == null)
-            return false;
-        String id = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(e.getType()).toString()
-                .toLowerCase();
+        if (e == null) return false;
+        String id = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(e.getType()).toString().toLowerCase();
         String name = e.getDisplayName().getString().toLowerCase();
-        // Expanded list
         return (id.contains("cart") || id.contains("vehicle") || id.contains("jeep") || id.contains("atv")
                 || id.contains("car") || id.contains("rover") || id.contains("scooter")
                 || name.contains("cart") || name.contains("mobil") || name.contains("vehicle")
@@ -164,312 +176,111 @@ public class StaffEntity extends PathfinderMob {
         }
     }
 
-    // --- INNER GOALS ---
-
+    // --- INNER GOALS (Copy paste your existing goals here: RideVehicle, CleanTrash, RefillFeeder, InteractVisitor) ---
+    // (Ensure you include the goal classes from your previous file here)
     static class RideVehicleGoal extends Goal {
         private final StaffEntity staff;
         private net.minecraft.world.entity.Entity targetVehicle;
-
-        public RideVehicleGoal(StaffEntity staff) {
-            this.staff = staff;
-            this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE));
-        }
-
-        @Override
-        public boolean canUse() {
-            // Only Janitor drives
-            if (staff.getRole() != 0)
-                return false;
-            // Don't switch if already riding
-            if (staff.isPassenger())
-                return false;
-            // Chance to look for car
-            if (staff.getRandom().nextFloat() > 0.02F)
-                return false;
-
-            // Find nearby vehicle
-            java.util.List<net.minecraft.world.entity.Entity> vehicles = staff.level().getEntities(staff,
-                    staff.getBoundingBox().inflate(10), e -> staff.isDriveable(e) && !e.isVehicle());
-
-            if (!vehicles.isEmpty()) {
-                // Pick closest
-                vehicles.sort(java.util.Comparator.comparingDouble(staff::distanceToSqr));
-                this.targetVehicle = vehicles.get(0);
-                return true;
-            }
+        public RideVehicleGoal(StaffEntity staff) { this.staff = staff; this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE)); }
+        @Override public boolean canUse() {
+            if (staff.getRole() != 0) return false;
+            if (staff.isPassenger() || staff.getRandom().nextFloat() > 0.02F) return false;
+            java.util.List<net.minecraft.world.entity.Entity> vehicles = staff.level().getEntities(staff, staff.getBoundingBox().inflate(10), e -> staff.isDriveable(e) && !e.isVehicle());
+            if (!vehicles.isEmpty()) { vehicles.sort(java.util.Comparator.comparingDouble(staff::distanceToSqr)); this.targetVehicle = vehicles.get(0); return true; }
             return false;
         }
-
-        @Override
-        public void start() {
-            staff.getNavigation().moveTo(targetVehicle, 1.2D);
-        }
-
-        @Override
-        public void tick() {
+        @Override public void start() { staff.getNavigation().moveTo(targetVehicle, 1.2D); }
+        @Override public void tick() {
             if (targetVehicle != null && !targetVehicle.isRemoved()) {
-                if (staff.distanceToSqr(targetVehicle) < 4.0D) {
-                    staff.startRiding(targetVehicle);
-                    staff.getNavigation().stop();
-                } else {
-                    staff.getNavigation().moveTo(targetVehicle, 1.2D);
-                }
+                if (staff.distanceToSqr(targetVehicle) < 4.0D) { staff.startRiding(targetVehicle); staff.getNavigation().stop(); } 
+                else { staff.getNavigation().moveTo(targetVehicle, 1.2D); }
             }
         }
-
-        @Override
-        public boolean canContinueToUse() {
-            return targetVehicle != null && !targetVehicle.isRemoved() && !targetVehicle.isVehicle()
-                    && !staff.isPassenger();
-        }
+        @Override public boolean canContinueToUse() { return targetVehicle != null && !targetVehicle.isRemoved() && !targetVehicle.isVehicle() && !staff.isPassenger(); }
     }
 
     static class CleanTrashGoal extends Goal {
         private final StaffEntity staff;
         private BlockPos targetPos;
         private int workTimer;
-
-        public CleanTrashGoal(StaffEntity staff) {
-            this.staff = staff;
-            this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
-        }
-
-        @Override
-        public boolean canUse() {
-            // Only Janitor (Role 0) cleans, check every few ticks
-            if (staff.getRole() != 0 || staff.getRandom().nextFloat() > 0.02F)
-                return false;
-
-            // Simple scan for trash nearby (radius 10)
+        public CleanTrashGoal(StaffEntity staff) { this.staff = staff; this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK)); }
+        @Override public boolean canUse() {
+            if (staff.getRole() != 0 || staff.getRandom().nextFloat() > 0.02F) return false;
             BlockPos p = staff.blockPosition();
             for (BlockPos pos : BlockPos.betweenClosed(p.offset(-10, -2, -10), p.offset(10, 2, 10))) {
-                if (staff.level().getBlockState(pos).is(IndoZooTycoon.TRASH_BLOCK.get())) {
-                    this.targetPos = pos.immutable();
-                    return true;
-                }
+                if (staff.level().getBlockState(pos).is(IndoZooTycoon.TRASH_BLOCK.get())) { this.targetPos = pos.immutable(); return true; }
             }
             return false;
         }
-
-        @Override
-        public void start() {
-            // Updated: Dismount if riding to clean
-            if (staff.isPassenger()) {
-                staff.stopRiding();
-            }
-
-            staff.getNavigation().moveTo(targetPos.getX(), targetPos.getY(), targetPos.getZ(), 1.0D);
-            workTimer = 0;
-            staff.setAnimState(0);
+        @Override public void start() { if (staff.isPassenger()) staff.stopRiding(); staff.getNavigation().moveTo(targetPos.getX(), targetPos.getY(), targetPos.getZ(), 1.0D); workTimer = 0; staff.setAnimState(0); }
+        @Override public void stop() { staff.setAnimState(0); targetPos = null; }
+        @Override public void tick() {
+            if (targetPos == null) return;
+            if (staff.distanceToSqr(targetPos.getX(), targetPos.getY(), targetPos.getZ()) < 5.0D) {
+                staff.getNavigation().stop(); staff.setAnimState(1); workTimer++;
+                if (workTimer > 60) { staff.level().destroyBlock(targetPos, false); staff.setAnimState(0); targetPos = null; }
+            } else if (staff.getNavigation().isDone()) { staff.getNavigation().moveTo(targetPos.getX(), targetPos.getY(), targetPos.getZ(), 1.0D); }
         }
-
-        @Override
-        public void stop() {
-            staff.setAnimState(0);
-            targetPos = null;
-        }
-
-        @Override
-        public void tick() {
-            if (targetPos == null)
-                return;
-
-            double dist = staff.distanceToSqr(targetPos.getX(), targetPos.getY(), targetPos.getZ());
-            if (dist < 5.0D) {
-                // Arrived at trash
-                staff.getNavigation().stop();
-                staff.setAnimState(1); // Sweeping animation
-
-                workTimer++;
-                if (workTimer > 60) { // 3 seconds to clean
-                    staff.level().destroyBlock(targetPos, false);
-                    staff.setAnimState(0);
-                    targetPos = null; // Done
-                }
-            } else {
-                // Keep moving to trash
-                if (staff.getNavigation().isDone()) {
-                    staff.getNavigation().moveTo(targetPos.getX(), targetPos.getY(), targetPos.getZ(), 1.0D);
-                }
-            }
-        }
-
-        @Override
-        public boolean canContinueToUse() {
-            return targetPos != null && staff.level().getBlockState(targetPos).is(IndoZooTycoon.TRASH_BLOCK.get());
-        }
+        @Override public boolean canContinueToUse() { return targetPos != null && staff.level().getBlockState(targetPos).is(IndoZooTycoon.TRASH_BLOCK.get()); }
     }
 
     static class RefillFeederGoal extends Goal {
         private final StaffEntity staff;
         private BlockPos targetPos;
         private int workTimer;
-
-        public RefillFeederGoal(StaffEntity staff) {
-            this.staff = staff;
-            this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
-        }
-
-        @Override
-        public boolean canUse() {
-            // Only Zookeeper (Role 1) refills feeders
-            if (staff.getRole() != 1 || staff.getRandom().nextFloat() > 0.05F)
-                return false;
-
+        public RefillFeederGoal(StaffEntity staff) { this.staff = staff; this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK)); }
+        @Override public boolean canUse() {
+            if (staff.getRole() != 1 || staff.getRandom().nextFloat() > 0.05F) return false;
             BlockPos p = staff.blockPosition();
             for (BlockPos pos : BlockPos.betweenClosed(p.offset(-15, -3, -15), p.offset(15, 3, 15))) {
                 if (staff.level().getBlockState(pos).is(IndoZooTycoon.ANIMAL_FEEDER_BLOCK.get())) {
                     net.minecraft.world.level.block.entity.BlockEntity be = staff.level().getBlockEntity(pos);
-                    if (be instanceof AnimalFeederBlockEntity feeder && !feeder.isFull()) {
-                        this.targetPos = pos.immutable();
-                        return true;
-                    }
+                    if (be instanceof AnimalFeederBlockEntity feeder && !feeder.isFull()) { this.targetPos = pos.immutable(); return true; }
                 }
             }
             return false;
         }
-
-        @Override
-        public void start() {
-            staff.getNavigation().moveTo(targetPos.getX(), targetPos.getY(), targetPos.getZ(), 1.0D);
-            workTimer = 0;
-            staff.setAnimState(0);
-            // Visual: Hold "Food" (Hay Block)
-            staff.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
-                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.HAY_BLOCK));
-        }
-
-        @Override
-        public void stop() {
-            staff.setAnimState(0);
-            staff.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
-                    net.minecraft.world.item.ItemStack.EMPTY);
-            targetPos = null;
-        }
-
-        @Override
-        public void tick() {
-            if (targetPos == null)
-                return;
-
+        @Override public void start() { staff.getNavigation().moveTo(targetPos.getX(), targetPos.getY(), targetPos.getZ(), 1.0D); workTimer = 0; staff.setAnimState(0); staff.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.HAY_BLOCK)); }
+        @Override public void stop() { staff.setAnimState(0); staff.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY); targetPos = null; }
+        @Override public void tick() {
+            if (targetPos == null) return;
             if (staff.distanceToSqr(targetPos.getX(), targetPos.getY(), targetPos.getZ()) < 5.0D) {
-                staff.getNavigation().stop();
-                // Change: Don't use Explaining animation (3) for refill. Just swing arm.
-                staff.setAnimState(0);
-
-                if (staff.tickCount % 10 == 0) {
-                    staff.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
-                }
-
+                staff.getNavigation().stop(); staff.setAnimState(0);
+                if (staff.tickCount % 10 == 0) staff.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
                 workTimer++;
-                if (workTimer > 40) { // 2 seconds to refill
+                if (workTimer > 40) {
                     net.minecraft.world.level.block.entity.BlockEntity be = staff.level().getBlockEntity(targetPos);
-                    if (be instanceof AnimalFeederBlockEntity feeder) {
-                        feeder.addFood(50); // Add 50% food
-                    }
-                    // Stop will be called by canContinueToUse returning false?
-                    // No, we need to clear TargetPos to stop continuing.
+                    if (be instanceof AnimalFeederBlockEntity feeder) { feeder.addFood(50); }
                     targetPos = null;
                 }
             }
         }
-
-        @Override
-        public boolean canContinueToUse() {
-            return targetPos != null;
-        }
+        @Override public boolean canContinueToUse() { return targetPos != null; }
     }
 
     static class InteractVisitorGoal extends Goal {
         private final StaffEntity staff;
         private VisitorEntity targetVisitor;
         private int timer;
-
-        public InteractVisitorGoal(StaffEntity staff) {
-            this.staff = staff;
-            this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
-        }
-
-        @Override
-        public boolean canUse() {
-            // Only Zookeeper (Role 1) explains
-            if (staff.getRole() != 1)
-                return false;
-
-            if (staff.getRandom().nextFloat() < 0.01F) { // Check 1% per tick
-                VisitorEntity nearby = staff.level().getNearestEntity(VisitorEntity.class,
-                        TargetingConditions.forNonCombat().range(4.0D).selector(entity -> {
-                            return entity.hasLineOfSight(staff);
-                        }), staff,
-                        staff.getX(), staff.getY(), staff.getZ(),
-                        staff.getBoundingBox().inflate(4.0D));
-
-                if (nearby != null) {
-                    this.targetVisitor = nearby;
-                    return true;
-                }
+        public InteractVisitorGoal(StaffEntity staff) { this.staff = staff; this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK)); }
+        @Override public boolean canUse() {
+            if (staff.getRole() != 1) return false;
+            if (staff.getRandom().nextFloat() < 0.01F) {
+                VisitorEntity nearby = staff.level().getNearestEntity(VisitorEntity.class, TargetingConditions.forNonCombat().range(4.0D).selector(e -> e.hasLineOfSight(staff)), staff, staff.getX(), staff.getY(), staff.getZ(), staff.getBoundingBox().inflate(4.0D));
+                if (nearby != null) { this.targetVisitor = nearby; return true; }
             }
             return false;
         }
-
-        @Override
-        public void start() {
-            timer = 60; // 3 seconds interaction
-            staff.getNavigation().stop();
-            if (staff.getRole() == 0) {
-                staff.setAnimState(2); // Janitor -> Greet (2)
-            } else {
-                staff.setAnimState(3); // Zookeeper -> Explain (3)
-            }
-        }
-
-        @Override
-        public void stop() {
-            staff.setAnimState(0);
-            targetVisitor = null;
-        }
-
-        @Override
-        public void tick() {
-            if (targetVisitor != null) {
-                staff.getLookControl().setLookAt(targetVisitor, 30.0F, 30.0F);
-                // Visitor also looks at staff
-                targetVisitor.getLookControl().setLookAt(staff, 30.0F, 30.0F);
-            }
-            timer--;
-        }
-
-        @Override
-        public boolean canContinueToUse() {
-            return timer > 0 && targetVisitor != null && targetVisitor.isAlive()
-                    && staff.distanceToSqr(targetVisitor) < 25.0D; // 5 blocks
-        }
+        @Override public void start() { timer = 60; staff.getNavigation().stop(); staff.setAnimState(staff.getRole() == 0 ? 2 : 3); }
+        @Override public void stop() { staff.setAnimState(0); targetVisitor = null; }
+        @Override public void tick() { if (targetVisitor != null) { staff.getLookControl().setLookAt(targetVisitor, 30.0F, 30.0F); targetVisitor.getLookControl().setLookAt(staff, 30.0F, 30.0F); } timer--; }
+        @Override public boolean canContinueToUse() { return timer > 0 && targetVisitor != null && targetVisitor.isAlive() && staff.distanceToSqr(targetVisitor) < 25.0D; }
     }
 
-    public int getFoodStock() {
-        return foodStock;
-    }
-
-    public void setFoodStock(int amount) {
-        this.foodStock = amount;
-    }
-
-    public boolean hasFood() {
-        return foodStock > 0;
-    }
-
-    public void consumeOneFood() {
-        if (foodStock > 0)
-            foodStock--;
-    }
-
-    public void setHomePos(BlockPos pos, int radius) {
-        this.homePos = pos;
-        this.restrictTo(pos, radius);
-    }
-
-    // Overload for backward compatibility or default
-    public void setHomePos(BlockPos pos) {
-        setHomePos(pos, MAX_HOME_DISTANCE);
-    }
+    public int getFoodStock() { return foodStock; }
+    public void setFoodStock(int amount) { this.foodStock = amount; }
+    public boolean hasFood() { return foodStock > 0; }
+    public void consumeOneFood() { if (foodStock > 0) foodStock--; }
+    public void setHomePos(BlockPos pos, int radius) { this.homePos = pos; this.restrictTo(pos, radius); }
+    public void setHomePos(BlockPos pos) { setHomePos(pos, MAX_HOME_DISTANCE); }
 }

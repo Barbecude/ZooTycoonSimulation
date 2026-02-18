@@ -225,10 +225,10 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
                 .tooltip(Tooltip.create(Component.literal("§fZookeeper\n§7Memberi makan hewan\n\n§aRp 2.000.000")))
                 .build());
 
-        addRenderableWidget(Button.builder(Component.literal("Security"), b -> {}) 
-                .bounds(x + (btnWidth + btnGap) * 2, recruitY + 25, btnWidth, 20)
-                .tooltip(Tooltip.create(Component.literal("§cComing Soon")))
-                .build());
+     addRenderableWidget(Button.builder(Component.literal("Security"), b -> { if(!isRenaming) cmd("hire security"); }) 
+        .bounds(x + (btnWidth + btnGap) * 2, recruitY + 25, btnWidth, 20)
+        .tooltip(Tooltip.create(Component.literal("§9Security\n§7Mengusir Visitor Jahat\n\n§aRp 3.000.000")))
+        .build());
 
         int animalsY = recruitY + 70;
         int colCount = 5;
@@ -596,124 +596,142 @@ private List<String> getFiltersForTab(String type) {
         }
     }
     
-    private void prepareShopData(String type) {
-        currentDisplayList.clear();
-        if (currentSubFilter.equals("ALL") || currentSubFilter.isEmpty()) {
-            if (type.equals("ANIMALS")) currentSubFilter = "Land";
-            else if (type.equals("BUILDINGS")) currentSubFilter = "Block";
-            else if (type.equals("FOOD")) currentSubFilter = "All"; 
-        }
-        
-        if (type.equals("ANIMALS")) {
-            addAnim("alexsmobs:elephant", "Elephant", 5000000, "LAND");
-            addAnim("alexsmobs:tiger", "Tiger", 4500000, "LAND");
-            addAnim("alexsmobs:grizzly_bear", "Grizzly Bear", 4000000, "LAND");
-            addAnim("alexsmobs:gorilla", "Gorilla", 3800000, "LAND");
-            addAnim("alexsmobs:kangaroo", "Kangaroo", 3000000, "LAND");
-            addAnim("alexsmobs:rocky_roller", "Rocky Roller", 2500000, "LAND");
-            addAnim("alexsmobs:komodo_dragon", "Komodo Dragon", 4200000, "LAND");
-            addAnim("alexsmobs:anaconda", "Anaconda", 4000000, "LAND");
+private void prepareShopData(String type) {
+    currentDisplayList.clear();
 
-            addAnim("naturalist:alligator", "Alligator", 3500000, "LAND");
-            addAnim("naturalist:giraffe", "Giraffe", 4800000, "LAND");
-            addAnim("naturalist:zebra", "Zebra", 3200000, "LAND");
-            addAnim("naturalist:hippo", "Hippo", 4500000, "LAND");
-            addAnim("naturalist:lion", "Lion", 5000000, "LAND");
-            addAnim("naturalist:rhino", "Rhino", 5500000, "LAND");
-            
-            addAnim("minecraft:panda", "Panda", 2000000, "LAND");
-            
-            addAnim("alexsmobs:mimic_octopus", "Mimic Octopus", 3800000, "AQUATIC");
-            addAnim("alexsmobs:hammerhead_shark", "Hammerhead Shark", 4500000, "AQUATIC");
-            addAnim("alexsmobs:giant_squid", "Giant Squid", 5000000, "AQUATIC");
-            
-            addAnim("alexsmobs:centipede_head", "Cave Centipede", 6000000, "MYTHICAL");
-            addAnim("alexsmobs:sea_bear", "Sea Bear", 7000000, "MYTHICAL");
-            addAnim("alexsmobs:comb_jelly", "Comb Jelly", 5500000, "MYTHICAL");
-            addAnim("alexsmobs:guster", "Guster", 6500000, "MYTHICAL");
-            addAnim("alexsmobs:cachalot_whale", "Cachalot Whale", 8000000, "MYTHICAL");
-            addAnim("alexsmobs:tarantula_hawk", "Tarantula Hawk", 5800000, "MYTHICAL");
-            addAnim("alexsmobs:bone_serpent", "Bone Serpent", 7500000, "MYTHICAL");
-            addAnim("alexsmobs:endergrade", "Endergrade", 6200000, "MYTHICAL");
-            addAnim("alexsmobs:enderiophage", "Enderiophage", 6800000, "MYTHICAL");
-        } 
-        else if (type.equals("BUILDINGS")) {
-            addItem("minecraft:scaffolding", "Scaffolding", 500, "ITEM");
-            addItem("minecraft:lead", "Lead", 1000, "ITEM");
-            addItem("minecraft:bone_meal", "Bone Meal", 200, "ITEM");
-            addItem("minecraft:ladder", "Ladder", 100, "ITEM");
-            for(String dye : new String[]{"white","orange","magenta","light_blue","yellow","lime","pink","gray","light_gray","cyan","purple","blue","brown","green","red","black"}) {
-                addItem("minecraft:"+dye+"_dye", "Dye " + dye, 100, "ITEM");
-            }
-            
-            addBlockGroup("planks", "BLOCK");
-            addBlockGroup("fence", "BLOCK"); 
-            addBlockGroup("fence_gate", "BLOCK");
-            addBlockGroup("stairs", "BLOCK");
-            addBlockGroup("slab", "BLOCK");
-            addBlockGroup("log", "BLOCK");
-            addBlockGroup("wood", "BLOCK");
-    
-            addBlockGroup("picket", "BLOCK");      // Mendukung semua Picket Fences
-addBlockGroup("stockade", "BLOCK");    // Mendukung semua Stockade Fences
-addBlockGroup("horse_fence", "BLOCK"); // Mendukung semua Horse Fences
-addBlockGroup("hedge", "BLOCK"); 
-addBlockGroup("wired", "BLOCK");       // Mendukung semua Wired Fences
-addBlockGroup("highley", "BLOCK");     // Mendukung Highley Gates
-addBlockGroup("pyramid", "BLOCK");
-            addItem("minecraft:wooden_door", "Wooden Door", 200, "BLOCK");
-            addItem("minecraft:oak_door", "Oak Door", 200, "BLOCK");
-            addItem("minecraft:glass", "Glass", 100, "BLOCK");
-            addItem("minecraft:glass_pane", "Glass Pane", 50, "BLOCK");
-            addItem("minecraft:stone", "Stone", 100, "BLOCK");
-            addItem("minecraft:stone_bricks", "Stone Bricks", 100, "BLOCK");
-            addItem("minecraft:cobblestone", "Cobblestone", 50, "BLOCK");
-            
-            addItem("minecraft:lantern", "Lantern", 500, "ITEM");
-            addItem("minecraft:flower_pot", "Pot", 200, "ITEM");
-            addItem("minecraft:composter", "Composter", 300, "ITEM");
-            addItem("minecraft:campfire", "Campfire", 400, "ITEM");
-            addItem("indozoo:zoo_banner", "Zoo Banner", 0, "ITEM");
-            addItem("indozoo:animal_tag", "Animal Tag", 0, "ITEM");
-            
-            addItem("minecraft:podzol", "Podzol", 100, "NATURAL");
-            addItem("minecraft:gravel", "Gravel", 50, "NATURAL");
-            addItem("minecraft:sand", "Sand", 50, "NATURAL");
-            addItem("minecraft:coarse_dirt", "Coarse Dirt", 50, "NATURAL");
-            addBlockGroup("leaves", "NATURAL");
-            addItem("minecraft:moss_block", "Moss Block", 150, "NATURAL");
-            addItem("minecraft:azalea", "Azalea", 150, "NATURAL");
-            addItem("minecraft:fern", "Fern", 50, "NATURAL");
-            addItem("minecraft:dead_bush", "Dead Bush", 50, "NATURAL");
-            addItem("minecraft:lily_pad", "Lily Pad", 50, "NATURAL");
-            addItem("minecraft:kelp", "Kelp", 50, "NATURAL");
-            addItem("minecraft:amethyst_block", "Amethyst Block", 500, "NATURAL");
-            addItem("minecraft:amethyst_cluster", "Amethyst Cluster", 300, "NATURAL");
-        } 
-        else if (type.equals("FOOD")) {
-            addFood("minecraft:wheat_seeds", "Seeds", 50, "minecraft:chicken", "minecraft:parrot");
-            addFood("minecraft:carrot", "Carrot", 100, "minecraft:pig", "minecraft:rabbit");
-            addFood("alexsmobs:acacia_blossom", "Acacia Blossom", 200, "naturalist:giraffe");
-            addFood("alexsmobs:banana", "Banana", 200, "alexsmobs:gorilla");
-            addFood("minecraft:bamboo", "Bamboo", 100, "minecraft:panda");
-            addFood("minecraft:hay_block", "Hay Bale", 300, "naturalist:zebra", "naturalist:rhino");
-            addFood("minecraft:apple", "Apple", 50, "minecraft:horse");
-            addFood("minecraft:beef", "Beef", 150, "alexsmobs:tiger", "naturalist:lion");
-        }
-
-        if (!currentSubFilter.equals("ALL")) {
-            currentDisplayList = currentDisplayList.stream()
-                  .filter(e -> e.category != null && (e.category.equalsIgnoreCase(currentSubFilter) || e.category.contains(currentSubFilter)))
-                  .collect(Collectors.toList());
-        }
-
-        if (searchBox != null && !searchBox.getValue().isEmpty()) {
-            String q = searchBox.getValue().toLowerCase();
-            currentDisplayList = currentDisplayList.stream()
-                  .filter(e -> e.displayName.toLowerCase().contains(q))
-                  .collect(Collectors.toList());
-        }
+    // Default sub filter
+    if (currentSubFilter.equals("ALL") || currentSubFilter.isEmpty()) {
+        if (type.equals("ANIMALS")) currentSubFilter = "LAND";
+        else if (type.equals("BUILDINGS")) currentSubFilter = "BLOCK";
+        else if (type.equals("FOOD")) currentSubFilter = "ALL";
     }
+
+    /* =======================
+       ANIMALS (Zoo Tycoon)
+       NPC Ticket = 20.000
+       ======================= */
+    if (type.equals("ANIMALS")) {
+
+        // ===== LAND (Common → Premium)
+        addAnim("minecraft:panda", "Panda", 1200000, "LAND");
+        addAnim("alexsmobs:kangaroo", "Kangaroo", 1400000, "LAND");
+        addAnim("naturalist:zebra", "Zebra", 1600000, "LAND");
+        addAnim("alexsmobs:gorilla", "Gorilla", 1800000, "LAND");
+        addAnim("naturalist:giraffe", "Giraffe", 2000000, "LAND");
+
+        addAnim("alexsmobs:elephant", "Elephant", 3000000, "LAND");
+        addAnim("naturalist:lion", "Lion", 3200000, "LAND");
+        addAnim("alexsmobs:tiger", "Tiger", 3500000, "LAND");
+        addAnim("naturalist:hippo", "Hippo", 3600000, "LAND");
+        addAnim("naturalist:rhino", "Rhino", 3800000, "LAND");
+
+        // ===== AQUATIC (lebih mahal, enclosure ribet)
+        addAnim("alexsmobs:mimic_octopus", "Mimic Octopus", 4200000, "AQUATIC");
+        addAnim("alexsmobs:hammerhead_shark", "Hammerhead Shark", 4800000, "AQUATIC");
+        addAnim("alexsmobs:giant_squid", "Giant Squid", 5200000, "AQUATIC");
+
+        // ===== MYTHICAL (Endgame)
+        addAnim("alexsmobs:comb_jelly", "Comb Jelly", 7000000, "MYTHICAL");
+        addAnim("alexsmobs:centipede_head", "Cave Centipede", 8000000, "MYTHICAL");
+        addAnim("alexsmobs:guster", "Guster", 9000000, "MYTHICAL");
+        addAnim("alexsmobs:endergrade", "Endergrade", 9500000, "MYTHICAL");
+        addAnim("alexsmobs:enderiophage", "Enderiophage", 10000000, "MYTHICAL");
+        addAnim("alexsmobs:bone_serpent", "Bone Serpent", 12000000, "MYTHICAL");
+        addAnim("alexsmobs:cachalot_whale", "Cachalot Whale", 15000000, "MYTHICAL");
+    }
+
+    /* =======================
+       BUILDINGS
+       ======================= */
+    else if (type.equals("BUILDINGS")) {
+
+        // Item utility
+        addItem("minecraft:scaffolding", "Scaffolding", 500, "ITEM");
+        addItem("minecraft:lead", "Lead", 1000, "ITEM");
+        addItem("minecraft:bone_meal", "Bone Meal", 200, "ITEM");
+        addItem("minecraft:ladder", "Ladder", 150, "ITEM");
+
+        for (String dye : new String[]{
+                "white","orange","magenta","light_blue","yellow","lime","pink",
+                "gray","light_gray","cyan","purple","blue","brown","green","red","black"}) {
+            addItem("minecraft:" + dye + "_dye", "Dye " + dye, 150, "ITEM");
+        }
+
+        // Block groups
+        addBlockGroup("planks", "BLOCK");
+        addBlockGroup("fence", "BLOCK");
+        addBlockGroup("fence_gate", "BLOCK");
+        addBlockGroup("stairs", "BLOCK");
+        addBlockGroup("slab", "BLOCK");
+        addBlockGroup("log", "BLOCK");
+        addBlockGroup("wood", "BLOCK");
+        addBlockGroup("picket", "BLOCK");
+
+        addBlockGroup("wall", "BLOCK");
+        addBlockGroup("hedge", "BLOCK");
+
+        // Blocks
+        addItem("minecraft:oak_door", "Oak Door", 300, "BLOCK");
+        addItem("minecraft:glass", "Glass", 300, "BLOCK");
+        addItem("minecraft:glass_pane", "Glass Pane", 150, "BLOCK");
+        addItem("minecraft:stone", "Stone", 200, "BLOCK");
+        addItem("minecraft:stone_bricks", "Stone Bricks", 300, "BLOCK");
+        addItem("minecraft:cobblestone", "Cobblestone", 150, "BLOCK");
+
+        // Decoration
+        addItem("minecraft:lantern", "Lantern", 1000, "ITEM");
+        addItem("minecraft:flower_pot", "Flower Pot", 300, "ITEM");
+        addItem("minecraft:composter", "Composter", 400, "ITEM");
+        addItem("minecraft:campfire", "Campfire", 1500, "ITEM");
+
+        // Zoo item
+        addItem("indozoo:zoo_banner", "Zoo Banner", 0, "ITEM");
+        addItem("indozoo:animal_tag", "Animal Tag", 0, "ITEM");
+
+        // Natural
+        addItem("minecraft:podzol", "Podzol", 150, "NATURAL");
+        addItem("minecraft:gravel", "Gravel", 100, "NATURAL");
+        addItem("minecraft:sand", "Sand", 100, "NATURAL");
+        addItem("minecraft:coarse_dirt", "Coarse Dirt", 100, "NATURAL");
+        addBlockGroup("leaves", "NATURAL");
+        addItem("minecraft:moss_block", "Moss Block", 300, "NATURAL");
+        addItem("minecraft:azalea", "Azalea", 300, "NATURAL");
+        addItem("minecraft:fern", "Fern", 100, "NATURAL");
+        addItem("minecraft:lily_pad", "Lily Pad", 100, "NATURAL");
+    }
+
+    /* =======================
+       FOOD (Consumable)
+       ======================= */
+    else if (type.equals("FOOD")) {
+        addFood("minecraft:wheat_seeds", "Seeds", 100, "minecraft:chicken", "minecraft:parrot");
+        addFood("minecraft:carrot", "Carrot", 200, "minecraft:pig", "minecraft:rabbit");
+        addFood("minecraft:apple", "Apple", 150, "minecraft:horse");
+        addFood("minecraft:bamboo", "Bamboo", 150, "minecraft:panda");
+        addFood("alexsmobs:banana", "Banana", 300, "alexsmobs:gorilla");
+        addFood("minecraft:hay_block", "Hay Bale", 500, "naturalist:zebra", "naturalist:rhino");
+        addFood("minecraft:beef", "Beef", 400, "alexsmobs:tiger", "naturalist:lion");
+    }
+
+    /* =======================
+       FILTER & SEARCH
+       ======================= */
+    if (!currentSubFilter.equals("ALL")) {
+        currentDisplayList = currentDisplayList.stream()
+                .filter(e -> e.category != null &&
+                        (e.category.equalsIgnoreCase(currentSubFilter)
+                                || e.category.contains(currentSubFilter)))
+                .collect(Collectors.toList());
+    }
+
+    if (searchBox != null && !searchBox.getValue().isEmpty()) {
+        String q = searchBox.getValue().toLowerCase();
+        currentDisplayList = currentDisplayList.stream()
+                .filter(e -> e.displayName.toLowerCase().contains(q))
+                .collect(Collectors.toList());
+    }
+}
+
     
     private void addAnim(String id, String name, int price, String cat) {
         String ns = "minecraft";

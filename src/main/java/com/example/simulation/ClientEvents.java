@@ -52,8 +52,8 @@ public class ClientEvents {
                             ctx, new StaffModel(ctx.bakeLayer(ModelLayers.PLAYER)), 0.5f) {
                         @Override
                         public ResourceLocation getTextureLocation(StaffEntity entity) {
-                            // 0 = Janitor, 1 = Zookeeper
-                            String role = entity.getRole() == 1 ? "zookeeper.png" : "janitor.png";
+                            int r = entity.getRole();
+                            String role = r == 1 ? "zookeeper.png" : (r == 2 ? "security.png" : "janitor.png");
                             return new ResourceLocation(IndoZooTycoon.MODID, "textures/entity/staff/" + role);
                         }
                     });

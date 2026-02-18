@@ -68,6 +68,11 @@ public class ZooItemRegistry {
         registerWoodVariants();
         registerStoneVariants();
         registerGlassVariants();
+        addMacawsMods();
+
+
+        register("minecraft:minecart", "Minecart", 10_000_000, Category.VEHICLE);
+        register("minecraft:oak_boat", "Boat", 5_000_000, Category.VEHICLE);
 
         // 4. NATURAL BLOCKS -> 10k-100k
         register("minecraft:podzol", "Podzol", 20_000, Category.NATURAL);
@@ -123,6 +128,56 @@ public class ZooItemRegistry {
         register("minecraft:oak_boat", "Boat", 5_000_000, Category.VEHICLE); // Wooden boat cheaper
 
         System.out.println("[IndoZoo] Registered " + ITEM_CATALOG.size() + " factory items.");
+    }
+    private static void addMacawsMods() {
+        // Kata kunci umum item Macaw's
+        String[] keywords = {
+            "fence", "bridge", "roof", "door", "window", "furniture", 
+            "path", "light", "trapdoor", "gutter"
+        };
+        
+        // Namespace Macaw's (mcw_*)
+        String[] modIds = {
+            "mcw_fences", "mcw_bridges", "mcw_doors", "mcw_trapdoors", 
+            "mcw_windows", "mcw_roofs", "mcw_furniture", "mcw_lights", "mcw_paths"
+        };
+
+        for (ResourceLocation loc : ForgeRegistries.ITEMS.getKeys()) {
+            String ns = loc.getNamespace();
+            String path = loc.getPath();
+            
+            // Cek apakah item berasal dari mod Macaw's
+            boolean isMacaw = false;
+            for (String id : modIds) {
+                if (ns.equals(id)) {
+                    isMacaw = true;
+                    break;
+                }
+            }
+            
+            // Atau jika path mengandung keyword bangunan umum
+            if (!isMacaw) {
+                 for (String k : keywords) {
+                     if (path.contains(k)) {
+                         // Filter item yang tidak diinginkan (opsional)
+                         isMacaw = true; 
+                         break;
+                     }
+                 }
+            }
+
+            if (isMacaw) {
+                // Tentukan kategori. Furniture masuk ITEM/UTILITY, sisanya BLOCK
+                String subCat = "BLOCK";
+                if (path.contains("furniture") || ns.contains("furniture")) subCat = "ITEM";
+                
+                // Hindari duplikat jika sudah diregister
+                if (!ITEM_CATALOG.containsKey(loc)) {
+                    // Harga default 200 perak untuk item mod bangunan
+                    register(loc.toString(), formatName(path), 200, Category.BUILDING, subCat);
+                }
+            }
+        }
     }
 
     private static void registerWoodVariants() {

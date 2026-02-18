@@ -6,7 +6,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
 
 public class ZooData extends SavedData {
-    private int balance = 100_000_000;
+    private int balance = 0;
     private int ticketPrice = 20_000;
     private int marketingLevel = 1;
 
