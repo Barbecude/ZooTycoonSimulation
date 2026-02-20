@@ -16,6 +16,7 @@ out
 # gradle
 build
 .gradle
+# release artifacts for GitHub should go to /libs (tracked)
 
 # other
 eclipse
