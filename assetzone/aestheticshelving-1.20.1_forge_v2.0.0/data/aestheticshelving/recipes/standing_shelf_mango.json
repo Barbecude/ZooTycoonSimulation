@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "#": {
+      "item": "arborealnature:mango_log"
+    },
+    "/": {
+      "item": "arborealnature:stripped_mango_log"
+    }
+  },
+  "pattern": [
+    "/#",
+    "/#"
+    
+  ],
+  "result": {
+    "count": 4,
+    "item": "aestheticshelving:standing_shelf_mango"
+  }
+}

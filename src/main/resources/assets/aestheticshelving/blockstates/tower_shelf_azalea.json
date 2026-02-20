@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "aestheticshelving:block/tower_shelf_azalea" },
+    "facing=south": { "model": "aestheticshelving:block/tower_shelf_azalea", "y": 180 },
+    "facing=west": { "model": "aestheticshelving:block/tower_shelf_azalea", "y": 270 },
+    "facing=east": { "model": "aestheticshelving:block/tower_shelf_azalea", "y": 90 }
+  }
+}

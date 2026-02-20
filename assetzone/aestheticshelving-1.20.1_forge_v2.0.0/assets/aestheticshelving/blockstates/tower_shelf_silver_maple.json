@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "aestheticshelving:block/tower_shelf_silver_maple" },
+    "facing=south": { "model": "aestheticshelving:block/tower_shelf_silver_maple", "y": 180 },
+    "facing=west": { "model": "aestheticshelving:block/tower_shelf_silver_maple", "y": 270 },
+    "facing=east": { "model": "aestheticshelving:block/tower_shelf_silver_maple", "y": 90 }
+  }
+}

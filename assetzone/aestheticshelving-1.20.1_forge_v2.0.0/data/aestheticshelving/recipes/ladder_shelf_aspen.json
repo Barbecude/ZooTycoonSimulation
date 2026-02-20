@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "#": {
+      "item": "whisperleaftrees:aspen_log"
+    },
+    "/": {
+      "item": "whisperleaftrees:stripped_aspen_log"
+    }
+  },
+  "pattern": [
+    "#/ ",
+    "#/ ",
+    " #/"
+  ],
+  "result": {
+    "count": 2,
+    "item": "aestheticshelving:ladder_shelf_aspen"
+  }
+}

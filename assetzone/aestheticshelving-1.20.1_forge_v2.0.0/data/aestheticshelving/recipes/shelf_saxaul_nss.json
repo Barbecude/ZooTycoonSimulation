@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "#": {
+      "item": "natures_spirit:saxaul_log"
+    },
+    "/": {
+      "item": "natures_spirit:stripped_saxaul_log"
+    }
+  },
+  "pattern": [
+    "#/#"
+    
+    
+  ],
+  "result": {
+    "count": 4,
+    "item": "aestheticshelving:shelf_saxaul_nss"
+  }
+}

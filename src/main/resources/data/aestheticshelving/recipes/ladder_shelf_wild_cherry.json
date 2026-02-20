@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "#": {
+      "item": "arborealnature:wild_cherry_log"
+    },
+    "/": {
+      "item": "arborealnature:stripped_wild_cherry_log"
+    }
+  },
+  "pattern": [
+    "#/ ",
+    "#/ ",
+    " #/"
+  ],
+  "result": {
+    "count": 2,
+    "item": "aestheticshelving:ladder_shelf_wild_cherry"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "#": {
+      "item": "whisperleaftrees:poplar_log"
+    },
+    "/": {
+      "item": "whisperleaftrees:stripped_poplar_log"
+    }
+  },
+  "pattern": [
+    " / ",
+    "/#/",
+    "/#/"
+  ],
+  "result": {
+    "count": 3,
+    "item": "aestheticshelving:tower_shelf_poplar"
+  }
+}

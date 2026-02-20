@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "#": {
+      "item": "silverwoodtrees:silverberry_log"
+    },
+    "/": {
+      "item": "silverwoodtrees:stripped_silverberry_log"
+    }
+  },
+  "pattern": [
+    "/#",
+    "/#"
+    
+  ],
+  "result": {
+    "count": 4,
+    "item": "aestheticshelving:standing_shelf_silverberry"
+  }
+}

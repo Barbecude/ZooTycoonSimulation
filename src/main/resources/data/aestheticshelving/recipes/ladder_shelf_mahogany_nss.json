@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "#": {
+      "item": "natures_spirit:mahogany_log"
+    },
+    "/": {
+      "item": "natures_spirit:stripped_mahogany_log"
+    }
+  },
+  "pattern": [
+    "#/ ",
+    "#/ ",
+    " #/"
+  ],
+  "result": {
+    "count": 2,
+    "item": "aestheticshelving:ladder_shelf_mahogany_nss"
+  }
+}

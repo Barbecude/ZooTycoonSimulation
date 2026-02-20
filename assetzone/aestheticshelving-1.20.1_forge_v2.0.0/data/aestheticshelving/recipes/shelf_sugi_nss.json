@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "#": {
+      "item": "natures_spirit:sugi_log"
+    },
+    "/": {
+      "item": "natures_spirit:stripped_sugi_log"
+    }
+  },
+  "pattern": [
+    "#/#"
+    
+    
+  ],
+  "result": {
+    "count": 4,
+    "item": "aestheticshelving:shelf_sugi_nss"
+  }
+}

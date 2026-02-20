@@ -1,0 +1,8 @@
+{
+    "parent": "indozoo:block/custom/trash_can_closed",
+    "textures": {
+        "all": "indozoo:block/trash_can",
+        "particle": "indozoo:block/trash_can",
+        "1": "indozoo:block/trash_can"
+    }
+}

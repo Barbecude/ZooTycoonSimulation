@@ -1,6 +1,43 @@
 {
+    "block.indozoo.zoo_computer": "Zoo Computer",
+    "item.indozoo.zoo_computer": "Zoo Computer",
+
+    "block.indozoo.zone_marker": "Zone Marker",
+    "item.indozoo.zone_marker": "Zone Marker",
+
     "block.indozoo.trash": "Trash",
     "item.indozoo.trash": "Trash",
+
+    "block.indozoo.trash_can": "Trash Can",
+    "item.indozoo.trash_can": "Trash Can",
+
+    "block.indozoo.food_stall": "Food Stall",
+    "item.indozoo.food_stall": "Food Stall",
+
+    "block.indozoo.drink_stall": "Drink Stall",
+    "item.indozoo.drink_stall": "Drink Stall",
+
+    "block.indozoo.animal_feeder": "Animal Feeder",
+    "item.indozoo.animal_feeder": "Animal Feeder",
+
+    "block.indozoo.toilet": "Toilet",
+    "item.indozoo.toilet": "Toilet",
+
+    "block.indozoo.zoo_wall_banner": "Zoo Wall Banner",
+    "block.indozoo.zoo_banner": "Zoo Banner",
+    "item.indozoo.zoo_banner": "Zoo Banner",
+
     "item.indozoo.capture_cage": "Capture Cage",
+    "item.indozoo.animal_tag": "Animal Tag",
+    "item.indozoo.biome_changer": "Biome Changer",
+
+    "item.indozoo.staff_spawn_egg": "Staff Spawn Egg",
+    "item.indozoo.visitor_spawn_egg": "Visitor Spawn Egg",
+    "item.indozoo.cashier_spawn_egg": "Cashier Spawn Egg",
+
+    "entity.indozoo.staff": "Zoo Staff",
+    "entity.indozoo.visitor": "Visitor",
+    "entity.indozoo.cashier": "Cashier",
+
     "itemGroup.indozoo.zoo_tab": "IndoZoo Tycoon"
 }

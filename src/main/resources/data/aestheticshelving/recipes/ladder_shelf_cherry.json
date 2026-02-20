@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "#": {
+      "item": "minecraft:cherry_log"
+    },
+    "/": {
+      "item": "minecraft:stripped_cherry_log"
+    }
+  },
+  "pattern": [
+    "#/ ",
+    "#/ ",
+    " #/"
+  ],
+  "result": {
+    "count": 2,
+    "item": "aestheticshelving:ladder_shelf_cherry"
+  },
+  "show_notification": true
+}

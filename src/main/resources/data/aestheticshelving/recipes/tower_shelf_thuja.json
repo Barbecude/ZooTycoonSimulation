@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "#": {
+      "item": "arborealnature:thuja_log"
+    },
+    "/": {
+      "item": "arborealnature:stripped_thuja_log"
+    }
+  },
+  "pattern": [
+    " / ",
+    "/#/",
+    "/#/"
+  ],
+  "result": {
+    "count": 3,
+    "item": "aestheticshelving:tower_shelf_thuja"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "#": {
+      "item": "wildfields:tamarisk_log"
+    },
+    "/": {
+      "item": "wildfields:stripped_tamarisk_log"
+    }
+  },
+  "pattern": [
+    "#/ ",
+    "#/ ",
+    " #/"
+  ],
+  "result": {
+    "count": 2,
+    "item": "aestheticshelving:ladder_shelf_tamarisk"
+  }
+}

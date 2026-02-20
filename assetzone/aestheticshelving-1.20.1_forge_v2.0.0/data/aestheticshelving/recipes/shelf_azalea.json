@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "#": {
+      "item": "missingtrees:azalea_log"
+    },
+    "/": {
+      "item": "missingtrees:stripped_azalea_log"
+    }
+  },
+  "pattern": [
+    "#/#"
+    
+    
+  ],
+  "result": {
+    "count": 4,
+    "item": "aestheticshelving:shelf_azalea"
+  }
+}

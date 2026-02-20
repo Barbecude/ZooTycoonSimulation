@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "aestheticshelving:block/ladder_shelf_poplar" },
+    "facing=south": { "model": "aestheticshelving:block/ladder_shelf_poplar", "y": 180 },
+    "facing=west": { "model": "aestheticshelving:block/ladder_shelf_poplar", "y": 270 },
+    "facing=east": { "model": "aestheticshelving:block/ladder_shelf_poplar", "y": 90 }
+  }
+}

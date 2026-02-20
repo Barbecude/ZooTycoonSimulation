@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=east": {
+      "model": "indozoo:block/toilet",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "indozoo:block/toilet"
+    },
+    "facing=south": {
+      "model": "indozoo:block/toilet",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "indozoo:block/toilet",
+      "y": 270
+    }
+  }
+}

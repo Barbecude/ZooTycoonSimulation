@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "#": {
+      "item": "silverwoodtrees:staghorn_sumac_log"
+    },
+    "/": {
+      "item": "silverwoodtrees:stripped_staghorn_sumac_log"
+    }
+  },
+  "pattern": [
+    "/#",
+    "/#"
+    
+  ],
+  "result": {
+    "count": 4,
+    "item": "aestheticshelving:standing_shelf_staghorn_sumac"
+  }
+}

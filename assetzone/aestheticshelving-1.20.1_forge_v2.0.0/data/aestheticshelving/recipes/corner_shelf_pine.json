@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "#": {
+      "item": "arborealnature:pine_log"
+    },
+    "/": {
+      "item": "arborealnature:stripped_pine_log"
+    }
+  },
+  "pattern": [
+    "#/",
+    " #"
+    
+  ],
+  "result": {
+    "count": 4,
+    "item": "aestheticshelving:corner_shelf_pine"
+  }
+}

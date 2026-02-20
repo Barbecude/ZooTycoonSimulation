@@ -1,0 +1,41 @@
+{
+  "multipart": [
+    {
+      "apply": {
+        "model": "indozoo:block/animal_feeder"
+      }
+    },
+    {
+      "when": {
+        "level": "1"
+      },
+      "apply": {
+        "model": "indozoo:block/animal_feeder_content_1"
+      }
+    },
+    {
+      "when": {
+        "level": "2"
+      },
+      "apply": {
+        "model": "indozoo:block/animal_feeder_content_2"
+      }
+    },
+    {
+      "when": {
+        "level": "3"
+      },
+      "apply": {
+        "model": "indozoo:block/animal_feeder_content_3"
+      }
+    },
+    {
+      "when": {
+        "level": "4"
+      },
+      "apply": {
+        "model": "indozoo:block/animal_feeder_content_4"
+      }
+    }
+  ]
+}

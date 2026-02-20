@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "aestheticshelving:block/tower_shelf_swamp_oak" },
+    "facing=south": { "model": "aestheticshelving:block/tower_shelf_swamp_oak", "y": 180 },
+    "facing=west": { "model": "aestheticshelving:block/tower_shelf_swamp_oak", "y": 270 },
+    "facing=east": { "model": "aestheticshelving:block/tower_shelf_swamp_oak", "y": 90 }
+  }
+}

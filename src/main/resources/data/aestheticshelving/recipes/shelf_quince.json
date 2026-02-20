@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "#": {
+      "item": "arborealnature:quince_log"
+    },
+    "/": {
+      "item": "arborealnature:stripped_quince_log"
+    }
+  },
+  "pattern": [
+    "#/#"
+    
+    
+  ],
+  "result": {
+    "count": 4,
+    "item": "aestheticshelving:shelf_quince"
+  }
+}

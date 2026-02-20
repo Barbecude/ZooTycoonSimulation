@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "bonus_rolls": 0.0,
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "aestheticshelving:corner_shelf_tamarisk"
+        }
+      ],
+      "rolls": 1.0
+    }
+  ],
+  "random_sequence": "aestheticshelving:blocks/corner_shelf_tamarisk"
+}

@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "#": {
+      "item": "arborealnature:fig_log"
+    },
+    "/": {
+      "item": "arborealnature:stripped_fig_log"
+    }
+  },
+  "pattern": [
+    "#/#"
+    
+    
+  ],
+  "result": {
+    "count": 4,
+    "item": "aestheticshelving:shelf_fig"
+  }
+}

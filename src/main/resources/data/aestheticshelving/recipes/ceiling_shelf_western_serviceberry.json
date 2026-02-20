@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "#": {
+      "item": "minecraft:chain"
+    },
+    "/": {
+      "item": "wildfields:stripped_western_serviceberry_log"
+    }
+  },
+  "pattern": [
+    "# #",
+    "///"
+    
+  ],
+  "result": {
+    "count": 4,
+    "item": "aestheticshelving:ceiling_shelf_western_serviceberry"
+  }
+}
