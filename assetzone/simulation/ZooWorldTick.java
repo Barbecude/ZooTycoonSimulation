@@ -16,6 +16,8 @@ public class ZooWorldTick {
             return;
 
         if (event.level instanceof ServerLevel level) {
+            ZooAnimalHungerSystem.tickServer(level);
+
             // Run logic every 10 seconds (200 ticks)
             if (level.getGameTime() % 200 == 0) {
                 ZooData data = ZooData.get(level);

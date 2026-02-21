@@ -84,6 +84,18 @@ public class IndoZooTycoon {
                         ShelfBlock::new);
         public static final RegistryObject<Item> DRINK_STALL_ITEM = ITEMS.register("drink_stall",
                         () -> new BlockItem(DRINK_STALL_BLOCK.get(), new Item.Properties()));
+        public static final RegistryObject<Block> OAK_SHELF_BLOCK = BLOCKS.register("oak_shelf",
+                        OakShelfBlock::new);
+        public static final RegistryObject<Item> OAK_SHELF_ITEM = ITEMS.register("oak_shelf",
+                        () -> new BlockItem(OAK_SHELF_BLOCK.get(), new Item.Properties()));
+        public static final RegistryObject<Block> OAK_STANDING_SHELF_BLOCK = BLOCKS.register("standing_oak_shelf",
+                        OakStandingShelfBlock::new);
+        public static final RegistryObject<Item> OAK_STANDING_SHELF_ITEM = ITEMS.register("standing_oak_shelf",
+                        () -> new BlockItem(OAK_STANDING_SHELF_BLOCK.get(), new Item.Properties()));
+        public static final RegistryObject<Block> OAK_TOWER_SHELF_BLOCK = BLOCKS.register("tower_oak_shelf",
+                        OakTowerShelfBlock::new);
+        public static final RegistryObject<Item> OAK_TOWER_SHELF_ITEM = ITEMS.register("tower_oak_shelf",
+                        () -> new BlockItem(OAK_TOWER_SHELF_BLOCK.get(), new Item.Properties()));
 
         public static final RegistryObject<Block> ZOO_WALL_BANNER_BLOCK = BLOCKS.register("zoo_wall_banner",
                         ZooWallBannerBlock::new);
@@ -162,13 +174,20 @@ public class IndoZooTycoon {
         public static final RegistryObject<BlockEntityType<ShelfBlockEntity>> SHELF_BE = BLOCK_ENTITIES
                         .register("shelf",
                                         () -> BlockEntityType.Builder
-                                                        .of(ShelfBlockEntity::new, FOOD_STALL_BLOCK.get(), DRINK_STALL_BLOCK.get())
+                                                        .of(ShelfBlockEntity::new, FOOD_STALL_BLOCK.get(), DRINK_STALL_BLOCK.get(),
+                                                                        OAK_SHELF_BLOCK.get(), OAK_STANDING_SHELF_BLOCK.get(), OAK_TOWER_SHELF_BLOCK.get())
                                                         .build(null));
 
         // Menu
         public static final RegistryObject<MenuType<ZooComputerMenu>> ZOO_COMPUTER_MENU = MENUS.register(
                         "zoo_computer_menu",
                         () -> IForgeMenuType.create(ZooComputerMenu::new));
+        public static final RegistryObject<MenuType<AnimalFeederMenu>> ANIMAL_FEEDER_MENU = MENUS.register(
+                        "animal_feeder_menu",
+                        () -> IForgeMenuType.create(AnimalFeederMenu::new));
+        public static final RegistryObject<MenuType<ShelfMenu>> SHELF_MENU = MENUS.register(
+                        "shelf_menu",
+                        () -> IForgeMenuType.create(ShelfMenu::new));
 
         // Tab
         public static final RegistryObject<CreativeModeTab> ZOO_TAB = CREATIVE_TABS.register("zoo_tab",
@@ -181,6 +200,9 @@ public class IndoZooTycoon {
                                                 output.accept(TRASH_CAN_ITEM.get());
                                                 output.accept(FOOD_STALL_ITEM.get());
                                                 output.accept(DRINK_STALL_ITEM.get());
+                                                output.accept(OAK_SHELF_ITEM.get());
+                                                output.accept(OAK_STANDING_SHELF_ITEM.get());
+                                                output.accept(OAK_TOWER_SHELF_ITEM.get());
                                                 output.accept(ANIMAL_FEEDER_ITEM.get());
                                                 output.accept(CAPTURE_CAGE_ITEM.get());
                                                 output.accept(BIOME_CHANGER_ITEM.get());

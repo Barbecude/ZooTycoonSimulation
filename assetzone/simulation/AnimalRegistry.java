@@ -66,7 +66,7 @@ public class AnimalRegistry {
 
         // 4. BUGS (Cheaper but still significant)
         register("alexsmobs:cockroach", "Cockroach", 500_000, Category.BUG);
-        register("alexsmobs:flutter", "Butterfly", 750_000, Category.BUG);
+        register("alexsmobs:flutter", "Flutter", 750_000, Category.BUG);
         register("naturalist:butterfly", "Butterfly", 750_000, Category.BUG);
         register("naturalist:caterpillar", "Caterpillar", 300_000, Category.BUG);
         register("alexsmobs:fly", "Fly", 350_000, Category.BUG);

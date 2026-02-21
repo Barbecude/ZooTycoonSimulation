@@ -7,6 +7,7 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.SpawnGroupData;
@@ -149,7 +150,8 @@ public class StaffEntity extends PathfinderMob {
 
         // Role 1 (Zookeeper)
         this.goalSelector.addGoal(2, new InteractVisitorGoal(this));
-        this.goalSelector.addGoal(3, new RefillFeederGoal(this));
+        this.goalSelector.addGoal(3, new ThrowFoodToHungryAnimalGoal(this));
+        this.goalSelector.addGoal(4, new RefillFeederGoal(this));
 
         // Role 2 (Security) - Melee Attack
         this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.2D, false) {
@@ -413,12 +415,16 @@ public class StaffEntity extends PathfinderMob {
             if (staff.getAssignedAnimalId().isEmpty() || staff.getAssignedFoodId().isEmpty()) return false;
             net.minecraft.world.entity.Entity specializedAnimal = findSpecializedAnimal();
             if (specializedAnimal == null) return false;
+            net.minecraft.resources.ResourceLocation foodId = net.minecraft.resources.ResourceLocation.tryParse(staff.getAssignedFoodId());
+            net.minecraft.world.item.Item foodItem = foodId != null ? net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(foodId) : null;
+            if (foodItem == null) return false;
             BlockPos p = staff.blockPosition();
             for (BlockPos pos : BlockPos.betweenClosed(p.offset(-15, -3, -15), p.offset(15, 3, 15))) {
                 if (staff.level().getBlockState(pos).is(IndoZooTycoon.ANIMAL_FEEDER_BLOCK.get())) {
                     net.minecraft.world.level.block.entity.BlockEntity be = staff.level().getBlockEntity(pos);
                     if (!(be instanceof AnimalFeederBlockEntity feeder) || feeder.isFull()) continue;
                     if (specializedAnimal.blockPosition().distSqr(pos) > (SPECIALIZATION_RADIUS * SPECIALIZATION_RADIUS)) continue;
+                    if (!feeder.canAcceptFood(foodItem, "", 1)) continue;
                     this.targetPos = pos.immutable();
                     return true;
                 }
@@ -447,7 +453,7 @@ public class StaffEntity extends PathfinderMob {
                         net.minecraft.resources.ResourceLocation foodId = net.minecraft.resources.ResourceLocation.tryParse(staff.getAssignedFoodId());
                         net.minecraft.world.item.Item foodItem = foodId != null ? net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(foodId) : null;
                         if (foodItem != null && FoodAnimalRegistry.isValidFoodForAnimal(staff.getAssignedAnimalId(), foodItem)) {
-                            feeder.addFood(new net.minecraft.world.item.ItemStack(foodItem), 50, staff.getAssignedAnimalId());
+                            feeder.addFood(new net.minecraft.world.item.ItemStack(foodItem), 8, "");
                         }
                     }
                     targetPos = null;
@@ -466,6 +472,113 @@ public class StaffEntity extends PathfinderMob {
                 if (e != null && e.isAlive()) return e;
             }
             return null;
+        }
+    }
+
+    static class ThrowFoodToHungryAnimalGoal extends Goal {
+        private final StaffEntity staff;
+        private LivingEntity targetAnimal;
+        private int actionTicks;
+        private int cooldownTicks;
+
+        public ThrowFoodToHungryAnimalGoal(StaffEntity staff) {
+            this.staff = staff;
+            this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
+        }
+
+        @Override
+        public boolean canUse() {
+            if (staff.getRole() != 1) return false;
+            if (cooldownTicks > 0) {
+                cooldownTicks--;
+                return false;
+            }
+            if (staff.getAssignedAnimalId().isEmpty() || staff.getAssignedFoodId().isEmpty()) return false;
+            if (!(staff.level() instanceof net.minecraft.server.level.ServerLevel serverLevel)) return false;
+            if (staff.getRandom().nextFloat() > 0.08F) return false;
+
+            targetAnimal = findHungrySpecializedAnimal(serverLevel);
+            return targetAnimal != null;
+        }
+
+        @Override
+        public void start() {
+            actionTicks = 0;
+            staff.setAnimState(3);
+            net.minecraft.resources.ResourceLocation foodId = net.minecraft.resources.ResourceLocation.tryParse(staff.getAssignedFoodId());
+            net.minecraft.world.item.Item foodItem = foodId != null ? net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(foodId) : null;
+            if (foodItem != null) {
+                staff.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new net.minecraft.world.item.ItemStack(foodItem));
+            }
+        }
+
+        @Override
+        public void stop() {
+            staff.setAnimState(0);
+            staff.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+            targetAnimal = null;
+            actionTicks = 0;
+        }
+
+        @Override
+        public void tick() {
+            if (!(staff.level() instanceof net.minecraft.server.level.ServerLevel serverLevel)) return;
+            if (targetAnimal == null || !targetAnimal.isAlive()) {
+                targetAnimal = null;
+                return;
+            }
+
+            net.minecraft.resources.ResourceLocation foodId = net.minecraft.resources.ResourceLocation.tryParse(staff.getAssignedFoodId());
+            net.minecraft.world.item.Item foodItem = foodId != null ? net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(foodId) : null;
+            if (foodItem == null) {
+                targetAnimal = null;
+                return;
+            }
+
+            staff.getLookControl().setLookAt(targetAnimal, 30.0F, 30.0F);
+            double dist = staff.distanceToSqr(targetAnimal);
+            if (dist > 64.0D) {
+                staff.getNavigation().moveTo(targetAnimal, 1.05D);
+                return;
+            }
+
+            staff.getNavigation().stop();
+            actionTicks++;
+            if (actionTicks >= 16) {
+                ZooAnimalHungerSystem.throwFoodAtTarget(serverLevel, staff, targetAnimal, foodItem);
+                cooldownTicks = 80;
+                targetAnimal = null;
+            }
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return targetAnimal != null;
+        }
+
+        private LivingEntity findHungrySpecializedAnimal(net.minecraft.server.level.ServerLevel level) {
+            ZooData data = ZooData.get(level);
+            net.minecraft.nbt.ListTag tagged = data.getTaggedAnimals();
+            LivingEntity best = null;
+            double bestDistance = Double.MAX_VALUE;
+
+            for (int i = 0; i < tagged.size(); i++) {
+                net.minecraft.nbt.CompoundTag tag = tagged.getCompound(i);
+                if (!staff.getAssignedAnimalId().equals(tag.getString("type"))) continue;
+
+                net.minecraft.world.entity.Entity entity = ZooAnimalHungerSystem.resolveTaggedEntity(level, tag);
+                if (!(entity instanceof LivingEntity living) || !living.isAlive()) continue;
+                if (!ZooAnimalHungerSystem.isHungry(level, living)) continue;
+
+                double distance = staff.distanceToSqr(living);
+                if (distance > 18.0D * 18.0D) continue;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = living;
+                }
+            }
+
+            return best;
         }
     }
 

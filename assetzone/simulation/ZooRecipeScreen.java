@@ -32,6 +32,8 @@ public class ZooRecipeScreen extends Screen {
         pages.add(RecipePage.trashCan());
         pages.add(RecipePage.animalTag());
         pages.add(RecipePage.mobCage());
+        pages.add(RecipePage.toilet());
+        pages.add(RecipePage.zooBanner());
 
         int centerX = this.width / 2;
         int y = (this.height - BG_HEIGHT) / 2;
@@ -308,6 +310,48 @@ public class ZooRecipeScreen extends Screen {
             String desc = "Kandang portabel untuk menangkap dan memindahkan hewan.\n"
                     + "Sangat berguna saat merapikan tata letak kandang.";
             return new RecipePage("Mob Cage", desc, grid, result);
+        }
+
+        static RecipePage toilet() {
+            ItemStack iron = new ItemStack(net.minecraft.world.item.Items.IRON_INGOT);
+            ItemStack quartz = new ItemStack(net.minecraft.world.item.Items.QUARTZ);
+            ItemStack bucket = new ItemStack(net.minecraft.world.item.Items.WATER_BUCKET);
+            ItemStack[][] grid = new ItemStack[3][3];
+
+            grid[0][0] = iron;
+            grid[0][1] = quartz;
+            grid[0][2] = iron;
+            grid[1][0] = quartz;
+            grid[1][1] = bucket;
+            grid[1][2] = quartz;
+            grid[2][0] = iron;
+            grid[2][1] = quartz;
+            grid[2][2] = iron;
+
+            ItemStack result = new ItemStack(IndoZooTycoon.RESTROOM_ITEM.get());
+            String desc = "Toilet tidak dijual di toko.\n"
+                    + "Craft langsung untuk fasilitas pengunjung agar rating kebun binatang tetap stabil.";
+            return new RecipePage("Toilet", desc, grid, result);
+        }
+
+        static RecipePage zooBanner() {
+            ItemStack wool = new ItemStack(net.minecraft.world.item.Items.WHITE_WOOL);
+            ItemStack gold = new ItemStack(net.minecraft.world.item.Items.GOLD_INGOT);
+            ItemStack stick = new ItemStack(net.minecraft.world.item.Items.STICK);
+            ItemStack[][] grid = new ItemStack[3][3];
+
+            grid[0][0] = wool;
+            grid[0][1] = wool;
+            grid[0][2] = wool;
+            grid[1][0] = wool;
+            grid[1][1] = gold;
+            grid[1][2] = wool;
+            grid[2][1] = stick;
+
+            ItemStack result = new ItemStack(IndoZooTycoon.ZOO_BANNER_ITEM.get());
+            String desc = "Banner kebun binatang sekarang hanya melalui crafting.\n"
+                    + "Gunakan sebagai penanda visual area utama kebun binatang.";
+            return new RecipePage("Zoo Banner", desc, grid, result);
         }
     }
 }

@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "WWW",
+    "WGW",
+    " S "
+  ],
+  "key": {
+    "W": {
+      "item": "minecraft:white_wool"
+    },
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    }
+  },
+  "result": {
+    "item": "indozoo:zoo_banner",
+    "count": 1
+  }
+}

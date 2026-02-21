@@ -16,6 +16,12 @@
 
     "block.indozoo.drink_stall": "Drink Stall",
     "item.indozoo.drink_stall": "Drink Stall",
+    "block.indozoo.oak_shelf": "Oak Shelf",
+    "item.indozoo.oak_shelf": "Oak Shelf",
+    "block.indozoo.standing_oak_shelf": "Standing Oak Shelf",
+    "item.indozoo.standing_oak_shelf": "Standing Oak Shelf",
+    "block.indozoo.tower_oak_shelf": "Tower Oak Shelf",
+    "item.indozoo.tower_oak_shelf": "Tower Oak Shelf",
 
     "block.indozoo.animal_feeder": "Animal Feeder",
     "item.indozoo.animal_feeder": "Animal Feeder",

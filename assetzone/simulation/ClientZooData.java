@@ -1,6 +1,8 @@
 package com.example.simulation;
 
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.world.entity.Entity;
 
 public class ClientZooData {
     private static int balance = 100_000_000;
@@ -75,6 +77,39 @@ public class ClientZooData {
     public static void setTaggedAnimals(ListTag list) {
         taggedAnimals = list;
         markDirty();
+    }
+
+    public static boolean isTaggedAnimal(Entity entity) {
+        return findTaggedAnimal(entity) != null;
+    }
+
+    public static int getTaggedAnimalHunger(Entity entity) {
+        CompoundTag tag = findTaggedAnimal(entity);
+        if (tag == null) return -1;
+        int hunger = tag.contains("hunger") ? tag.getInt("hunger") : ZooAnimalHungerSystem.MAX_HUNGER;
+        return Math.max(0, Math.min(ZooAnimalHungerSystem.MAX_HUNGER, hunger));
+    }
+
+    public static CompoundTag findTaggedAnimal(Entity entity) {
+        if (entity == null) return null;
+        String uuid = entity.getUUID().toString();
+
+        for (int i = 0; i < taggedAnimals.size(); i++) {
+            CompoundTag tag = taggedAnimals.getCompound(i);
+            if (tag.contains("uuid") && uuid.equals(tag.getString("uuid"))) {
+                return tag;
+            }
+        }
+
+        int id = entity.getId();
+        for (int i = 0; i < taggedAnimals.size(); i++) {
+            CompoundTag tag = taggedAnimals.getCompound(i);
+            if (tag.getInt("id") == id) {
+                return tag;
+            }
+        }
+
+        return null;
     }
 
     // Update the timestamp whenever data changes

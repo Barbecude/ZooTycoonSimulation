@@ -19,6 +19,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.core.BlockPos;
 import java.util.List;
 import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.server.level.ServerLevel;
 
 /**
  * Zookeeper NPC that specializes in caring for specific animals
@@ -39,6 +40,7 @@ public class ZookeeperEntity extends PathfinderMob {
     private String assignedAnimalId = ""; // e.g., "alexsmobs:elephant"
     private String assignedFoodId = "";
     private int feedingCooldown = 0;
+    private int throwCooldown = 0;
 
     public ZookeeperEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -70,12 +72,21 @@ public class ZookeeperEntity extends PathfinderMob {
             if (feedingCooldown > 0) {
                 feedingCooldown--;
             }
+            if (throwCooldown > 0) {
+                throwCooldown--;
+            }
 
             // Attempt to fill feeding stations
             if (feedingCooldown <= 0 && !assignedAnimalId.isEmpty()) {
                 ensureAssignedFood();
                 attemptFeedingStation();
                 feedingCooldown = FEEDING_COOLDOWN;
+            }
+
+            if (throwCooldown <= 0 && !assignedAnimalId.isEmpty()) {
+                ensureAssignedFood();
+                attemptThrowFoodToHungryAnimal();
+                throwCooldown = 80;
             }
         }
     }
@@ -102,11 +113,32 @@ public class ZookeeperEntity extends PathfinderMob {
                     Item food = foodId != null ? ForgeRegistries.ITEMS.getValue(foodId) : null;
                     if (food == null) continue;
                     if (!FoodAnimalRegistry.isValidFoodForAnimal(assignedAnimalId, food)) continue;
-                    feeder.addFood(new ItemStack(food), 20, assignedAnimalId);
+                    if (!feeder.canAcceptFood(food, "", 1)) continue;
+                    feeder.addFood(new ItemStack(food), 8, "");
                     return;
                 }
             }
         }
+    }
+
+    private void attemptThrowFoodToHungryAnimal() {
+        if (!(this.level() instanceof ServerLevel serverLevel)) return;
+        Entity specialized = findSpecializedAnimal();
+        if (!(specialized instanceof LivingEntity living) || !living.isAlive()) return;
+        if (!ZooAnimalHungerSystem.isHungry(serverLevel, living)) return;
+
+        net.minecraft.resources.ResourceLocation foodId = net.minecraft.resources.ResourceLocation.tryParse(assignedFoodId);
+        Item food = foodId != null ? ForgeRegistries.ITEMS.getValue(foodId) : null;
+        if (food == null) return;
+        if (!FoodAnimalRegistry.isValidFoodForAnimal(assignedAnimalId, food)) return;
+
+        if (this.distanceToSqr(living) > (9.0D * 9.0D)) {
+            this.getNavigation().moveTo(living, 0.95D);
+            return;
+        }
+
+        this.getNavigation().stop();
+        ZooAnimalHungerSystem.throwFoodAtTarget(serverLevel, this, living, food);
     }
 
     private void ensureAssignedFood() {

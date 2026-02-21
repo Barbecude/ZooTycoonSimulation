@@ -2,115 +2,137 @@ package com.example.simulation;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.world.item.Item;
+import net.minecraft.world.Container;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.Nullable;
 
-public class ShelfBlockEntity extends BlockEntity {
-    private int foodStock = 0;      // 0-64
-    private int drinkStock = 0;     // 0-64
-    private int foodPrice = 5000;   // default price
-    private int drinkPrice = 3000;  // default price
-    private long revenue = 0;       // accumulated revenue
-    private ItemStack displayFood = ItemStack.EMPTY;
-    private ItemStack displayDrink = ItemStack.EMPTY;
+public class ShelfBlockEntity extends BlockEntity implements Container, net.minecraft.world.MenuProvider {
+    private static final int MAX_STOCK = 64;
+
+    private ItemStack stockItem = ItemStack.EMPTY;
+    private int foodPrice = 5000;
+    private int drinkPrice = 3000;
+    private long revenue = 0;
 
     public ShelfBlockEntity(BlockPos pos, BlockState state) {
         super(IndoZooTycoon.SHELF_BE.get(), pos, state);
     }
 
-    // Food Management
+    // Food stock is represented by the internal stack count.
     public int getFoodStock() {
-        return foodStock;
+        return stockItem.isEmpty() ? 0 : stockItem.getCount();
     }
 
     public void setFoodStock(int amount) {
-        this.foodStock = Math.max(0, Math.min(64, amount));
+        amount = Math.max(0, Math.min(MAX_STOCK, amount));
+        if (amount <= 0) {
+            stockItem = ItemStack.EMPTY;
+        } else {
+            if (stockItem.isEmpty()) {
+                stockItem = new ItemStack(Items.COOKED_BEEF, amount);
+            } else {
+                stockItem.setCount(amount);
+            }
+        }
         setChanged();
         syncToClient();
     }
 
+    public boolean isStockEmpty() {
+        return getFoodStock() <= 0;
+    }
+
+    public boolean isStockFull() {
+        return getFoodStock() >= MAX_STOCK;
+    }
+
     public void addFoodStock(int amount) {
-        setFoodStock(foodStock + amount);
+        if (amount <= 0) return;
+        if (stockItem.isEmpty()) {
+            stockItem = new ItemStack(Items.COOKED_BEEF, 0);
+        }
+        stockItem.grow(Math.min(amount, MAX_STOCK - stockItem.getCount()));
+        setChanged();
+        syncToClient();
     }
 
     public boolean removeFoodStock(int amount) {
-        if (foodStock >= amount) {
-            setFoodStock(foodStock - amount);
-            if (foodStock <= 0) {
-                displayFood = ItemStack.EMPTY;
-                syncToClient();
-            }
-            return true;
+        if (amount <= 0) return false;
+        if (getFoodStock() < amount) return false;
+
+        stockItem.shrink(amount);
+        if (stockItem.isEmpty()) {
+            stockItem = ItemStack.EMPTY;
         }
-        return false;
+        setChanged();
+        syncToClient();
+        return true;
     }
 
     public boolean addFoodItem(ItemStack stack) {
         if (stack.isEmpty()) return false;
-        Item item = stack.getItem();
-        if (!FoodAnimalRegistry.isFoodRegistered(item)) return false;
-        if (foodStock >= 64) return false;
-        addFoodStock(1);
-        if (displayFood.isEmpty()) {
-            displayFood = new ItemStack(item);
-            syncToClient();
+        if (!isValidShelfFood(stack)) return false;
+        if (isStockFull()) return false;
+
+        if (stockItem.isEmpty()) {
+            stockItem = new ItemStack(Items.COOKED_BEEF, 0);
         }
+
+        int add = Math.min(stack.getCount(), MAX_STOCK - stockItem.getCount());
+        if (add <= 0) return false;
+
+        stockItem.grow(add);
+        setChanged();
+        syncToClient();
         return true;
     }
 
-    public ItemStack getDisplayFood() {
-        return displayFood.copy();
+    public static boolean isValidShelfFood(ItemStack stack) {
+        return stack.getItem() == Items.COOKED_BEEF;
     }
 
-    // Drink Management
+    public ItemStack getDisplayFood() {
+        if (stockItem.isEmpty()) return ItemStack.EMPTY;
+        ItemStack display = stockItem.copy();
+        display.setCount(1);
+        return display;
+    }
+
+    // Drink-related API kept for compatibility with existing renderer/logic.
     public int getDrinkStock() {
-        return drinkStock;
+        return 0;
     }
 
     public void setDrinkStock(int amount) {
-        this.drinkStock = Math.max(0, Math.min(64, amount));
-        setChanged();
-        syncToClient();
+        // Not used in debug shelf mode.
     }
 
     public void addDrinkStock(int amount) {
-        setDrinkStock(drinkStock + amount);
+        // Not used in debug shelf mode.
     }
 
     public boolean removeDrinkStock(int amount) {
-        if (drinkStock >= amount) {
-            setDrinkStock(drinkStock - amount);
-            if (drinkStock <= 0) {
-                displayDrink = ItemStack.EMPTY;
-                syncToClient();
-            }
-            return true;
-        }
         return false;
     }
 
     public boolean addDrinkItem(ItemStack stack) {
-        if (stack.isEmpty()) return false;
-        if (drinkStock >= 64) return false;
-        addDrinkStock(1);
-        if (displayDrink.isEmpty()) {
-            displayDrink = new ItemStack(stack.getItem());
-            syncToClient();
-        }
-        return true;
+        return false;
     }
 
     public ItemStack getDisplayDrink() {
-        return displayDrink.copy();
+        return ItemStack.EMPTY;
     }
 
-    // Pricing
     public int getFoodPrice() {
         return foodPrice;
     }
@@ -131,7 +153,6 @@ public class ShelfBlockEntity extends BlockEntity {
         syncToClient();
     }
 
-    // Revenue
     public long getRevenue() {
         return revenue;
     }
@@ -148,7 +169,6 @@ public class ShelfBlockEntity extends BlockEntity {
         syncToClient();
     }
 
-    // Sync
     private void syncToClient() {
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
@@ -158,31 +178,43 @@ public class ShelfBlockEntity extends BlockEntity {
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
-        tag.putInt("FoodStock", foodStock);
-        tag.putInt("DrinkStock", drinkStock);
+        tag.putInt("FoodStock", getFoodStock());
+        tag.putInt("DrinkStock", 0);
         tag.putInt("FoodPrice", foodPrice);
         tag.putInt("DrinkPrice", drinkPrice);
         tag.putLong("Revenue", revenue);
-        if (!displayFood.isEmpty()) {
-            tag.put("DisplayFood", displayFood.save(new CompoundTag()));
-        }
-        if (!displayDrink.isEmpty()) {
-            tag.put("DisplayDrink", displayDrink.save(new CompoundTag()));
+        if (!stockItem.isEmpty()) {
+            tag.put("StockItem", stockItem.save(new CompoundTag()));
+            tag.put("DisplayFood", stockItem.save(new CompoundTag())); // legacy mirror
         }
     }
 
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
-        foodStock = tag.getInt("FoodStock");
-        drinkStock = tag.getInt("DrinkStock");
-        foodPrice = tag.getInt("FoodPrice");
-        drinkPrice = tag.getInt("DrinkPrice");
+
+        if (tag.contains("StockItem")) {
+            stockItem = ItemStack.of(tag.getCompound("StockItem"));
+        } else if (tag.contains("DisplayFood")) {
+            stockItem = ItemStack.of(tag.getCompound("DisplayFood"));
+        } else {
+            stockItem = ItemStack.EMPTY;
+        }
+
+        int legacyFoodStock = tag.getInt("FoodStock");
+        if (!stockItem.isEmpty()) {
+            stockItem.setCount(Math.max(1, Math.min(MAX_STOCK, legacyFoodStock > 0 ? legacyFoodStock : stockItem.getCount())));
+            if (stockItem.getItem() != Items.COOKED_BEEF) {
+                // Migrate old custom foods to debug stock item.
+                stockItem = new ItemStack(Items.COOKED_BEEF, Math.max(1, Math.min(MAX_STOCK, stockItem.getCount())));
+            }
+        } else if (legacyFoodStock > 0) {
+            stockItem = new ItemStack(Items.COOKED_BEEF, Math.min(MAX_STOCK, legacyFoodStock));
+        }
+
+        foodPrice = tag.contains("FoodPrice") ? tag.getInt("FoodPrice") : 5000;
+        drinkPrice = tag.contains("DrinkPrice") ? tag.getInt("DrinkPrice") : 3000;
         revenue = tag.getLong("Revenue");
-        displayFood = tag.contains("DisplayFood") ? ItemStack.of(tag.getCompound("DisplayFood")) : ItemStack.EMPTY;
-        displayDrink = tag.contains("DisplayDrink") ? ItemStack.of(tag.getCompound("DisplayDrink")) : ItemStack.EMPTY;
-        if (displayFood.isEmpty() && foodStock > 0) displayFood = new ItemStack(Items.APPLE);
-        if (displayDrink.isEmpty() && drinkStock > 0) displayDrink = new ItemStack(Items.POTION);
     }
 
     @Override
@@ -195,5 +227,92 @@ public class ShelfBlockEntity extends BlockEntity {
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public Component getDisplayName() {
+        return Component.translatable(getBlockState().getBlock().getDescriptionId());
+    }
+
+    @Nullable
+    @Override
+    public AbstractContainerMenu createMenu(int syncId, Inventory playerInventory, Player player) {
+        return new ShelfMenu(syncId, playerInventory, this);
+    }
+
+    @Override
+    public int getContainerSize() {
+        return 1;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return stockItem.isEmpty();
+    }
+
+    @Override
+    public ItemStack getItem(int slot) {
+        return slot == 0 ? stockItem : ItemStack.EMPTY;
+    }
+
+    @Override
+    public ItemStack removeItem(int slot, int amount) {
+        if (slot != 0 || amount <= 0 || stockItem.isEmpty()) return ItemStack.EMPTY;
+        ItemStack split = stockItem.split(amount);
+        if (stockItem.isEmpty()) stockItem = ItemStack.EMPTY;
+        setChanged();
+        syncToClient();
+        return split;
+    }
+
+    @Override
+    public ItemStack removeItemNoUpdate(int slot) {
+        if (slot != 0) return ItemStack.EMPTY;
+        ItemStack out = stockItem;
+        stockItem = ItemStack.EMPTY;
+        setChanged();
+        syncToClient();
+        return out;
+    }
+
+    @Override
+    public void setItem(int slot, ItemStack stack) {
+        if (slot != 0) return;
+        if (stack.isEmpty()) {
+            stockItem = ItemStack.EMPTY;
+        } else {
+            ItemStack copy = stack.copy();
+            if (!isValidShelfFood(copy)) {
+                return;
+            }
+            copy.setCount(Math.min(MAX_STOCK, copy.getCount()));
+            stockItem = copy;
+        }
+        setChanged();
+        syncToClient();
+    }
+
+    @Override
+    public boolean stillValid(Player player) {
+        if (level == null || level.getBlockEntity(worldPosition) != this) return false;
+        return player.distanceToSqr(worldPosition.getX() + 0.5D, worldPosition.getY() + 0.5D,
+                worldPosition.getZ() + 0.5D) <= 64.0D;
+    }
+
+    @Override
+    public boolean canPlaceItem(int slot, ItemStack stack) {
+        return slot == 0 && isValidShelfFood(stack);
+    }
+
+    @Override
+    public void clearContent() {
+        stockItem = ItemStack.EMPTY;
+        setChanged();
+        syncToClient();
+    }
+
+    @Override
+    public int getMaxStackSize() {
+        return MAX_STOCK;
     }
 }

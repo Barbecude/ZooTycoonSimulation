@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "# #",
+    "###"
+  ],
+  "key": {
+    "#": "#minecraft:wooden_slabs"
+  },
+  "result": {
+    "count": 1,
+    "id": "animal_feeding_trough:feeding_trough"
+  }
+}

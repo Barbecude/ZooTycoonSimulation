@@ -84,7 +84,13 @@ public class ZooCommand {
                         .then(Commands.argument("x", IntegerArgumentType.integer())
                                 .then(Commands.argument("y", IntegerArgumentType.integer())
                                         .then(Commands.argument("z", IntegerArgumentType.integer())
-                                                .executes(ctx -> hireStaff(ctx.getSource(), 2, IntegerArgumentType.getInteger(ctx, "x"), IntegerArgumentType.getInteger(ctx, "y"), IntegerArgumentType.getInteger(ctx, "z"))))))));
+                                                .executes(ctx -> hireStaff(ctx.getSource(), 2, IntegerArgumentType.getInteger(ctx, "x"), IntegerArgumentType.getInteger(ctx, "y"), IntegerArgumentType.getInteger(ctx, "z")))))))
+                .then(Commands.literal("cashier")
+                        .executes(ctx -> hireCashierGlobal(ctx.getSource(), srcOrPlayerPos(ctx.getSource())))
+                        .then(Commands.argument("x", IntegerArgumentType.integer())
+                                .then(Commands.argument("y", IntegerArgumentType.integer())
+                                        .then(Commands.argument("z", IntegerArgumentType.integer())
+                                                .executes(ctx -> hireCashier(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "x"), IntegerArgumentType.getInteger(ctx, "y"), IntegerArgumentType.getInteger(ctx, "z"))))))));
 
         // Reset
         zoocmd.then(Commands.literal("reset")
@@ -170,6 +176,11 @@ public class ZooCommand {
         }
         BlockPos pos = src.getEntity().blockPosition();
         return hireStaffGlobal(src, role, pos);
+    }
+
+    private static BlockPos srcOrPlayerPos(CommandSourceStack src) {
+        if (src.getEntity() != null) return src.getEntity().blockPosition();
+        return BlockPos.containing(src.getPosition());
     }
 
     private static int resetGlobal(CommandSourceStack src) {
@@ -377,6 +388,37 @@ public class ZooCommand {
         return 1;
     }
 
+    private static int hireCashierGlobal(CommandSourceStack src, BlockPos pos) {
+        ServerLevel level = src.getLevel();
+        ZooData zooData = ZooData.get(level);
+        int cost = 2_500_000;
+
+        if (zooData.getBalance() < cost) {
+            src.sendFailure(Component.literal("Saldo tidak cukup!")
+                    .withStyle(ChatFormatting.RED));
+            return 0;
+        }
+
+        zooData.addBalance(-cost);
+        CashierEntity cashier = IndoZooTycoon.CASHIER_ENTITY.get().create(level);
+        if (cashier != null) {
+            BlockPos spawnPos = pos;
+            if (!zooData.getEntrances().isEmpty()) {
+                spawnPos = zooData.getRandomEntrance();
+            }
+            cashier.moveTo(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5, 0, 0);
+            level.addFreshEntity(cashier);
+        }
+
+        src.sendSuccess(() -> Component.literal("Cashier Hired!")
+                .withStyle(ChatFormatting.GREEN), false);
+        zooData.updateCounts(level);
+        SyncBalancePacket packet = new SyncBalancePacket(zooData.getBalance(), zooData.getTaggedAnimals(),
+                zooData.getAnimalCount(), zooData.getStaffCount(), zooData.getVisitorCount(), zooData.getRating());
+        PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(), packet);
+        return 1;
+    }
+
     private static int buyAnimal(CommandSourceStack src, ResourceLocation parsedId, int x, int y, int z) {
         return buyEntity(src, parsedId, x, y, z);
     }
@@ -408,6 +450,10 @@ public class ZooCommand {
 
     private static int hireStaff(CommandSourceStack src, int role, int x, int y, int z) {
         return hireStaffGlobal(src, role, new BlockPos(x, y, z));
+    }
+
+    private static int hireCashier(CommandSourceStack src, int x, int y, int z) {
+        return hireCashierGlobal(src, new BlockPos(x, y, z));
     }
 
     private static int upgradeLand(CommandSourceStack src, int x, int y, int z) {

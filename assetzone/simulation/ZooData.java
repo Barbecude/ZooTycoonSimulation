@@ -180,6 +180,7 @@ public class ZooData extends SavedData {
         if (uuid != null && !uuid.isEmpty()) tag.putString("uuid", uuid);
         tag.putString("name", name);
         tag.putString("type", type);
+        tag.putInt("hunger", ZooAnimalHungerSystem.MAX_HUNGER);
 
         // Remove existing if any (update)
         removeAnimal(entityId); // Reuse remove logic
@@ -257,7 +258,7 @@ public class ZooData extends SavedData {
                 continue;
             if (e instanceof VisitorEntity)
                 vCount++;
-            if (e instanceof StaffEntity)
+            if (e instanceof StaffEntity || e instanceof CashierEntity)
                 sCount++;
         }
 

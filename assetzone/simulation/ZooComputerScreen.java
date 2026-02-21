@@ -22,9 +22,7 @@ import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import org.lwjgl.glfw.GLFW;
 
-import java.awt.Color;
 import java.util.*;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> {
@@ -45,6 +43,7 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
 
     private int panelWidth = 0;
     private final List<String> staffPanelLines = new ArrayList<>();
+    private final Map<String, List<String>> zookeeperByAnimalType = new HashMap<>();
 
     // --- TABS ---
     private enum MainTab {
@@ -254,8 +253,8 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
 
     // ================= DASHBOARD =================
     private void initDashboard(int x, int y, int w) {
-        int recruitY = y + 100;
-        int btnWidth = 100;
+        int recruitY = y + 108;
+        int btnWidth = 112;
         int btnGap = 10;
 
         int tutWidth = 110;
@@ -283,13 +282,17 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
         .bounds(x + (btnWidth + btnGap) * 2, recruitY + 25, btnWidth, 20)
         .tooltip(Tooltip.create(Component.literal("§9Security\n§7Mengusir Visitor Jahat\n\n§aRp 3.000.000")))
         .build());
+        addRenderableWidget(Button.builder(Component.literal("Cashier"), b -> { if(!isRenaming) cmd("hire cashier"); })
+                .bounds(x, recruitY + 50, btnWidth, 20)
+                .tooltip(Tooltip.create(Component.literal("§eCashier\n§7Auto restock & transaksi shelf\n\n§aRp 2.500.000")))
+                .build());
 
-        int animalsY = recruitY + 70;
+        int animalsY = recruitY + 82;
         int colCount = 5;
         int cardGap = 10;
         int cardWidth = (w - (cardGap * (colCount - 1))) / colCount;
         if (cardWidth < 60) cardWidth = 60; 
-        int cardHeight = 40;
+        int cardHeight = 74;
         
         int maxRows = 3;
         List<ShopEntry> animals = currentDisplayList; 
@@ -299,13 +302,13 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
             int row = i / colCount;
             int col = i % colCount;
             int ax = x + col * (cardWidth + cardGap);
-            int ay = animalsY + 30 + row * (cardHeight + cardGap);
+            int ay = animalsY + 28 + row * (cardHeight + cardGap);
             if (ax + cardWidth > x + w) continue; 
             
             addRenderableWidget(new AnimalCard(ax, ay, cardWidth, cardHeight, animals.get(i)));
         }
         
-        addRenderableWidget(Button.builder(Component.literal("🔄"),
+        addRenderableWidget(Button.builder(Component.literal("R"),
                         b -> { if(!isRenaming) cmd("refresh"); }).bounds(leftPos + panelWidth - 30, topPos + imageHeight - 30, 20, 20)
                         .tooltip(Tooltip.create(Component.literal("Refresh Data")))
                         .build());
@@ -315,30 +318,33 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
         String balanceText = formatPrice(ClientZooData.getBalance());
         g.pose().pushPose();
         g.pose().translate(x, y, 0);
-        g.pose().scale(2.0f, 2.0f, 2.0f);
+        g.pose().scale(1.9f, 1.9f, 1.9f);
         g.drawString(font, balanceText, 0, 0, 0xFF55FF55);
         g.pose().popPose();
 
-        int statsY = y + 35;
+        int statsY = y + 38;
         drawStatBox(g, x, statsY, "Staff", String.valueOf(ClientZooData.getStaffCount()));
         drawStatBox(g, x + 60, statsY, "Pengunjung", String.valueOf(ClientZooData.getVisitorCount()));
+        drawStatBox(g, x + 120, statsY, "Hewan", String.valueOf(ClientZooData.getAnimalCount()));
 
-        int recruitY = y + 100;
+        int recruitY = y + 108;
         g.drawString(font, "Rekrut staff", x, recruitY, TEXT_PRIMARY);
 
-        int animalsY = recruitY + 70;
+        int animalsY = recruitY + 82;
         g.drawString(font, "Hewan (" + currentDisplayList.size() + ")", x, animalsY, TEXT_PRIMARY);
 
-        int panelX = x + 330;
-        int panelY = y + 35;
-        g.fill(panelX, panelY, panelX + 250, panelY + 160, CARD_BG_COLOR);
-        g.renderOutline(panelX, panelY, 250, 160, ACCENT_COLOR);
-        g.drawString(font, "Keeper/Security Panel", panelX + 8, panelY + 8, TEXT_PRIMARY);
+        int panelX = x + 340;
+        int panelY = y + 38;
+        int panelW = Math.max(260, panelWidth - (panelX - leftPos) - 14);
+        int panelH = 172;
+        g.fill(panelX, panelY, panelX + panelW, panelY + panelH, CARD_BG_COLOR);
+        g.renderOutline(panelX, panelY, panelW, panelH, ACCENT_COLOR);
+        g.drawString(font, "Staff Operations Panel", panelX + 8, panelY + 8, TEXT_PRIMARY);
         int lineY = panelY + 24;
         if (staffPanelLines.isEmpty()) {
-            g.drawString(font, "- No active staff data", panelX + 8, lineY, TEXT_SECONDARY);
+            g.drawString(font, "- Tidak ada data staff aktif", panelX + 8, lineY, TEXT_SECONDARY);
         } else {
-            for (int i = 0; i < Math.min(8, staffPanelLines.size()); i++) {
+            for (int i = 0; i < Math.min(9, staffPanelLines.size()); i++) {
                 g.drawString(font, staffPanelLines.get(i), panelX + 8, lineY + (i * 16), TEXT_SECONDARY);
             }
         }
@@ -346,25 +352,42 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
 
     private void collectStaffPanelData() {
         staffPanelLines.clear();
+        zookeeperByAnimalType.clear();
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
 
         for (Entity e : mc.level.entitiesForRendering()) {
             if (e instanceof StaffEntity staff) {
                 if (staff.getRole() == 1) {
-                    String animal = staff.getAssignedAnimalId().isEmpty() ? "unassigned" : staff.getAssignedAnimalId();
-                    String food = staff.getAssignedFoodId().isEmpty() ? "none" : staff.getAssignedFoodId();
-                    staffPanelLines.add("ZK " + staff.getStaffName() + " | " + animal + " | " + food);
+                    String animal = staff.getAssignedAnimalId().isEmpty() ? "Belum ditugaskan" : prettifyAnimalType(staff.getAssignedAnimalId());
+                    String food = staff.getAssignedFoodId().isEmpty() ? "Belum ditentukan" : prettifyAnimalType(staff.getAssignedFoodId());
+                    staffPanelLines.add("Zookeeper " + staff.getStaffName() + " | Hewan: " + animal + " | Pakan: " + food);
+                    if (!staff.getAssignedAnimalId().isEmpty()) {
+                        zookeeperByAnimalType.computeIfAbsent(staff.getAssignedAnimalId(), k -> new ArrayList<>())
+                                .add(staff.getStaffName());
+                    }
                 } else if (staff.getRole() == 2) {
-                    staffPanelLines.add("SEC " + staff.getStaffName() + " | alert-ready");
+                    staffPanelLines.add("Security Officer " + staff.getStaffName() + " | Status: Siaga");
                 }
+            } else if (e instanceof CashierEntity cashier) {
+                String cashierName = cashier.getName() != null ? cashier.getName().getString() : "Cashier";
+                staffPanelLines.add("Cashier " + cashierName + " | Status: Shelf Service Aktif");
             } else if (e instanceof ZookeeperEntity zk) {
-                String animal = zk.getAssignedAnimal().isEmpty() ? "unassigned" : zk.getAssignedAnimal();
-                staffPanelLines.add("ZK " + zk.getZookeeperName() + " | " + animal);
+                String animal = zk.getAssignedAnimal().isEmpty() ? "Belum ditugaskan" : prettifyAnimalType(zk.getAssignedAnimal());
+                staffPanelLines.add("Zookeeper " + zk.getZookeeperName() + " | Hewan: " + animal);
+                if (!zk.getAssignedAnimal().isEmpty()) {
+                    zookeeperByAnimalType.computeIfAbsent(zk.getAssignedAnimal(), k -> new ArrayList<>())
+                            .add(zk.getZookeeperName());
+                }
             } else if (e instanceof SecurityEntity sec) {
-                staffPanelLines.add("SEC " + sec.getSecurityName() + " | alert=" + sec.getAlertLevel());
+                staffPanelLines.add("Security Officer " + sec.getSecurityName() + " | Level Alert: " + sec.getAlertLevel());
             }
         }
+
+        // Keep unique lines while preserving first-seen order.
+        LinkedHashSet<String> unique = new LinkedHashSet<>(staffPanelLines);
+        staffPanelLines.clear();
+        staffPanelLines.addAll(unique);
     }
 
     private void drawStatBox(GuiGraphics g, int x, int y, String label, String value) {
@@ -437,11 +460,11 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
         
         if (totalRows > maxRows) {
                 int px = leftPos + panelWidth - 25;
-                addRenderableWidget(Button.builder(Component.literal("▲"), b -> {
+                addRenderableWidget(Button.builder(Component.literal("â–²"), b -> {
                     if (scrollOffset > 0 && !isRenaming) { scrollOffset--; refreshContent(); }
                 }).bounds(px, listY, 20, 20).build());
 
-            addRenderableWidget(Button.builder(Component.literal("▼"), b -> {
+            addRenderableWidget(Button.builder(Component.literal("â–¼"), b -> {
                     if (scrollOffset < totalRows - maxRows && !isRenaming) { scrollOffset++; refreshContent(); }
             }).bounds(px, listY + 25, 20, 20).build());
         }
@@ -647,7 +670,7 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
             int textX = x + textPaddingX;
             g.drawString(font, label.getString(), textX, textY, 0xFFFFFFFF);
 
-            String chevron = "˅";
+            String chevron = tutorialMenuOpen ? "^" : "v";
             int chevronWidth = font.width(chevron);
             int chevronX = x + w - chevronWidth - textPaddingX;
             g.drawString(font, chevron, chevronX, textY, 0xFFAAAAAA);
@@ -731,6 +754,28 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
         return "Rp " + nf.format(price);
     }
 
+    private String prettifyAnimalType(String rawId) {
+        if (rawId == null || rawId.isEmpty()) return "Unknown";
+        String path = rawId;
+        if (rawId.contains(":")) {
+            path = rawId.substring(rawId.indexOf(':') + 1);
+        }
+        return formatName(path);
+    }
+
+    private String getKeeperNamesForAnimal(String animalTypeId) {
+        if (animalTypeId == null || animalTypeId.isEmpty()) return "Belum ada zookeeper";
+        List<String> names = zookeeperByAnimalType.get(animalTypeId);
+        if (names == null || names.isEmpty()) return "Belum ada zookeeper";
+        LinkedHashSet<String> unique = new LinkedHashSet<>(names);
+        return String.join(", ", unique);
+    }
+
+    private static int hungerToPercent(int hungerValue) {
+        int safe = Math.max(0, Math.min(20, hungerValue));
+        return ((20 - safe) * 100) / 20;
+    }
+
 private List<String> getFiltersForTab(String type) {
         // Ubah tulisan di sini jadi "Land", "Aquatic" (bukan "LAND")
         if (type.equals("ANIMALS")) return Arrays.asList("Land", "Aquatic", "Bugs", "Mythical");
@@ -748,55 +793,16 @@ private List<String> getFiltersForTab(String type) {
                 int id = tag.getInt("id"); 
                 String uuid = tag.contains("uuid") ? tag.getString("uuid") : "";
                 String typeRaw = tag.contains("type") ? tag.getString("type") : "animal";
-                
-                String typeDisplay = typeRaw;
-                String namespace = "minecraft";
-                String path = typeRaw;
-                
-                if (typeRaw.contains(":")) {
-                    String[] split = typeRaw.split(":");
-                    namespace = split[0];
-                    path = split[1];
-                    typeDisplay = path;
-                }
-                typeDisplay = typeDisplay.replace("_", " ");
-                
-                StringBuilder sb = new StringBuilder();
-                boolean first = true;
-                for (String s : typeDisplay.split(" ")) {
-                    if (!s.isEmpty()) {
-                        if (!first) sb.append(" ");
-                        sb.append(Character.toUpperCase(s.charAt(0)));
-                        if (s.length() > 1) sb.append(s.substring(1).toLowerCase());
-                        first = false;
-                    }
-                }
-                typeDisplay = sb.toString();
+                String typeDisplay = prettifyAnimalType(typeRaw);
+                int hunger = tag.contains("hunger") ? Math.max(0, Math.min(20, tag.getInt("hunger"))) : 20;
+                String keeperName = getKeeperNamesForAnimal(typeRaw);
 
-                ItemStack icon = ItemStack.EMPTY; 
-                try {
-                    ResourceLocation typeId = new ResourceLocation(namespace, path);
-                    List<ResourceLocation> potentials = new ArrayList<>();
-                    potentials.add(new ResourceLocation(namespace, path + "_spawn_egg"));
-                    potentials.add(new ResourceLocation(namespace, "spawn_egg_" + path));
-                    
-                    for (ResourceLocation eggLoc : potentials) {
-                        if (ForgeRegistries.ITEMS.containsKey(eggLoc)) {
-                            icon = new ItemStack(ForgeRegistries.ITEMS.getValue(eggLoc));
-                            break;
-                        }
-                    }
-                    if (icon.isEmpty() && ForgeRegistries.ITEMS.containsKey(typeId)) { 
-                            icon = new ItemStack(ForgeRegistries.ITEMS.getValue(typeId));
-                    }
-                    if (icon.isEmpty()) icon = new ItemStack(Items.FOX_SPAWN_EGG);
-                } catch (Exception e) {
-                    icon = new ItemStack(Items.FOX_SPAWN_EGG);
-                }
-                
-                ShopEntry entry = new ShopEntry(new ResourceLocation("indozoo", "animal_"+id), name, 0, icon, null, typeDisplay);
+                ShopEntry entry = new ShopEntry(new ResourceLocation("indozoo", "animal_" + id), name, 0, ItemStack.EMPTY, null, typeDisplay);
                 entry.dbId = id; 
                 entry.dbUuid = uuid;
+                entry.originalName = typeDisplay;
+                entry.hunger = hunger;
+                entry.zookeeperName = keeperName;
                 currentDisplayList.add(entry);
             }
         } catch (Exception e) {
@@ -1075,7 +1081,7 @@ private void prepareShopData(String type) {
              super(x, y, w, h, Component.empty());
              this.entry = entry;
              this.command = command;
-             String tooltip = entry.displayName + "\n" + formatPrice(entry.price);
+             String tooltip = entry.displayName + "\n§a" + formatPrice(entry.price);
             if ("FOOD".equalsIgnoreCase(entry.category) && entry.icon != null && !entry.icon.isEmpty()) {
                  tooltip += "\n" + FoodAnimalRegistry.getFoodTooltip(entry.icon.getItem());
              }
@@ -1163,93 +1169,139 @@ private void prepareShopData(String type) {
 
     // 4. Animal Card (Overview)
     private class AnimalCard extends AbstractButton {
-         ShopEntry entry;
-         private boolean isHoveringEdit = false;
-         private boolean isHoveringDelete = false;
+        private static final int ACTION_WIDTH = 34;
+        private static final int ACTION_HEIGHT = 12;
 
-         public AnimalCard(int x, int y, int w, int h, ShopEntry entry) {
-             super(x, y, w, h, Component.empty());
-             this.entry = entry;
-         }
-         
-         @Override
-         public void onPress() {
-             if (isHoveringEdit && !isRenaming && (entry.dbId != -1 || (entry.dbUuid != null && !entry.dbUuid.isEmpty()))) {
-                 openRenamePopup(entry.dbId, entry.dbUuid, entry.displayName);
-             } else if (isHoveringDelete && !isRenaming && (entry.dbId != -1 || (entry.dbUuid != null && !entry.dbUuid.isEmpty()))) {
-                 if (entry.dbUuid != null && !entry.dbUuid.isEmpty()) {
-                     cmd("releaseuuid " + entry.dbUuid);
-                 } else {
-                     cmd("release " + entry.dbId);
-                 }
-                 refreshContent();
-             }
-         }
+        private final ShopEntry entry;
+        private boolean isHoveringEdit = false;
+        private boolean isHoveringDelete = false;
 
-         @Override
-         protected void updateWidgetNarration(NarrationElementOutput output) {
-         }
-         
-         @Override
-         public void renderWidget(GuiGraphics g, int mx, int my, float partialTick) {
-            g.fill(getX(), getY(), getX() + width, getY() + height, CARD_BG_COLOR);
+        public AnimalCard(int x, int y, int w, int h, ShopEntry entry) {
+            super(x, y, w, h, Component.empty());
+            this.entry = entry;
+        }
 
-            int iconSize = 20;
-            int pad = 5;
-            int iconX = getX() + pad;
-            int iconY = getY() + (height - iconSize) / 2;
-            if (entry.icon != null) g.renderItem(entry.icon, iconX, iconY);
+        @Override
+        public void onPress() {
+            if (isHoveringEdit && !isRenaming && (entry.dbId != -1 || (entry.dbUuid != null && !entry.dbUuid.isEmpty()))) {
+                openRenamePopup(entry.dbId, entry.dbUuid, entry.displayName);
+            } else if (isHoveringDelete && !isRenaming && (entry.dbId != -1 || (entry.dbUuid != null && !entry.dbUuid.isEmpty()))) {
+                if (entry.dbUuid != null && !entry.dbUuid.isEmpty()) {
+                    cmd("releaseuuid " + entry.dbUuid);
+                } else {
+                    cmd("release " + entry.dbId);
+                }
+                refreshContent();
+            }
+        }
 
-            boolean showActions = isHoveredOrFocused() && !isRenaming;
-            int actionW = showActions ? 16 : 2;
-            int textLeft = iconX + iconSize + 6;
-            int textRight = getX() + width - actionW;
-            int availW = Math.max(0, textRight - textLeft);
+        @Override
+        protected void updateWidgetNarration(NarrationElementOutput output) {
+        }
 
-            String name = entry.displayName != null ? entry.displayName : "";
-            int nameW = font.width(name);
-            int nameY = getY() + 5;
-            int nameColor = 0xFFFFAA00;
-            if (nameW <= availW) {
-                int nx = textLeft + (availW - nameW) / 2;
-                g.drawString(font, name, nx, nameY, nameColor);
-            } else {
-                g.enableScissor(textLeft, getY(), textRight, getY() + height);
-                long time = System.currentTimeMillis();
-                int speed = 30;
-                int cycle = nameW + 30;
-                int offset = (int) ((time / speed) % cycle);
-                g.drawString(font, name, textLeft - offset, nameY, nameColor);
-                if (offset > 0) g.drawString(font, name, textLeft - offset + cycle, nameY, nameColor);
-                g.disableScissor();
+        @Override
+        public void renderWidget(GuiGraphics g, int mx, int my, float partialTick) {
+            boolean hovered = isHoveredOrFocused() && !isRenaming;
+            int cardColor = hovered ? CARD_HOVER_COLOR : CARD_BG_COLOR;
+
+            g.fill(getX(), getY(), getX() + width, getY() + height, cardColor);
+            if (hovered) {
+                g.renderOutline(getX(), getY(), width, height, ACCENT_COLOR);
             }
 
-            String type = entry.category != null ? entry.category : "Animal";
-            float scale = 0.65f;
-            int typeY = getY() + 20;
-            int typeW = (int) (font.width(type) * scale);
-            int tx = textLeft + Math.max(0, (availW - typeW) / 2);
-            g.pose().pushPose();
-            g.pose().translate(tx, typeY, 0);
-            g.pose().scale(scale, scale, scale);
-            g.drawString(font, type, 0, 0, TEXT_SECONDARY);
-            g.pose().popPose();
+            int textX = getX() + 6;
+            int textW = width - 12;
 
-             if (isHoveredOrFocused() && !isRenaming) {
-                 int actionX = getX() + width - 15;
-                 int editY = getY() + 5;
-                 int trashY = getY() + 20;
+            drawInfoLine(g, "Tag", entry.displayName, textX, getY() + 6, textW, 0xFFFFD369);
+            drawInfoLine(g, "Spesies", entry.originalName, textX, getY() + 17, textW, TEXT_PRIMARY);
+            drawInfoLine(g, "Zookeeper", entry.zookeeperName, textX, getY() + 28, textW, TEXT_SECONDARY);
 
-                 isHoveringEdit = (mx >= actionX && mx <= actionX + 10 && my >= editY && my <= editY + 10);
-                 isHoveringDelete = (mx >= actionX && mx <= actionX + 10 && my >= trashY && my <= trashY + 10);
+            int hungryPercent = hungerToPercent(entry.hunger);
+            int barX = textX;
+            int barY = getY() + 41;
+            int barW = textW;
+            int barH = 6;
+            renderHungryBar(g, barX, barY, barW, barH, hungryPercent);
+            g.drawString(font, "Hungry: " + hungryPercent + "%", textX, getY() + 50, 0xFFE5E5E5, false);
 
-                 g.drawString(font, "✎", actionX, editY, isHoveringEdit ? 0xFFFFFF00 : 0xFFAAAAAA);
-                 g.drawString(font, "🗑", actionX, trashY, isHoveringDelete ? 0xFFFF0000 : 0xFFAAAAAA);
-             } else {
-                 isHoveringEdit = false;
-                 isHoveringDelete = false;
-             }
-         }
+            if (hovered) {
+                renderActionButtons(g, mx, my);
+                renderHoverTooltip(g, mx, my, hungryPercent);
+            } else {
+                isHoveringEdit = false;
+                isHoveringDelete = false;
+            }
+        }
+
+        private void renderActionButtons(GuiGraphics g, int mx, int my) {
+            int actionY = getY() + height - ACTION_HEIGHT - 4;
+            int editX = getX() + width - (ACTION_WIDTH * 2) - 7;
+            int deleteX = getX() + width - ACTION_WIDTH - 4;
+
+            isHoveringEdit = mx >= editX && mx <= editX + ACTION_WIDTH && my >= actionY && my <= actionY + ACTION_HEIGHT;
+            isHoveringDelete = mx >= deleteX && mx <= deleteX + ACTION_WIDTH && my >= actionY && my <= actionY + ACTION_HEIGHT;
+
+            int editBg = isHoveringEdit ? 0xFF3C7BFF : 0x882D2D2D;
+            int deleteBg = isHoveringDelete ? 0xFFD14D4D : 0x882D2D2D;
+            g.fill(editX, actionY, editX + ACTION_WIDTH, actionY + ACTION_HEIGHT, editBg);
+            g.fill(deleteX, actionY, deleteX + ACTION_WIDTH, actionY + ACTION_HEIGHT, deleteBg);
+            g.renderOutline(editX, actionY, ACTION_WIDTH, ACTION_HEIGHT, 0xFF666666);
+            g.renderOutline(deleteX, actionY, ACTION_WIDTH, ACTION_HEIGHT, 0xFF666666);
+
+            g.drawString(font, "Edit", editX + 8, actionY + 2, 0xFFFFFFFF, false);
+            g.drawString(font, "Hapus", deleteX + 5, actionY + 2, 0xFFFFFFFF, false);
+        }
+
+        private void renderHoverTooltip(GuiGraphics g, int mx, int my, int hungryPercent) {
+            int tooltipW = 185;
+            int tooltipH = 54;
+            int tx = mx + 12;
+            int ty = my + 10;
+            if (tx + tooltipW > ZooComputerScreen.this.width - 4) tx = mx - tooltipW - 12;
+            if (ty + tooltipH > ZooComputerScreen.this.height - 4) ty = my - tooltipH - 10;
+            tx = Math.max(4, tx);
+            ty = Math.max(4, ty);
+
+            g.fill(tx, ty, tx + tooltipW, ty + tooltipH, 0xE0101010);
+            g.renderOutline(tx, ty, tooltipW, tooltipH, ACCENT_COLOR);
+            g.drawString(font, "Aksi: Klik tombol Edit/Hapus", tx + 6, ty + 6, 0xFFDFDFDF, false);
+            g.drawString(font, "Hungry: " + hungryPercent + "%", tx + 6, ty + 18, 0xFFDFDFDF, false);
+            String keeperLine = "Zookeeper: " + (entry.zookeeperName == null ? "-" : entry.zookeeperName);
+            g.drawString(font, trimToWidth(keeperLine, tooltipW - 10), tx + 6, ty + 30, 0xFFBFBFBF, false);
+            g.drawString(font, "Spesies: " + trimToWidth(entry.originalName, tooltipW - 58), tx + 6, ty + 42, 0xFFBFBFBF, false);
+        }
+
+        private void drawInfoLine(GuiGraphics g, String label, String value, int x, int y, int maxWidth, int color) {
+            String line = label + ": " + (value == null || value.isEmpty() ? "-" : value);
+            g.drawString(font, trimToWidth(line, maxWidth), x, y, color, false);
+        }
+
+        private void renderHungryBar(GuiGraphics g, int x, int y, int w, int h, int hungryPercent) {
+            g.fill(x, y, x + w, y + h, 0xFF2A2A2A);
+            int fill = Math.max(0, Math.min(w, (w * hungryPercent) / 100));
+            int color;
+            if (hungryPercent >= 65) {
+                color = 0xFFD94B4B;
+            } else if (hungryPercent >= 35) {
+                color = 0xFFE6C14C;
+            } else {
+                color = 0xFF5CCF6B;
+            }
+            g.fill(x, y, x + fill, y + h, color);
+            g.renderOutline(x, y, w, h, 0xFF555555);
+        }
+
+        private String trimToWidth(String value, int maxWidth) {
+            if (value == null || value.isEmpty()) return "";
+            if (font.width(value) <= maxWidth) return value;
+            String suffix = "...";
+            int end = value.length();
+            while (end > 0 && font.width(value.substring(0, end) + suffix) > maxWidth) {
+                end--;
+            }
+            if (end <= 0) return suffix;
+            return value.substring(0, end) + suffix;
+        }
     }
 
     private static class ShopEntry {
@@ -1260,8 +1312,11 @@ private void prepareShopData(String type) {
         LivingEntity entityModel;
         String category;
         List<EntityType<?>> targets;
-        int dbId = -1; 
+        int dbId = -1;
         String dbUuid = "";
+        String originalName = "";
+        int hunger = 20;
+        String zookeeperName = "Belum ada zookeeper";
 
         public ShopEntry(ResourceLocation id, String name, int price, ItemStack icon, LivingEntity entityModel, String category) {
             this.id = id;
@@ -1271,6 +1326,7 @@ private void prepareShopData(String type) {
             this.entityModel = entityModel;
             this.category = category;
             this.targets = null;
+            this.originalName = name;
         }
     }
 }

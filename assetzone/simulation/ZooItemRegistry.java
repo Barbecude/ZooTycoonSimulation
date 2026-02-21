@@ -47,7 +47,6 @@ public class ZooItemRegistry {
         ITEM_CATALOG.clear();
 
         // 1. ITEMS (Utility) -> 5k-50k
-        register(IndoZooTycoon.MODID + ":zoo_banner", "Banner Kebun Binatang", 0, Category.UTILITY);
         register("minecraft:scaffolding", "Scaffolding", 15_000, Category.UTILITY);
         register("minecraft:lead", "Lead", 25_000, Category.UTILITY);
         register("minecraft:bone_meal", "Bone Meal", 5_000, Category.UTILITY);
@@ -59,6 +58,10 @@ public class ZooItemRegistry {
         register("minecraft:flower_pot", "Pot", 15_000, Category.UTILITY, "FUNCTIONAL");
         register("minecraft:composter", "Composter", 35_000, Category.UTILITY, "FUNCTIONAL");
         register("minecraft:campfire", "Campfire", 25_000, Category.UTILITY, "FUNCTIONAL");
+        register(IndoZooTycoon.MODID + ":oak_shelf", "Oak Shelf", 250_000, Category.BUILDING, "FUNCTIONAL");
+        register(IndoZooTycoon.MODID + ":standing_oak_shelf", "Standing Oak Shelf", 275_000, Category.BUILDING, "FUNCTIONAL");
+        register(IndoZooTycoon.MODID + ":tower_oak_shelf", "Tower Oak Shelf", 300_000, Category.BUILDING, "FUNCTIONAL");
+        register(IndoZooTycoon.MODID + ":animal_feeder", "Animal Feeder", 225_000, Category.BUILDING, "FUNCTIONAL");
 
         // 3. BLOCKS -> 10k-50k per block
         registerWoodVariants();
@@ -125,6 +128,8 @@ public class ZooItemRegistry {
         prices.put("Bone Meal", 5_000);
         prices.put("Acacia Leaves", 10_000);
         prices.put("Seeds", 2_000);
+        prices.put("Flower", 4_000);
+        prices.put("Glow Berries", 8_000);
 
         for (FoodAnimalRegistry.FoodProfile profile : FoodAnimalRegistry.getAllFoods()) {
             if (profile == null || profile.food == null) continue;
@@ -294,6 +299,9 @@ public class ZooItemRegistry {
         if (cat != Category.BUILDING) return false;
         String path = id.getPath();
         if (path.contains("shulker_box")) return true;
+        if (path.endsWith("_bed") || path.equals("bed")) return true;
+        if (path.contains("candle")) return true;
+        if (path.endsWith("_banner") || path.equals("banner")) return true;
         String[] colors = {
                 "white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
                 "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"
@@ -333,3 +341,4 @@ public class ZooItemRegistry {
         return ITEM_CATALOG.get(id);
     }
 }
+

@@ -23,6 +23,7 @@ public class ClientEvents {
         public static void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
             event.put(IndoZooTycoon.STAFF_ENTITY.get(), StaffEntity.createAttributes().build());
             event.put(IndoZooTycoon.VISITOR_ENTITY.get(), VisitorEntity.createAttributes().build());
+            event.put(IndoZooTycoon.CASHIER_ENTITY.get(), CashierEntity.createAttributes().build());
         }
     }
 
@@ -34,6 +35,8 @@ public class ClientEvents {
         public static void onClientSetup(FMLClientSetupEvent event) {
             event.enqueueWork(() -> {
                 MenuScreens.register(IndoZooTycoon.ZOO_COMPUTER_MENU.get(), ZooComputerScreen::new);
+                MenuScreens.register(IndoZooTycoon.ANIMAL_FEEDER_MENU.get(), AnimalFeederScreen::new);
+                MenuScreens.register(IndoZooTycoon.SHELF_MENU.get(), ShelfScreen::new);
                 net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(IndoZooTycoon.TRASH_BLOCK.get(),
                         net.minecraft.client.renderer.RenderType.cutout());
             });
@@ -87,6 +90,14 @@ public class ClientEvents {
                     });
 
             event.registerEntityRenderer(IndoZooTycoon.TOILET_SEAT_ENTITY.get(), ToiletSeatRenderer::new);
+            event.registerEntityRenderer(IndoZooTycoon.CASHIER_ENTITY.get(),
+                    ctx -> new HumanoidMobRenderer<CashierEntity, HumanoidModel<CashierEntity>>(
+                            ctx, new HumanoidModel<>(ctx.bakeLayer(ModelLayers.PLAYER)), 0.5f) {
+                        @Override
+                        public ResourceLocation getTextureLocation(CashierEntity entity) {
+                            return new ResourceLocation(IndoZooTycoon.MODID, "textures/entity/visitor/visitor_0.png");
+                        }
+                    });
 
             event.registerBlockEntityRenderer(IndoZooTycoon.ZOO_BANNER_BE.get(), net.minecraft.client.renderer.blockentity.BannerRenderer::new);
             event.registerBlockEntityRenderer(IndoZooTycoon.SHELF_BE.get(), ShelfBlockEntityRenderer::new);

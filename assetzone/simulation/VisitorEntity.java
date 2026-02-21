@@ -1088,17 +1088,8 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
 
             // Scan for facility
             BlockPos p = visitor.blockPosition();
-            net.minecraft.world.level.block.Block targetBlock;
-
-            if (type.equals("food"))
-                targetBlock = IndoZooTycoon.FOOD_STALL_BLOCK.get();
-            else if (type.equals("drink"))
-                targetBlock = IndoZooTycoon.DRINK_STALL_BLOCK.get();
-            else
-                targetBlock = IndoZooTycoon.RESTROOM_BLOCK.get();
-
             for (BlockPos pos : BlockPos.betweenClosed(p.offset(-30, -5, -30), p.offset(30, 5, 30))) {
-                if (visitor.level().getBlockState(pos).is(targetBlock)) {
+                if (isValidFacilityBlock(visitor.level().getBlockState(pos))) {
                     this.targetPos = pos.immutable();
                     if (type.equals("toilet")) {
                         this.doorPos = findNearestDoorNear(this.targetPos, 6);
@@ -1108,6 +1099,19 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                         this.stage = Stage.TO_TARGET;
                     }
                     return true;
+                }
+            }
+
+            if (!visitor.level().isClientSide && !type.equals("toilet")) {
+                // Need exists but no facility found nearby.
+                ZooData data = ZooData.get(visitor.level());
+                if (visitor.tickCount % 200 == 0) {
+                    data.setRating(Math.max(0, data.getRating() - 1));
+                }
+                if (type.equals("food")) {
+                    visitor.setMood(Mood.HUNGRY, 160);
+                } else if (type.equals("drink")) {
+                    visitor.setMood(Mood.THIRSTY, 160);
                 }
             }
             return false;
@@ -1183,11 +1187,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                 visitor.getNavigation().stop();
                 timer++;
                 if (timer > 20) {
-                    if (type.equals("food"))
-                        visitor.setHunger(0);
-                    else if (type.equals("drink"))
-                        visitor.setThirst(0);
-                    else if (type.equals("toilet")) {
+                    if (type.equals("toilet")) {
                         boolean occupied = false;
                         double cx = targetPos.getX() + 0.5;
                         double cy = targetPos.getY();
@@ -1211,23 +1211,26 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                         }
                     }
 
-                    if (type.equals("food") || type.equals("drink")) {
-                        visitor.setHasTrash(true);
-                    }
-                    
                     // Pay for service (food/drink only) via FoodTransactionManager
                     if (!type.equals("toilet") && !visitor.level().isClientSide) {
+                        boolean purchased = false;
                         net.minecraft.world.level.block.entity.BlockEntity be = visitor.level().getBlockEntity(targetPos);
                         if (be instanceof ShelfBlockEntity shelf) {
                             if (type.equals("food")) {
-                                FoodTransactionManager.processFoodPurchase(visitor, shelf);
+                                purchased = FoodTransactionManager.processFoodPurchase(visitor, shelf);
                             } else if (type.equals("drink")) {
-                                FoodTransactionManager.processDrinkPurchase(visitor, shelf);
+                                purchased = FoodTransactionManager.processDrinkPurchase(visitor, shelf);
                             }
-                        } else {
-                            // Fallback: basic transaction if shelf not found
-                            ZooData.get(visitor.level()).addBalance(15);
-                            visitor.playSound(net.minecraft.sounds.SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0F, 1.0F);
+                        }
+
+                        if (!purchased) {
+                            ZooData data = ZooData.get(visitor.level());
+                            data.setRating(Math.max(0, data.getRating() - 1));
+                            if (type.equals("food")) {
+                                visitor.setMood(Mood.HUNGRY, 160);
+                            } else {
+                                visitor.setMood(Mood.THIRSTY, 160);
+                            }
                         }
                     }
 
@@ -1241,15 +1244,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
 
         @Override
         public boolean canContinueToUse() {
-            net.minecraft.world.level.block.Block targetBlock;
-            if (type.equals("food"))
-                targetBlock = IndoZooTycoon.FOOD_STALL_BLOCK.get();
-            else if (type.equals("drink"))
-                targetBlock = IndoZooTycoon.DRINK_STALL_BLOCK.get();
-            else
-                targetBlock = IndoZooTycoon.RESTROOM_BLOCK.get();
-
-            return targetPos != null && visitor.level().getBlockState(targetPos).is(targetBlock);
+            return targetPos != null && isValidFacilityBlock(visitor.level().getBlockState(targetPos));
         }
 
         private void moveTo(BlockPos pos) {
@@ -1303,6 +1298,16 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                 }
             }
             return best;
+        }
+
+        private boolean isValidFacilityBlock(BlockState state) {
+            if (type.equals("food")) {
+                return ShelfBlock.isFoodShelfState(state);
+            }
+            if (type.equals("drink")) {
+                return ShelfBlock.isDrinkShelfState(state);
+            }
+            return state.is(IndoZooTycoon.RESTROOM_BLOCK.get());
         }
     }
 
