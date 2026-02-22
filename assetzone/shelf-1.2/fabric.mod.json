@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "shelf",
+  "version": "1.2",
+
+  "name": "Shelf",
+  "description": "Adds shelves to showcase your items",
+  "authors": [
+    "idwtd"
+  ],
+  "contact": {
+    "homepage": "https://www.curseforge.com/minecraft/mc-mods/shelf",
+    "issues": "https://www.curseforge.com/minecraft/mc-mods/shelf/issues"
+  },
+
+  "license": "CC0-1.0",
+  "icon": "shelf_icon.png",
+
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "shelf.fabric.ShelfModInitializer"
+    ],
+    "client": [
+      "shelf.fabric.ShelfModClientInitializer"
+    ]
+  },
+
+  "depends": {
+    "fabricloader": ">=0.7.4",
+    "fabric": "*",
+    "minecraft": ">=1.16.4",
+    "architectury": ">=1.1.55"
+  }
+}

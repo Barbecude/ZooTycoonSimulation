@@ -1,0 +1,34 @@
+modLoader = "javafml"
+loaderVersion = "[35,)"
+issueTrackerURL = "https://www.curseforge.com/minecraft/mc-mods/shelf/issues"
+license = "CC0-1.0"
+
+[[mods]]
+modId = "shelf"
+version = "1.2"
+displayName = "Shelf"
+displayURL = "https://www.curseforge.com/minecraft/mc-mods/shelf"
+authors = "idwtd"
+description = "Adds shelves to showcase your items"
+logoFile = "shelf_icon.png"
+
+[[dependencies.shelf]]
+modId = "forge"
+mandatory = true
+versionRange = "[35,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.shelf]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.16.2,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.shelf]]
+modId = "architectury"
+mandatory = true
+versionRange = "[1.1.55,)"
+ordering = "AFTER"
+side = "BOTH"

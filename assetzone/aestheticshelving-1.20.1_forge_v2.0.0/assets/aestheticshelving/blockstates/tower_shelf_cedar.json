@@ -1,8 +1,0 @@
-{
-  "variants": {
-    "facing=north": { "model": "aestheticshelving:block/tower_shelf_cedar" },
-    "facing=south": { "model": "aestheticshelving:block/tower_shelf_cedar", "y": 180 },
-    "facing=west": { "model": "aestheticshelving:block/tower_shelf_cedar", "y": 270 },
-    "facing=east": { "model": "aestheticshelving:block/tower_shelf_cedar", "y": 90 }
-  }
-}

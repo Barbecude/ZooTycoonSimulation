@@ -1,8 +1,0 @@
-{
-  "variants": {
-    "facing=north": { "model": "aestheticshelving:block/standing_shelf_hazelnut" },
-    "facing=south": { "model": "aestheticshelving:block/standing_shelf_hazelnut", "y": 180 },
-    "facing=west": { "model": "aestheticshelving:block/standing_shelf_hazelnut", "y": 270 },
-    "facing=east": { "model": "aestheticshelving:block/standing_shelf_hazelnut", "y": 90 }
-  }
-}

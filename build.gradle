@@ -123,14 +123,10 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 // Include IndoZoo simulation source directory
 sourceSets.main.java {
-    srcDir 'assetzone/simulation'
+    srcDir 'src/main/java/com/example/simulation'
 }
 
-// Exclude CarryOn mod sources to avoid compilation conflicts
-// CarryOn is a dependency, not part of IndoZoo  
-sourceSets.main.java {
-    exclude 'com/example/CarryOn/**'
-}
+
 
 repositories {
     // Put repositories for dependencies here
@@ -270,4 +266,30 @@ publishing {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+}
+
+// Copy mod jar to Modrinth profile after build
+def modrinthModsPath = "C:\\Users\\chill\\AppData\\Roaming\\ModrinthApp\\profiles\\Dawn of the Flood 1.2.1\\mods"
+
+tasks.register('copyToModrinth') {
+    doLast {
+        def modrinthDir = file(modrinthModsPath)
+        if (!modrinthDir.exists()) {
+            modrinthDir.mkdirs()
+            println "Created mods directory: ${modrinthModsPath}"
+        }
+        
+        // Copy main jar
+        def jarFile = tasks.named('jar', Jar).get().archiveFile.get().asFile
+        def destFile = new File(modrinthDir, jarFile.name)
+        copy {
+            from jarFile
+            into modrinthDir
+        }
+        println "✓ Copied mod to Modrinth: ${destFile.name}"
+    }
+}
+
+tasks.named('build').configure {
+    finalizedBy 'copyToModrinth'
 }

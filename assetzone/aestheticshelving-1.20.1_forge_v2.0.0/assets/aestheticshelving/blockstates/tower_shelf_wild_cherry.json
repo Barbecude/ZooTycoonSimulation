@@ -1,8 +1,0 @@
-{
-  "variants": {
-    "facing=north": { "model": "aestheticshelving:block/tower_shelf_wild_cherry" },
-    "facing=south": { "model": "aestheticshelving:block/tower_shelf_wild_cherry", "y": 180 },
-    "facing=west": { "model": "aestheticshelving:block/tower_shelf_wild_cherry", "y": 270 },
-    "facing=east": { "model": "aestheticshelving:block/tower_shelf_wild_cherry", "y": 90 }
-  }
-}

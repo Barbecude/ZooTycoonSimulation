@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "shelf:wooden_shelf",
+  "pattern": [
+    "# ",
+    "##"
+  ],
+  "key": {
+    "#": {
+      "item": "minecraft:warped_planks"
+    }
+  },
+  "result": {
+    "item": "shelf:warped_shelf"
+  }
+}

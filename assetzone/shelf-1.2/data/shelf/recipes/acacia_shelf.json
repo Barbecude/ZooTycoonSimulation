@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "shelf:wooden_shelf",
+  "pattern": [
+    "# ",
+    "##"
+  ],
+  "key": {
+    "#": {
+      "item": "minecraft:acacia_planks"
+    }
+  },
+  "result": {
+    "item": "shelf:acacia_shelf"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "shelf:wooden_shelf",
+  "pattern": [
+    "# ",
+    "##"
+  ],
+  "key": {
+    "#": {
+      "item": "minecraft:spruce_planks"
+    }
+  },
+  "result": {
+    "item": "shelf:spruce_shelf"
+  }
+}

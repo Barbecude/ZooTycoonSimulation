@@ -1,8 +1,0 @@
-{
-  "variants": {
-    "facing=north": { "model": "aestheticshelving:block/corner_shelf_mango" },
-    "facing=south": { "model": "aestheticshelving:block/corner_shelf_mango", "y": 180 },
-    "facing=west": { "model": "aestheticshelving:block/corner_shelf_mango", "y": 270 },
-    "facing=east": { "model": "aestheticshelving:block/corner_shelf_mango", "y": 90 }
-  }
-}
