@@ -38,20 +38,20 @@ public class ShelfMenu extends AbstractContainerMenu {
         this.shelf = initData.shelf();
         this.access = access;
 
-        checkContainerSize(this.shelfInventory, 1);
+        checkContainerSize(this.shelfInventory, 9);
         this.shelfInventory.startOpen(playerInventory.player);
 
-        this.addSlot(new Slot(this.shelfInventory, 0, 80, 26) {
-            @Override
-            public boolean mayPlace(ItemStack stack) {
-                return ShelfBlockEntity.isValidShelfFood(stack);
+        // 3x3 grid centered
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 3; col++) {
+                this.addSlot(new Slot(this.shelfInventory, col + row * 3, 62 + col * 18, 17 + row * 18) {
+                    @Override
+                    public boolean mayPlace(ItemStack stack) {
+                        return ShelfBlockEntity.isValidShelfFood(stack);
+                    }
+                });
             }
-
-            @Override
-            public int getMaxStackSize() {
-                return 64;
-            }
-        });
+        }
 
         drawPlayerInventory(playerInventory);
         drawHotbar(playerInventory);
@@ -61,7 +61,7 @@ public class ShelfMenu extends AbstractContainerMenu {
         if (playerInventory.player.level().getBlockEntity(pos) instanceof ShelfBlockEntity shelfEntity) {
             return new ClientInitData(shelfEntity, shelfEntity);
         }
-        return new ClientInitData(new SimpleContainer(1), null);
+        return new ClientInitData(new SimpleContainer(9), null);
     }
 
     private void drawPlayerInventory(Inventory playerInventory) {
@@ -81,11 +81,10 @@ public class ShelfMenu extends AbstractContainerMenu {
     @Override
     public boolean stillValid(Player player) {
         if (shelf != null) return shelf.stillValid(player);
-        return stillValid(access, player, IndoZooTycoon.FOOD_STALL_BLOCK.get())
-                || stillValid(access, player, IndoZooTycoon.DRINK_STALL_BLOCK.get())
-                || stillValid(access, player, IndoZooTycoon.OAK_SHELF_BLOCK.get())
+        return stillValid(access, player, IndoZooTycoon.OAK_SHELF_BLOCK.get())
                 || stillValid(access, player, IndoZooTycoon.OAK_STANDING_SHELF_BLOCK.get())
-                || stillValid(access, player, IndoZooTycoon.OAK_TOWER_SHELF_BLOCK.get());
+                || stillValid(access, player, IndoZooTycoon.OAK_TOWER_SHELF_BLOCK.get())
+                || stillValid(access, player, IndoZooTycoon.SPRUCE_TOWER_SHELF_BLOCK.get());
     }
 
     @Override
@@ -135,5 +134,10 @@ public class ShelfMenu extends AbstractContainerMenu {
         ItemStack stack = shelf != null ? shelf.getDisplayFood() : shelfInventory.getItem(0);
         if (stack.isEmpty()) return "-";
         return stack.getHoverName().getString();
+    }
+
+    @org.jetbrains.annotations.Nullable
+    public BlockPos getShelfPos() {
+        return shelf != null ? shelf.getBlockPos() : null;
     }
 }

@@ -10,10 +10,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 
-public class OakTowerShelfBlock extends ShelfBlock {
+/** Tower shelf using spruce planks texture — functionally identical to OakTowerShelfBlock. */
+public class SpruceTowerShelfBlock extends ShelfBlock {
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
 
-    public OakTowerShelfBlock() {
+    public SpruceTowerShelfBlock() {
         super();
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
     }

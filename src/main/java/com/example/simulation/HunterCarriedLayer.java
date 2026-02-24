@@ -28,10 +28,6 @@ public class HunterCarriedLayer extends RenderLayer<VisitorEntity, HumanoidModel
             cache.remove(entity.getId());
             return;
         }
-        if (!entity.getPassengers().isEmpty()) {
-            cache.remove(entity.getId());
-            return;
-        }
 
         Entity carried = getOrCreateCarriedEntity(entity);
         if (carried == null) return;

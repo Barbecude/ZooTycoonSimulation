@@ -16,10 +16,13 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.UUID;
 
 public class ZooCommand {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ZooCommand.class);
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         LiteralArgumentBuilder<CommandSourceStack> zoocmd = Commands.literal("zoocmd");
@@ -493,7 +496,7 @@ public class ZooCommand {
 
     private static int setBiome(CommandSourceStack src, ResourceLocation biomeId, int x, int y, int z, ResourceLocation filter) {
         ServerLevel level = src.getLevel();
-        int r = 15;
+        int r = 2; // 5x5 block area (centre ±2)
 
         String cmd;
         if (filter != null) {
@@ -508,16 +511,23 @@ public class ZooCommand {
                     biomeId.toString());
         }
 
-        CommandSourceStack elevatedSrc = src.withPermission(4).withLevel(level);
+        LOGGER.info("Biome changer executing: {} (biome={}, pos=[{},{},{}])", cmd, biomeId, x, y, z);
+
+        // Use server console source so fillbiome always has full permission
+        CommandSourceStack elevatedSrc = level.getServer().createCommandSourceStack().withLevel(level);
         int result = src.getServer().getCommands().performPrefixedCommand(elevatedSrc, cmd);
 
+        LOGGER.info("Fillbiome command result: {}", result);
+
         if (result == 0) {
-            src.sendFailure(Component.literal("Gagal mengubah biome! Area mungkin terlalu besar atau chunk belum load."));
+            src.sendFailure(Component.literal("Gagal mengubah biome! Perintah: " + cmd).withStyle(ChatFormatting.RED));
+            LOGGER.warn("Fillbiome failed for biome {} at {},{},{}", biomeId, x, y, z);
             return 0;
         }
 
-        src.sendSuccess(() -> Component.literal("Set Biome: " + biomeId + " @ " + x + "," + z)
+        src.sendSuccess(() -> Component.literal("Set Biome: " + biomeId + " @ " + x + "," + z + " (5x5 area)")
                 .withStyle(ChatFormatting.GREEN), true);
+        LOGGER.info("Successfully set biome {} at {},{},{}", biomeId, x, y, z);
         return 1;
     }
 

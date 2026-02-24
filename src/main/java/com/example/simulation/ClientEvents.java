@@ -64,11 +64,12 @@ public class ClientEvents {
                         }
                     });
 
-            // Visitor renderer - Dynamic Texture & Player Model
+            // Visitor renderer - uses HunterVisitorModel for animated kidnapper arm
             event.registerEntityRenderer(IndoZooTycoon.VISITOR_ENTITY.get(),
                     ctx -> {
+                        HunterVisitorModel model = new HunterVisitorModel(ctx.bakeLayer(ModelLayers.PLAYER));
                         var renderer = new HumanoidMobRenderer<VisitorEntity, HumanoidModel<VisitorEntity>>(
-                                ctx, new HumanoidModel<>(ctx.bakeLayer(ModelLayers.PLAYER)), 0.5f) {
+                                ctx, model, 0.5f) {
                             @Override
                             public ResourceLocation getTextureLocation(VisitorEntity entity) {
                                 if (entity.isHunter()) {
@@ -82,7 +83,7 @@ public class ClientEvents {
                             protected void scale(VisitorEntity entity, com.mojang.blaze3d.vertex.PoseStack poseStack,
                                     float partialTickTime) {
                                 if (entity.isChildVisitor() && !entity.isHunter()) {
-                                    poseStack.scale(0.6F, 0.6F, 0.6F); // Force visual resize to 60%
+                                    poseStack.scale(0.6F, 0.6F, 0.6F);
                                 } else {
                                     super.scale(entity, poseStack, partialTickTime);
                                 }
@@ -133,6 +134,31 @@ public class ClientEvents {
                 // Gerakan tangan menjelaskan
                 this.rightArm.xRot = -0.5F + (float) Math.sin(ageInTicks * 0.3F) * 0.2F;
                 this.leftArm.xRot = -0.5F + (float) Math.cos(ageInTicks * 0.25F) * 0.2F;
+            }
+        }
+    }
+
+    // Custom model for visitors/hunters: raises right arm + both arms up when carrying big sack
+    public static class HunterVisitorModel extends HumanoidModel<VisitorEntity> {
+        public HunterVisitorModel(ModelPart root) {
+            super(root);
+        }
+
+        @Override
+        public void setupAnim(VisitorEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks,
+                float netHeadYaw, float headPitch) {
+            super.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
+            if (entity.isHunter() && entity.isCarrying()) {
+                // Both arms raised high holding the big sack overhead
+                this.rightArm.xRot = -(float) Math.PI * 0.9F;
+                this.rightArm.zRot = 0.15F;
+                this.leftArm.xRot  = -(float) Math.PI * 0.9F;
+                this.leftArm.zRot  = -0.15F;
+            } else if (entity.isHunter()
+                    && entity.getHunterMode() == VisitorEntity.HunterMode.KIDNAPPER) {
+                // Default: small sack dangling at right side
+                this.rightArm.xRot = 0.3F;
+                this.rightArm.zRot = 0.1F;
             }
         }
     }

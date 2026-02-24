@@ -11,6 +11,7 @@ public class ClientZooData {
     private static int visitorCount = 0;
     private static int rating = 100;
     private static ListTag taggedAnimals = new ListTag();
+    private static ListTag transactionLog = new ListTag();
 
     // ERROR FIX: Added this field so ZooComputerScreen can check for updates
     public static long lastUpdate = 0;
@@ -76,6 +77,15 @@ public class ClientZooData {
 
     public static void setTaggedAnimals(ListTag list) {
         taggedAnimals = list;
+        markDirty();
+    }
+
+    public static ListTag getTransactionLog() {
+        return transactionLog;
+    }
+
+    public static void setTransactionLog(ListTag log) {
+        transactionLog = log;
         markDirty();
     }
 

@@ -76,12 +76,6 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
     private Button cancelNameButton;
     private EditBox searchBox;
 
-    private boolean tutorialMenuOpen = false;
-    private int tutorialButtonX;
-    private int tutorialButtonY;
-    private int tutorialButtonWidth;
-    private int tutorialButtonHeight;
-
     public ZooComputerScreen(ZooComputerMenu menu, Inventory inv, Component title) {
         super(menu, inv, title);
         this.imageWidth = 400;
@@ -164,7 +158,6 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
         if (isRenaming)
             return;
 
-        tutorialMenuOpen = false;
         collectStaffPanelData();
 
         // Simpan widget popup agar tidak hilang saat clear
@@ -267,23 +260,16 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
         int btnWidth = 112;
         int btnGap = 10;
 
-        int tutWidth = 110;
+        int tutWidth = 130;
         int tutHeight = 16;
         int tutX = leftPos + panelWidth - tutWidth - 10;
         int tutY = topPos + TOP_PADDING + 36;
-        this.tutorialButtonX = tutX;
-        this.tutorialButtonY = tutY;
-        this.tutorialButtonWidth = tutWidth;
-        this.tutorialButtonHeight = tutHeight;
 
-        addRenderableWidget(new DropdownButton(tutX, tutY, tutWidth, tutHeight, Component.literal("Tutorial & Resep")));
-
-        int zooInfoX = tutX - 110;
         addRenderableWidget(Button
                 .builder(Component.literal("Zoo Info"),
-                        b -> Minecraft.getInstance().setScreen(new ZooRatingInfoScreen(this)))
-                .bounds(zooInfoX, tutY, 100, tutHeight)
-                .tooltip(Tooltip.create(Component.literal("Info rating & tips")))
+                        b -> Minecraft.getInstance().setScreen(new TutorialResepScreen(this)))
+                .bounds(tutX, tutY, tutWidth, tutHeight)
+                .tooltip(Tooltip.create(Component.literal("Lihat resep, pengeluaran & tips")))
                 .build());
 
         addRenderableWidget(Button.builder(Component.literal("Janitor"), b -> {
@@ -622,34 +608,6 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (tutorialMenuOpen && currentTab == MainTab.DASHBOARD && !isRenaming) {
-            int menuWidth = 150;
-            int entryHeight = 18;
-            int menuX = tutorialButtonX;
-            int menuY = tutorialButtonY + tutorialButtonHeight + 4;
-            int menuHeight = entryHeight * 2;
-
-            boolean insideMenu = mouseX >= menuX && mouseX <= menuX + menuWidth
-                    && mouseY >= menuY && mouseY <= menuY + menuHeight;
-
-            if (insideMenu) {
-                if (mouseY < menuY + entryHeight) {
-                    tutorialMenuOpen = false;
-                    if (!isRenaming) {
-                        Minecraft.getInstance().setScreen(new ZooRecipeScreen(this));
-                    }
-                    return true;
-                } else {
-                    tutorialMenuOpen = false;
-                    if (!isRenaming) {
-                        Minecraft.getInstance().setScreen(new ZooRatingInfoScreen(this));
-                    }
-                    return true;
-                }
-            } else {
-                tutorialMenuOpen = false;
-            }
-        }
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
@@ -681,90 +639,7 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
             this.cancelNameButton.render(g, mx, my, partialTick);
             g.pose().popPose();
         } else {
-            if (tutorialMenuOpen && currentTab == MainTab.DASHBOARD) {
-                int menuWidth = 150;
-                int entryHeight = 22;
-                int menuX = tutorialButtonX;
-                int menuY = tutorialButtonY + tutorialButtonHeight + 4;
-                int menuHeight = entryHeight * 2;
-
-                g.pose().pushPose();
-                g.pose().translate(0, 0, 300);
-
-                int bgColor = 0xFF2A2A2A;
-                int borderColor = 0xFF555555;
-                int hoverColor = 0xFF3A3A3A;
-
-                boolean hoverFirst = mx >= menuX && mx <= menuX + menuWidth && my >= menuY && my <= menuY + entryHeight;
-                boolean hoverSecond = mx >= menuX && mx <= menuX + menuWidth && my >= menuY + entryHeight
-                        && my <= menuY + menuHeight;
-
-                g.fill(menuX, menuY, menuX + menuWidth, menuY + menuHeight, bgColor);
-                g.renderOutline(menuX, menuY, menuWidth, menuHeight, borderColor);
-
-                if (hoverFirst) {
-                    g.fill(menuX + 1, menuY + 1, menuX + menuWidth - 1, menuY + entryHeight - 1, hoverColor);
-                }
-                if (hoverSecond) {
-                    g.fill(menuX + 1, menuY + entryHeight + 1, menuX + menuWidth - 1, menuY + menuHeight - 1,
-                            hoverColor);
-                }
-
-                String opt1 = "Recipe";
-                String opt2 = "Cara Naikkan Rating";
-                int textBaseY = menuY + (entryHeight - font.lineHeight) / 2;
-                int textX = menuX + 12;
-                g.drawString(font, opt1, textX, textBaseY, 0xFFFFFFFF);
-                g.drawString(font, opt2, textX, textBaseY + entryHeight, 0xFFFFFFFF);
-
-                g.pose().popPose();
-            }
             renderTooltip(g, mx, my);
-        }
-    }
-
-    private class DropdownButton extends AbstractButton {
-        private final Component label;
-
-        public DropdownButton(int x, int y, int width, int height, Component label) {
-            super(x, y, width, height, label);
-            this.label = label;
-        }
-
-        @Override
-        public void onPress() {
-            if (!isRenaming) {
-                tutorialMenuOpen = !tutorialMenuOpen;
-            }
-        }
-
-        @Override
-        protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-            int x = getX();
-            int y = getY();
-            int w = this.width;
-            int h = this.height;
-
-            int bgColor = isHoveredOrFocused() ? 0xFF3A3A3A : 0xFF2A2A2A;
-            int borderColor = 0xFF555555;
-
-            g.fill(x, y, x + w, y + h, bgColor);
-            g.renderOutline(x, y, w, h, borderColor);
-
-            int textPaddingX = 12;
-            int textPaddingY = 8;
-            int textY = y + (h - font.lineHeight) / 2;
-            int textX = x + textPaddingX;
-            g.drawString(font, label.getString(), textX, textY, 0xFFFFFFFF);
-
-            String chevron = tutorialMenuOpen ? "^" : "v";
-            int chevronWidth = font.width(chevron);
-            int chevronX = x + w - chevronWidth - textPaddingX;
-            g.drawString(font, chevron, chevronX, textY, 0xFFAAAAAA);
-        }
-
-        @Override
-        protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
         }
     }
 
@@ -862,8 +737,9 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
     }
 
     private static int hungerToPercent(int hungerValue) {
+        // 20 = full (100%), 0 = empty (0%) — matches ZooOverlay single source of truth
         int safe = Math.max(0, Math.min(20, hungerValue));
-        return ((20 - safe) * 100) / 20;
+        return (safe * 100) / 20;
     }
 
     private List<String> getFiltersForTab(String type) {
@@ -1398,7 +1274,7 @@ public class ZooComputerScreen extends AbstractContainerScreen<ZooComputerMenu> 
             g.fill(tx, ty, tx + tooltipW, ty + tooltipH, 0xE0101010);
             g.renderOutline(tx, ty, tooltipW, tooltipH, ACCENT_COLOR);
             g.drawString(font, "Edit/Delete: Klik tombol", tx + 6, ty + 6, 0xFFDFDFDF, false);
-            g.drawString(font, "Satuan: " + (100 - hungryPercent) + "% lapar", tx + 6, ty + 18, 0xFFDFDFDF, false);
+            g.drawString(font, "Kenyang: " + hungryPercent + "%", tx + 6, ty + 18, 0xFFDFDFDF, false);
             String keeperLine = "Zookeeper: " + (entry.zookeeperName == null ? "Belum ada" : entry.zookeeperName);
             g.drawString(font, trimToWidth(keeperLine, tooltipW - 10), tx + 6, ty + 30, 0xFFBFBFBF, false);
             String speciesName = "Spesies: " + cleanSpeciesName(entry.originalName);

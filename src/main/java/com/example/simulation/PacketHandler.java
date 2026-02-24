@@ -33,5 +33,13 @@ public class PacketHandler {
                                 TagAnimalPacket::toBytes,
                                 TagAnimalPacket::new,
                                 TagAnimalPacket::handle);
+                INSTANCE.registerMessage(id++, SyncTransactionLogPacket.class,
+                                SyncTransactionLogPacket::toBytes,
+                                SyncTransactionLogPacket::new,
+                                SyncTransactionLogPacket::handle);
+                INSTANCE.registerMessage(id++, ShelfBuyItemPacket.class,
+                                ShelfBuyItemPacket::toBytes,
+                                ShelfBuyItemPacket::new,
+                                ShelfBuyItemPacket::handle);
         }
 }

@@ -25,6 +25,31 @@ public class ZooData extends SavedData {
     private net.minecraft.nbt.ListTag taggedAnimals = new net.minecraft.nbt.ListTag();
     private final java.util.Map<Integer, Integer> viewerCounts = new java.util.HashMap<>();
 
+    // Transaction log (max 150 entries, persisted)
+    private net.minecraft.nbt.ListTag transactionLog = new net.minecraft.nbt.ListTag();
+
+    public net.minecraft.nbt.ListTag getTransactionLog() {
+        return transactionLog;
+    }
+
+    /**
+     * Logs a financial transaction.
+     * @param category  "Pendapatan" or "Pengeluaran"
+     * @param description  Short description of the transaction
+     * @param amount  Positive = income, Negative = expense
+     */
+    public void logTransaction(String category, String description, int amount) {
+        if (transactionLog.size() >= 150) {
+            transactionLog.remove(0);
+        }
+        net.minecraft.nbt.CompoundTag entry = new net.minecraft.nbt.CompoundTag();
+        entry.putString("cat", category);
+        entry.putString("desc", description);
+        entry.putInt("amount", amount);
+        transactionLog.add(entry);
+        setDirty();
+    }
+
     public static ZooData get(Level level) {
         if (level instanceof ServerLevel serverLevel) {
             return serverLevel.getDataStorage().computeIfAbsent(ZooData::load, ZooData::new, "indozoo_data");
@@ -309,6 +334,9 @@ public class ZooData extends SavedData {
         data.visitorCount = tag.getInt("VisitorCount");
         data.trashCount = tag.getInt("TrashCount");
         if (tag.contains("Rating")) data.rating = tag.getInt("Rating");
+        if (tag.contains("TransactionLog")) {
+            data.transactionLog = tag.getList("TransactionLog", 10);
+        }
         return data;
     }
 
@@ -330,6 +358,7 @@ public class ZooData extends SavedData {
         tag.putInt("TrashCount", trashCount);
         tag.putInt("Rating", rating);
         tag.put("TaggedAnimals", taggedAnimals);
+        tag.put("TransactionLog", transactionLog);
 
         return tag;
     }

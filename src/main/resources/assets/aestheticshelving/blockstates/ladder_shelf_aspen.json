@@ -1,8 +1,0 @@
-{
-  "variants": {
-    "facing=north": { "model": "aestheticshelving:block/ladder_shelf_aspen" },
-    "facing=south": { "model": "aestheticshelving:block/ladder_shelf_aspen", "y": 180 },
-    "facing=west": { "model": "aestheticshelving:block/ladder_shelf_aspen", "y": 270 },
-    "facing=east": { "model": "aestheticshelving:block/ladder_shelf_aspen", "y": 90 }
-  }
-}

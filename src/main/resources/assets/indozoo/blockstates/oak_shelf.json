@@ -1,20 +1,28 @@
 {
   "variants": {
-    "facing=north,variant=normal": {
-      "model": "indozoo:block/shelf_oak"
+    "facing=east": {
+      "model": "indozoo:block/oak_shelf",
+      "y": 0,
+      "uvlock": true
     },
-    "facing=south,variant=normal": {
-      "model": "indozoo:block/shelf_oak",
-      "y": 180
+    "facing=north": {
+      "model": "indozoo:block/oak_shelf",
+      "y": 270,
+      "uvlock": true
     },
-    "facing=west,variant=normal": {
-      "model": "indozoo:block/shelf_oak",
-      "y": 270
+    "facing=south": {
+      "model": "indozoo:block/oak_shelf",
+      "y": 90,
+      "uvlock": true
     },
-    "facing=east,variant=normal": {
-      "model": "indozoo:block/shelf_oak",
-      "y": 90
-    },
+    "facing=west": {
+      "model": "indozoo:block/oak_shelf",
+      "y": 180,
+      "uvlock": true
+    }
+  }
+}
+
     "facing=north,variant=center": {
       "model": "indozoo:block/shelf_oak_center"
     },

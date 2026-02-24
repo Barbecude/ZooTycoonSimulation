@@ -19,10 +19,23 @@ public class ZooRecipeScreen extends Screen {
     private static final int BG_WIDTH = 220;
     private static final int BG_HEIGHT = 250;
 
+    /** When true, this screen is embedded inside another screen.
+     *  Its own nav/close buttons are not added and super.render is skipped. */
+    private boolean delegateMode = false;
+
     public ZooRecipeScreen(Screen parent) {
         super(Component.literal("Resep IndoZoo"));
         this.parent = parent;
     }
+
+    public void setDelegateMode(boolean delegate) {
+        this.delegateMode = delegate;
+    }
+
+    public int getCurrentIndex() { return currentIndex; }
+    public int getPageCount() { return pages.size(); }
+    public void prevPage() { if (currentIndex > 0) { currentIndex--; descScroll = 0; } }
+    public void nextPage() { if (currentIndex < pages.size() - 1) { currentIndex++; descScroll = 0; } }
 
     @Override
     protected void init() {
@@ -34,6 +47,8 @@ public class ZooRecipeScreen extends Screen {
         pages.add(RecipePage.mobCage());
         pages.add(RecipePage.toilet());
         pages.add(RecipePage.zooBanner());
+
+        if (delegateMode) return; // Delegate: no own buttons
 
         int centerX = this.width / 2;
         int y = (this.height - BG_HEIGHT) / 2;
@@ -64,8 +79,6 @@ public class ZooRecipeScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
-        this.renderBackground(g);
-
         int bgWidth = BG_WIDTH;
         int bgHeight = BG_HEIGHT;
         int x = (this.width - bgWidth) / 2;
@@ -76,8 +89,11 @@ public class ZooRecipeScreen extends Screen {
         int slotBg = 0xFF2A2A2A;
         int slotOutline = 0xFF444444;
 
-        g.fill(x, y, x + bgWidth, y + bgHeight, bg);
-        g.renderOutline(x, y, bgWidth, bgHeight, outline);
+        if (!delegateMode) {
+            this.renderBackground(g);
+            g.fill(x, y, x + bgWidth, y + bgHeight, bg);
+            g.renderOutline(x, y, bgWidth, bgHeight, outline);
+        }
 
         if (!pages.isEmpty()) {
             RecipePage page = pages.get(currentIndex);
@@ -150,7 +166,7 @@ public class ZooRecipeScreen extends Screen {
             }
         }
 
-        super.render(g, mx, my, pt);
+        if (!delegateMode) super.render(g, mx, my, pt);
     }
 
     @Override

@@ -58,9 +58,6 @@ public class ZooItemRegistry {
         register("minecraft:flower_pot", "Pot", 15_000, Category.UTILITY, "FUNCTIONAL");
         register("minecraft:composter", "Composter", 35_000, Category.UTILITY, "FUNCTIONAL");
         register("minecraft:campfire", "Campfire", 25_000, Category.UTILITY, "FUNCTIONAL");
-        register(IndoZooTycoon.MODID + ":oak_shelf", "Oak Shelf", 250_000, Category.BUILDING, "FUNCTIONAL");
-        register(IndoZooTycoon.MODID + ":standing_oak_shelf", "Standing Oak Shelf", 275_000, Category.BUILDING, "FUNCTIONAL");
-        register(IndoZooTycoon.MODID + ":tower_oak_shelf", "Tower Oak Shelf", 300_000, Category.BUILDING, "FUNCTIONAL");
         register(IndoZooTycoon.MODID + ":animal_feeder", "Animal Feeder", 225_000, Category.BUILDING, "FUNCTIONAL");
 
         // 3. BLOCKS -> 10k-50k per block

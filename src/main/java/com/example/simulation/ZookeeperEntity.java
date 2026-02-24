@@ -51,9 +51,10 @@ public class ZookeeperEntity extends PathfinderMob {
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new PanicGoal(this, 0.5D));
-        this.goalSelector.addGoal(2, new LookAtPlayerGoal(this, Player.class, 8.0F));
-        this.goalSelector.addGoal(3, new RandomLookAroundGoal(this));
-        this.goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 0.3D));
+        this.goalSelector.addGoal(2, new FeedHungryAnimalGoal(this));
+        this.goalSelector.addGoal(3, new LookAtPlayerGoal(this, Player.class, 8.0F));
+        this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.3D));
     }
 
     @Override
@@ -132,13 +133,71 @@ public class ZookeeperEntity extends PathfinderMob {
         if (food == null) return;
         if (!FoodAnimalRegistry.isValidFoodForAnimal(assignedAnimalId, food)) return;
 
-        if (this.distanceToSqr(living) > (9.0D * 9.0D)) {
-            this.getNavigation().moveTo(living, 0.95D);
-            return;
+        // Navigation is handled by FeedHungryAnimalGoal; just throw when close enough
+        if (this.distanceToSqr(living) <= (9.0D * 9.0D)) {
+            this.getNavigation().stop();
+            ZooAnimalHungerSystem.throwFoodAtTarget(serverLevel, this, living, food);
+        }
+    }
+
+    // Goal that ensures the zookeeper actively navigates to and feeds its hungry animal
+    private class FeedHungryAnimalGoal extends net.minecraft.world.entity.ai.goal.Goal {
+        private final ZookeeperEntity keeper;
+        private LivingEntity target;
+        private int throwDelay = 0;
+
+        FeedHungryAnimalGoal(ZookeeperEntity keeper) {
+            this.keeper = keeper;
+            this.setFlags(java.util.EnumSet.of(Flag.MOVE, Flag.LOOK));
         }
 
-        this.getNavigation().stop();
-        ZooAnimalHungerSystem.throwFoodAtTarget(serverLevel, this, living, food);
+        @Override
+        public boolean canUse() {
+            if (keeper.assignedAnimalId.isEmpty()) return false;
+            if (!(keeper.level() instanceof ServerLevel sl)) return false;
+            keeper.ensureAssignedFood();
+            if (keeper.assignedFoodId.isEmpty()) return false;
+            Entity e = keeper.findSpecializedAnimal();
+            if (!(e instanceof LivingEntity le) || !le.isAlive()) return false;
+            if (!ZooAnimalHungerSystem.isHungry(sl, le)) return false;
+            this.target = le;
+            return true;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            if (target == null || !target.isAlive()) return false;
+            if (!(keeper.level() instanceof ServerLevel sl)) return false;
+            return ZooAnimalHungerSystem.isHungry(sl, target);
+        }
+
+        @Override
+        public void tick() {
+            if (target == null) return;
+            keeper.getLookControl().setLookAt(target, 30.0F, 30.0F);
+            double distSq = keeper.distanceToSqr(target);
+            if (distSq > (7.0D * 7.0D)) {
+                keeper.getNavigation().moveTo(target, 0.95D);
+            } else {
+                keeper.getNavigation().stop();
+                if (throwDelay-- <= 0 && keeper.level() instanceof ServerLevel sl) {
+                    net.minecraft.resources.ResourceLocation foodId =
+                            net.minecraft.resources.ResourceLocation.tryParse(keeper.assignedFoodId);
+                    Item food = foodId != null ? ForgeRegistries.ITEMS.getValue(foodId) : null;
+                    if (food != null && FoodAnimalRegistry.isValidFoodForAnimal(keeper.assignedAnimalId, food)) {
+                        ZooAnimalHungerSystem.throwFoodAtTarget(sl, keeper, target, food);
+                        throwDelay = 60; // throw every 3 seconds
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void stop() {
+            target = null;
+            throwDelay = 0;
+            keeper.getNavigation().stop();
+        }
     }
 
     private void ensureAssignedFood() {
@@ -152,10 +211,22 @@ public class ZookeeperEntity extends PathfinderMob {
     private Entity findSpecializedAnimal() {
         ZooData data = ZooData.get(this.level());
         net.minecraft.nbt.ListTag tagged = data.getTaggedAnimals();
+
+        // Try UUID lookup first (survives chunk reload), fall back to runtime ID
         for (int i = 0; i < tagged.size(); i++) {
             CompoundTag tag = tagged.getCompound(i);
             if (!assignedAnimalId.equals(tag.getString("type"))) continue;
-            Entity e = this.level().getEntity(tag.getInt("id"));
+
+            Entity e = null;
+            if (tag.contains("uuid") && this.level() instanceof ServerLevel sl) {
+                try {
+                    java.util.UUID uuid = java.util.UUID.fromString(tag.getString("uuid"));
+                    e = sl.getEntity(uuid);
+                } catch (IllegalArgumentException ignored) {}
+            }
+            if (e == null) {
+                e = this.level().getEntity(tag.getInt("id"));
+            }
             if (e != null && e.isAlive()) return e;
         }
         return null;

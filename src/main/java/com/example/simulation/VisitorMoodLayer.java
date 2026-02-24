@@ -56,30 +56,36 @@ public class VisitorMoodLayer extends RenderLayer<VisitorEntity, HumanoidModel<V
                 }
 
                 // Render a billboard above the entity's head.
-                // At this point poseStack is at the entity's feet (after EntityRenderer.render
-                // offset).
+                // Layer poseStack: Y is inverted due to renderer's scale(-1,-1,1).
+                // Entity model root (L=0) is at the entity's TOP in world space.
+                // To appear ABOVE the head: use negative Y offset (smaller = higher).
                 poseStack.pushPose();
 
-                // Translate upward above head (entity height + small padding)
-                float headY = entity.getBbHeight() + 0.35f;
-                if (entity.isChildVisitor() && !entity.isHunter())
-                        headY = headY * 0.6f + 0.15f;
-                poseStack.translate(0.0, headY, 0.0);
+                // Place icon above entity head.
+                // After LivingEntityRenderer applies scale(-1,-1,1) then translate(0,-1.501,0),
+                // the model origin sits ~1.501 blocks above entity feet.
+                // The child renderer further adds scale(0.6,0.6,0.6) before the translate, shrinking
+                // the effective translate to 0.9 blocks.  In this space -Y moves the icon UP in world.
+                // Adult head top ≈ model-origin + 0.5 = 2.0 blocks; adjust to be closer to head.
+                // Child visually smaller (0.6×), head top ≈ 1.2 blocks.
+                float headAbove = entity.isChildVisitor() ? -1.0f : -1.6f;
+                poseStack.translate(0.0, headAbove, 0.0);
 
-                // Counter-rotate to face camera: apply inverse of entity body rotation, then
-                // camera yaw
+                // Counter the entity body rotation that the renderer baked in (180-yBodyRot)
+                // then orient to face to camera
                 net.minecraft.client.Camera camera = net.minecraft.client.Minecraft.getInstance().gameRenderer
                                 .getMainCamera();
+                poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(entity.yBodyRot - 180.0f));
                 poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(-camera.getYRot()));
                 poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(camera.getXRot()));
 
                 // Optional: slight bob animation
                 float bob = (float) Math.sin(ageInTicks * 0.15f) * 0.04f;
-                poseStack.translate(0, bob, 0);
+                poseStack.translate(0, -bob, 0);
 
-                // Scale: 0.4 blocks wide
+                // Scale: 0.4 blocks wide (positive scale to render icon correctly)
                 float sc = 0.4f;
-                poseStack.scale(-sc, -sc, sc);
+                poseStack.scale(sc, sc, sc);
 
                 renderIconStatic(poseStack, buffer, tex, packedLight, 255, 255, 255);
 

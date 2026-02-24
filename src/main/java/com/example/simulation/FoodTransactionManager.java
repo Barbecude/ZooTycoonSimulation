@@ -34,6 +34,7 @@ public class FoodTransactionManager {
         data.addBalance(income);
         data.setRating(Math.min(100, data.getRating() + 1));
         shelf.addRevenue(income);
+        data.logTransaction("Pendapatan", "Penjualan makanan di shelf", income);
 
         visitor.setHunger(0);
         visitor.setMood(VisitorEntity.Mood.HAPPY, 140);
@@ -65,6 +66,7 @@ public class FoodTransactionManager {
         data.addBalance(income);
         data.setRating(Math.min(100, data.getRating() + 1));
         shelf.addRevenue(income);
+        data.logTransaction("Pendapatan", "Penjualan minuman di shelf", income);
 
         visitor.setThirst(0);
         visitor.setMood(VisitorEntity.Mood.HAPPY, 120);

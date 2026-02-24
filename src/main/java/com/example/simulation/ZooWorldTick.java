@@ -55,6 +55,12 @@ public class ZooWorldTick {
                     " (Janitors: " + janitorCount + ", Zookeepers: " + zookeeperCount +
                     ", Security: " + securityCount + ", Cashiers: " + cashierCount + ")");
 
+            data.logTransaction("Pengeluaran",
+                    "Gaji staff: " + janitorCount + " janitor, " + zookeeperCount
+                            + " zookeeper, " + securityCount + " security, "
+                            + cashierCount + " cashier",
+                    -totalSalary);
+
             // Notify players if balance is too low
             if (data.getBalance() < 0) {
                 data.setBalance(0); // Prevent negative balance
@@ -144,6 +150,9 @@ public class ZooWorldTick {
                 SyncBalancePacket packet = new SyncBalancePacket(data.getBalance(), data.getTaggedAnimals(), aCount,
                         sCount, vCount, data.getRating());
                 PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(), packet);
+
+                SyncTransactionLogPacket logPacket = new SyncTransactionLogPacket(data.getTransactionLog());
+                PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(), logPacket);
             }
         }
     }

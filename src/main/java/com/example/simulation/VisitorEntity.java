@@ -10,6 +10,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -57,8 +58,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
     // Kidnapping
     private static final EntityDataAccessor<Boolean> IS_CARRYING = SynchedEntityData.defineId(VisitorEntity.class,
             EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<CompoundTag> CARRIED_ANIMAL_DATA = SynchedEntityData.defineId(
-            VisitorEntity.class,
+    private static final EntityDataAccessor<CompoundTag> CARRIED_ANIMAL_DATA = SynchedEntityData.defineId(VisitorEntity.class,
             EntityDataSerializers.COMPOUND_TAG);
     // Escape Mode
     private static final EntityDataAccessor<Boolean> IS_ESCAPE_MODE = SynchedEntityData.defineId(VisitorEntity.class,
@@ -74,7 +74,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
     private static final int MAX_VIEWERS_PER_ANIMAL = 4;
     private static final double VISITOR_BASE_SPEED = 0.28D;
     private static final double HUNTER_BASE_SPEED = 0.22D;
-    private static final double HUNTER_RUN_SPEED = 0.45D;
+    private static final double HUNTER_RUN_SPEED = 0.32D;
 
     public enum HunterMode {
         KIDNAPPER(0),
@@ -88,8 +88,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
 
         public static HunterMode fromId(int id) {
             for (HunterMode m : values()) {
-                if (m.id == id)
-                    return m;
+                if (m.id == id) return m;
             }
             return KIDNAPPER;
         }
@@ -120,6 +119,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
     private boolean lastCarryState = false;
     private final java.util.HashMap<Long, Integer> tempPlacedBlocks = new java.util.HashMap<>();
     private long hunterCrimeUntilTick = 0L;
+    int eatTimer = 0; // ticks remaining before visitor finishes eating held food
 
     public Mood getMood() {
         int ordinal = this.entityData.get(MOOD);
@@ -144,17 +144,13 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
 
     @Override
     public void performRangedAttack(LivingEntity target, float distanceFactor) {
-        net.minecraft.world.entity.projectile.AbstractArrow arrow = net.minecraft.world.entity.projectile.ProjectileUtil
-                .getMobArrow(this, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ARROW),
-                        distanceFactor);
+        net.minecraft.world.entity.projectile.AbstractArrow arrow = net.minecraft.world.entity.projectile.ProjectileUtil.getMobArrow(this, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ARROW), distanceFactor);
         double d0 = target.getX() - this.getX();
         double d1 = target.getY(0.3333333333333333D) - arrow.getY();
         double d2 = target.getZ() - this.getZ();
         double d3 = Math.sqrt(d0 * d0 + d2 * d2);
-        arrow.shoot(d0, d1 + d3 * 0.20000000298023224D, d2, 1.6F,
-                (float) (14 - this.level().getDifficulty().getId() * 4));
-        this.playSound(net.minecraft.sounds.SoundEvents.SKELETON_SHOOT, 1.0F,
-                1.0F / (this.getRandom().nextFloat() * 0.4F + 0.8F));
+        arrow.shoot(d0, d1 + d3 * 0.20000000298023224D, d2, 1.6F, (float)(14 - this.level().getDifficulty().getId() * 4));
+        this.playSound(net.minecraft.sounds.SoundEvents.SKELETON_SHOOT, 1.0F, 1.0F / (this.getRandom().nextFloat() * 0.4F + 0.8F));
         this.level().addFreshEntity(arrow);
         if (isHunter() && target != null && !(target instanceof StaffEntity) && !(target instanceof VisitorEntity)) {
             markHunterCrime("attack");
@@ -215,7 +211,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     public boolean isCarrying() {
-        return this.isHunter() && (this.entityData.get(IS_CARRYING) || !this.getPassengers().isEmpty());
+        return this.isHunter() && this.entityData.get(IS_CARRYING);
     }
 
     private void setCarrying(boolean carrying) {
@@ -247,8 +243,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     public void markHunterCrime(String reason) {
-        if (!isHunter())
-            return;
+        if (!isHunter()) return;
         this.hunterCrimeUntilTick = this.level().getGameTime() + 20L * 60L; // 60s threat window
         this.setEscapeMode(true);
         this.getPersistentData().putLong("HunterCrimeUntil", this.hunterCrimeUntilTick);
@@ -258,11 +253,9 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     public boolean hasActiveHunterCrime() {
-        if (!isHunter())
-            return false;
+        if (!isHunter()) return false;
         long now = this.level().getGameTime();
-        if (hunterCrimeUntilTick > now)
-            return true;
+        if (hunterCrimeUntilTick > now) return true;
         long fromTag = this.getPersistentData().getLong("HunterCrimeUntil");
         return fromTag > now;
     }
@@ -356,14 +349,10 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
             stayTime++;
 
             if (isHunter()) {
-                if (getHunger() != 0)
-                    setHunger(0);
-                if (getThirst() != 0)
-                    setThirst(0);
-                if (getMood() != Mood.NEUTRAL)
-                    setMood(Mood.NEUTRAL, 0);
-                if (hasTrash())
-                    setHasTrash(false);
+                if (getHunger() != 0) setHunger(0);
+                if (getThirst() != 0) setThirst(0);
+                if (getMood() != Mood.NEUTRAL) setMood(Mood.NEUTRAL, 0);
+                if (hasTrash()) setHasTrash(false);
             } else {
                 if (this.tickCount % 600 == 0) {
                     setHunger(Math.min(100, getHunger() + 5));
@@ -413,18 +402,36 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                     if (this.level().getBlockState(pos).isAir()) {
                         int variant = this.getRandom().nextInt(4);
                         this.level().setBlock(pos,
-                                IndoZooTycoon.TRASH_BLOCK.get().defaultBlockState().setValue(TrashBlock.VARIANT,
-                                        variant),
+                                IndoZooTycoon.TRASH_BLOCK.get().defaultBlockState().setValue(TrashBlock.VARIANT, variant),
                                 3);
                     }
                 }
             }
 
-            // Hunter logic: equip bow
-            if (isHunter() && getHunterMode() == HunterMode.ARCHER
-                    && this.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND).isEmpty()) {
+            // Eat animation: count down, then clear held food
+            if (eatTimer > 0) {
+                eatTimer--;
+                if (eatTimer == 0) {
+                    this.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND,
+                            net.minecraft.world.item.ItemStack.EMPTY);
+                    this.playSound(net.minecraft.sounds.SoundEvents.GENERIC_EAT, 1.0F, 1.0F);
+                }
+            }
+
+            // Hunter logic: equip bow for archer, sack for kidnapper
+            if (isHunter() && getHunterMode() == HunterMode.ARCHER && this.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND).isEmpty()) {
                 this.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
                         new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BOW));
+            }
+            if (isHunter() && getHunterMode() == HunterMode.KIDNAPPER) {
+                net.minecraft.world.item.Item targetSack = isCarrying()
+                        ? IndoZooTycoon.HUNTER_SACK_BIG.get()
+                        : IndoZooTycoon.HUNTER_SACK_SMALL.get();
+                net.minecraft.world.item.ItemStack current = this.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND);
+                if (current.isEmpty() || current.getItem() != targetSack) {
+                    this.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                            new net.minecraft.world.item.ItemStack(targetSack));
+                }
             }
 
             boolean carrying = isHunter() && isCarrying();
@@ -432,39 +439,30 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                 LOGGER.info("Hunter {} carrying={} pos={}", this.getId(), carrying, this.blockPosition());
                 lastCarryState = carrying;
             }
-            if (isHunter()) {
-                boolean runMode = (carrying || isEscapeMode()) && getHunterMode() == HunterMode.KIDNAPPER;
-                this.setSprinting(runMode);
+            if (isHunter() && getHunterMode() == HunterMode.KIDNAPPER) {
+                boolean actuallyMoving = this.getDeltaMovement().horizontalDistanceSqr() > 0.001D;
+                if (carrying || isEscapeMode()) {
+                    // Run when escaping/carrying
+                    this.setSprinting(actuallyMoving);
+                    this.setPose(Pose.STANDING);
+                } else {
+                    // Sneak when approaching target
+                    this.setSprinting(false);
+                    this.setPose(Pose.CROUCHING);
+                }
                 tickTempBlocks();
             }
             updateMovementSpeed();
 
-            // Hunter misc: equip sack (pig spawn egg) when carrying, clear when not
-            if (isHunter() && getHunterMode() == HunterMode.KIDNAPPER) {
-                boolean shouldHoldEgg = isCarrying();
-                net.minecraft.world.item.ItemStack mainHand = this
-                        .getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND);
-                boolean holdingEgg = mainHand.is(net.minecraft.world.item.Items.PIG_SPAWN_EGG);
-                if (shouldHoldEgg && !holdingEgg) {
-                    this.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
-                            new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.PIG_SPAWN_EGG));
-                } else if (!shouldHoldEgg && holdingEgg) {
-                    this.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
-                            net.minecraft.world.item.ItemStack.EMPTY);
-                }
-            }
-
-            if (isHunter() && isCarrying() && !isEscapeMode()) {
+            if (isHunter() && getHunterMode() == HunterMode.KIDNAPPER && isCarrying() && !isEscapeMode()) {
                 setEscapeMode(true);
             }
         }
     }
 
     private void tickTempBlocks() {
-        if (this.level().isClientSide)
-            return;
-        if (tempPlacedBlocks.isEmpty())
-            return;
+        if (this.level().isClientSide) return;
+        if (tempPlacedBlocks.isEmpty()) return;
         java.util.Iterator<java.util.Map.Entry<Long, Integer>> it = tempPlacedBlocks.entrySet().iterator();
         while (it.hasNext()) {
             java.util.Map.Entry<Long, Integer> e = it.next();
@@ -498,7 +496,22 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
 
     @Override
     protected void positionRider(Entity passenger, MoveFunction moveFunction) {
-        // Hunter no longer carries via riding; this is kept in case of other passengers
+        if (this.isHunter() && this.isCarrying()) {
+            float yaw = this.getYRot();
+            double rad = Math.toRadians(yaw);
+            double sideX = -Math.sin(rad) * 0.35;
+            double sideZ = Math.cos(rad) * 0.35;
+            double forwardX = Math.cos(rad) * 0.15;
+            double forwardZ = Math.sin(rad) * 0.15;
+
+            double px = this.getX() + sideX + forwardX;
+            double py = this.getY() + 0.45;
+            double pz = this.getZ() + sideZ + forwardZ;
+            moveFunction.accept(passenger, px, py, pz);
+            passenger.setYRot(this.getYRot());
+            passenger.setXRot(0.0F);
+            return;
+        }
         super.positionRider(passenger, moveFunction);
     }
 
@@ -515,64 +528,42 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
     @Override
     public boolean doHurtTarget(Entity target) {
         boolean hit = super.doHurtTarget(target);
-        if (hit && isHunter() && target instanceof LivingEntity && !(target instanceof StaffEntity)
-                && !(target instanceof VisitorEntity)) {
+        if (hit && isHunter() && target instanceof LivingEntity && !(target instanceof StaffEntity) && !(target instanceof VisitorEntity)) {
             markHunterCrime("melee");
         }
         return hit;
     }
 
     private void dropCarriedAnimal() {
-        if (this.level().isClientSide)
-            return;
-
-        // Clear sack visual
-        if (this.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND)
-                .is(net.minecraft.world.item.Items.PIG_SPAWN_EGG)) {
-            this.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
-        }
-
-        CompoundTag carried = getCarriedAnimalData();
-        if (carried != null && carried.contains("Nbt") && carried.contains("Type")) {
-            // Respawn the animal from saved NBT
-            net.minecraft.resources.ResourceLocation typeId = net.minecraft.resources.ResourceLocation
-                    .tryParse(carried.getString("Type"));
-            if (typeId != null) {
-                net.minecraft.world.level.Level lvl = this.level();
-                net.minecraft.world.entity.EntityType<?> type = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES
-                        .getValue(typeId);
-                if (type != null) {
-                    net.minecraft.world.entity.Entity spawned = type.create(lvl);
-                    if (spawned != null) {
-                        CompoundTag nbt = carried.getCompound("Nbt");
-                        spawned.load(nbt);
-                        // Drop at hunter's position; give new UUID to avoid conflicts
-                        spawned.setUUID(java.util.UUID.randomUUID());
-                        spawned.moveTo(this.getX(), this.getY(), this.getZ(),
-                                this.getYRot(), 0.0F);
-                        if (spawned instanceof net.minecraft.world.entity.Mob mob) {
-                            mob.setNoAi(false);
-                        }
-                        lvl.addFreshEntity(spawned);
-                        // Update ZooData to recognise new entity ID
-                        ZooData data = ZooData.get(lvl);
-                        if (carried.contains("ZooTaggedId")) {
-                            int oldId = carried.getInt("ZooTaggedId");
-                            data.replaceAnimalId(oldId, spawned.getId());
-                            data.setAnimalCarried(spawned.getId(), false);
-                        }
-                        LOGGER.info("Hunter {} dropped kidnapped animal {} (respawned as {})",
-                                this.getId(), carried.getString("Type"), spawned.getId());
-                    }
-                }
-            }
-        } else if (carried != null && carried.contains("ZooTaggedId")) {
-            ZooData.get(this.level()).setAnimalCarried(carried.getInt("ZooTaggedId"), false);
-        }
-
+        if (this.level().isClientSide) return;
         setCarrying(false);
-        setCarriedAnimalData(new CompoundTag());
         setEscapeMode(false);
+        CompoundTag carried = getCarriedAnimalData();
+        setCarriedAnimalData(new CompoundTag());
+        if (carried == null || !carried.contains("Nbt")) {
+            // Nothing to restore
+            return;
+        }
+        int oldId = carried.getInt("ZooTaggedId");
+        CompoundTag nbt = carried.getCompound("Nbt");
+        // Recreate entity from saved NBT at hunter's current position
+        net.minecraft.world.entity.Entity spawned =
+                net.minecraft.world.entity.EntityType.loadEntityRecursive(
+                        nbt, this.level(), e -> {
+                            e.setPos(this.getX(), this.getY(), this.getZ());
+                            return e;
+                        });
+        if (spawned instanceof net.minecraft.world.entity.Mob mob) {
+            mob.setNoAi(false);
+            mob.setInvisible(false);
+            this.level().addFreshEntity(mob);
+            ZooData data = ZooData.get(this.level());
+            data.replaceAnimalId(oldId, mob.getId());
+            data.setAnimalCarried(mob.getId(), false);
+        } else {
+            // Could not restore entity — just clear the carried flag
+            ZooData.get(this.level()).setAnimalCarried(oldId, false);
+        }
     }
 
     @Override
@@ -605,33 +596,26 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
         this.goalSelector.addGoal(2, new RangedBowAttackGoal<>(this, 1.0D, 20, 15.0F) {
             @Override
             public boolean canUse() {
-                return super.canUse() && VisitorEntity.this.isHunter()
-                        && VisitorEntity.this.getHunterMode() == HunterMode.ARCHER;
+                return super.canUse() && VisitorEntity.this.isHunter() && VisitorEntity.this.getHunterMode() == HunterMode.ARCHER;
             }
         });
-        this.targetSelector.addGoal(1, new net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal<>(this,
-                net.minecraft.world.entity.Mob.class, 10, true, false, (target) -> {
-                    if (target == null)
-                        return false;
-                    if (target instanceof Player)
-                        return false;
-                    if (target instanceof StaffEntity)
-                        return false;
-                    if (target instanceof VisitorEntity)
-                        return false;
-                    ZooData data = ZooData.get(VisitorEntity.this.level());
-                    for (int i = 0; i < data.getTaggedAnimals().size(); i++) {
-                        CompoundTag t = data.getTaggedAnimals().getCompound(i);
-                        if (t.getInt("id") == target.getId() && !t.getBoolean("carried")) {
-                            return true;
-                        }
-                    }
-                    return false;
-                }) {
+        this.targetSelector.addGoal(1, new net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal<>(this, net.minecraft.world.entity.Mob.class, 10, true, false, (target) -> {
+            if (target == null) return false;
+            if (target instanceof Player) return false;
+            if (target instanceof StaffEntity) return false;
+            if (target instanceof VisitorEntity) return false;
+            ZooData data = ZooData.get(VisitorEntity.this.level());
+            for (int i = 0; i < data.getTaggedAnimals().size(); i++) {
+                CompoundTag t = data.getTaggedAnimals().getCompound(i);
+                if (t.getInt("id") == target.getId() && !t.getBoolean("carried")) {
+                    return true;
+                }
+            }
+            return false;
+        }) {
             @Override
             public boolean canUse() {
-                return super.canUse() && VisitorEntity.this.isHunter()
-                        && VisitorEntity.this.getHunterMode() == HunterMode.ARCHER;
+                return super.canUse() && VisitorEntity.this.isHunter() && VisitorEntity.this.getHunterMode() == HunterMode.ARCHER;
             }
         });
 
@@ -778,6 +762,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
         private net.minecraft.world.entity.Mob targetAnimal;
         private int kidnapTimer = 0;
         private int placeCooldown = 0;
+        private int stuckApproachTicks = 0; // give up on unreachable animals
 
         public KidnapAnimalGoal(VisitorEntity visitor) {
             this.visitor = visitor;
@@ -786,24 +771,18 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
 
         @Override
         public boolean canUse() {
-            if (!visitor.isHunter() || visitor.getHunterMode() != HunterMode.KIDNAPPER || visitor.isCarrying())
-                return false;
-
-            List<net.minecraft.world.entity.Mob> animals = visitor.level().getEntitiesOfClass(
-                    net.minecraft.world.entity.Mob.class, visitor.getBoundingBox().inflate(64.0D),
+            if (!visitor.isHunter() || visitor.getHunterMode() != HunterMode.KIDNAPPER || visitor.isCarrying()) return false;
+            
+            List<net.minecraft.world.entity.Mob> animals = visitor.level().getEntitiesOfClass(net.minecraft.world.entity.Mob.class, visitor.getBoundingBox().inflate(64.0D),
                     (m) -> !(m instanceof StaffEntity) && !(m instanceof VisitorEntity) && m.getVehicle() == null);
             ZooData data = ZooData.get(visitor.level());
             net.minecraft.world.entity.Mob best = null;
             double bestDist = Double.MAX_VALUE;
             for (net.minecraft.world.entity.Mob animal : animals) {
-                if (!animal.isAlive())
-                    continue;
-                if (animal.getVehicle() != null)
-                    continue;
-                if (!isTagged(data, animal.getId()))
-                    continue;
-                if (isTaggedCarried(data, animal.getId()))
-                    continue;
+                if (!animal.isAlive()) continue;
+                if (animal.getVehicle() != null) continue;
+                if (!isTagged(data, animal.getId())) continue;
+                if (isTaggedCarried(data, animal.getId())) continue;
                 double d = visitor.distanceToSqr(animal);
                 if (d < bestDist) {
                     bestDist = d;
@@ -818,15 +797,17 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
         public void start() {
             this.kidnapTimer = 0;
             this.placeCooldown = 0;
-            visitor.getNavigation().moveTo(targetAnimal, 1.1D);
+            visitor.getNavigation().moveTo(targetAnimal, 2.0D);
         }
 
         @Override
         public boolean canContinueToUse() {
             return visitor.isHunter() && visitor.getHunterMode() == HunterMode.KIDNAPPER && !visitor.isCarrying()
-                    && targetAnimal != null && targetAnimal.isAlive()
-                    && isTagged(ZooData.get(visitor.level()), targetAnimal.getId());
+                    && targetAnimal != null && targetAnimal.isAlive() && isTagged(ZooData.get(visitor.level()), targetAnimal.getId());
         }
+
+        private int stuckTicks = 0;
+        private BlockPos lastPos = null;
 
         @Override
         public void tick() {
@@ -838,6 +819,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
             double dist = visitor.distanceToSqr(targetAnimal);
             if (dist < 4.5D) {
                 kidnapTimer++;
+                stuckTicks = 0;
                 if (kidnapTimer >= 10) {
                     if (!visitor.level().isClientSide) {
                         ZooData data = ZooData.get(visitor.level());
@@ -858,12 +840,11 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                         }
                         CompoundTag nbt = new CompoundTag();
                         if (targetAnimal.save(nbt)) {
-                            if (nbt.contains("UUID"))
-                                nbt.remove("UUID");
+                            if (nbt.contains("UUID")) nbt.remove("UUID");
                             carried.put("Nbt", nbt);
                         }
 
-                        // Discard animal from world (hidden in sack) — restored on drop
+                        // Remove animal from world — stored entirely in NBT
                         targetAnimal.discard();
 
                         visitor.setCarriedAnimalData(carried);
@@ -878,8 +859,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                 }
             } else {
                 if (!visitor.level().isClientSide) {
-                    if (placeCooldown > 0)
-                        placeCooldown--;
+                    if (placeCooldown > 0) placeCooldown--;
                     if (placeCooldown == 0 && (visitor.getNavigation().isStuck() || visitor.horizontalCollision)) {
                         if (attemptClimbPlacement(targetAnimal)) {
                             placeCooldown = 20;
@@ -887,15 +867,29 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                         }
                     }
                 }
+                // Stuck detection: if hunter hasn't moved for 3 seconds, teleport closer
+                BlockPos nowPos = visitor.blockPosition();
+                if (nowPos.equals(lastPos)) {
+                    stuckTicks++;
+                } else {
+                    stuckTicks = 0;
+                    lastPos = nowPos;
+                }
+                if (!visitor.level().isClientSide && stuckTicks > 60) {
+                    stuckTicks = 0;
+                    // Teleport to a spot adjacent to target
+                    double tx = targetAnimal.getX() + (visitor.getRandom().nextDouble() - 0.5) * 3.0;
+                    double tz = targetAnimal.getZ() + (visitor.getRandom().nextDouble() - 0.5) * 3.0;
+                    visitor.teleportTo(tx, targetAnimal.getY(), tz);
+                }
                 if (visitor.getNavigation().isDone() || visitor.tickCount % 20 == 0) {
-                    visitor.getNavigation().moveTo(targetAnimal, 1.2D);
+                    visitor.getNavigation().moveTo(targetAnimal, 2.0D);
                 }
             }
         }
 
         private boolean attemptClimbPlacement(net.minecraft.world.entity.Mob target) {
-            if (visitor.tempPlacedBlocks.size() >= 12)
-                return false;
+            if (visitor.tempPlacedBlocks.size() >= 12) return false;
             BlockPos feetPos = visitor.blockPosition();
             BlockPos placePos = null;
             if (visitor.level().getBlockState(feetPos).isAir()) {
@@ -907,8 +901,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                 }
             }
 
-            if (placePos == null)
-                return false;
+            if (placePos == null) return false;
 
             visitor.level().setBlock(placePos, net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState(), 3);
             visitor.tempPlacedBlocks.put(placePos.asLong(), 60);
@@ -938,10 +931,12 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
         }
     }
 
+
     private class EscapeWithAnimalGoal extends Goal {
         private final VisitorEntity visitor;
         private BlockPos bannerPos;
         private int placeBlockCooldown = 0;
+        private int stuckTicks = 0; // recovery counter
 
         public EscapeWithAnimalGoal(VisitorEntity visitor) {
             this.visitor = visitor;
@@ -957,21 +952,29 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
         public void start() {
             this.bannerPos = findNearestBanner();
             placeBlockCooldown = 0;
+            stuckTicks = 0;
             if (bannerPos != null) {
-                visitor.getNavigation().moveTo(bannerPos.getX(), bannerPos.getY(), bannerPos.getZ(), 1.5D);
+                visitor.getNavigation().moveTo(bannerPos.getX(), bannerPos.getY(), bannerPos.getZ(), 2.5D);
+            } else {
+                // No banner — head straight toward gate exit from the start
+                BlockPos gate = visitor.getGatePos();
+                if (gate != null) {
+                    BlockPos out = gate.offset(visitor.getX() > gate.getX() ? 20 : -20, 0,
+                            visitor.getZ() > gate.getZ() ? 20 : -20);
+                    visitor.getNavigation().moveTo(out.getX(), out.getY(), out.getZ(), 2.5D);
+                }
             }
         }
 
         @Override
         public void tick() {
-            if (!visitor.isCarrying())
-                return;
+            if (!visitor.isCarrying()) return;
 
             // Handle stuck situation by placing blocks
             if (placeBlockCooldown > 0) {
                 placeBlockCooldown--;
-            } else if ((visitor.getNavigation().isStuck() || visitor.horizontalCollision) &&
-                    visitor.tempPlacedBlocks.size() < 12) {
+            } else if ((visitor.getNavigation().isStuck() || visitor.horizontalCollision) && 
+                       visitor.tempPlacedBlocks.size() < 12) {
                 if (attemptClimbPlacement()) {
                     placeBlockCooldown = 20;
                 }
@@ -981,21 +984,47 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                 double dist = visitor.distanceToSqr(bannerPos.getX(), bannerPos.getY(), bannerPos.getZ());
                 if (dist < 9.0D) {
                     bannerPos = null;
-                    // Reached banner, leave zoo
+                    stuckTicks = 0;
                     visitor.forceLeave();
                     return;
                 } else {
-                    // Recalculate path more frequently if stuck or far away
+                    // Stuck recovery: nudge hunter toward banner
+                    if (visitor.getNavigation().isStuck()) {
+                        stuckTicks++;
+                        if (stuckTicks >= 60) {
+                            stuckTicks = 0;
+                            double dx = bannerPos.getX() - visitor.getX();
+                            double dz = bannerPos.getZ() - visitor.getZ();
+                            double len = Math.sqrt(dx * dx + dz * dz);
+                            if (len > 0) {
+                                visitor.setDeltaMovement(dx / len * 0.35, 0.38, dz / len * 0.35);
+                            }
+                            visitor.getNavigation().stop();
+                            visitor.getNavigation().moveTo(bannerPos.getX(), bannerPos.getY(), bannerPos.getZ(), 2.5D);
+                        }
+                    } else {
+                        stuckTicks = 0;
+                    }
                     if (visitor.getNavigation().isDone() || visitor.tickCount % 15 == 0) {
-                        visitor.getNavigation().moveTo(bannerPos.getX(), bannerPos.getY(), bannerPos.getZ(), 1.5D);
+                        visitor.getNavigation().moveTo(bannerPos.getX(), bannerPos.getY(), bannerPos.getZ(), 2.5D);
                     }
                     return;
                 }
             }
 
-            // If no banner found, try to leave through gate
-            if (visitor.getGatePos() != null) {
-                visitor.forceLeave();
+            // No banner found — navigate to gate exit continuously, only call forceLeave when close
+            BlockPos gate = visitor.getGatePos();
+            if (gate != null) {
+                double distToGate = visitor.distanceToSqr(gate.getX(), gate.getY(), gate.getZ());
+                if (distToGate < 9.0D) {
+                    visitor.forceLeave();
+                } else if (visitor.getNavigation().isDone() || visitor.tickCount % 20 == 0) {
+                    BlockPos out = gate.offset(visitor.getX() > gate.getX() ? 20 : -20, 0,
+                            visitor.getZ() > gate.getZ() ? 20 : -20);
+                    visitor.getNavigation().moveTo(out.getX(), out.getY(), out.getZ(), 2.5D);
+                }
+            } else if (!visitor.level().isClientSide) {
+                visitor.discard(); // Nowhere to escape, despawn cleanly
             }
         }
 
@@ -1011,11 +1040,10 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
         }
 
         private boolean attemptClimbPlacement() {
-            if (visitor.tempPlacedBlocks.size() >= 12)
-                return false;
+            if (visitor.tempPlacedBlocks.size() >= 12) return false;
             BlockPos feetPos = visitor.blockPosition();
             BlockPos placePos = null;
-
+            
             // Try to place block at feet
             if (visitor.level().getBlockState(feetPos).isAir()) {
                 placePos = feetPos;
@@ -1027,8 +1055,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                 }
             }
 
-            if (placePos == null)
-                return false;
+            if (placePos == null) return false;
 
             try {
                 visitor.level().setBlock(placePos, net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState(), 3);
@@ -1073,15 +1100,12 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
 
         @Override
         public boolean canUse() {
-            if (!visitor.isHunter() || visitor.getHunterMode() != HunterMode.KIDNAPPER)
-                return false;
-            if (!visitor.isCarrying())
-                return false;
-
+            if (!visitor.isHunter() || visitor.getHunterMode() != HunterMode.KIDNAPPER) return false;
+            if (!visitor.isCarrying()) return false;
+            
             if (visitor.getNavigation().isStuck() || visitor.horizontalCollision) {
                 Direction forward = visitor.getMotionDirection();
-                if (forward == Direction.UP || forward == Direction.DOWN)
-                    return false;
+                if (forward == Direction.UP || forward == Direction.DOWN) return false;
 
                 BlockPos front = visitor.blockPosition().relative(forward);
                 if (isObstructing(front)) {
@@ -1099,10 +1123,8 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
 
         private boolean isObstructing(BlockPos pos) {
             BlockState state = visitor.level().getBlockState(pos);
-            if (state.isAir())
-                return false;
-            if (!state.getFluidState().isEmpty())
-                return false;
+            if (state.isAir()) return false;
+            if (!state.getFluidState().isEmpty()) return false;
             boolean isFenceLike = state.is(net.minecraft.tags.BlockTags.FENCES)
                     || state.is(net.minecraft.tags.BlockTags.WALLS)
                     || state.is(net.minecraft.tags.BlockTags.FENCE_GATES)
@@ -1120,10 +1142,9 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
             breakTick++;
             if (breakTick % 5 == 0) {
                 visitor.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
-                visitor.level().levelEvent(2001, breakingPos,
-                        net.minecraft.world.level.block.Block.getId(visitor.level().getBlockState(breakingPos)));
+                visitor.level().levelEvent(2001, breakingPos, net.minecraft.world.level.block.Block.getId(visitor.level().getBlockState(breakingPos)));
             }
-
+            
             if (breakTick >= 25) { // 1.25 detik hancur (lebih cepat)
                 visitor.level().destroyBlock(breakingPos, false);
                 this.breakingPos = null;
@@ -1177,8 +1198,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
 
         @Override
         public boolean canUse() {
-            if (visitor.isHunter())
-                return false;
+            if (visitor.isHunter()) return false;
             if (type.equals("food") && visitor.getHunger() < 50)
                 return false;
             if (type.equals("drink") && visitor.getThirst() < 50)
@@ -1254,8 +1274,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                         new net.minecraft.world.phys.AABB(doorPos).inflate(0.8D),
                         v -> v != visitor && !v.isHunter()).isEmpty();
                 if (blocked && visitor.tickCount % 20 == 0) {
-                    BlockPos side = doorPos.offset(visitor.getRandom().nextBoolean() ? 1 : -1, 0,
-                            visitor.getRandom().nextBoolean() ? 0 : 1);
+                    BlockPos side = doorPos.offset(visitor.getRandom().nextBoolean() ? 1 : -1, 0, visitor.getRandom().nextBoolean() ? 0 : 1);
                     moveTo(side);
                     return;
                 }
@@ -1318,13 +1337,19 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                     // Pay for service (food/drink only) via FoodTransactionManager
                     if (!type.equals("toilet") && !visitor.level().isClientSide) {
                         boolean purchased = false;
-                        net.minecraft.world.level.block.entity.BlockEntity be = visitor.level()
-                                .getBlockEntity(targetPos);
+                        net.minecraft.world.level.block.entity.BlockEntity be = visitor.level().getBlockEntity(targetPos);
                         if (be instanceof ShelfBlockEntity shelf) {
+                            // Peek at item before removing it so we can give it to the visitor visually
+                            net.minecraft.world.item.ItemStack peekItem = shelf.getDisplayFood();
                             if (type.equals("food")) {
                                 purchased = FoodTransactionManager.processFoodPurchase(visitor, shelf);
                             } else if (type.equals("drink")) {
                                 purchased = FoodTransactionManager.processDrinkPurchase(visitor, shelf);
+                            }
+                            // Give visitor a held item so they appear to eat/drink it
+                            if (purchased && !peekItem.isEmpty()) {
+                                visitor.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND, peekItem);
+                                visitor.eatTimer = 40 + visitor.getRandom().nextInt(80);
                             }
                         }
 
@@ -1353,14 +1378,12 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
         }
 
         private void moveTo(BlockPos pos) {
-            if (pos == null)
-                return;
+            if (pos == null) return;
             visitor.getNavigation().moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 1.0D);
         }
 
         private void repathIfNeeded(BlockPos pos) {
-            if (pos == null)
-                return;
+            if (pos == null) return;
             if (repathCooldown > 0) {
                 repathCooldown--;
                 return;
@@ -1381,8 +1404,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
             }
             if (state.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock) {
                 if (!state.getValue(net.minecraft.world.level.block.FenceGateBlock.OPEN)) {
-                    visitor.level().setBlock(pos,
-                            state.setValue(net.minecraft.world.level.block.FenceGateBlock.OPEN, true), 3);
+                    visitor.level().setBlock(pos, state.setValue(net.minecraft.world.level.block.FenceGateBlock.OPEN, true), 3);
                 }
             }
         }
@@ -1391,16 +1413,14 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
             BlockPos best = null;
             double bestDist = Double.MAX_VALUE;
             BlockPos start = visitor.blockPosition();
-            for (BlockPos pos : BlockPos.betweenClosed(center.offset(-radius, -2, -radius),
-                    center.offset(radius, 2, radius))) {
+            for (BlockPos pos : BlockPos.betweenClosed(center.offset(-radius, -2, -radius), center.offset(radius, 2, radius))) {
                 net.minecraft.world.level.block.state.BlockState st = visitor.level().getBlockState(pos);
                 if (!(st.getBlock() instanceof net.minecraft.world.level.block.DoorBlock)
                         && !(st.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock)) {
                     continue;
                 }
                 net.minecraft.world.level.pathfinder.Path path = visitor.getNavigation().createPath(pos, 0);
-                if (path == null)
-                    continue;
+                if (path == null) continue;
                 double d = pos.distSqr(start);
                 if (d < bestDist) {
                     bestDist = d;
@@ -1434,15 +1454,11 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
 
         @Override
         public boolean canUse() {
-            if (visitor.isHunter())
-                return false;
-            if (visitor.isTimeToLeave())
-                return false;
-            if (visitor.tickCount % 40 != 0)
-                return false;
+            if (visitor.isHunter()) return false;
+            if (visitor.isTimeToLeave()) return false;
+            if (visitor.tickCount % 40 != 0) return false;
             ZooData data = ZooData.get(visitor.level());
-            if (data.getTaggedAnimals().isEmpty())
-                return false;
+            if (data.getTaggedAnimals().isEmpty()) return false;
 
             Animal candidate = findTarget(data);
             if (candidate != null) {
@@ -1495,8 +1511,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
 
             boolean crowded = visitor.level().getEntitiesOfClass(VisitorEntity.class,
                     target.getBoundingBox().inflate(2.0D), v -> !v.isHunter()).size() > MAX_VIEWERS_PER_ANIMAL;
-            if (watchPos == null || crowded
-                    || visitor.distanceToSqr(watchPos.getX() + 0.5, watchPos.getY(), watchPos.getZ() + 0.5) < 2.0D) {
+            if (watchPos == null || crowded || visitor.distanceToSqr(watchPos.getX() + 0.5, watchPos.getY(), watchPos.getZ() + 0.5) < 2.0D) {
                 watchPos = computeWatchPos(target, crowded);
             }
 
@@ -1565,8 +1580,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                 }
             }
 
-            if (candidates.isEmpty())
-                return null;
+            if (candidates.isEmpty()) return null;
             Animal nearest = null;
             double best = Double.MAX_VALUE;
             for (Animal animal : candidates) {
@@ -1612,11 +1626,9 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
 
         @Override
         public boolean canUse() {
-            if (visitor.isHunter())
-                return false;
-            if (!visitor.hasTrash())
-                return false;
-
+            if (visitor.isHunter()) return false;
+            if (!visitor.hasTrash()) return false;
+            
             // Scan for trash can
             BlockPos p = visitor.blockPosition();
             for (BlockPos pos : BlockPos.betweenClosed(p.offset(-15, -3, -15), p.offset(15, 3, 15))) {
@@ -1626,14 +1638,14 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                     return true;
                 }
             }
-
+            
             // If no trash can found, increment search timer
             this.searchTimer++;
             if (this.searchTimer > 300) { // Approx 15 seconds
                 this.targetPos = null;
                 return true; // Return true to trigger littering in start() or tick()
             }
-
+            
             return false;
         }
 
@@ -1651,7 +1663,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                 if (visitor.distanceToSqr(targetPos.getX(), targetPos.getY(), targetPos.getZ()) < 4.0D) {
                     visitor.getNavigation().stop();
                     timer++;
-
+                    
                     // Interaction Animation
                     if (timer == 2) {
                         BlockState state = visitor.level().getBlockState(targetPos);
@@ -1664,7 +1676,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                     if (timer > 20) {
                         visitor.setHasTrash(false);
                         visitor.playSound(net.minecraft.sounds.SoundEvents.ITEM_PICKUP, 1.0F, 1.0F);
-
+                        
                         // Close it
                         BlockState state = visitor.level().getBlockState(targetPos);
                         if (state.is(IndoZooTycoon.TRASH_CAN_BLOCK.get())) {
@@ -1683,10 +1695,10 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                 BlockPos feet = visitor.blockPosition();
                 if (visitor.level().isEmptyBlock(feet)) {
                     visitor.level().setBlockAndUpdate(feet, IndoZooTycoon.TRASH_BLOCK.get().defaultBlockState()
-                            .setValue(TrashBlock.VARIANT, visitor.getRandom().nextInt(4)));
+                        .setValue(TrashBlock.VARIANT, visitor.getRandom().nextInt(4)));
                     visitor.setHasTrash(false);
                     this.searchTimer = 0;
-
+                    
                     // Rating Penalty
                     if (!visitor.level().isClientSide) {
                         ZooData data = ZooData.get(visitor.level());
@@ -1701,12 +1713,9 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
 
         @Override
         public boolean canContinueToUse() {
-            if (visitor.isHunter())
-                return false;
-            if (targetPos == null && visitor.hasTrash())
-                return true; // Finish littering
-            return targetPos != null && visitor.hasTrash()
-                    && visitor.level().getBlockState(targetPos).is(IndoZooTycoon.TRASH_CAN_BLOCK.get());
+            if (visitor.isHunter()) return false;
+            if (targetPos == null && visitor.hasTrash()) return true; // Finish littering
+            return targetPos != null && visitor.hasTrash() && visitor.level().getBlockState(targetPos).is(IndoZooTycoon.TRASH_CAN_BLOCK.get());
         }
     }
 
@@ -1734,7 +1743,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
         public void tick() {
             BlockPos gate = visitor.getGatePos();
             double speed = visitor.isCarrying() ? 1.4D : 1.0D;
-
+            
             if (visitor.getNavigation().isDone() || visitor.tickCount % 20 == 0) {
                 visitor.getNavigation().moveTo(gate.getX(), gate.getY(), gate.getZ(), speed);
             }

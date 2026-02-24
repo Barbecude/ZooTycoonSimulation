@@ -79,22 +79,29 @@ public class ZooOverlay {
     }
 
     private static void drawHungerBar(Minecraft mc, GuiGraphics gfx, int x, int y, int hunger) {
-        // Always use Minecraft food icons (chicken leg) — same as dashboard AnimalCard
-        // hunger: MAX_HUNGER=20 = full, 0 = starving
-        final ResourceLocation ICONS = new ResourceLocation("minecraft", "textures/gui/icons.png");
-        int filled = Math.max(0, Math.min(10, Math.round((hunger / (float) ZooAnimalHungerSystem.MAX_HUNGER) * 10.0F)));
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        for (int i = 0; i < 10; i++) {
-            int drawX = x + (i * 9); // 9px spacing to avoid overlap
-            // Empty icon (u=16, v=27)
-            gfx.blit(ICONS, drawX, y, 16, 27, 9, 9, 256, 256);
-            // Filled icon on top (u=52, v=27) — golden/yellow drumstick
-            if (i < filled) {
-                gfx.blit(ICONS, drawX, y, 52, 27, 9, 9, 256, 256);
+        // hunger: MAX_HUNGER = full, 0 = starving
+        boolean isHungry = hunger <= ZooAnimalHungerSystem.HUNGRY_THRESHOLD;
+        if (hasVanillaFoodIcons(mc)) {
+            int filled = Math.max(0,
+                    Math.min(10, Math.round((hunger / (float) ZooAnimalHungerSystem.MAX_HUNGER) * 10.0F)));
+            for (int i = 0; i < 10; i++) {
+                int drawX = x + (i * 8);
+                gfx.blit(VANILLA_ICONS, drawX, y, 16, 27, 9, 9);
+                if (i < filled) {
+                    gfx.blit(VANILLA_ICONS, drawX, y, 52, 27, 9, 9);
+                }
             }
+  
+            return;
         }
-        RenderSystem.disableBlend();
+
+        // Fallback bar (green → red when hungry)
+        int barWidth = 80;
+        int fill = Math.max(0, Math.round((hunger / (float) ZooAnimalHungerSystem.MAX_HUNGER) * barWidth));
+        int barColor = isHungry ? 0xFFD14D4D : 0xFF65C466;
+        gfx.fill(x, y + 1, x + barWidth, y + 9, 0xFF444444);
+        gfx.fill(x, y + 1, x + fill, y + 9, barColor);
+
     }
 
     private static boolean hasVanillaFoodIcons(Minecraft mc) {

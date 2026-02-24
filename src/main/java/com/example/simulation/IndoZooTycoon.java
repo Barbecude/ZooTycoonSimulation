@@ -75,15 +75,12 @@ public class IndoZooTycoon {
         public static final RegistryObject<Item> RESTROOM_ITEM = ITEMS.register("toilet",
                         () -> new BlockItem(RESTROOM_BLOCK.get(), new Item.Properties()));
 
-        public static final RegistryObject<Block> FOOD_STALL_BLOCK = BLOCKS.register("food_stall",
-                        ShelfBlock::new);
-        public static final RegistryObject<Item> FOOD_STALL_ITEM = ITEMS.register("food_stall",
-                        () -> new BlockItem(FOOD_STALL_BLOCK.get(), new Item.Properties()));
+        // --- Hunter sack items ---
+        public static final RegistryObject<Item> HUNTER_SACK_SMALL = ITEMS.register("hunter_sack_small",
+                        () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> HUNTER_SACK_BIG = ITEMS.register("hunter_sack_big",
+                        () -> new Item(new Item.Properties()));
 
-        public static final RegistryObject<Block> DRINK_STALL_BLOCK = BLOCKS.register("drink_stall",
-                        ShelfBlock::new);
-        public static final RegistryObject<Item> DRINK_STALL_ITEM = ITEMS.register("drink_stall",
-                        () -> new BlockItem(DRINK_STALL_BLOCK.get(), new Item.Properties()));
         public static final RegistryObject<Block> OAK_SHELF_BLOCK = BLOCKS.register("oak_shelf",
                         OakShelfBlock::new);
         public static final RegistryObject<Item> OAK_SHELF_ITEM = ITEMS.register("oak_shelf",
@@ -96,6 +93,10 @@ public class IndoZooTycoon {
                         OakTowerShelfBlock::new);
         public static final RegistryObject<Item> OAK_TOWER_SHELF_ITEM = ITEMS.register("tower_oak_shelf",
                         () -> new BlockItem(OAK_TOWER_SHELF_BLOCK.get(), new Item.Properties()));
+        public static final RegistryObject<Block> SPRUCE_TOWER_SHELF_BLOCK = BLOCKS.register("tower_spruce_shelf",
+                        SpruceTowerShelfBlock::new);
+        public static final RegistryObject<Item> SPRUCE_TOWER_SHELF_ITEM = ITEMS.register("tower_spruce_shelf",
+                        () -> new BlockItem(SPRUCE_TOWER_SHELF_BLOCK.get(), new Item.Properties()));
 
         public static final RegistryObject<Block> ZOO_WALL_BANNER_BLOCK = BLOCKS.register("zoo_wall_banner",
                         ZooWallBannerBlock::new);
@@ -174,8 +175,9 @@ public class IndoZooTycoon {
         public static final RegistryObject<BlockEntityType<ShelfBlockEntity>> SHELF_BE = BLOCK_ENTITIES
                         .register("shelf",
                                         () -> BlockEntityType.Builder
-                                                        .of(ShelfBlockEntity::new, FOOD_STALL_BLOCK.get(), DRINK_STALL_BLOCK.get(),
-                                                                        OAK_SHELF_BLOCK.get(), OAK_STANDING_SHELF_BLOCK.get(), OAK_TOWER_SHELF_BLOCK.get())
+                                                        .of(ShelfBlockEntity::new,
+                                                                        OAK_SHELF_BLOCK.get(), OAK_STANDING_SHELF_BLOCK.get(),
+                                                                        OAK_TOWER_SHELF_BLOCK.get(), SPRUCE_TOWER_SHELF_BLOCK.get())
                                                         .build(null));
 
         // Menu
@@ -198,11 +200,8 @@ public class IndoZooTycoon {
                                                 output.accept(ZONE_MARKER_ITEM.get());
                                                 output.accept(TRASH_ITEM.get());
                                                 output.accept(TRASH_CAN_ITEM.get());
-                                                output.accept(FOOD_STALL_ITEM.get());
-                                                output.accept(DRINK_STALL_ITEM.get());
-                                                output.accept(OAK_SHELF_ITEM.get());
-                                                output.accept(OAK_STANDING_SHELF_ITEM.get());
                                                 output.accept(OAK_TOWER_SHELF_ITEM.get());
+                                                output.accept(SPRUCE_TOWER_SHELF_ITEM.get());
                                                 output.accept(ANIMAL_FEEDER_ITEM.get());
                                                 output.accept(CAPTURE_CAGE_ITEM.get());
                                                 output.accept(BIOME_CHANGER_ITEM.get());

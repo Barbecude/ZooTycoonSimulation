@@ -1,25 +1,26 @@
 package com.example.simulation;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.Container;
+import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 public class ShelfBlockEntity extends BlockEntity implements Container, net.minecraft.world.MenuProvider {
-    private static final int MAX_STOCK = 64;
-
-    private ItemStack stockItem = ItemStack.EMPTY;
+    private static final int CONTAINER_SIZE = 9; // 3x3 grid
+    private NonNullList<ItemStack> items = NonNullList.withSize(CONTAINER_SIZE, ItemStack.EMPTY);
+    
     private int foodPrice = 5000;
     private int drinkPrice = 3000;
     private long revenue = 0;
@@ -28,25 +29,19 @@ public class ShelfBlockEntity extends BlockEntity implements Container, net.mine
         super(IndoZooTycoon.SHELF_BE.get(), pos, state);
     }
 
-    // Food stock is represented by the internal stack count.
+    // Food stock is total count of all items in slots
     public int getFoodStock() {
-        return stockItem.isEmpty() ? 0 : stockItem.getCount();
+        int total = 0;
+        for (ItemStack stack : items) {
+            if (!stack.isEmpty()) {
+                total += stack.getCount();
+            }
+        }
+        return total;
     }
 
     public void setFoodStock(int amount) {
-        amount = Math.max(0, Math.min(MAX_STOCK, amount));
-        if (amount <= 0) {
-            stockItem = ItemStack.EMPTY;
-        } else {
-            if (stockItem.isEmpty()) {
-                // No item assigned yet — default to cooked beef for backwards compat
-                stockItem = new ItemStack(Items.COOKED_BEEF, amount);
-            } else {
-                stockItem.setCount(amount);
-            }
-        }
-        setChanged();
-        syncToClient();
+        // Legacy compatibility - not used with multi-slot
     }
 
     public boolean isStockEmpty() {
@@ -54,61 +49,43 @@ public class ShelfBlockEntity extends BlockEntity implements Container, net.mine
     }
 
     public boolean isStockFull() {
-        return getFoodStock() >= MAX_STOCK;
-    }
-
-    public void addFoodStock(int amount) {
-        if (amount <= 0)
-            return;
-        if (stockItem.isEmpty()) {
-            stockItem = new ItemStack(Items.COOKED_BEEF, 0); // default fallback
+        for (ItemStack stack : items) {
+            if (stack.isEmpty() || stack.getCount() < stack.getMaxStackSize()) {
+                return false;
+            }
         }
-        stockItem.grow(Math.min(amount, MAX_STOCK - stockItem.getCount()));
-        setChanged();
-        syncToClient();
-    }
-
-    public boolean removeFoodStock(int amount) {
-        if (amount <= 0)
-            return false;
-        if (getFoodStock() < amount)
-            return false;
-
-        stockItem.shrink(amount);
-        if (stockItem.isEmpty()) {
-            stockItem = ItemStack.EMPTY;
-        }
-        setChanged();
-        syncToClient();
         return true;
     }
 
-    public boolean addFoodItem(ItemStack stack) {
-        if (stack.isEmpty())
-            return false;
-        if (isStockFull())
-            return false;
+    public void addFoodStock(int amount) {
+        // Legacy compatibility - not used with multi-slot
+    }
 
-        if (stockItem.isEmpty()) {
-            // First item placed: set this item as the stock type
-            stockItem = stack.copy();
-            stockItem.setCount(Math.min(stack.getCount(), MAX_STOCK));
+    public boolean removeFoodStock(int amount) {
+        // Try to remove amount from slots
+        int remaining = amount;
+        for (int i = 0; i < items.size() && remaining > 0; i++) {
+            ItemStack stack = items.get(i);
+            if (!stack.isEmpty()) {
+                int toRemove = Math.min(remaining, stack.getCount());
+                stack.shrink(toRemove);
+                remaining -= toRemove;
+                if (stack.isEmpty()) {
+                    items.set(i, ItemStack.EMPTY);
+                }
+            }
+        }
+        if (remaining < amount) {
             setChanged();
             syncToClient();
             return true;
         }
+        return false;
+    }
 
-        // Already has an item — only accept the same type
-        if (!ItemStack.isSameItemSameTags(stockItem, stack))
-            return false;
-        int add = Math.min(stack.getCount(), MAX_STOCK - stockItem.getCount());
-        if (add <= 0)
-            return false;
-
-        stockItem.grow(add);
-        setChanged();
-        syncToClient();
-        return true;
+    public boolean addFoodItem(ItemStack stack) {
+        // Legacy compatibility - use Container methods instead
+        return false;
     }
 
     public static boolean isValidShelfFood(ItemStack stack) {
@@ -117,11 +94,20 @@ public class ShelfBlockEntity extends BlockEntity implements Container, net.mine
     }
 
     public ItemStack getDisplayFood() {
-        if (stockItem.isEmpty())
-            return ItemStack.EMPTY;
-        ItemStack display = stockItem.copy();
-        display.setCount(1);
-        return display;
+        // Return first non-empty item for compatibility
+        for (ItemStack stack : items) {
+            if (!stack.isEmpty()) {
+                ItemStack display = stack.copy();
+                display.setCount(1);
+                return display;
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
+    // Get all items for rendering
+    public NonNullList<ItemStack> getAllItems() {
+        return items;
     }
 
     // Drink-related API kept for compatibility with existing renderer/logic.
@@ -194,39 +180,17 @@ public class ShelfBlockEntity extends BlockEntity implements Container, net.mine
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
-        tag.putInt("FoodStock", getFoodStock());
-        tag.putInt("DrinkStock", 0);
+        ContainerHelper.saveAllItems(tag, items);
         tag.putInt("FoodPrice", foodPrice);
         tag.putInt("DrinkPrice", drinkPrice);
         tag.putLong("Revenue", revenue);
-        if (!stockItem.isEmpty()) {
-            tag.put("StockItem", stockItem.save(new CompoundTag()));
-            tag.put("DisplayFood", stockItem.save(new CompoundTag())); // legacy mirror
-        }
     }
 
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
-
-        if (tag.contains("StockItem")) {
-            stockItem = ItemStack.of(tag.getCompound("StockItem"));
-        } else if (tag.contains("DisplayFood")) {
-            stockItem = ItemStack.of(tag.getCompound("DisplayFood"));
-        } else {
-            stockItem = ItemStack.EMPTY;
-        }
-
-        int legacyFoodStock = tag.getInt("FoodStock");
-        if (!stockItem.isEmpty()) {
-            // Keep whatever item is stored; just fix count if needed
-            stockItem.setCount(
-                    Math.max(1, Math.min(MAX_STOCK, legacyFoodStock > 0 ? legacyFoodStock : stockItem.getCount())));
-        } else if (legacyFoodStock > 0) {
-            // Legacy: no item tag but had a food stock count — default to cooked beef
-            stockItem = new ItemStack(Items.COOKED_BEEF, Math.min(MAX_STOCK, legacyFoodStock));
-        }
-
+        items.clear();
+        ContainerHelper.loadAllItems(tag, items);
         foodPrice = tag.contains("FoodPrice") ? tag.getInt("FoodPrice") : 5000;
         drinkPrice = tag.contains("DrinkPrice") ? tag.getInt("DrinkPrice") : 3000;
         revenue = tag.getLong("Revenue");
@@ -257,55 +221,52 @@ public class ShelfBlockEntity extends BlockEntity implements Container, net.mine
 
     @Override
     public int getContainerSize() {
-        return 1;
+        return CONTAINER_SIZE;
     }
 
     @Override
     public boolean isEmpty() {
-        return stockItem.isEmpty();
+        for (ItemStack stack : items) {
+            if (!stack.isEmpty()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
     public ItemStack getItem(int slot) {
-        return slot == 0 ? stockItem : ItemStack.EMPTY;
+        return slot >= 0 && slot < items.size() ? items.get(slot) : ItemStack.EMPTY;
     }
 
     @Override
     public ItemStack removeItem(int slot, int amount) {
-        if (slot != 0 || amount <= 0 || stockItem.isEmpty())
-            return ItemStack.EMPTY;
-        ItemStack split = stockItem.split(amount);
-        if (stockItem.isEmpty())
-            stockItem = ItemStack.EMPTY;
-        setChanged();
-        syncToClient();
-        return split;
+        ItemStack result = ContainerHelper.removeItem(items, slot, amount);
+        if (!result.isEmpty()) {
+            setChanged();
+            syncToClient();
+        }
+        return result;
     }
 
     @Override
     public ItemStack removeItemNoUpdate(int slot) {
-        if (slot != 0)
-            return ItemStack.EMPTY;
-        ItemStack out = stockItem;
-        stockItem = ItemStack.EMPTY;
+        ItemStack result = ContainerHelper.takeItem(items, slot);
         setChanged();
         syncToClient();
-        return out;
+        return result;
     }
 
     @Override
     public void setItem(int slot, ItemStack stack) {
-        if (slot != 0)
-            return;
-        if (stack.isEmpty()) {
-            stockItem = ItemStack.EMPTY;
-        } else {
-            ItemStack copy = stack.copy();
-            copy.setCount(Math.min(MAX_STOCK, copy.getCount()));
-            stockItem = copy;
+        if (slot >= 0 && slot < items.size()) {
+            items.set(slot, stack);
+            if (stack.getCount() > getMaxStackSize()) {
+                stack.setCount(getMaxStackSize());
+            }
+            setChanged();
+            syncToClient();
         }
-        setChanged();
-        syncToClient();
     }
 
     @Override
@@ -318,23 +279,21 @@ public class ShelfBlockEntity extends BlockEntity implements Container, net.mine
 
     @Override
     public boolean canPlaceItem(int slot, ItemStack stack) {
-        if (slot != 0)
-            return false;
-        if (stockItem.isEmpty())
-            return !stack.isEmpty();
-        // If slot has an item, only allow the same item type
-        return ItemStack.isSameItemSameTags(stockItem, stack);
+        return !stack.isEmpty() && isValidShelfFood(stack);
     }
 
     @Override
     public void clearContent() {
-        stockItem = ItemStack.EMPTY;
+        items.clear();
+        for (int i = 0; i < CONTAINER_SIZE; i++) {
+            items.add(ItemStack.EMPTY);
+        }
         setChanged();
         syncToClient();
     }
 
     @Override
     public int getMaxStackSize() {
-        return MAX_STOCK;
+        return 64;
     }
 }
