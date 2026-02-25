@@ -117,6 +117,7 @@ public class IndoZooTycoon {
         public static final RegistryObject<Item> FD_COD_SLICE               = ITEMS.register("fd_cod_slice",               () -> new Item(new Item.Properties()));
         public static final RegistryObject<Item> FD_PIE_CRUST               = ITEMS.register("fd_pie_crust",               () -> new Item(new Item.Properties()));
         public static final RegistryObject<Item> FD_RICE                    = ITEMS.register("fd_rice",                    () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_CABBAGE_LEAF             = ITEMS.register("fd_cabbage_leaf",             () -> new Item(new Item.Properties()));
 
         public static final RegistryObject<Block> ZOO_WALL_BANNER_BLOCK = BLOCKS.register("zoo_wall_banner",
                         ZooWallBannerBlock::new);

@@ -54,6 +54,8 @@ public class FoodStallScreen extends AbstractContainerScreen<FoodStallMenu> {
 
     private static final java.util.Map<String, ResourceLocation> ITEM_TEX_FALLBACK = java.util.Map.of(
         "farmersdelight:cabbage_leaf",
+            Objects.requireNonNull(ResourceLocation.tryParse("indozoo:textures/gui/items/cabbage_leaf.png")),
+        "indozoo:fd_cabbage_leaf",
             Objects.requireNonNull(ResourceLocation.tryParse("indozoo:textures/gui/items/cabbage_leaf.png"))
     );
 
@@ -65,7 +67,7 @@ public class FoodStallScreen extends AbstractContainerScreen<FoodStallMenu> {
         new CatalogEntry("minecraft:cooked_chicken",          "Cooked Chicken", 600),
         new CatalogEntry("minecraft:milk_bucket",             "Milk Bucket",    400),
         new CatalogEntry("minecraft:cocoa_beans",             "Cocoa",          350),
-        new CatalogEntry("farmersdelight:cabbage_leaf",       "Cabbage Leaf",   300)
+        new CatalogEntry("indozoo:fd_cabbage_leaf",           "Cabbage Leaf",   300)
     );
 
     // ---- State -----------------------------------------------------------

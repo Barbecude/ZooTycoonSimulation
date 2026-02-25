@@ -117,6 +117,48 @@ public class FoodTransactionManager {
     // ─────────────────────────────────────────────────────────────────────
 
     /**
+     * Process a visitor buying one drink item (Chocolate Milk) from a Food Stall.
+     * Revenue goes directly to the zoo balance (70 % of listed price).
+     */
+    public static boolean processDrinkStallPurchase(VisitorEntity visitor, FoodStallBlockEntity stall) {
+        if (stall == null || visitor.level().isClientSide) return false;
+
+        String requestId = stall.getRequestForVisitor(visitor.getUUID());
+        if (requestId == null || requestId.isBlank()) requestId = "indozoo:fd_hot_cocoa";
+
+        net.minecraft.resources.ResourceLocation rl = net.minecraft.resources.ResourceLocation.tryParse(requestId);
+        net.minecraft.world.item.Item requestItem = rl != null ? net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(rl) : null;
+        net.minecraft.world.item.ItemStack peekItem = (requestItem != null && requestItem != net.minecraft.world.item.Items.AIR)
+                ? new net.minecraft.world.item.ItemStack(requestItem, 1) : stall.getDisplayFood();
+
+        boolean removed = stall.removeSpecificFood(requestId);
+        if (!removed) {
+            visitor.playSound(net.minecraft.sounds.SoundEvents.VILLAGER_NO, 1.0F, 1.0F);
+            return false;
+        }
+
+        int income = (stall.getItemPrice(requestId) * TRANSACTION_PROFIT_MARGIN) / 100;
+        ZooData data = ZooData.get(visitor.level());
+        data.addBalance(income);
+        data.setRating(Math.min(100, data.getRating() + 1));
+        stall.addRevenue(income);
+        data.logTransaction("Pendapatan",
+                "Penjualan Chocolate Milk di Food Stall @" + stall.getBlockPos().toShortString(), income);
+
+        visitor.setThirst(0);
+        visitor.setMood(VisitorEntity.Mood.HAPPY, 120);
+        visitor.setHasTrash(true);
+        visitor.playSound(net.minecraft.sounds.SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0F, 1.0F);
+
+        if (!peekItem.isEmpty()) {
+            visitor.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND, peekItem);
+            visitor.eatTimer = 40 + visitor.getRandom().nextInt(80);
+        }
+
+        return true;
+    }
+
+    /**
      * Process a visitor buying one item from a Food Stall.
      * Revenue goes directly to the zoo balance (70 % of listed price).
      */

@@ -115,6 +115,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
 
     private int moodTimer = 0;
     private int toiletTimer = 0; // Tracks duration of TOILET mood
+    private boolean needsToilet = false; // Flag for toilet need
     private int watchingAnimalId = -1;
     private boolean lastCarryState = false;
     private final java.util.HashMap<Long, Integer> tempPlacedBlocks = new java.util.HashMap<>();
@@ -359,26 +360,32 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                     setThirst(Math.min(100, getThirst() + 10));  // slightly reduced rate
                 }
 
-                if (this.tickCount % 100 == 0) {
-                    // Mood distribution: 45% animals (happy), 22% food, 14% drink, 14% toilet, 5% hunter fear
-                    float roll = this.getRandom().nextFloat();
-                    if (roll < 0.05F) {
-                        // 5% chance: hunter fear (set neutral/scared mood briefly)
-                        setMood(Mood.NEUTRAL, 60);
-                    } else if (roll < 0.19F) {
-                        // 14% chance: toilet need
-                        setMood(Mood.TOILET, 1200);
-                    } else if (roll < 0.33F) {
-                        // 14% chance: thirsty
-                        setThirst(Math.min(100, getThirst() + 25));
-                        setMood(Mood.THIRSTY, 120);
-                    } else if (roll < 0.55F) {
-                        // 22% chance: hungry
-                        setHunger(Math.min(100, getHunger() + 25));
-                        setMood(Mood.HUNGRY, 120);
-                    } else {
-                        // 45% chance: happy watching animals
-                        setMood(Mood.HAPPY, 100);
+                // Random toilet trigger (14% chance every 100 ticks)
+                if (this.tickCount % 100 == 0 && !needsToilet) {
+                    if (this.getRandom().nextFloat() < 0.14F) {
+                        needsToilet = true;
+                    }
+                }
+
+                // Needs-driven mood sync: mood always reflects current need/behavior
+                if (this.tickCount % 10 == 0) {
+                    // Priority: TOILET > HUNGRY > THIRSTY > NEUTRAL
+                    if (needsToilet) {
+                        if (getMood() != Mood.TOILET) {
+                            setMood(Mood.TOILET, 1200);
+                        }
+                    } else if (getHunger() >= 50) {
+                        if (getMood() != Mood.HUNGRY && getMood() != Mood.HAPPY) {
+                            setMood(Mood.HUNGRY, 200);
+                        }
+                    } else if (getThirst() >= 50) {
+                        if (getMood() != Mood.THIRSTY && getMood() != Mood.HAPPY) {
+                            setMood(Mood.THIRSTY, 200);
+                        }
+                    } else if (watchingAnimalId == -1 && getMood() != Mood.HAPPY && getMood() != Mood.NEUTRAL
+                            && getMood() != Mood.AMAZED && getMood() != Mood.ADORED) {
+                        // Not watching animal and no need -> neutral
+                        setMood(Mood.NEUTRAL, 0);
                     }
                 }
 
@@ -387,6 +394,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                     if (toiletTimer > 600) {
                         ZooData data = ZooData.get(this.level());
                         data.setRating(data.getRating() - 5);
+                        needsToilet = false;
                         this.forceLeave();
                     }
                 } else {
@@ -398,7 +406,6 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                     if (moodTimer == 0) {
                         if (getMood() != Mood.TOILET) {
                             setMood(Mood.NEUTRAL, 0);
-                        } else {
                         }
                     }
                 }
@@ -709,6 +716,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
         tag.put("CarriedAnimalData", getCarriedAnimalData());
         tag.putBoolean("IsEscapeMode", isEscapeMode());
         tag.putBoolean("HasTrash", hasTrash());
+        tag.putBoolean("NeedsToilet", needsToilet);
         tag.putLong("HunterCrimeUntil", hunterCrimeUntilTick);
     }
 
@@ -750,6 +758,8 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
             setEscapeMode(tag.getBoolean("IsEscapeMode"));
         if (tag.contains("HasTrash"))
             setHasTrash(tag.getBoolean("HasTrash"));
+        if (tag.contains("NeedsToilet"))
+            needsToilet = tag.getBoolean("NeedsToilet");
         if (tag.contains("HunterCrimeUntil")) {
             hunterCrimeUntilTick = tag.getLong("HunterCrimeUntil");
             this.getPersistentData().putLong("HunterCrimeUntil", hunterCrimeUntilTick);
@@ -1206,7 +1216,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                 return false;
             if (type.equals("drink") && visitor.getThirst() < 30)   // was 50
                 return false;
-            if (type.equals("toilet") && visitor.getMood() != Mood.TOILET)
+            if (type.equals("toilet") && !visitor.needsToilet)
                 return false;
 
             if (!type.equals("toilet") && visitor.getRandom().nextFloat() > 0.4F)  // was 0.05F
@@ -1304,10 +1314,30 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                     usingTicks--;
                 }
                 if (usingTicks <= 0) {
-                    visitor.setMood(Mood.HAPPY, 100);
                     visitor.toiletTimer = 0;
-                    if (visitor.getRandom().nextFloat() < 0.45F || visitor.isTimeToLeave()) {
+                    visitor.needsToilet = false;
+                    // After toilet: pick a branch
+                    if (visitor.isTimeToLeave()) {
+                        visitor.setMood(Mood.NEUTRAL, 60);
                         visitor.forceLeave();
+                    } else {
+                        float branch = visitor.getRandom().nextFloat();
+                        if (branch < 0.25F) {
+                            // Branch: go home
+                            visitor.setMood(Mood.NEUTRAL, 60);
+                            visitor.forceLeave();
+                        } else if (branch < 0.50F) {
+                            // Branch: become hungry
+                            visitor.setHunger(Math.min(100, visitor.getHunger() + 40));
+                            visitor.setMood(Mood.HUNGRY, 200);
+                        } else if (branch < 0.70F) {
+                            // Branch: become thirsty
+                            visitor.setThirst(Math.min(100, visitor.getThirst() + 40));
+                            visitor.setMood(Mood.THIRSTY, 200);
+                        } else {
+                            // Branch: continue watching animals
+                            visitor.setMood(Mood.HAPPY, 120);
+                        }
                     }
                     targetPos = null;
                 }
@@ -1321,7 +1351,11 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                 if (visitor.level().getBlockEntity(targetPos) instanceof FoodStallBlockEntity stall) {
                     if (stall.wasServed(visitor.getUUID())) {
                         // We've been served — remove food from stall & credit revenue
-                        FoodTransactionManager.processFoodStallPurchase(visitor, stall);
+                        if (type.equals("drink")) {
+                            FoodTransactionManager.processDrinkStallPurchase(visitor, stall);
+                        } else {
+                            FoodTransactionManager.processFoodStallPurchase(visitor, stall);
+                        }
                         stall.acknowledgeServed(visitor.getUUID());
                         targetPos = null;
                         return;
@@ -1330,8 +1364,17 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                     if (queueTicks > FoodStallBlockEntity.QUEUE_TIMEOUT_TICKS) {
                         stall.removeFromQueue(visitor.getUUID());
                         ZooData data = ZooData.get(visitor.level());
-                        data.setRating(Math.max(0, data.getRating() - 1));
-                        visitor.setMood(Mood.HUNGRY, 200);
+                        data.setRating(Math.max(0, data.getRating() - 2));
+                        // Timed out waiting → pick a branch
+                        if (type.equals("food")) {
+                            visitor.setMood(Mood.HUNGRY, 200);
+                        } else if (type.equals("drink")) {
+                            visitor.setMood(Mood.THIRSTY, 200);
+                        }
+                        float branchRoll = visitor.getRandom().nextFloat();
+                        if (branchRoll < 0.5F) {
+                            visitor.forceLeave(); // leave unhappy
+                        }
                         targetPos = null;
                     }
                 } else {
@@ -1373,9 +1416,67 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                     if (!type.equals("toilet") && !visitor.level().isClientSide) {
                         boolean purchased = false;
                         net.minecraft.world.level.block.entity.BlockEntity be = visitor.level().getBlockEntity(targetPos);
-                        if (be instanceof FoodStallBlockEntity stall && type.equals("food")) {
-                            // Join the player-confirmed queue instead of instant-purchase
-                            String requestId = stall.pickRandomStockedItemId(visitor.getRandom());
+                        if (be instanceof FoodStallBlockEntity stall && (type.equals("food") || type.equals("drink"))) {
+                            // Determine request based on type
+                            String requestId;
+                            if (type.equals("drink")) {
+                                // Thirsty visitors only request Chocolate Milk
+                                requestId = "indozoo:fd_hot_cocoa";
+                                // Check if Chocolate Milk is in stock
+                                boolean hasChocolateMilk = false;
+                                for (int s = 0; s < stall.getContainerSize(); s++) {
+                                    net.minecraft.world.item.ItemStack slot = stall.getItem(s);
+                                    if (!slot.isEmpty()) {
+                                        String slotId = java.util.Objects.toString(net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(slot.getItem()), "");
+                                        if (slotId.equals("indozoo:fd_hot_cocoa")) {
+                                            hasChocolateMilk = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (!hasChocolateMilk) {
+                                    // No Chocolate Milk in stock → rating drop, branch
+                                    ZooData data2 = ZooData.get(visitor.level());
+                                    data2.setRating(Math.max(0, data2.getRating() - 1));
+                                    visitor.setMood(Mood.THIRSTY, 200);
+                                    if (visitor.getRandom().nextFloat() < 0.5F) {
+                                        visitor.forceLeave();
+                                    }
+                                    targetPos = null;
+                                    return;
+                                }
+                            } else {
+                                // Hungry visitors only request Burger or Chicken Sandwich
+                                boolean hasBurger = false;
+                                boolean hasChickenSandwich = false;
+                                for (int s = 0; s < stall.getContainerSize(); s++) {
+                                    net.minecraft.world.item.ItemStack slot = stall.getItem(s);
+                                    if (!slot.isEmpty()) {
+                                        String slotId = java.util.Objects.toString(net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(slot.getItem()), "");
+                                        if (slotId.equals("indozoo:fd_hamburger")) hasBurger = true;
+                                        if (slotId.equals("indozoo:fd_chicken_sandwich")) hasChickenSandwich = true;
+                                    }
+                                }
+                                if (!hasBurger && !hasChickenSandwich) {
+                                    // No food in stock → rating drop, branch
+                                    ZooData data2 = ZooData.get(visitor.level());
+                                    data2.setRating(Math.max(0, data2.getRating() - 1));
+                                    visitor.setMood(Mood.HUNGRY, 200);
+                                    if (visitor.getRandom().nextFloat() < 0.5F) {
+                                        visitor.forceLeave();
+                                    }
+                                    targetPos = null;
+                                    return;
+                                }
+                                // Pick randomly between available items
+                                if (hasBurger && hasChickenSandwich) {
+                                    requestId = visitor.getRandom().nextBoolean() ? "indozoo:fd_hamburger" : "indozoo:fd_chicken_sandwich";
+                                } else if (hasBurger) {
+                                    requestId = "indozoo:fd_hamburger";
+                                } else {
+                                    requestId = "indozoo:fd_chicken_sandwich";
+                                }
+                            }
                             stall.addToQueue(visitor.getUUID(), requestId);
                             stage = Stage.QUEUING;
                             queueTicks = 0;
@@ -1479,7 +1580,8 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                 return ShelfBlock.isFoodShelfState(state) || FoodStallBlock.isFoodStallState(state);
             }
             if (type.equals("drink")) {
-                return ShelfBlock.isDrinkShelfState(state);
+                // Drink visitors also go to FoodStall for Chocolate Milk
+                return ShelfBlock.isDrinkShelfState(state) || FoodStallBlock.isFoodStallState(state);
             }
             return state.is(IndoZooTycoon.RESTROOM_BLOCK.get());
         }
@@ -1518,8 +1620,14 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
             if (target != null) {
                 double d = Math.sqrt(visitor.distanceToSqr(target));
                 watchTimer = base + Math.min(600, (int) (d * 8));
-                if (d > 35) {
+                // Initial mood based on animal size
+                float width = target.getBbWidth();
+                if (width > 1.5F) {
                     visitor.setMood(Mood.AMAZED, 120);
+                } else if (width < 0.8F || target.isBaby()) {
+                    visitor.setMood(Mood.ADORED, 120);
+                } else {
+                    visitor.setMood(Mood.HAPPY, 120);
                 }
             } else {
                 watchTimer = base;
@@ -1569,13 +1677,15 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
             if (watchTimer > 0) {
                 watchTimer--;
                 if (watchTimer % 20 == 0) {
+                    // Mood based on animal size: large = AMAZED, small/baby = ADORED, normal = HAPPY
                     float width = target.getBbWidth();
                     if (width > 1.5F) {
                         visitor.setMood(Mood.AMAZED, 100);
                     } else if (width < 0.8F || target.isBaby()) {
                         visitor.setMood(Mood.ADORED, 100);
+                    } else {
+                        visitor.setMood(Mood.HAPPY, 100);
                     }
-
                     net.minecraft.resources.ResourceLocation id = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES
                             .getKey(target.getType());
                     if (id != null && (id.getPath().contains("dragon") || id.getPath().contains("wither")
