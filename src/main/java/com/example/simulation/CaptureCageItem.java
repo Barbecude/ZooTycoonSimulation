@@ -22,6 +22,7 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
@@ -235,9 +236,10 @@ public class CaptureCageItem extends Item {
         double by = Math.floor(base.y);
         double bz = Math.floor(base.z) + 0.5;
 
-        int[] dx = new int[] {0, 1, -1, 0, 0, 2, -2, 1, -1, 0};
-        int[] dz = new int[] {0, 0, 0, 1, -1, 0, 0, 1, -1, 2};
-        int[] dy = new int[] {0, 1, -1, 2, -2};
+        // Expanded search: further offsets, more y levels
+        int[] dx = new int[] {0, 1, -1, 0, 0, 2, -2, 1, -1, 1, -1, 3, -3, 0, 0};
+        int[] dz = new int[] {0, 0, 0, 1, -1, 0, 0, 1, -1, -1, 1, 0, 0, 3, -3};
+        int[] dy = new int[] {0, 1, -1, 2, -2, 3};
 
         for (int yOff : dy) {
             double y = by + yOff;
@@ -246,18 +248,26 @@ public class CaptureCageItem extends Item {
                 double z = bz + dz[i];
                 BlockPos pos = BlockPos.containing(x, y, z);
 
-                if (!level.getBlockState(pos.below()).isFaceSturdy(level, pos.below(), Direction.UP)) {
-                    continue;
-                }
-                if (!level.getBlockState(pos).getCollisionShape(level, pos).isEmpty()) {
-                    continue;
-                }
+                // Require non-air floor (lenient — any solid block, not just sturdy face)
+                BlockState floorState = level.getBlockState(pos.below());
+                if (floorState.isAir()) continue;
+
+                // Must not be inside a solid block
+                if (!level.getBlockState(pos).getCollisionShape(level, pos).isEmpty()) continue;
+
                 entity.setPos(x, y, z);
                 if (level.noCollision(entity)) {
                     return new Vec3(x, y, z);
                 }
             }
         }
+
+        // Last-resort fallback: try directly at base position even without floor check
+        entity.setPos(bx, by + 0.1, bz);
+        if (level.noCollision(entity)) {
+            return new Vec3(bx, by + 0.1, bz);
+        }
+
         return null;
     }
 }

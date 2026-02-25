@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " C ",
+    " S ",
+    " B "
+  ],
+  "key": {
+    "C": {
+      "item": "farmersdelight:cabbage_leaf"
+    },
+    "S": {
+      "item": "minecraft:cooked_beef"
+    },
+    "B": {
+      "item": "minecraft:bread"
+    }
+  },
+  "result": {
+    "item": "indozoo:fd_hamburger",
+    "count": 4
+  }
+}

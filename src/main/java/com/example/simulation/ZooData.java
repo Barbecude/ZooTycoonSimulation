@@ -19,6 +19,8 @@ public class ZooData extends SavedData {
     private int visitorCount = 0;
     private int trashCount = 0;
     private int rating = 100;
+    private int hunterPhase = 0;  // 0 = calm, 1-5 = escalating threat waves
+    private long hunterPhaseStartTick = 0;
 
     // Tagged Animals List (ID, Name, Type)
     // Storing as CompoundTag list for simplicity
@@ -272,6 +274,36 @@ public class ZooData extends SavedData {
         setDirty();
     }
 
+    // ── Hunter Phase ─────────────────────────────────────────────────────────
+
+    public int getHunterPhase() { return hunterPhase; }
+
+    public void setHunterPhase(int phase) {
+        this.hunterPhase = Math.max(0, Math.min(5, phase));
+        setDirty();
+    }
+
+    public long getHunterPhaseStartTick() { return hunterPhaseStartTick; }
+
+    public void setHunterPhaseStartTick(long tick) {
+        this.hunterPhaseStartTick = tick;
+        setDirty();
+    }
+
+    /**
+     * Number of hunters to spawn in the current phase wave.
+     * Phase 0 = 0 (calm), 1 = 2, 2 = 3, 3 = 3, 4 = 4, 5 = 5
+     */
+    public int getHunterWaveSize() {
+        return switch (hunterPhase) {
+            case 1 -> 2;
+            case 2, 3 -> 3;
+            case 4 -> 4;
+            case 5 -> 5;
+            default -> 0;
+        };
+    }
+
     public void updateCounts(ServerLevel level) {
         int vCount = 0;
         int sCount = 0;
@@ -334,6 +366,8 @@ public class ZooData extends SavedData {
         data.visitorCount = tag.getInt("VisitorCount");
         data.trashCount = tag.getInt("TrashCount");
         if (tag.contains("Rating")) data.rating = tag.getInt("Rating");
+        if (tag.contains("HunterPhase")) data.hunterPhase = tag.getInt("HunterPhase");
+        if (tag.contains("HunterPhaseStartTick")) data.hunterPhaseStartTick = tag.getLong("HunterPhaseStartTick");
         if (tag.contains("TransactionLog")) {
             data.transactionLog = tag.getList("TransactionLog", 10);
         }
@@ -357,6 +391,8 @@ public class ZooData extends SavedData {
         tag.putInt("VisitorCount", visitorCount);
         tag.putInt("TrashCount", trashCount);
         tag.putInt("Rating", rating);
+        tag.putInt("HunterPhase", hunterPhase);
+        tag.putLong("HunterPhaseStartTick", hunterPhaseStartTick);
         tag.put("TaggedAnimals", taggedAnimals);
         tag.put("TransactionLog", transactionLog);
 

@@ -63,17 +63,13 @@ public class ShelfBlock extends BaseEntityBlock {
     }
 
     public static boolean isFoodShelfState(BlockState state) {
-        return state.is(IndoZooTycoon.OAK_SHELF_BLOCK.get())
-                || state.is(IndoZooTycoon.OAK_STANDING_SHELF_BLOCK.get())
-                || state.is(IndoZooTycoon.OAK_TOWER_SHELF_BLOCK.get())
-                || state.is(IndoZooTycoon.SPRUCE_TOWER_SHELF_BLOCK.get());
+        // All old shelf blocks have been removed; food needs are now served by FoodStallBlock.
+        return FoodStallBlock.isFoodStallState(state);
     }
 
     public static boolean isDrinkShelfState(BlockState state) {
-        return state.is(IndoZooTycoon.OAK_SHELF_BLOCK.get())
-                || state.is(IndoZooTycoon.OAK_STANDING_SHELF_BLOCK.get())
-                || state.is(IndoZooTycoon.OAK_TOWER_SHELF_BLOCK.get())
-                || state.is(IndoZooTycoon.SPRUCE_TOWER_SHELF_BLOCK.get());
+        // Drink stall not yet implemented — return false.
+        return false;
     }
 
     public static boolean isAnyShelfState(BlockState state) {

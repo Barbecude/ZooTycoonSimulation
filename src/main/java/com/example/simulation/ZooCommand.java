@@ -148,6 +148,16 @@ public class ZooCommand {
                 .executes(ctx -> killAllStaffByRole(ctx.getSource(), 0)));
         zoocmd.then(Commands.literal("removetrash")
                 .executes(ctx -> removeAllTrash(ctx.getSource())));
+
+        // Hunter Phase
+        zoocmd.then(Commands.literal("hunterphase")
+                .executes(ctx -> showHunterPhase(ctx.getSource()))
+                .then(Commands.literal("set")
+                        .then(Commands.argument("phase", IntegerArgumentType.integer(0, 5))
+                                .executes(ctx -> setHunterPhase(ctx.getSource(),
+                                        IntegerArgumentType.getInteger(ctx, "phase")))))
+                .then(Commands.literal("reset")
+                        .executes(ctx -> setHunterPhase(ctx.getSource(), 0))));
         
         // Entrance Management
         zoocmd.then(Commands.literal("entrance")
@@ -329,6 +339,42 @@ public class ZooCommand {
         PacketHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.ALL.noArg(), packet);
         src.sendSuccess(() -> Component.literal("Menghapus " + removed[0] + " blok sampah"), true);
         return removed[0];
+    }
+
+    // ── Hunter Phase Commands ────────────────────────────────────────────────
+
+    private static int showHunterPhase(CommandSourceStack src) {
+        ZooData data = ZooData.get(src.getLevel());
+        int phase = data.getHunterPhase();
+        int waveSize = data.getHunterWaveSize();
+
+        // Count active hunters
+        int hunterCount = 0;
+        for (net.minecraft.world.entity.Entity e : src.getLevel().getAllEntities()) {
+            if (e instanceof VisitorEntity v && !e.isRemoved() && v.isHunter()) {
+                hunterCount++;
+            }
+        }
+
+        final int hc = hunterCount;
+        String status = phase == 0 ? "§aAman (tidak ada gelombang)" : "§cFase " + phase + " aktif";
+        src.sendSuccess(() -> Component.literal("§6[Hunter Phase] §r" + status +
+                "\n§7Pemburu hidup: §f" + hc +
+                "\n§7Ukuran gelombang: §f" + waveSize), false);
+        return phase;
+    }
+
+    private static int setHunterPhase(CommandSourceStack src, int phase) {
+        ZooData data = ZooData.get(src.getLevel());
+        data.setHunterPhase(phase);
+        if (phase == 0) {
+            data.setHunterPhaseStartTick(0);
+        } else {
+            data.setHunterPhaseStartTick(src.getLevel().getGameTime());
+        }
+        final int p = phase;
+        src.sendSuccess(() -> Component.literal("§6[Hunter Phase] §rDiatur ke fase " + p), true);
+        return phase;
     }
 
     private static int buyItemGlobalLogic(CommandSourceStack src, ResourceLocation itemId, int amount,

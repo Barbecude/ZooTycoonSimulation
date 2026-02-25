@@ -13,6 +13,32 @@
 
     "block.indozoo.food_stall": "Food Stall",
     "item.indozoo.food_stall": "Food Stall",
+    "screen.indozoo.food_stall_queue": "Food Stall - Antrian Pengunjung",
+
+    "item.indozoo.fd_hamburger": "Burger",
+    "item.indozoo.fd_chicken_sandwich": "Chicken Sandwich",
+    "item.indozoo.fd_bacon_sandwich": "Bacon Sandwich",
+    "item.indozoo.fd_barbecue_stick": "BBQ Stick",
+    "item.indozoo.fd_beef_patty": "Beef Patty",
+    "item.indozoo.fd_egg_sandwich": "Egg Sandwich",
+    "item.indozoo.fd_mutton_wrap": "Mutton Wrap",
+    "item.indozoo.fd_honey_cookie": "Honey Cookie",
+    "item.indozoo.fd_sweet_berry_cookie": "Sweet Berry Cookie",
+    "item.indozoo.fd_cake_slice": "Cake Slice",
+    "item.indozoo.fd_sweet_berry_cheesecake_slice": "Sweet Berry Cheesecake Slice",
+    "item.indozoo.fd_apple_pie_slice": "Apple Pie Slice",
+    "item.indozoo.fd_chocolate_pie_slice": "Chocolate Pie Slice",
+    "item.indozoo.fd_dumplings": "Dumplings",
+    "item.indozoo.fd_kelp_roll": "Kelp Roll",
+    "item.indozoo.fd_cod_roll": "Cod Roll",
+    "item.indozoo.fd_fried_egg": "Fried Egg",
+    "item.indozoo.fd_fruit_salad": "Fruit Salad",
+    "item.indozoo.fd_melon_juice": "Melon Juice",
+    "item.indozoo.fd_apple_cider": "Apple Cider",
+    "item.indozoo.fd_hot_cocoa": "Hot Cocoa",
+    "item.indozoo.fd_milk_bottle": "Milk Bottle",
+    "item.indozoo.fd_bone_broth": "Bone Broth",
+    "item.indozoo.fd_melon_popsicle": "Melon Popsicle",
 
     "block.indozoo.drink_stall": "Drink Stall",
     "item.indozoo.drink_stall": "Drink Stall",
@@ -21,7 +47,7 @@
     "block.indozoo.standing_oak_shelf": "Standing Oak Shelf",
     "item.indozoo.standing_oak_shelf": "Standing Oak Shelf",
     "block.indozoo.tower_oak_shelf": "Tower Oak Shelf",
-    "item.indozoo.tower_oak_shelf": "Tower Oak Shelf",    "item.indozoo.tower_oak_shelf": "Tower Oak Shelf",
+    "item.indozoo.tower_oak_shelf": "Tower Oak Shelf",
 
     "block.indozoo.tower_spruce_shelf": "Spruce Tower Shelf",
     "item.indozoo.tower_spruce_shelf": "Spruce Tower Shelf",
@@ -41,11 +67,26 @@
 
     "item.indozoo.staff_spawn_egg": "Staff Spawn Egg",
     "item.indozoo.visitor_spawn_egg": "Visitor Spawn Egg",
+    "item.indozoo.hunter_spawn_egg": "Hunter Spawn Egg",
+    "item.indozoo.zookeeper_spawn_egg": "Zookeeper Spawn Egg",
+    "item.indozoo.security_spawn_egg": "Security Spawn Egg",
     "item.indozoo.cashier_spawn_egg": "Cashier Spawn Egg",
 
     "entity.indozoo.staff": "Zoo Staff",
     "entity.indozoo.visitor": "Visitor",
+    "entity.indozoo.hunter": "Hunter",
     "entity.indozoo.cashier": "Cashier",
+    "entity.indozoo.zookeeper": "Zookeeper",
+    "entity.indozoo.security": "Security Guard",
+
+    "item.indozoo.fd_wheat_dough": "Wheat Dough",
+    "item.indozoo.fd_minced_beef": "Minced Beef",
+    "item.indozoo.fd_chicken_cuts": "Chicken Cuts",
+    "item.indozoo.fd_bacon_raw": "Raw Bacon",
+    "item.indozoo.fd_mutton_chops": "Mutton Chops",
+    "item.indozoo.fd_cod_slice": "Cod Slice",
+    "item.indozoo.fd_pie_crust": "Pie Crust",
+    "item.indozoo.fd_rice": "Rice",
 
     "itemGroup.indozoo.zoo_tab": "IndoZoo Tycoon"
 }

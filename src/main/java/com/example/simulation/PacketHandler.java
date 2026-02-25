@@ -41,5 +41,21 @@ public class PacketHandler {
                                 ShelfBuyItemPacket::toBytes,
                                 ShelfBuyItemPacket::new,
                                 ShelfBuyItemPacket::handle);
+                INSTANCE.registerMessage(id++, SetFoodStallPricePacket.class,
+                                SetFoodStallPricePacket::toBytes,
+                                SetFoodStallPricePacket::new,
+                                SetFoodStallPricePacket::handle);
+                INSTANCE.registerMessage(id++, FoodStallQueueSyncPacket.class,
+                                FoodStallQueueSyncPacket::encode,
+                                FoodStallQueueSyncPacket::decode,
+                                FoodStallQueueSyncPacket::handle);
+                INSTANCE.registerMessage(id++, FoodStallServePacket.class,
+                                FoodStallServePacket::encode,
+                                FoodStallServePacket::decode,
+                                FoodStallServePacket::handle);
+                INSTANCE.registerMessage(id++, FoodStallBuyItemPacket.class,
+                                FoodStallBuyItemPacket::encode,
+                                FoodStallBuyItemPacket::decode,
+                                FoodStallBuyItemPacket::handle);
         }
 }

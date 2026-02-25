@@ -24,6 +24,8 @@ public class ClientEvents {
             event.put(IndoZooTycoon.STAFF_ENTITY.get(), StaffEntity.createAttributes().build());
             event.put(IndoZooTycoon.VISITOR_ENTITY.get(), VisitorEntity.createAttributes().build());
             event.put(IndoZooTycoon.CASHIER_ENTITY.get(), CashierEntity.createAttributes().build());
+            event.put(IndoZooTycoon.ZOOKEEPER_ENTITY.get(), ZookeeperEntity.createAttributes().build());
+            event.put(IndoZooTycoon.SECURITY_ENTITY.get(), SecurityEntity.createAttributes().build());
         }
     }
 
@@ -37,6 +39,7 @@ public class ClientEvents {
                 MenuScreens.register(IndoZooTycoon.ZOO_COMPUTER_MENU.get(), ZooComputerScreen::new);
                 MenuScreens.register(IndoZooTycoon.ANIMAL_FEEDER_MENU.get(), AnimalFeederScreen::new);
                 MenuScreens.register(IndoZooTycoon.SHELF_MENU.get(), ShelfScreen::new);
+                MenuScreens.register(IndoZooTycoon.FOOD_STALL_MENU.get(), FoodStallScreen::new);
                 net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(IndoZooTycoon.TRASH_BLOCK.get(),
                         net.minecraft.client.renderer.RenderType.cutout());
                 // FIX TOILET TEXTURE: Set render layer for cutout transparency
@@ -103,8 +106,25 @@ public class ClientEvents {
                         }
                     });
 
+            event.registerEntityRenderer(IndoZooTycoon.ZOOKEEPER_ENTITY.get(),
+                    ctx -> new HumanoidMobRenderer<ZookeeperEntity, HumanoidModel<ZookeeperEntity>>(
+                            ctx, new HumanoidModel<>(ctx.bakeLayer(ModelLayers.PLAYER)), 0.5f) {
+                        @Override
+                        public ResourceLocation getTextureLocation(ZookeeperEntity entity) {
+                            return new ResourceLocation(IndoZooTycoon.MODID, "textures/entity/staff/zookeeper.png");
+                        }
+                    });
+
+            event.registerEntityRenderer(IndoZooTycoon.SECURITY_ENTITY.get(),
+                    ctx -> new HumanoidMobRenderer<SecurityEntity, HumanoidModel<SecurityEntity>>(
+                            ctx, new HumanoidModel<>(ctx.bakeLayer(ModelLayers.PLAYER)), 0.5f) {
+                        @Override
+                        public ResourceLocation getTextureLocation(SecurityEntity entity) {
+                            return new ResourceLocation(IndoZooTycoon.MODID, "textures/entity/staff/security.png");
+                        }
+                    });
+
             event.registerBlockEntityRenderer(IndoZooTycoon.ZOO_BANNER_BE.get(), net.minecraft.client.renderer.blockentity.BannerRenderer::new);
-            event.registerBlockEntityRenderer(IndoZooTycoon.SHELF_BE.get(), ShelfBlockEntityRenderer::new);
             event.registerBlockEntityRenderer(IndoZooTycoon.ANIMAL_FEEDER_BE.get(), AnimalFeederBlockEntityRenderer::new);
         }
     }

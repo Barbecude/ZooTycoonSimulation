@@ -24,3 +24,6 @@ run
 
 # Files from Forge MDK
 forge*changelog.txt
+
+# DailyShop reference assets (contains filenames too long for Git on Windows)
+assetzone/DailyShop-mc1.20.1-v1.0.10-fabric (2)/

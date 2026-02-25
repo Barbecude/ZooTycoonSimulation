@@ -82,6 +82,29 @@ public class ZooWorldTick {
         if (event.level instanceof ServerLevel level) {
             ZooAnimalHungerSystem.tickServer(level);
 
+            // HUNTER PHASE: Check every 60 seconds (1200 ticks)
+            if (level.getGameTime() % 1200 == 0) {
+                tickHunterPhase(level);
+            }
+
+            // FOOD STALL QUEUE: Notify nearby players every second (20 ticks)
+            if (level.getGameTime() % 20 == 0) {
+                for (net.minecraft.server.level.ServerPlayer player : level.getServer().getPlayerList().getPlayers()) {
+                    if (player.serverLevel() != level) continue;
+                    BlockPos pp = player.blockPosition();
+                    for (BlockPos bp : BlockPos.betweenClosed(
+                            pp.offset(-8, -4, -8), pp.offset(8, 4, 8))) {
+                        net.minecraft.world.level.block.entity.BlockEntity be = level.getBlockEntity(bp);
+                        if (be instanceof FoodStallBlockEntity stall && stall.getQueueSize() > 0) {
+                            PacketHandler.INSTANCE.send(
+                                net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> player),
+                                new FoodStallQueueSyncPacket(bp.immutable(), stall.getQueueSize(), "HUNGRY", stall.getNextRequestItemId()));
+                            break; // one popup per player per tick cycle
+                        }
+                    }
+                }
+            }
+
             // SALARY DEDUCTION: Every 24000 ticks = 1 Minecraft day (20 minutes real time)
             if (level.getGameTime() % 24000 == 0) {
                 deductStaffSalaries(level);
@@ -185,6 +208,98 @@ public class ZooWorldTick {
         for (BlockPos pos : found) {
             data.addEntrance(pos);
             System.out.println("[IndoZoo] ✓ Auto-discovered entrance at Zoo Banner: " + pos);
+        }
+    }
+
+    // ── Hunter Phase System ──────────────────────────────────────────────────
+
+    /**
+     * Called every 60 seconds. Manages escalating hunter waves.
+     * Phase 0 = calm. Every ~5 min (6000 ticks) there's a 15% chance to start phase 1.
+     * Each phase lasts 5 min; if hunters are killed, phase escalates (+1). Max phase 5.
+     * After phase 5 wave is cleared, resets to 0.
+     */
+    private static void tickHunterPhase(ServerLevel level) {
+        ZooData data = ZooData.get(level);
+        int phase = data.getHunterPhase();
+        long now = level.getGameTime();
+
+        // Count active hunters
+        int hunterCount = 0;
+        for (net.minecraft.world.entity.Entity e : level.getAllEntities()) {
+            if (e instanceof VisitorEntity v && !e.isRemoved() && v.isHunter()) {
+                hunterCount++;
+            }
+        }
+
+        if (phase == 0) {
+            // Calm: 15% chance every check (every 60s) to spawn a wave
+            if (level.random.nextFloat() < 0.15F) {
+                data.setHunterPhase(1);
+                data.setHunterPhaseStartTick(now);
+                spawnHunterWave(level, data);
+                notifyPlayers(level, "§c⚠ Pemburu fase 1 muncul! " + data.getHunterWaveSize() + " pemburu mendekati zoo!");
+            }
+        } else {
+            // Active phase: check if all hunters are dead
+            if (hunterCount == 0) {
+                // Wave cleared! Escalate or reset
+                if (phase >= 5) {
+                    data.setHunterPhase(0);
+                    data.setHunterPhaseStartTick(0);
+                    notifyPlayers(level, "§a✓ Semua gelombang pemburu telah dikalahkan! Zoo aman.");
+                } else {
+                    int newPhase = phase + 1;
+                    data.setHunterPhase(newPhase);
+                    data.setHunterPhaseStartTick(now);
+                    spawnHunterWave(level, data);
+                    notifyPlayers(level, "§c⚠ Pemburu fase " + newPhase + "! " + data.getHunterWaveSize() + " pemburu baru muncul!");
+                }
+            } else {
+                // Timeout: if phase active for > 10 min (12000 ticks) with hunters still alive, don't escalate
+                if (now - data.getHunterPhaseStartTick() > 12000) {
+                    // Hunters still roaming, just keep current phase
+                }
+            }
+        }
+    }
+
+    private static void spawnHunterWave(ServerLevel level, ZooData data) {
+        int count = data.getHunterWaveSize();
+        java.util.List<BlockPos> entrances = data.getEntrances();
+        if (entrances.isEmpty()) return;
+
+        for (int i = 0; i < count; i++) {
+            BlockPos spawnPos = entrances.get(level.random.nextInt(entrances.size()));
+            if (!level.isLoaded(spawnPos)) continue;
+
+            VisitorEntity hunter = IndoZooTycoon.VISITOR_ENTITY.get().create(level);
+            if (hunter != null) {
+                double x = spawnPos.getX() + 0.5 + (level.random.nextDouble() - 0.5) * 3.0;
+                double z = spawnPos.getZ() + 0.5 + (level.random.nextDouble() - 0.5) * 3.0;
+                hunter.moveTo(x, spawnPos.getY(), z, level.random.nextFloat() * 360F, 0);
+                hunter.setGatePos(spawnPos);
+
+                // Force hunter via dataTag
+                net.minecraft.nbt.CompoundTag forceHunter = new net.minecraft.nbt.CompoundTag();
+                forceHunter.putBoolean("IsHunter", true);
+                // Higher phases have more archers
+                float archerChance = 0.15F + (data.getHunterPhase() * 0.10F);
+                int hunterMode = level.random.nextFloat() < archerChance ? 0 : 1; // 0=ARCHER, 1=KIDNAPPER
+                forceHunter.putInt("HunterMode", hunterMode);
+
+                hunter.finalizeSpawn(level, level.getCurrentDifficultyAt(spawnPos),
+                        MobSpawnType.EVENT, null, forceHunter);
+                level.addFreshEntity(hunter);
+            }
+        }
+        System.out.println("[IndoZoo] Hunter wave spawned: phase " + data.getHunterPhase() + ", count " + count);
+    }
+
+    private static void notifyPlayers(ServerLevel level, String message) {
+        for (net.minecraft.server.level.ServerPlayer player : level.getServer().getPlayerList().getPlayers()) {
+            player.displayClientMessage(
+                    net.minecraft.network.chat.Component.literal(message), false);
         }
     }
 }

@@ -111,4 +111,58 @@ public class FoodTransactionManager {
                 new net.minecraft.world.phys.AABB(pos).inflate(INTERACTION_RADIUS),
                 e -> e.isAlive()).isEmpty();
     }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Food Stall (new directional shop block)
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Process a visitor buying one item from a Food Stall.
+     * Revenue goes directly to the zoo balance (70 % of listed price).
+     */
+    public static boolean processFoodStallPurchase(VisitorEntity visitor, FoodStallBlockEntity stall) {
+        if (stall == null || visitor.level().isClientSide) return false;
+
+        if (stall.isStockEmpty()) {
+            visitor.playSound(net.minecraft.sounds.SoundEvents.VILLAGER_NO, 1.0F, 1.0F);
+            return false;
+        }
+
+        // Peek at display item before removing (for visual hand-hold)
+        // Use the visitor's specific request if available
+        String requestId = stall.getRequestForVisitor(visitor.getUUID());
+        net.minecraft.world.item.ItemStack peekItem;
+        if (requestId != null && !requestId.isBlank()) {
+            net.minecraft.resources.ResourceLocation rl = net.minecraft.resources.ResourceLocation.tryParse(requestId);
+            net.minecraft.world.item.Item requestItem = rl != null ? net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(rl) : null;
+            peekItem = (requestItem != null && requestItem != net.minecraft.world.item.Items.AIR)
+                    ? new net.minecraft.world.item.ItemStack(requestItem, 1) : stall.getDisplayFood();
+            stall.removeSpecificFood(requestId);
+        } else {
+            peekItem = stall.getDisplayFood();
+            stall.removeOneFood();
+        }
+
+        int income = (stall.getItemPrice(requestId != null ? requestId : "") * TRANSACTION_PROFIT_MARGIN) / 100;
+        ZooData data = ZooData.get(visitor.level());
+        data.addBalance(income);
+        data.setRating(Math.min(100, data.getRating() + 1));
+        stall.addRevenue(income);
+        data.logTransaction("Pendapatan",
+                "Penjualan makanan di Food Stall @" + stall.getBlockPos().toShortString(), income);
+
+        visitor.setHunger(0);
+        visitor.setMood(VisitorEntity.Mood.HAPPY, 140);
+        visitor.setHasTrash(true);
+        visitor.playSound(net.minecraft.sounds.SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0F, 1.0F);
+
+        // Give visitor a held item so they visually eat/drink
+        if (!peekItem.isEmpty()) {
+            visitor.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND, peekItem);
+            visitor.eatTimer = 40 + visitor.getRandom().nextInt(80);
+        }
+
+        return true;
+    }
 }
+

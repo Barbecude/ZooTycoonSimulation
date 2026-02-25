@@ -81,10 +81,7 @@ public class ShelfMenu extends AbstractContainerMenu {
     @Override
     public boolean stillValid(Player player) {
         if (shelf != null) return shelf.stillValid(player);
-        return stillValid(access, player, IndoZooTycoon.OAK_SHELF_BLOCK.get())
-                || stillValid(access, player, IndoZooTycoon.OAK_STANDING_SHELF_BLOCK.get())
-                || stillValid(access, player, IndoZooTycoon.OAK_TOWER_SHELF_BLOCK.get())
-                || stillValid(access, player, IndoZooTycoon.SPRUCE_TOWER_SHELF_BLOCK.get());
+        return stillValid(access, player, IndoZooTycoon.FOOD_STALL_BLOCK.get());
     }
 
     @Override

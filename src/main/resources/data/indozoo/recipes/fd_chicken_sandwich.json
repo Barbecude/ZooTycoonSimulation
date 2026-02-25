@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " C ",
+    " K ",
+    " B "
+  ],
+  "key": {
+    "C": {
+      "item": "farmersdelight:cabbage_leaf"
+    },
+    "K": {
+      "item": "minecraft:cooked_chicken"
+    },
+    "B": {
+      "item": "minecraft:bread"
+    }
+  },
+  "result": {
+    "item": "indozoo:fd_chicken_sandwich",
+    "count": 4
+  }
+}

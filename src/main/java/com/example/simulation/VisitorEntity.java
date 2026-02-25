@@ -74,7 +74,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
     private static final int MAX_VIEWERS_PER_ANIMAL = 4;
     private static final double VISITOR_BASE_SPEED = 0.28D;
     private static final double HUNTER_BASE_SPEED = 0.22D;
-    private static final double HUNTER_RUN_SPEED = 0.32D;
+    private static final double HUNTER_RUN_SPEED = 0.17D; // reduced flee speed
 
     public enum HunterMode {
         KIDNAPPER(0),
@@ -354,25 +354,31 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                 if (getMood() != Mood.NEUTRAL) setMood(Mood.NEUTRAL, 0);
                 if (hasTrash()) setHasTrash(false);
             } else {
-                if (this.tickCount % 600 == 0) {
-                    setHunger(Math.min(100, getHunger() + 5));
-                    setThirst(Math.min(100, getThirst() + 8));
+                if (this.tickCount % 200 == 0) {   // every 10s
+                    setHunger(Math.min(100, getHunger() + 7));   // slightly reduced rate
+                    setThirst(Math.min(100, getThirst() + 10));  // slightly reduced rate
                 }
 
                 if (this.tickCount % 100 == 0) {
-                    if (getHunger() > 70) {
-                        setMood(Mood.HUNGRY, 120);
-                    } else if (getThirst() > 70) {
-                        setMood(Mood.THIRSTY, 120);
-                    } else if (this.getRandom().nextFloat() < 0.15F) {
-                        if (this.getRandom().nextBoolean())
-                            setMood(Mood.HAPPY, 100);
-                        else
-                            setMood(Mood.NEUTRAL, 100);
-                    }
-
-                    if (this.getRandom().nextFloat() < 0.05F) {
+                    // Mood distribution: 45% animals (happy), 22% food, 14% drink, 14% toilet, 5% hunter fear
+                    float roll = this.getRandom().nextFloat();
+                    if (roll < 0.05F) {
+                        // 5% chance: hunter fear (set neutral/scared mood briefly)
+                        setMood(Mood.NEUTRAL, 60);
+                    } else if (roll < 0.19F) {
+                        // 14% chance: toilet need
                         setMood(Mood.TOILET, 1200);
+                    } else if (roll < 0.33F) {
+                        // 14% chance: thirsty
+                        setThirst(Math.min(100, getThirst() + 25));
+                        setMood(Mood.THIRSTY, 120);
+                    } else if (roll < 0.55F) {
+                        // 22% chance: hungry
+                        setHunger(Math.min(100, getHunger() + 25));
+                        setMood(Mood.HUNGRY, 120);
+                    } else {
+                        // 45% chance: happy watching animals
+                        setMood(Mood.HAPPY, 100);
                     }
                 }
 
@@ -397,14 +403,9 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                     }
                 }
 
-                if (this.getRandom().nextFloat() < 0.0005F) {
-                    BlockPos pos = this.blockPosition();
-                    if (this.level().getBlockState(pos).isAir()) {
-                        int variant = this.getRandom().nextInt(4);
-                        this.level().setBlock(pos,
-                                IndoZooTycoon.TRASH_BLOCK.get().defaultBlockState().setValue(TrashBlock.VARIANT, variant),
-                                3);
-                    }
+                if (this.getRandom().nextFloat() < 0.0003F && !hasTrash()) {
+                    // Visitor now has trash — FindTrashCanGoal will find a bin or litter
+                    setHasTrash(true);
                 }
             }
 
@@ -954,14 +955,14 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
             placeBlockCooldown = 0;
             stuckTicks = 0;
             if (bannerPos != null) {
-                visitor.getNavigation().moveTo(bannerPos.getX(), bannerPos.getY(), bannerPos.getZ(), 2.5D);
+                visitor.getNavigation().moveTo(bannerPos.getX(), bannerPos.getY(), bannerPos.getZ(), 1.8D); // reduced escape speed
             } else {
                 // No banner — head straight toward gate exit from the start
                 BlockPos gate = visitor.getGatePos();
                 if (gate != null) {
                     BlockPos out = gate.offset(visitor.getX() > gate.getX() ? 20 : -20, 0,
                             visitor.getZ() > gate.getZ() ? 20 : -20);
-                    visitor.getNavigation().moveTo(out.getX(), out.getY(), out.getZ(), 2.5D);
+                    visitor.getNavigation().moveTo(out.getX(), out.getY(), out.getZ(), 1.8D);
                 }
             }
         }
@@ -1000,13 +1001,13 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                                 visitor.setDeltaMovement(dx / len * 0.35, 0.38, dz / len * 0.35);
                             }
                             visitor.getNavigation().stop();
-                            visitor.getNavigation().moveTo(bannerPos.getX(), bannerPos.getY(), bannerPos.getZ(), 2.5D);
+                            visitor.getNavigation().moveTo(bannerPos.getX(), bannerPos.getY(), bannerPos.getZ(), 1.8D);
                         }
                     } else {
                         stuckTicks = 0;
                     }
                     if (visitor.getNavigation().isDone() || visitor.tickCount % 15 == 0) {
-                        visitor.getNavigation().moveTo(bannerPos.getX(), bannerPos.getY(), bannerPos.getZ(), 2.5D);
+                        visitor.getNavigation().moveTo(bannerPos.getX(), bannerPos.getY(), bannerPos.getZ(), 1.8D);
                     }
                     return;
                 }
@@ -1021,7 +1022,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                 } else if (visitor.getNavigation().isDone() || visitor.tickCount % 20 == 0) {
                     BlockPos out = gate.offset(visitor.getX() > gate.getX() ? 20 : -20, 0,
                             visitor.getZ() > gate.getZ() ? 20 : -20);
-                    visitor.getNavigation().moveTo(out.getX(), out.getY(), out.getZ(), 2.5D);
+                    visitor.getNavigation().moveTo(out.getX(), out.getY(), out.getZ(), 1.8D); // reduced escape speed
                 }
             } else if (!visitor.level().isClientSide) {
                 visitor.discard(); // Nowhere to escape, despawn cleanly
@@ -1183,11 +1184,13 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
         private int timer;
         private int usingTicks;
         private int repathCooldown;
+        private int queueTicks; // ticks spent in QUEUING stage
 
         private enum Stage {
             TO_DOOR,
             TO_TARGET,
-            USING
+            USING,
+            QUEUING
         }
 
         public FindFacilityGoal(VisitorEntity v, String type) {
@@ -1199,19 +1202,19 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
         @Override
         public boolean canUse() {
             if (visitor.isHunter()) return false;
-            if (type.equals("food") && visitor.getHunger() < 50)
+            if (type.equals("food") && visitor.getHunger() < 30)   // was 50
                 return false;
-            if (type.equals("drink") && visitor.getThirst() < 50)
+            if (type.equals("drink") && visitor.getThirst() < 30)   // was 50
                 return false;
             if (type.equals("toilet") && visitor.getMood() != Mood.TOILET)
                 return false;
 
-            if (!type.equals("toilet") && visitor.getRandom().nextFloat() > 0.05F)
+            if (!type.equals("toilet") && visitor.getRandom().nextFloat() > 0.4F)  // was 0.05F
                 return false;
 
-            // Scan for facility
+            // Scan for facility (48-block radius to match janitor range)
             BlockPos p = visitor.blockPosition();
-            for (BlockPos pos : BlockPos.betweenClosed(p.offset(-30, -5, -30), p.offset(30, 5, 30))) {
+            for (BlockPos pos : BlockPos.betweenClosed(p.offset(-48, -5, -48), p.offset(48, 5, 48))) {
                 if (isValidFacilityBlock(visitor.level().getBlockState(pos))) {
                     this.targetPos = pos.immutable();
                     if (type.equals("toilet")) {
@@ -1257,10 +1260,16 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
 
         @Override
         public void stop() {
+            // If we were queuing, remove from queue so the slot isn't stuck
+            if (stage == Stage.QUEUING && targetPos != null && !visitor.level().isClientSide) {
+                if (visitor.level().getBlockEntity(targetPos) instanceof FoodStallBlockEntity stall)
+                    stall.removeFromQueue(visitor.getUUID());
+            }
             targetPos = null;
             doorPos = null;
             stage = null;
             usingTicks = 0;
+            queueTicks = 0;
             repathCooldown = 0;
         }
 
@@ -1305,6 +1314,32 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                 return;
             }
 
+            // ── QUEUING stage (food stall only) ─────────────────────────────────
+            if (stage == Stage.QUEUING) {
+                visitor.getNavigation().stop();
+                if (visitor.level().isClientSide) return;
+                if (visitor.level().getBlockEntity(targetPos) instanceof FoodStallBlockEntity stall) {
+                    if (stall.wasServed(visitor.getUUID())) {
+                        // We've been served — remove food from stall & credit revenue
+                        FoodTransactionManager.processFoodStallPurchase(visitor, stall);
+                        stall.acknowledgeServed(visitor.getUUID());
+                        targetPos = null;
+                        return;
+                    }
+                    queueTicks++;
+                    if (queueTicks > FoodStallBlockEntity.QUEUE_TIMEOUT_TICKS) {
+                        stall.removeFromQueue(visitor.getUUID());
+                        ZooData data = ZooData.get(visitor.level());
+                        data.setRating(Math.max(0, data.getRating() - 1));
+                        visitor.setMood(Mood.HUNGRY, 200);
+                        targetPos = null;
+                    }
+                } else {
+                    targetPos = null; // stall gone
+                }
+                return;
+            }
+
             if (visitor.distanceToSqr(targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5) < 6.0D) {
                 // Arrived
                 visitor.getNavigation().stop();
@@ -1338,7 +1373,14 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                     if (!type.equals("toilet") && !visitor.level().isClientSide) {
                         boolean purchased = false;
                         net.minecraft.world.level.block.entity.BlockEntity be = visitor.level().getBlockEntity(targetPos);
-                        if (be instanceof ShelfBlockEntity shelf) {
+                        if (be instanceof FoodStallBlockEntity stall && type.equals("food")) {
+                            // Join the player-confirmed queue instead of instant-purchase
+                            String requestId = stall.pickRandomStockedItemId(visitor.getRandom());
+                            stall.addToQueue(visitor.getUUID(), requestId);
+                            stage = Stage.QUEUING;
+                            queueTicks = 0;
+                            return; // do NOT clear targetPos yet
+                        } else if (be instanceof ShelfBlockEntity shelf) {
                             // Peek at item before removing it so we can give it to the visitor visually
                             net.minecraft.world.item.ItemStack peekItem = shelf.getDisplayFood();
                             if (type.equals("food")) {
@@ -1374,6 +1416,8 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
 
         @Override
         public boolean canContinueToUse() {
+            // Always continue while waiting in a Food Stall queue
+            if (stage == Stage.QUEUING && targetPos != null) return true;
             return targetPos != null && isValidFacilityBlock(visitor.level().getBlockState(targetPos));
         }
 
@@ -1432,7 +1476,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
 
         private boolean isValidFacilityBlock(BlockState state) {
             if (type.equals("food")) {
-                return ShelfBlock.isFoodShelfState(state);
+                return ShelfBlock.isFoodShelfState(state) || FoodStallBlock.isFoodStallState(state);
             }
             if (type.equals("drink")) {
                 return ShelfBlock.isDrinkShelfState(state);

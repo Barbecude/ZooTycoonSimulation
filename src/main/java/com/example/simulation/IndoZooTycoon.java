@@ -46,10 +46,11 @@ public class IndoZooTycoon {
         public static final RegistryObject<Item> ZOO_COMPUTER_ITEM = ITEMS.register("zoo_computer",
                         () -> new BlockItem(ZOO_COMPUTER_BLOCK.get(), new Item.Properties()));
 
-        public static final RegistryObject<Block> ZONE_MARKER_BLOCK = BLOCKS.register("zone_marker",
-                        ZoneMarkerBlock::new);
-        public static final RegistryObject<Item> ZONE_MARKER_ITEM = ITEMS.register("zone_marker",
-                        () -> new BlockItem(ZONE_MARKER_BLOCK.get(), new Item.Properties()));
+        // Food Stall
+        public static final RegistryObject<Block> FOOD_STALL_BLOCK = BLOCKS.register("food_stall",
+                        FoodStallBlock::new);
+        public static final RegistryObject<Item> FOOD_STALL_ITEM = ITEMS.register("food_stall",
+                        () -> new BlockItem(FOOD_STALL_BLOCK.get(), new Item.Properties()));
 
         public static final RegistryObject<Block> TRASH_BLOCK = BLOCKS.register("trash", TrashBlock::new);
         public static final RegistryObject<Item> TRASH_ITEM = ITEMS.register("trash",
@@ -81,22 +82,41 @@ public class IndoZooTycoon {
         public static final RegistryObject<Item> HUNTER_SACK_BIG = ITEMS.register("hunter_sack_big",
                         () -> new Item(new Item.Properties()));
 
-        public static final RegistryObject<Block> OAK_SHELF_BLOCK = BLOCKS.register("oak_shelf",
-                        OakShelfBlock::new);
-        public static final RegistryObject<Item> OAK_SHELF_ITEM = ITEMS.register("oak_shelf",
-                        () -> new BlockItem(OAK_SHELF_BLOCK.get(), new Item.Properties()));
-        public static final RegistryObject<Block> OAK_STANDING_SHELF_BLOCK = BLOCKS.register("standing_oak_shelf",
-                        OakStandingShelfBlock::new);
-        public static final RegistryObject<Item> OAK_STANDING_SHELF_ITEM = ITEMS.register("standing_oak_shelf",
-                        () -> new BlockItem(OAK_STANDING_SHELF_BLOCK.get(), new Item.Properties()));
-        public static final RegistryObject<Block> OAK_TOWER_SHELF_BLOCK = BLOCKS.register("tower_oak_shelf",
-                        OakTowerShelfBlock::new);
-        public static final RegistryObject<Item> OAK_TOWER_SHELF_ITEM = ITEMS.register("tower_oak_shelf",
-                        () -> new BlockItem(OAK_TOWER_SHELF_BLOCK.get(), new Item.Properties()));
-        public static final RegistryObject<Block> SPRUCE_TOWER_SHELF_BLOCK = BLOCKS.register("tower_spruce_shelf",
-                        SpruceTowerShelfBlock::new);
-        public static final RegistryObject<Item> SPRUCE_TOWER_SHELF_ITEM = ITEMS.register("tower_spruce_shelf",
-                        () -> new BlockItem(SPRUCE_TOWER_SHELF_BLOCK.get(), new Item.Properties()));
+        // --- Food & Drink items (FD-style, standalone) ---
+        public static final RegistryObject<Item> FD_HAMBURGER               = ITEMS.register("fd_hamburger",               () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_CHICKEN_SANDWICH        = ITEMS.register("fd_chicken_sandwich",        () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_BACON_SANDWICH          = ITEMS.register("fd_bacon_sandwich",          () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_BARBECUE_STICK          = ITEMS.register("fd_barbecue_stick",          () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_BEEF_PATTY              = ITEMS.register("fd_beef_patty",              () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_EGG_SANDWICH            = ITEMS.register("fd_egg_sandwich",            () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_MUTTON_WRAP             = ITEMS.register("fd_mutton_wrap",             () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_HONEY_COOKIE            = ITEMS.register("fd_honey_cookie",            () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_SWEET_BERRY_COOKIE      = ITEMS.register("fd_sweet_berry_cookie",      () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_CAKE_SLICE              = ITEMS.register("fd_cake_slice",              () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_SWEET_BERRY_CHEESECAKE  = ITEMS.register("fd_sweet_berry_cheesecake_slice",  () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_APPLE_PIE_SLICE         = ITEMS.register("fd_apple_pie_slice",         () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_CHOCOLATE_PIE_SLICE     = ITEMS.register("fd_chocolate_pie_slice",     () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_DUMPLINGS               = ITEMS.register("fd_dumplings",               () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_KELP_ROLL               = ITEMS.register("fd_kelp_roll",               () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_COD_ROLL                = ITEMS.register("fd_cod_roll",                () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_FRIED_EGG               = ITEMS.register("fd_fried_egg",               () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_FRUIT_SALAD             = ITEMS.register("fd_fruit_salad",             () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_MELON_JUICE             = ITEMS.register("fd_melon_juice",             () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_APPLE_CIDER             = ITEMS.register("fd_apple_cider",             () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_HOT_COCOA               = ITEMS.register("fd_hot_cocoa",               () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_MILK_BOTTLE             = ITEMS.register("fd_milk_bottle",             () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_BONE_BROTH              = ITEMS.register("fd_bone_broth",              () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_MELON_POPSICLE          = ITEMS.register("fd_melon_popsicle",          () -> new Item(new Item.Properties()));
+
+        // --- Raw material items (Bahan Baku) for food crafting ---
+        public static final RegistryObject<Item> FD_WHEAT_DOUGH             = ITEMS.register("fd_wheat_dough",             () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_MINCED_BEEF             = ITEMS.register("fd_minced_beef",             () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_CHICKEN_CUTS            = ITEMS.register("fd_chicken_cuts",            () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_BACON_RAW               = ITEMS.register("fd_bacon_raw",               () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_MUTTON_CHOPS            = ITEMS.register("fd_mutton_chops",            () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_COD_SLICE               = ITEMS.register("fd_cod_slice",               () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_PIE_CRUST               = ITEMS.register("fd_pie_crust",               () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> FD_RICE                    = ITEMS.register("fd_rice",                    () -> new Item(new Item.Properties()));
 
         public static final RegistryObject<Block> ZOO_WALL_BANNER_BLOCK = BLOCKS.register("zoo_wall_banner",
                         ZooWallBannerBlock::new);
@@ -175,9 +195,13 @@ public class IndoZooTycoon {
         public static final RegistryObject<BlockEntityType<ShelfBlockEntity>> SHELF_BE = BLOCK_ENTITIES
                         .register("shelf",
                                         () -> BlockEntityType.Builder
-                                                        .of(ShelfBlockEntity::new,
-                                                                        OAK_SHELF_BLOCK.get(), OAK_STANDING_SHELF_BLOCK.get(),
-                                                                        OAK_TOWER_SHELF_BLOCK.get(), SPRUCE_TOWER_SHELF_BLOCK.get())
+                                                        .of(ShelfBlockEntity::new)
+                                                        .build(null));
+
+        public static final RegistryObject<BlockEntityType<FoodStallBlockEntity>> FOOD_STALL_BE = BLOCK_ENTITIES
+                        .register("food_stall",
+                                        () -> BlockEntityType.Builder
+                                                        .of(FoodStallBlockEntity::new, FOOD_STALL_BLOCK.get())
                                                         .build(null));
 
         // Menu
@@ -190,18 +214,18 @@ public class IndoZooTycoon {
         public static final RegistryObject<MenuType<ShelfMenu>> SHELF_MENU = MENUS.register(
                         "shelf_menu",
                         () -> IForgeMenuType.create(ShelfMenu::new));
+        public static final RegistryObject<MenuType<FoodStallMenu>> FOOD_STALL_MENU = MENUS.register(
+                        "food_stall_menu",
+                        () -> IForgeMenuType.create(FoodStallMenu::new));
 
         // Tab
         public static final RegistryObject<CreativeModeTab> ZOO_TAB = CREATIVE_TABS.register("zoo_tab",
                         () -> CreativeModeTab.builder()
                                         .title(Component.literal("IndoZoo Tycoon"))
                                         .displayItems((params, output) -> {
-                                                output.accept(ZOO_COMPUTER_ITEM.get());
-                                                output.accept(ZONE_MARKER_ITEM.get());
+                                                output.accept(FOOD_STALL_ITEM.get());
                                                 output.accept(TRASH_ITEM.get());
                                                 output.accept(TRASH_CAN_ITEM.get());
-                                                output.accept(OAK_TOWER_SHELF_ITEM.get());
-                                                output.accept(SPRUCE_TOWER_SHELF_ITEM.get());
                                                 output.accept(ANIMAL_FEEDER_ITEM.get());
                                                 output.accept(CAPTURE_CAGE_ITEM.get());
                                                 output.accept(BIOME_CHANGER_ITEM.get());
@@ -211,8 +235,8 @@ public class IndoZooTycoon {
                                                 output.accept(STAFF_SPAWN_EGG.get());
                                                 output.accept(ZOOKEEPER_SPAWN_EGG.get());
                                                 output.accept(SECURITY_SPAWN_EGG.get());
-                                                output.accept(VISITOR_SPAWN_EGG.get());
-                                                output.accept(HUNTER_SPAWN_EGG.get());
+                                                output.accept(VISITOR_SPAWN_EGG.get().getDefaultInstance());
+                                                output.accept(HUNTER_SPAWN_EGG.get().getDefaultInstance());
                                                 output.accept(CASHIER_SPAWN_EGG.get());
                                         })
                                         .build());

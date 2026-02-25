@@ -68,7 +68,7 @@ public class VisitorMoodLayer extends RenderLayer<VisitorEntity, HumanoidModel<V
                 // the effective translate to 0.9 blocks.  In this space -Y moves the icon UP in world.
                 // Adult head top ≈ model-origin + 0.5 = 2.0 blocks; adjust to be closer to head.
                 // Child visually smaller (0.6×), head top ≈ 1.2 blocks.
-                float headAbove = entity.isChildVisitor() ? -1.0f : -1.6f;
+                float headAbove = entity.isChildVisitor() ? -0.7f : -1.3f;
                 poseStack.translate(0.0, headAbove, 0.0);
 
                 // Counter the entity body rotation that the renderer baked in (180-yBodyRot)
