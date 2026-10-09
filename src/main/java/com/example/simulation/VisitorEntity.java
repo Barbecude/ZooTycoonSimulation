@@ -113,10 +113,11 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
         }
     }
 
-    private int moodTimer = 0;
     private int toiletTimer = 0; // Tracks duration of TOILET mood
     private boolean needsToilet = false; // Flag for toilet need
     private int watchingAnimalId = -1;
+    // Size category of the animal currently being watched (-1=none, 0=small/baby, 1=normal, 2=big)
+    private int watchingAnimalSize = -1;
     private boolean lastCarryState = false;
     private final java.util.HashMap<Long, Integer> tempPlacedBlocks = new java.util.HashMap<>();
     private long hunterCrimeUntilTick = 0L;
@@ -130,13 +131,40 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
         return Mood.values()[ordinal];
     }
 
-    public void setMood(Mood mood, int duration) {
-        Mood current = getMood();
-        if (current == mood && this.moodTimer > duration)
-            return; // Keep longer duration
-
+    /** Direct setter — always wins. Call only from updateMood(). */
+    private void setMoodDirect(Mood mood) {
         this.entityData.set(MOOD, mood.ordinal());
-        this.moodTimer = duration;
+    }
+
+    /**
+     * Single source of truth for mood.
+     * Priority: TOILET > HUNGRY > THIRSTY > animal-watching moods > NEUTRAL
+     * Called every 5 ticks from aiStep on the server side.
+     */
+    private void updateMood() {
+        if (needsToilet) {
+            setMoodDirect(Mood.TOILET);
+            return;
+        }
+        if (getHunger() >= 50) {
+            setMoodDirect(Mood.HUNGRY);
+            return;
+        }
+        if (getThirst() >= 50) {
+            setMoodDirect(Mood.THIRSTY);
+            return;
+        }
+        if (watchingAnimalId != -1) {
+            if (watchingAnimalSize == 2) {
+                setMoodDirect(Mood.AMAZED);
+            } else if (watchingAnimalSize == 0) {
+                setMoodDirect(Mood.ADORED);
+            } else {
+                setMoodDirect(Mood.HAPPY);
+            }
+            return;
+        }
+        setMoodDirect(Mood.NEUTRAL);
     }
 
     public VisitorEntity(EntityType<? extends VisitorEntity> type, Level level) {
@@ -352,12 +380,11 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
             if (isHunter()) {
                 if (getHunger() != 0) setHunger(0);
                 if (getThirst() != 0) setThirst(0);
-                if (getMood() != Mood.NEUTRAL) setMood(Mood.NEUTRAL, 0);
                 if (hasTrash()) setHasTrash(false);
             } else {
                 if (this.tickCount % 200 == 0) {   // every 10s
-                    setHunger(Math.min(100, getHunger() + 7));   // slightly reduced rate
-                    setThirst(Math.min(100, getThirst() + 10));  // slightly reduced rate
+                    setHunger(Math.min(100, getHunger() + 7));
+                    setThirst(Math.min(100, getThirst() + 10));
                 }
 
                 // Random toilet trigger (14% chance every 100 ticks)
@@ -367,51 +394,26 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                     }
                 }
 
-                // Needs-driven mood sync: mood always reflects current need/behavior
-                if (this.tickCount % 10 == 0) {
-                    // Priority: TOILET > HUNGRY > THIRSTY > NEUTRAL
-                    if (needsToilet) {
-                        if (getMood() != Mood.TOILET) {
-                            setMood(Mood.TOILET, 1200);
-                        }
-                    } else if (getHunger() >= 50) {
-                        if (getMood() != Mood.HUNGRY && getMood() != Mood.HAPPY) {
-                            setMood(Mood.HUNGRY, 200);
-                        }
-                    } else if (getThirst() >= 50) {
-                        if (getMood() != Mood.THIRSTY && getMood() != Mood.HAPPY) {
-                            setMood(Mood.THIRSTY, 200);
-                        }
-                    } else if (watchingAnimalId == -1 && getMood() != Mood.HAPPY && getMood() != Mood.NEUTRAL
-                            && getMood() != Mood.AMAZED && getMood() != Mood.ADORED) {
-                        // Not watching animal and no need -> neutral
-                        setMood(Mood.NEUTRAL, 0);
-                    }
-                }
-
-                if (getMood() == Mood.TOILET) {
+                // Toilet timer: if TOILET mood persists too long, penalise rating and leave
+                if (needsToilet) {
                     toiletTimer++;
                     if (toiletTimer > 600) {
                         ZooData data = ZooData.get(this.level());
                         data.setRating(data.getRating() - 5);
                         needsToilet = false;
+                        toiletTimer = 0;
                         this.forceLeave();
                     }
                 } else {
                     toiletTimer = 0;
                 }
 
-                if (moodTimer > 0) {
-                    moodTimer--;
-                    if (moodTimer == 0) {
-                        if (getMood() != Mood.TOILET) {
-                            setMood(Mood.NEUTRAL, 0);
-                        }
-                    }
+                // Single authoritative mood update every 5 ticks
+                if (this.tickCount % 5 == 0) {
+                    updateMood();
                 }
 
                 if (this.getRandom().nextFloat() < 0.0003F && !hasTrash()) {
-                    // Visitor now has trash — FindTrashCanGoal will find a bin or litter
                     setHasTrash(true);
                 }
             }
@@ -709,7 +711,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
         tag.putInt("Hunger", getHunger());
         tag.putInt("Thirst", getThirst());
         tag.putInt("Mood", getMood().ordinal());
-        tag.putInt("MoodTimer", moodTimer);
+        // MoodTimer intentionally not saved \u2014 re-derived from state on load
         tag.putBoolean("IsHunter", isHunter());
         tag.putInt("HunterMode", getHunterMode().id);
         tag.putBoolean("IsCarrying", isCarrying());
@@ -744,8 +746,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                 this.entityData.set(MOOD, moodIdx);
             }
         }
-        if (tag.contains("MoodTimer"))
-            moodTimer = tag.getInt("MoodTimer");
+        // MoodTimer is intentionally not saved \u2014 mood is re-derived from state by updateMood()
         if (tag.contains("IsHunter"))
             setHunter(tag.getBoolean("IsHunter"));
         if (tag.contains("HunterMode"))
@@ -1200,7 +1201,8 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
             TO_DOOR,
             TO_TARGET,
             USING,
-            QUEUING
+            QUEUING,         // food/drink stall queue
+            QUEUING_TOILET   // toilet queue
         }
 
         public FindFacilityGoal(VisitorEntity v, String type) {
@@ -1224,30 +1226,58 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
 
             // Scan for facility (48-block radius to match janitor range)
             BlockPos p = visitor.blockPosition();
+
+            if (type.equals("toilet")) {
+                // Find a toilet, prefer least-queued or unoccupied
+                BlockPos bestPos = null;
+                int bestQueue = Integer.MAX_VALUE;
+                for (BlockPos pos : BlockPos.betweenClosed(p.offset(-48, -5, -48), p.offset(48, 5, 48))) {
+                    if (!isValidFacilityBlock(visitor.level().getBlockState(pos))) continue;
+                    int queueLen = 0;
+                    net.minecraft.world.level.block.entity.BlockEntity tbe = visitor.level().getBlockEntity(pos);
+                    if (tbe instanceof ToiletBlockEntity toilet) {
+                        // Skip if already in queue or occupying
+                        if (toilet.isVisitorOccupant(visitor.getUUID()) || toilet.isInVisitorQueue(visitor.getUUID())) {
+                            this.targetPos = pos.immutable();
+                            this.doorPos = findNearestDoorNear(this.targetPos, 6);
+                            this.stage = this.doorPos != null ? Stage.TO_DOOR : Stage.TO_TARGET;
+                            return true;
+                        }
+                        queueLen = toilet.getQueueSize();
+                    }
+                    if (queueLen < bestQueue) {
+                        bestQueue = queueLen;
+                        bestPos = pos.immutable();
+                    }
+                }
+                if (bestPos != null) {
+                    this.targetPos = bestPos;
+                    this.doorPos = findNearestDoorNear(this.targetPos, 6);
+                    this.stage = this.doorPos != null ? Stage.TO_DOOR : Stage.TO_TARGET;
+                    return true;
+                }
+                return false;
+            }
+
             for (BlockPos pos : BlockPos.betweenClosed(p.offset(-48, -5, -48), p.offset(48, 5, 48))) {
                 if (isValidFacilityBlock(visitor.level().getBlockState(pos))) {
                     this.targetPos = pos.immutable();
-                    if (type.equals("toilet")) {
-                        this.doorPos = findNearestDoorNear(this.targetPos, 6);
-                        this.stage = this.doorPos != null ? Stage.TO_DOOR : Stage.TO_TARGET;
-                    } else {
-                        this.doorPos = null;
-                        this.stage = Stage.TO_TARGET;
-                    }
+                    this.doorPos = null;
+                    this.stage = Stage.TO_TARGET;
                     return true;
                 }
             }
 
-            if (!visitor.level().isClientSide && !type.equals("toilet")) {
+            if (!visitor.level().isClientSide) {
                 // Need exists but no facility found nearby.
                 ZooData data = ZooData.get(visitor.level());
                 if (visitor.tickCount % 200 == 0) {
                     data.setRating(Math.max(0, data.getRating() - 1));
                 }
                 if (type.equals("food")) {
-                    visitor.setMood(Mood.HUNGRY, 160);
+                    // hunger is already high — updateMood() will show HUNGRY
                 } else if (type.equals("drink")) {
-                    visitor.setMood(Mood.THIRSTY, 160);
+                    // thirst is already high — updateMood() will show THIRSTY
                 }
             }
             return false;
@@ -1270,10 +1300,18 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
 
         @Override
         public void stop() {
-            // If we were queuing, remove from queue so the slot isn't stuck
+            // If we were queuing at food stall, remove from queue so the slot isn't stuck
             if (stage == Stage.QUEUING && targetPos != null && !visitor.level().isClientSide) {
                 if (visitor.level().getBlockEntity(targetPos) instanceof FoodStallBlockEntity stall)
                     stall.removeFromQueue(visitor.getUUID());
+            }
+            // If we were queuing or using a toilet, release our claim
+            if ((stage == Stage.QUEUING_TOILET || stage == Stage.USING) && type.equals("toilet")
+                    && targetPos != null && !visitor.level().isClientSide) {
+                net.minecraft.world.level.block.entity.BlockEntity tbe = visitor.level().getBlockEntity(targetPos);
+                if (tbe instanceof ToiletBlockEntity toilet) {
+                    toilet.releaseVisitorOccupant(visitor.getUUID());
+                }
             }
             targetPos = null;
             doorPos = null;
@@ -1310,36 +1348,79 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
 
             if (stage == Stage.USING) {
                 visitor.getNavigation().stop();
+                // Crouch pose to simulate sitting on the toilet
+                if (type.equals("toilet")) {
+                    visitor.setPose(net.minecraft.world.entity.Pose.CROUCHING);
+                }
                 if (usingTicks > 0) {
                     usingTicks--;
                 }
                 if (usingTicks <= 0) {
+                    visitor.setPose(net.minecraft.world.entity.Pose.STANDING);
                     visitor.toiletTimer = 0;
                     visitor.needsToilet = false;
-                    // After toilet: pick a branch
+                    // Release from ToiletBlockEntity
+                    if (type.equals("toilet") && targetPos != null && !visitor.level().isClientSide) {
+                        net.minecraft.world.level.block.entity.BlockEntity tbe = visitor.level().getBlockEntity(targetPos);
+                        if (tbe instanceof ToiletBlockEntity toilet) {
+                            toilet.releaseVisitorOccupant(visitor.getUUID());
+                        }
+                    }
+                    // After toilet: pick a random branch
                     if (visitor.isTimeToLeave()) {
-                        visitor.setMood(Mood.NEUTRAL, 60);
                         visitor.forceLeave();
                     } else {
                         float branch = visitor.getRandom().nextFloat();
                         if (branch < 0.25F) {
                             // Branch: go home
-                            visitor.setMood(Mood.NEUTRAL, 60);
                             visitor.forceLeave();
                         } else if (branch < 0.50F) {
                             // Branch: become hungry
                             visitor.setHunger(Math.min(100, visitor.getHunger() + 40));
-                            visitor.setMood(Mood.HUNGRY, 200);
                         } else if (branch < 0.70F) {
                             // Branch: become thirsty
                             visitor.setThirst(Math.min(100, visitor.getThirst() + 40));
-                            visitor.setMood(Mood.THIRSTY, 200);
-                        } else {
-                            // Branch: continue watching animals
-                            visitor.setMood(Mood.HAPPY, 120);
                         }
+                        // else: satisfy — needs are low, updateMood() will show NEUTRAL or watching mood
                     }
                     targetPos = null;
+                }
+                return;
+            }
+
+            // ── QUEUING_TOILET stage ─────────────────────────────────────────────
+            if (stage == Stage.QUEUING_TOILET) {
+                if (visitor.level().isClientSide) return;
+                net.minecraft.world.level.block.entity.BlockEntity tbe = visitor.level().getBlockEntity(targetPos);
+                if (!(tbe instanceof ToiletBlockEntity toilet)) {
+                    targetPos = null; stage = null; return;
+                }
+                // Check if the block entity has granted us the toilet
+                if (toilet.isVisitorOccupant(visitor.getUUID())) {
+                    // Open the door first, then walk right up to the toilet block
+                    if (doorPos != null) openDoorAt(doorPos);
+                    double distSq = visitor.distanceToSqr(
+                            targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5);
+                    if (distSq > 2.5D) {
+                        repathIfNeeded(targetPos);
+                    } else {
+                        visitor.getNavigation().stop();
+                        stage = Stage.USING;
+                        usingTicks = 80;
+                    }
+                    return;
+                }
+                // Still in queue — wait near the toilet
+                queueTicks++;
+                repathIfNeeded(targetPos);
+                // Timeout after 10 seconds waiting
+                if (queueTicks > 200) {
+                    toilet.releaseVisitorOccupant(visitor.getUUID()); // remove from queue
+                    visitor.toiletTimer = 0;
+                    visitor.needsToilet = false;
+                    // updateMood() will set NEUTRAL automatically
+                    targetPos = null;
+                    stage = null;
                 }
                 return;
             }
@@ -1366,11 +1447,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                         ZooData data = ZooData.get(visitor.level());
                         data.setRating(Math.max(0, data.getRating() - 2));
                         // Timed out waiting → pick a branch
-                        if (type.equals("food")) {
-                            visitor.setMood(Mood.HUNGRY, 200);
-                        } else if (type.equals("drink")) {
-                            visitor.setMood(Mood.THIRSTY, 200);
-                        }
+                        // hunger/thirst still high → updateMood() will show correct mood
                         float branchRoll = visitor.getRandom().nextFloat();
                         if (branchRoll < 0.5F) {
                             visitor.forceLeave(); // leave unhappy
@@ -1384,30 +1461,40 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
             }
 
             if (visitor.distanceToSqr(targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5) < 6.0D) {
-                // Arrived
+                // Arrived at facility
+                // For toilet: open door before stopping navigation
+                if (type.equals("toilet") && doorPos != null) openDoorAt(doorPos);
                 visitor.getNavigation().stop();
                 timer++;
                 if (timer > 20) {
                     if (type.equals("toilet")) {
-                        boolean occupied = false;
-                        double cx = targetPos.getX() + 0.5;
-                        double cy = targetPos.getY();
-                        double cz = targetPos.getZ() + 0.5;
-                        for (VisitorEntity other : visitor.level().getEntitiesOfClass(VisitorEntity.class,
-                                new net.minecraft.world.phys.AABB(targetPos).inflate(1.5D))) {
-                            if (other != visitor && other.getMood() == Mood.TOILET
-                                    && other.distanceToSqr(cx, cy, cz) < 2.25D
-                                    && other.getNavigation().isDone()) {
-                                occupied = true;
-                                break;
+                        if (visitor.level().isClientSide) return;
+                        net.minecraft.world.level.block.entity.BlockEntity tbe = visitor.level().getBlockEntity(targetPos);
+                        if (tbe instanceof ToiletBlockEntity toilet) {
+                            // Open the door so the visitor can enter
+                            if (doorPos != null) openDoorAt(doorPos);
+                            // Check if we are now the occupant (block entity granted us access)
+                            if (toilet.isVisitorOccupant(visitor.getUUID())) {
+                                stage = Stage.USING;
+                                usingTicks = 80;
+                                return;
                             }
-                        }
-                        if (!occupied) {
-                            stage = Stage.USING;
-                            usingTicks = 80;
+                            // Try to request use — if toilet is free we get it, if not we're queued
+                            boolean granted = toilet.requestVisitorUse(visitor.getUUID());
+                            if (granted) {
+                                stage = Stage.USING;
+                                usingTicks = 80;
+                            } else {
+                                // Queued — move toward toilet waiting spot and wait for grant
+                                stage = Stage.QUEUING_TOILET;
+                                queueTicks = 0;
+                                repathIfNeeded(targetPos);
+                            }
                             return;
                         } else {
-                            timer = 20;
+                            // No block entity at this block — scan for another toilet
+                            targetPos = null;
+                            stage = null;
                             return;
                         }
                     }
@@ -1438,7 +1525,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                                     // No Chocolate Milk in stock → rating drop, branch
                                     ZooData data2 = ZooData.get(visitor.level());
                                     data2.setRating(Math.max(0, data2.getRating() - 1));
-                                    visitor.setMood(Mood.THIRSTY, 200);
+                                    // thirst still high → updateMood() will keep THIRSTY
                                     if (visitor.getRandom().nextFloat() < 0.5F) {
                                         visitor.forceLeave();
                                     }
@@ -1461,7 +1548,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                                     // No food in stock → rating drop, branch
                                     ZooData data2 = ZooData.get(visitor.level());
                                     data2.setRating(Math.max(0, data2.getRating() - 1));
-                                    visitor.setMood(Mood.HUNGRY, 200);
+                                    // hunger still high → updateMood() will keep HUNGRY
                                     if (visitor.getRandom().nextFloat() < 0.5F) {
                                         visitor.forceLeave();
                                     }
@@ -1499,11 +1586,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                         if (!purchased) {
                             ZooData data = ZooData.get(visitor.level());
                             data.setRating(Math.max(0, data.getRating() - 1));
-                            if (type.equals("food")) {
-                                visitor.setMood(Mood.HUNGRY, 160);
-                            } else {
-                                visitor.setMood(Mood.THIRSTY, 160);
-                            }
+                            // hunger/thirst still high → updateMood() will keep correct mood
                         }
                     }
 
@@ -1519,6 +1602,9 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
         public boolean canContinueToUse() {
             // Always continue while waiting in a Food Stall queue
             if (stage == Stage.QUEUING && targetPos != null) return true;
+            // Always continue while waiting in or using a toilet
+            if (stage == Stage.QUEUING_TOILET && targetPos != null) return true;
+            if (stage == Stage.USING && type.equals("toilet") && targetPos != null) return true;
             return targetPos != null && isValidFacilityBlock(visitor.level().getBlockState(targetPos));
         }
 
@@ -1564,8 +1650,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                         && !(st.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock)) {
                     continue;
                 }
-                net.minecraft.world.level.pathfinder.Path path = visitor.getNavigation().createPath(pos, 0);
-                if (path == null) continue;
+                // Only count doors that are between the visitor and the toilet (on the path)
                 double d = pos.distSqr(start);
                 if (d < bestDist) {
                     bestDist = d;
@@ -1620,15 +1705,6 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
             if (target != null) {
                 double d = Math.sqrt(visitor.distanceToSqr(target));
                 watchTimer = base + Math.min(600, (int) (d * 8));
-                // Initial mood based on animal size
-                float width = target.getBbWidth();
-                if (width > 1.5F) {
-                    visitor.setMood(Mood.AMAZED, 120);
-                } else if (width < 0.8F || target.isBaby()) {
-                    visitor.setMood(Mood.ADORED, 120);
-                } else {
-                    visitor.setMood(Mood.HAPPY, 120);
-                }
             } else {
                 watchTimer = base;
             }
@@ -1638,6 +1714,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                     data.decrementViewer(visitor.watchingAnimalId);
                 }
                 visitor.watchingAnimalId = target.getId();
+                visitor.watchingAnimalSize = animalSizeCategory(target);
                 data.incrementViewer(target.getId());
                 watchPos = computeWatchPos(target, false);
                 LOGGER.info("Visitor {} watching target {}", visitor.getId(), target.getId());
@@ -1650,6 +1727,7 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                 ZooData.get(visitor.level()).decrementViewer(visitor.watchingAnimalId);
             }
             visitor.watchingAnimalId = -1;
+            visitor.watchingAnimalSize = -1;
             target = null;
             watchPos = null;
         }
@@ -1674,25 +1752,10 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                 }
             }
             visitor.getLookControl().setLookAt(target, 30, 30);
+            // Keep size category up-to-date (handles babies growing, etc.)
+            visitor.watchingAnimalSize = animalSizeCategory(target);
             if (watchTimer > 0) {
                 watchTimer--;
-                if (watchTimer % 20 == 0) {
-                    // Mood based on animal size: large = AMAZED, small/baby = ADORED, normal = HAPPY
-                    float width = target.getBbWidth();
-                    if (width > 1.5F) {
-                        visitor.setMood(Mood.AMAZED, 100);
-                    } else if (width < 0.8F || target.isBaby()) {
-                        visitor.setMood(Mood.ADORED, 100);
-                    } else {
-                        visitor.setMood(Mood.HAPPY, 100);
-                    }
-                    net.minecraft.resources.ResourceLocation id = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES
-                            .getKey(target.getType());
-                    if (id != null && (id.getPath().contains("dragon") || id.getPath().contains("wither")
-                            || id.getPath().contains("serpent"))) {
-                        visitor.setMood(Mood.AMAZED, 200);
-                    }
-                }
             }
         }
 
@@ -1745,6 +1808,20 @@ public class VisitorEntity extends PathfinderMob implements RangedAttackMob {
                 }
             }
             return nearest;
+        }
+
+        /** Returns 0=small/baby, 1=normal, 2=big */
+        private int animalSizeCategory(Animal animal) {
+            if (animal.isBaby() || animal.getBbWidth() < 0.8F) return 0;
+            // Dragon/wither/serpent family names always count as big
+            net.minecraft.resources.ResourceLocation typeId =
+                    net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(animal.getType());
+            if (typeId != null && (typeId.getPath().contains("dragon") || typeId.getPath().contains("wither")
+                    || typeId.getPath().contains("serpent"))) {
+                return 2;
+            }
+            if (animal.getBbWidth() > 1.5F) return 2;
+            return 1;
         }
 
         private boolean isTaggedAnimal(int id) {

@@ -198,7 +198,7 @@ public class FoodStallScreen extends AbstractContainerScreen<FoodStallMenu> {
                         requestItemId = "";
                     }
                 })
-                .bounds(qx + 5, qy + 100, 125, 18).build();
+                .bounds(qx + 5, qy + 104, 125, 18).build();
         addRenderableWidget(layaniBtn);
 
         syncVisibility();
@@ -356,7 +356,7 @@ public class FoodStallScreen extends AbstractContainerScreen<FoodStallMenu> {
         int qx = qx();
         int qy = topPos;
         int qw = 135;
-        int qh = 126;
+        int qh = 130;
 
         // Background
         g.fill(qx, qy, qx + qw, qy + qh, 0xCC1A1A2E);
@@ -368,15 +368,27 @@ public class FoodStallScreen extends AbstractContainerScreen<FoodStallMenu> {
 
         // Queue count
         g.drawCenteredString(font, queueSize + " pengunjung",
-                qx + qw / 2, qy + 22, 0xFFFFFFFF);
+                qx + qw / 2, qy + 20, 0xFFFFFFFF);
 
+        // Separator line
+        g.fill(qx + 8, qy + 32, qx + qw - 8, qy + 33, 0x55AAAAAA);
 
+        // Request label
+        g.drawCenteredString(font, Component.literal("Permintaan:"),
+                qx + qw / 2, qy + 38, 0xFFAAAAFF);
 
-        // Request
+        // Request item: icon on left, name on right
         String requestName = resolveRequestName();
-        g.drawCenteredString(font, Component.literal("Minta: " + requestName),
-                qx + qw / 2, qy + 54, 0xFFDDDDDD);
-
+        ItemStack reqStack = requestItemId.isBlank() ? ItemStack.EMPTY : stackFor(requestItemId);
+        int iconX = qx + 16;
+        int iconY = qy + 52;
+        if (!reqStack.isEmpty()) {
+            g.renderItem(reqStack, iconX, iconY);
+            g.drawString(font, requestName, iconX + 20, iconY + 4, 0xFFFFD700, false);
+        } else {
+            g.drawCenteredString(font, Component.literal(requestName.isEmpty() ? "-" : requestName),
+                    qx + qw / 2, qy + 56, 0xFFDDDDDD);
+        }
     }
 
 

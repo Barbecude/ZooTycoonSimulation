@@ -28,16 +28,102 @@ public class ToiletBlockEntity extends BlockEntity {
     private int doorCloseTicks = 0;
     private final List<UUID> queue = new ArrayList<>();
 
+    // --- Visitor entity state ---
+    // UUID of the VisitorEntity currently using the toilet (not a player)
+    private UUID visitorOccupant = null;
+    // Map of visitor UUIDs waiting in queue
+    private final List<UUID> visitorQueue = new ArrayList<>();
+    // Timer counting how long current visitor has been using the toilet
+    private int visitorUseTicks = 0;
+    // Duration a visitor uses the toilet (4-6 seconds)
+    private static final int VISITOR_USE_DURATION = 80;
+
     public ToiletBlockEntity(BlockPos pos, BlockState state) {
         super(IndoZooTycoon.TOILET_BE.get(), pos, state);
     }
 
     public boolean isOccupied() {
+        return occupiedBy != null || visitorOccupant != null;
+    }
+
+    public boolean isOccupiedByPlayerOnly() {
         return occupiedBy != null;
     }
 
     public int getQueueSize() {
-        return queue.size();
+        return queue.size() + visitorQueue.size();
+    }
+
+    /** Called by VisitorEntity to request toilet use. Returns true if the visitor can use it now. */
+    public boolean requestVisitorUse(UUID visitorUUID) {
+        if (visitorOccupant != null || occupiedBy != null) {
+            // Toilet occupied — add to queue if not already there
+            if (!visitorQueue.contains(visitorUUID) && !visitorUUID.equals(visitorOccupant)) {
+                visitorQueue.add(visitorUUID);
+                setChanged();
+            }
+            return false;
+        }
+        // Toilet is free — occupy it
+        visitorOccupant = visitorUUID;
+        visitorUseTicks = VISITOR_USE_DURATION;
+        setChanged();
+        return true;
+    }
+
+    /** Called by VisitorEntity to check if it's still occupying the toilet. */
+    public boolean isVisitorOccupant(UUID uuid) {
+        return uuid.equals(visitorOccupant);
+    }
+
+    /** Called by VisitorEntity when it finishes using the toilet. */
+    public void releaseVisitorOccupant(UUID uuid) {
+        if (uuid.equals(visitorOccupant)) {
+            visitorOccupant = null;
+            visitorUseTicks = 0;
+            setChanged();
+            // Open doors so next visitor can enter
+            openNearbyDoors();
+            doorCloseTicks = 20;
+        }
+        visitorQueue.remove(uuid);
+        setChanged();
+    }
+
+    /** Returns the next visitor UUID from the queue if any, or null. */
+    public UUID pollNextVisitorFromQueue(net.minecraft.server.level.ServerLevel sl) {
+        if (visitorOccupant != null || occupiedBy != null) return null;
+        java.util.Iterator<UUID> it = visitorQueue.iterator();
+        while (it.hasNext()) {
+            UUID next = it.next();
+            // Find if the visitor entity is still alive and close enough
+            java.util.List<VisitorEntity> visitors = sl.getEntitiesOfClass(VisitorEntity.class,
+                new net.minecraft.world.phys.AABB(worldPosition).inflate(24D),
+                v -> v.getUUID().equals(next));
+            if (visitors.isEmpty()) {
+                it.remove();
+                setChanged();
+                continue;
+            }
+            VisitorEntity visitor = visitors.get(0);
+            double distSq = visitor.distanceToSqr(worldPosition.getX() + 0.5, worldPosition.getY(), worldPosition.getZ() + 0.5);
+            if (distSq > 64.0D) {
+                // Too far — skip but keep in queue
+                continue;
+            }
+            it.remove();
+            visitorOccupant = next;
+            visitorUseTicks = VISITOR_USE_DURATION;
+            setChanged();
+            openNearbyDoors();
+            return next;
+        }
+        return null;
+    }
+
+    /** Check if this visitor is in the queue. */
+    public boolean isInVisitorQueue(UUID uuid) {
+        return visitorQueue.contains(uuid);
     }
 
     public void requestUse(ServerPlayer player) {
@@ -102,6 +188,26 @@ public class ToiletBlockEntity extends BlockEntity {
             if (be.doorCloseTicks <= 0) {
                 be.closeNearbyDoors();
             }
+        }
+
+        // Tick visitor occupant — if no VisitorEntity is alive for the occupant, release
+        if (be.visitorOccupant != null) {
+            boolean found = !sl.getEntitiesOfClass(VisitorEntity.class,
+                new net.minecraft.world.phys.AABB(pos).inflate(8D),
+                v -> v.getUUID().equals(be.visitorOccupant)).isEmpty();
+            if (!found) {
+                // Visitor is gone — release
+                be.visitorOccupant = null;
+                be.visitorUseTicks = 0;
+                be.setChanged();
+                be.openNearbyDoors();
+                be.doorCloseTicks = 20;
+            }
+        }
+
+        // Try to admit the next visitor from visitorQueue
+        if (be.visitorOccupant == null && be.occupiedBy == null && !be.visitorQueue.isEmpty()) {
+            be.pollNextVisitorFromQueue(sl);
         }
     }
 
@@ -188,9 +294,9 @@ public class ToiletBlockEntity extends BlockEntity {
     private void closeNearbyDoors() {
         if (!(level instanceof ServerLevel sl)) return;
         for (BlockPos p : BlockPos.betweenClosed(worldPosition.offset(-2, -1, -2), worldPosition.offset(2, 2, 2))) {
-            if (!sl.getEntitiesOfClass(ServerPlayer.class, new net.minecraft.world.phys.AABB(p).inflate(1.2D)).isEmpty()) {
-                continue;
-            }
+            net.minecraft.world.phys.AABB doorArea = new net.minecraft.world.phys.AABB(p).inflate(1.2D);
+            if (!sl.getEntitiesOfClass(ServerPlayer.class, doorArea).isEmpty()) continue;
+            if (!sl.getEntitiesOfClass(VisitorEntity.class, doorArea).isEmpty()) continue;
             BlockState st = sl.getBlockState(p);
             if (st.getBlock() instanceof DoorBlock door) {
                 if (st.getValue(DoorBlock.OPEN)) {
@@ -217,6 +323,16 @@ public class ToiletBlockEntity extends BlockEntity {
             q.add(e);
         }
         tag.put("Queue", q);
+        // Visitor state
+        if (visitorOccupant != null) tag.putUUID("VisitorOccupant", visitorOccupant);
+        tag.putInt("VisitorUseTicks", visitorUseTicks);
+        ListTag vq = new ListTag();
+        for (UUID id : visitorQueue) {
+            CompoundTag e = new CompoundTag();
+            e.putUUID("Id", id);
+            vq.add(e);
+        }
+        tag.put("VisitorQueue", vq);
     }
 
     @Override
@@ -232,6 +348,19 @@ public class ToiletBlockEntity extends BlockEntity {
                 CompoundTag e = q.getCompound(i);
                 if (e.hasUUID("Id")) {
                     queue.add(e.getUUID("Id"));
+                }
+            }
+        }
+        // Visitor state
+        visitorOccupant = tag.hasUUID("VisitorOccupant") ? tag.getUUID("VisitorOccupant") : null;
+        visitorUseTicks = tag.getInt("VisitorUseTicks");
+        visitorQueue.clear();
+        if (tag.contains("VisitorQueue", Tag.TAG_LIST)) {
+            ListTag vq = tag.getList("VisitorQueue", Tag.TAG_COMPOUND);
+            for (int i = 0; i < vq.size(); i++) {
+                CompoundTag e = vq.getCompound(i);
+                if (e.hasUUID("Id")) {
+                    visitorQueue.add(e.getUUID("Id"));
                 }
             }
         }

@@ -37,7 +37,7 @@ public class FoodTransactionManager {
         data.logTransaction("Pendapatan", "Penjualan makanan di shelf", income);
 
         visitor.setHunger(0);
-        visitor.setMood(VisitorEntity.Mood.HAPPY, 140);
+        // mood re-derived by updateMood() on next tick
         visitor.setHasTrash(true);
         visitor.playSound(SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0F, 1.0F);
 
@@ -69,7 +69,7 @@ public class FoodTransactionManager {
         data.logTransaction("Pendapatan", "Penjualan minuman di shelf", income);
 
         visitor.setThirst(0);
-        visitor.setMood(VisitorEntity.Mood.HAPPY, 120);
+        // mood re-derived by updateMood() on next tick
         visitor.setHasTrash(true);
         visitor.playSound(SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0F, 1.0F);
 
@@ -146,7 +146,7 @@ public class FoodTransactionManager {
                 "Penjualan Chocolate Milk di Food Stall @" + stall.getBlockPos().toShortString(), income);
 
         visitor.setThirst(0);
-        visitor.setMood(VisitorEntity.Mood.HAPPY, 120);
+        // mood re-derived by updateMood() on next tick
         visitor.setHasTrash(true);
         visitor.playSound(net.minecraft.sounds.SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0F, 1.0F);
 
@@ -194,7 +194,7 @@ public class FoodTransactionManager {
                 "Penjualan makanan di Food Stall @" + stall.getBlockPos().toShortString(), income);
 
         visitor.setHunger(0);
-        visitor.setMood(VisitorEntity.Mood.HAPPY, 140);
+        // mood re-derived by updateMood() on next tick
         visitor.setHasTrash(true);
         visitor.playSound(net.minecraft.sounds.SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0F, 1.0F);
 
