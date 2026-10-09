@@ -1,0 +1,17 @@
+{
+  "id": "zootycoon:builders_hut",
+  "name": "Builder's Hut",
+  "category": "essentials",
+  "subcategory": "construction",
+  "author": "Zoo Management",
+  "dimensions": {
+    "x": 7,
+    "y": 6,
+    "z": 7
+  },
+  "description": "Kantor dan bengkel kerja kontraktor kebun binatang.",
+  "builderHiringCost": 10,
+  "defaultPrice": 20,
+  "isCustom": false
+}
+

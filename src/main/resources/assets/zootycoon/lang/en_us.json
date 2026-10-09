@@ -1,0 +1,23 @@
+{
+  "item.zootycoon.build_tool": "Build Tool",
+  "item.zootycoon.build_tool.tooltip": "Right-click to open Zoo Tycoon Management Menu",
+  "item.zootycoon.build_tool.tooltip_preview": "Shift + Right-click to cancel structure preview",
+  "entity.zootycoon.builder": "Zoo Builder",
+  "category.zootycoon.enclosures": "Enclosures",
+  "category.zootycoon.essentials": "Essentials",
+  "zootycoon.ui.title": "Zoo Tycoon Management",
+  "zootycoon.ui.tab.claim": "Claim Land",
+  "zootycoon.ui.tab.enclosures": "Enclosures",
+  "zootycoon.ui.tab.essentials": "Essentials",
+  "zootycoon.ui.tab.builder": "Builder Status",
+  "zootycoon.ui.btn.add_schematic": "+ Add Schematic (Studio)",
+  "zootycoon.ui.btn.claim": "Claim Land",
+  "zootycoon.ui.btn.build": "Select Location",
+  "zootycoon.ui.btn.buy_materials": "Buy Missing Materials (Emeralds)",
+  "zootycoon.claim.success": "Land claimed successfully!",
+  "zootycoon.claim.overlap": "Land overlaps with an existing claim!",
+  "zootycoon.claim.not_enough_emeralds": "Not enough emeralds to claim this land!",
+  "zootycoon.build.outside_claim": "Building must be placed inside your claimed land!",
+  "zootycoon.welcome.message": "Welcome to Zoo Tycoon! Use your Build Tool to start expanding your zoo!"
+}
+

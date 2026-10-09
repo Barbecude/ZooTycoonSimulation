@@ -1,0 +1,23 @@
+{
+  "item.zootycoon.build_tool": "Build Tool",
+  "item.zootycoon.build_tool.tooltip": "Klik kanan untuk membuka Menu Manajemen Zoo Tycoon",
+  "item.zootycoon.build_tool.tooltip_preview": "Shift + Klik Kanan untuk membatalkan preview bangunan",
+  "entity.zootycoon.builder": "Zoo Builder",
+  "category.zootycoon.enclosures": "Kandang Satwa",
+  "category.zootycoon.essentials": "Fasilitas Utama",
+  "zootycoon.ui.title": "Zoo Tycoon Management",
+  "zootycoon.ui.tab.claim": "Klaim Lahan",
+  "zootycoon.ui.tab.enclosures": "Kandang Satwa",
+  "zootycoon.ui.tab.essentials": "Fasilitas Utama",
+  "zootycoon.ui.tab.builder": "Status Kontraktor",
+  "zootycoon.ui.btn.add_schematic": "+ Add Schematic (Studio)",
+  "zootycoon.ui.btn.claim": "Beli Lahan",
+  "zootycoon.ui.btn.build": "Pilih Lokasi Bangun",
+  "zootycoon.ui.btn.buy_materials": "Beli Sisa Material (Emerald)",
+  "zootycoon.claim.success": "Lahan berhasil diklaim!",
+  "zootycoon.claim.overlap": "Lahan bertumpukan dengan klaim yang sudah ada!",
+  "zootycoon.claim.not_enough_emeralds": "Emerald Anda tidak mencukupi untuk membeli lahan ini!",
+  "zootycoon.build.outside_claim": "Lokasi bangunan harus berada di dalam lahan klaim Anda!",
+  "zootycoon.welcome.message": "Selamat datang di Zoo Tycoon! Gunakan Build Tool Anda untuk mulai membangun!"
+}
+

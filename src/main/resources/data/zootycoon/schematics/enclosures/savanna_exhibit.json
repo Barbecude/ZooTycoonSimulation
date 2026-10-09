@@ -1,0 +1,17 @@
+{
+  "id": "zootycoon:savanna_exhibit",
+  "name": "Kandang Sabana Terbuka",
+  "category": "enclosures",
+  "subcategory": "savanna",
+  "author": "Zoo Architecture",
+  "dimensions": {
+    "x": 16,
+    "y": 6,
+    "z": 16
+  },
+  "description": "Kandang sabana luas berpagar ganda dengan kolam minum alami.",
+  "builderHiringCost": 25,
+  "defaultPrice": 50,
+  "isCustom": false
+}
+

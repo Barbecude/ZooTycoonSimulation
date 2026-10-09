@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "zootycoon",
+  "version": "${version}",
+  "name": "Zoo Tycoon Simulation",
+  "description": "Customizable Zoo Tycoon simulation mod for Minecraft featuring land claiming, schematic builders, and custom building designer.",
+  "authors": [
+    "Zevaldo"
+  ],
+  "contact": {
+    "homepage": ""
+  },
+  "license": "MIT",
+  "icon": "assets/zootycoon/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "net.zootycoon.ZooTycoonMod"
+    ],
+    "client": [
+      "net.zootycoon.client.ZooTycoonClient"
+    ]
+  },
+  "mixins": [
+    "zootycoon.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.0",
+    "minecraft": "~26.3",
+    "java": ">=21",
+    "fabric-api": "*",
+    "owo": ">=0.13.0"
+  }
+}
+

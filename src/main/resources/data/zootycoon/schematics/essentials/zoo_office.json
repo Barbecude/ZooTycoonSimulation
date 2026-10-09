@@ -1,0 +1,17 @@
+{
+  "id": "zootycoon:zoo_office",
+  "name": "Zoo Office",
+  "category": "essentials",
+  "subcategory": "management",
+  "author": "Zoo Management",
+  "dimensions": {
+    "x": 9,
+    "y": 7,
+    "z": 9
+  },
+  "description": "Kantor administrasi zoo, pelayanan informasi, dan keuangan.",
+  "builderHiringCost": 15,
+  "defaultPrice": 35,
+  "isCustom": false
+}
+
