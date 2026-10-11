@@ -1,5 +1,5 @@
 plugins {
-    id 'fabric-loom' version '1.18.2'
+    id 'fabric-loom' version '1.7.4'
     id 'maven-publish'
 }
 
@@ -16,28 +16,16 @@ repositories {
         name = 'Fabric'
         url = 'https://maven.fabricmc.net/'
     }
-    maven {
-        name = 'Wisp Forest Releases'
-        url = 'https://maven.wispforest.io/releases/'
-    }
-    maven {
-        name = 'JitPack'
-        url = 'https://jitpack.io'
-    }
 }
 
 dependencies {
-    // Minecraft 26.3 & Official Mojang Mappings
+    // Minecraft 1.21.1 & Official Mojang Mappings
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     mappings loom.officialMojangMappings()
 
     // Fabric Loader & Fabric API
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-
-    // Modern UI Framework: owo-lib (Wisp Forest)
-    modImplementation "io.wispforest:owo-lib:${project.owo_version}"
-    include "io.wispforest:owo-sentinel:${project.owo_version}"
 }
 
 processResources {
@@ -53,20 +41,45 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    it.options.release = 25
+    it.options.release = 21
 }
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
+        languageVersion = JavaLanguageVersion.of(21)
     }
-    withSourcesJar()
-    sourceCompatibility = JavaVersion.VERSION_25
-    targetCompatibility = JavaVersion.VERSION_25
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 jar {
     from("LICENSE.txt") {
         rename { "${it}_${project.base.archivesName.get()}" }
     }
+}
+
+// Copy mod jar to Modrinth profile after build
+def modrinthModsPath = "C:\\Users\\Zevaldo\\AppData\\Roaming\\ModrinthApp\\profiles\\Fresh & Smooth\\mods"
+
+tasks.register('copyToModrinth') {
+    doLast {
+        def modrinthDir = file(modrinthModsPath)
+        if (!modrinthDir.exists()) {
+            modrinthDir.mkdirs()
+            println "Created mods directory: ${modrinthModsPath}"
+        }
+
+        def remapJarTask = tasks.findByName('remapJar')
+        def jarFile = remapJarTask != null ? remapJarTask.archiveFile.get().asFile : tasks.named('jar').get().archiveFile.get().asFile
+        def destFile = new File(modrinthDir, jarFile.name)
+        copy {
+            from jarFile
+            into modrinthDir
+        }
+        println "✓ Copied mod to Modrinth: ${destFile.name}"
+    }
+}
+
+tasks.named('build').configure {
+    finalizedBy 'copyToModrinth'
 }

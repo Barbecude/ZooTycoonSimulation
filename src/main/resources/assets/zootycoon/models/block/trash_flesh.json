@@ -1,0 +1,6 @@
+{
+    "parent": "zootycoon:block/flat_item_base",
+    "textures": {
+        "layer0": "minecraft:item/rotten_flesh"
+    }
+}

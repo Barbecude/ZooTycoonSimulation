@@ -3,10 +3,13 @@
   "minVersion": "0.8",
   "package": "net.zootycoon.mixin",
   "compatibilityLevel": "JAVA_21",
-  "mixins": [],
-  "client": [],
+  "mixins": [
+    "compat.FieldGuideScanUnlockMixin"
+  ],
+  "client": [
+    "client.MouseHandlerMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   }
 }
-

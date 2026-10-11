@@ -1,7 +1,6 @@
 package net.zootycoon.economy;
 
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 
@@ -69,6 +68,16 @@ public class EconomyConfig {
             rawCost += pricePerUnit * entry.getValue();
         }
         return (int) Math.ceil(rawCost * convenienceSurcharge);
+    }
+
+    public static int calculateBuilderWage(int totalBlocks) {
+        if (totalBlocks <= 15) return 2;
+        if (totalBlocks <= 30) return 4;
+        if (totalBlocks <= 60) return 8;
+        if (totalBlocks <= 120) return 18;
+        if (totalBlocks <= 250) return 35;
+        if (totalBlocks <= 500) return 75;
+        return 75 + (int) Math.ceil((totalBlocks - 500) * 0.2);
     }
 }
 

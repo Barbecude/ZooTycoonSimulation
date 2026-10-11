@@ -79,8 +79,8 @@ public class ZooClaim {
 
     public CompoundTag toNbt() {
         CompoundTag tag = new CompoundTag();
-        tag.putUUID("claimId", claimId);
-        tag.putUUID("ownerUuid", ownerUuid);
+        tag.putString("claimId", claimId.toString());
+        tag.putString("ownerUuid", ownerUuid.toString());
         tag.putString("ownerName", ownerName);
         tag.putInt("minX", box.minX());
         tag.putInt("maxX", box.maxX());
@@ -94,18 +94,18 @@ public class ZooClaim {
     }
 
     public static ZooClaim fromNbt(CompoundTag tag) {
-        UUID claimId = tag.getUUID("claimId");
-        UUID ownerUuid = tag.getUUID("ownerUuid");
-        String ownerName = tag.getString("ownerName");
+        UUID claimId = tag.contains("claimId") ? UUID.fromString(tag.getString("claimId")) : UUID.randomUUID();
+        UUID ownerUuid = tag.contains("ownerUuid") ? UUID.fromString(tag.getString("ownerUuid")) : UUID.randomUUID();
+        String ownerName = tag.contains("ownerName") ? tag.getString("ownerName") : "Player";
         int minX = tag.getInt("minX");
         int maxX = tag.getInt("maxX");
         int minZ = tag.getInt("minZ");
         int maxZ = tag.getInt("maxZ");
-        int minY = tag.getInt("minY");
-        int maxY = tag.getInt("maxY");
+        int minY = tag.contains("minY") ? tag.getInt("minY") : -64;
+        int maxY = tag.contains("maxY") ? tag.getInt("maxY") : 320;
         BoundingBox box = new BoundingBox(minX, minY, minZ, maxX, maxY, maxZ);
-        ClaimTier tier = ClaimTier.valueOf(tag.getString("tier"));
-        long createdAt = tag.getLong("createdAt");
+        ClaimTier tier = tag.contains("tier") ? ClaimTier.valueOf(tag.getString("tier")) : ClaimTier.TIER_1_SMALL;
+        long createdAt = tag.contains("createdAt") ? tag.getLong("createdAt") : System.currentTimeMillis();
         return new ZooClaim(claimId, ownerUuid, ownerName, box, tier, createdAt);
     }
 }

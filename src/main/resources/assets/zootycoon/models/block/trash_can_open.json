@@ -1,0 +1,8 @@
+{
+    "parent": "zootycoon:block/custom/trash_can_open",
+    "textures": {
+        "all": "zootycoon:block/trash_can",
+        "particle": "zootycoon:block/trash_can",
+        "1": "zootycoon:block/trash_can"
+    }
+}

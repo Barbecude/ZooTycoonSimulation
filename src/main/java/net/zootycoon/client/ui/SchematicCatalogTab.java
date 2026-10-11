@@ -4,111 +4,286 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtAccounter;
+import net.minecraft.nbt.NbtIo;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import net.zootycoon.ZooTycoonMod;
 import net.zootycoon.client.render.PlacementPreviewRenderer;
+import net.zootycoon.item.ZooItems;
 import net.zootycoon.network.ZooNetworkPayloads;
+import net.zootycoon.schematic.SchematicScanner;
 import net.zootycoon.schematic.ZooSchematic;
 import net.zootycoon.schematic.ZooSchematicRegistry;
 
-import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
 
 public class SchematicCatalogTab {
     private final MainManagementScreen parent;
-    private final String category;
+    private String category;
     private List<ZooSchematic> schematics;
     private ZooSchematic selectedSchematic = null;
+    private List<Map.Entry<Item, Integer>> cachedMaterials = Collections.emptyList();
 
     public SchematicCatalogTab(MainManagementScreen parent, String category) {
         this.parent = parent;
         this.category = category;
     }
 
+    private void updateSelected(ZooSchematic schem) {
+        this.selectedSchematic = schem;
+        if (schem != null) {
+            this.cachedMaterials = loadMaterials(schem);
+        } else {
+            this.cachedMaterials = Collections.emptyList();
+        }
+    }
+
+    private List<Map.Entry<Item, Integer>> loadMaterials(ZooSchematic schem) {
+        if (schem == null) return Collections.emptyList();
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) return Collections.emptyList();
+        Path nbtFile = ZooSchematicRegistry.getCustomSchematicsDir().resolve(schem.getStructureLocation().getPath() + ".nbt");
+        if (Files.exists(nbtFile)) {
+            try {
+                CompoundTag tag = NbtIo.readCompressed(nbtFile, NbtAccounter.unlimitedHeap());
+                StructureTemplate template = new StructureTemplate();
+                template.load(mc.level.holderLookup(Registries.BLOCK), tag);
+                var scan = SchematicScanner.scan(template);
+                List<Map.Entry<Item, Integer>> list = new ArrayList<>(scan.requiredMaterials().entrySet());
+                list.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
+                ZooTycoonMod.LOGGER.info("Loaded {} distinct materials for schematic {}", list.size(), schem.getName());
+                return list;
+            } catch (Exception e) {
+                ZooTycoonMod.LOGGER.error("Failed to load materials for " + schem.getName(), e);
+            }
+        }
+        return Collections.emptyList();
+    }
+
     public void init(MainManagementScreen screen) {
         this.schematics = ZooSchematicRegistry.getByCategory(category);
+        if (selectedSchematic != null && !schematics.contains(selectedSchematic)) {
+            selectedSchematic = null;
+        }
         if (selectedSchematic == null && !schematics.isEmpty()) {
-            selectedSchematic = schematics.get(0);
+            updateSelected(schematics.get(0));
+        } else if (selectedSchematic != null && cachedMaterials.isEmpty()) {
+            this.cachedMaterials = loadMaterials(selectedSchematic);
         }
 
-        int listWidth = 180;
+        int listWidth = 190;
         int listX = 20;
-        int startY = 60;
 
-        // Button: + Add Schematic (Studio)
-        screen.addRenderableWidget(Button.builder(Component.translatable("zootycoon.ui.btn.add_schematic"), b -> {
+        // Category Switcher Buttons: Kandang vs Fasilitas with active state
+        int catBtnW = (listWidth - 4) / 2;
+        int catY = 48;
+
+        ZooButton kandangBtn = new ZooButton(listX, catY, catBtnW, 20, Component.literal("Kandang"), b -> {
+            if (!"enclosures".equals(this.category)) {
+                this.category = "enclosures";
+                this.selectedSchematic = null;
+                screen.setView(screen.getCurrentView());
+            }
+        });
+        kandangBtn.setSelected("enclosures".equals(this.category));
+        screen.addWidgetPublic(kandangBtn);
+
+        ZooButton fasilitasBtn = new ZooButton(listX + catBtnW + 4, catY, catBtnW, 20, Component.literal("Fasilitas"), b -> {
+            if (!"essentials".equals(this.category)) {
+                this.category = "essentials";
+                this.selectedSchematic = null;
+                screen.setView(screen.getCurrentView());
+            }
+        });
+        fasilitasBtn.setSelected("essentials".equals(this.category));
+        screen.addWidgetPublic(fasilitasBtn);
+
+        int startY = catY + 24;
+
+        // Custom Button: + Desain Baru di Studio
+        screen.addWidgetPublic(new ZooButton(listX, startY, listWidth, 22, Component.literal("+ Desain Baru di Studio (128x128)"), b -> {
             ClientPlayNetworking.send(new ZooNetworkPayloads.EnterStudioPayload(category));
             screen.onClose();
-        }).bounds(listX, startY, listWidth, 20).build());
+        }).setCustomIcon(ZooTycoonMod.id("textures/gui/icons/add_enclosure.png")).asPrimary());
 
-        // Buttons for schematics
-        int itemY = startY + 26;
+        // Custom Buttons for schematics list
+        int itemY = startY + 28;
         for (ZooSchematic schem : schematics) {
-            screen.addRenderableWidget(Button.builder(Component.literal(schem.getName()), b -> {
-                this.selectedSchematic = schem;
-            }).bounds(listX, itemY, listWidth, 22).build());
+            String label = (schem == selectedSchematic ? "> " : "  ") + schem.getName();
+            screen.addWidgetPublic(new ZooButton(listX, itemY, listWidth, 22, Component.literal(label), b -> {
+                updateSelected(schem);
+                screen.setView(screen.getCurrentView());
+            }).setLeftAligned(true).setSelected(schem == selectedSchematic));
             itemY += 26;
         }
 
-        // Action Button: Select Location to Build
-        int detailX = listX + listWidth + 25;
-        int actionBtnY = screen.height - 45;
-        screen.addRenderableWidget(Button.builder(Component.literal("Pilih Lokasi Bangun & Preview In-World"), b -> {
-            if (selectedSchematic != null) {
+        // Action Buttons: Place, Edit, Delete (Custom ZooButtons)
+        if (selectedSchematic != null) {
+            int detailX = listX + listWidth + 25;
+            int detailWidth = parent.width - detailX - 25;
+            int actionBtnY = screen.height - 42;
+
+            int btnWidth1 = (int) (detailWidth * 0.44);
+            int btnWidth2 = (int) (detailWidth * 0.34);
+            int btnWidth3 = detailWidth - btnWidth1 - btnWidth2 - 8;
+
+            // Place button
+            screen.addWidgetPublic(new ZooButton(detailX, actionBtnY, btnWidth1, 24, Component.literal("Tempatkan di Zoo"), b -> {
                 PlacementPreviewRenderer.setActiveSchematic(selectedSchematic);
                 Minecraft mc = Minecraft.getInstance();
                 if (mc.player != null) {
+                    boolean hasStick = false;
+                    for (int i = 0; i < 9; i++) {
+                        if (mc.player.getInventory().getItem(i).is(net.minecraft.world.item.Items.STICK)) {
+                            mc.player.getInventory().selected = i;
+                            hasStick = true;
+                            break;
+                        }
+                    }
+                    if (!hasStick) {
+                        for (int i = 9; i < mc.player.getInventory().getContainerSize(); i++) {
+                            if (mc.player.getInventory().getItem(i).is(net.minecraft.world.item.Items.STICK)) {
+                                hasStick = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!hasStick) {
+                        mc.player.displayClientMessage(
+                                Component.literal("Bos butuh Stick di tas untuk menempatkan cetak biru!").withStyle(ChatFormatting.YELLOW),
+                                true
+                        );
+                        return;
+                    }
                     mc.player.displayClientMessage(
-                            Component.literal("Arahkan pandangan dan klik kanan blok dengan Build Tool untuk menaruh bangunan.")
+                            Component.literal("Arahkan ke area tanah zoo, lalu Klik Kanan dengan Stick untuk membangun.")
                                     .withStyle(ChatFormatting.AQUA),
-                            false
+                            true
                     );
                 }
                 screen.onClose();
-            }
-        }).bounds(detailX, actionBtnY, 260, 24).build());
+            }).setCustomIcon(ZooTycoonMod.id("textures/gui/icons/add_green.png")).asEmerald());
+
+            // Edit in Studio button
+            screen.addWidgetPublic(new ZooButton(detailX + btnWidth1 + 4, actionBtnY, btnWidth2, 24, Component.literal("Edit Desain di Studio"), b -> {
+                ClientPlayNetworking.send(new ZooNetworkPayloads.EditStudioPayload(selectedSchematic.getId(), category));
+                screen.onClose();
+            }).setCustomIcon(ZooTycoonMod.id("textures/gui/icons/pencil.png")).asGold());
+
+            // Delete button
+            screen.addWidgetPublic(new ZooButton(detailX + btnWidth1 + btnWidth2 + 8, actionBtnY, btnWidth3, 24, Component.literal("Hapus"), b -> {
+                ZooSchematicRegistry.deleteCustomSchematic(selectedSchematic.getId());
+                this.selectedSchematic = null;
+                screen.setView(screen.getCurrentView());
+            }).setCustomIcon(ZooTycoonMod.id("textures/gui/icons/trash_can.png")).asDanger());
+        }
     }
 
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         Minecraft mc = Minecraft.getInstance();
-        int listWidth = 180;
+        int listWidth = 190;
         int listX = 20;
         int detailX = listX + listWidth + 25;
         int detailWidth = parent.width - detailX - 25;
-        int startY = 60;
-        int detailHeight = parent.height - startY - 55;
+        int panelStartY = 44;
+        int detailHeight = parent.height - panelStartY - 48;
 
-        // Detail panel background
-        graphics.fill(detailX, startY, detailX + detailWidth, startY + detailHeight, 0xAA222222);
-        graphics.renderOutline(detailX, startY, detailWidth, detailHeight, 0xFF444444);
+        // 1. Left List Container Background & Border (Essential Obsidian Slate)
+        int listTotalHeight = parent.height - panelStartY - 25;
+        graphics.fill(listX - 5, panelStartY, listX + listWidth + 5, panelStartY + listTotalHeight, 0xF20F1219);
+        graphics.fill(listX - 5, panelStartY, listX + listWidth + 5, panelStartY + 1, 0xFF242A38);
+        graphics.fill(listX - 5, panelStartY + listTotalHeight - 1, listX + listWidth + 5, panelStartY + listTotalHeight, 0xFF242A38);
+        graphics.fill(listX - 5, panelStartY, listX - 4, panelStartY + listTotalHeight, 0xFF242A38);
+        graphics.fill(listX + listWidth + 4, panelStartY, listX + listWidth + 5, panelStartY + listTotalHeight, 0xFF242A38);
+
+        // 2. Right Detail Panel Background & Border (Essential Obsidian Slate)
+        graphics.fill(detailX, panelStartY, detailX + detailWidth, panelStartY + detailHeight, 0xF20F1219);
+        graphics.fill(detailX, panelStartY, detailX + detailWidth, panelStartY + 1, 0xFF242A38);
+        graphics.fill(detailX, panelStartY + detailHeight - 1, detailX + detailWidth, panelStartY + detailHeight, 0xFF242A38);
+        graphics.fill(detailX, panelStartY, detailX + 1, panelStartY + detailHeight, 0xFF242A38);
+        graphics.fill(detailX + detailWidth - 1, panelStartY, detailX + detailWidth, panelStartY + detailHeight, 0xFF242A38);
+
+        int startY = panelStartY;
 
         if (selectedSchematic != null) {
-            // Header
-            graphics.drawString(mc.font, selectedSchematic.getName(), detailX + 15, startY + 15, 0xFFFFFF, false);
-            graphics.drawString(mc.font, "Kategori: " + selectedSchematic.getCategory() + " (" + selectedSchematic.getSubcategory() + ")", detailX + 15, startY + 30, 0xAAAAAA, false);
-            graphics.drawString(mc.font, "Arsitek: " + selectedSchematic.getAuthor(), detailX + 15, startY + 45, 0x888888, false);
+            // Header: Blueprint Title
+            graphics.drawString(mc.font, Component.literal(selectedSchematic.getName()), detailX + 15, startY + 15, 0xFFFFFFFF, true);
+
+            // Subtitle / Dimensions
+            var dim = selectedSchematic.getDimensions();
+            String dimText = "Dimensi: " + dim.getX() + " x " + dim.getY() + " x " + dim.getZ() + " Blok (Volume: " + (dim.getX() * dim.getY() * dim.getZ()) + " m3)";
+            graphics.drawString(mc.font, Component.literal(dimText), detailX + 15, startY + 30, 0xFF8B949E, false);
+
+            // Cost summary
+            String costText = "Biaya Jasa Pembangun: " + selectedSchematic.getBuilderHiringCost() + " Emerald";
+            graphics.drawString(mc.font, Component.literal(costText), detailX + 15, startY + 44, 0xFFD0D7DE, true);
 
             // Divider
-            graphics.fill(detailX + 15, startY + 60, detailX + detailWidth - 15, startY + 61, 0xFF444444);
+            graphics.fill(detailX + 15, startY + 62, detailX + detailWidth - 15, startY + 63, 0xFF2A2E37);
 
-            // Dimensions
-            var dim = selectedSchematic.getDimensions();
-            String dimText = "Dimensi: " + dim.getX() + " x " + dim.getY() + " x " + dim.getZ() + " Blok (P x T x L)";
-            graphics.drawString(mc.font, dimText, detailX + 15, startY + 70, 0x55FF55, false);
+            // Material List Header (Grid)
+            graphics.drawString(mc.font, Component.literal("Daftar Kebutuhan Material (" + cachedMaterials.size() + " Jenis):"), detailX + 15, startY + 74, 0xFFFFFFFF, true);
 
-            // Builder cost
-            String costText = "Biaya Sewa Builder: " + selectedSchematic.getBuilderHiringCost() + " Emeralds ❇";
-            graphics.drawString(mc.font, costText, detailX + 15, startY + 85, 0x55FFFF, false);
+            int gridStartY = startY + 90;
+            int slotSize = 22;
+            int gap = 3;
+            int step = slotSize + gap;
+            int cols = Math.max(1, (detailWidth - 30) / step);
 
-            // Description
-            graphics.drawString(mc.font, "Deskripsi:", detailX + 15, startY + 110, 0xFFFFFF, false);
-            graphics.drawWordWrap(mc.font, Component.literal(selectedSchematic.getDescription()), detailX + 15, startY + 125, detailWidth - 30, 0xCCCCCC);
+            if (cachedMaterials.isEmpty()) {
+                graphics.drawString(mc.font, Component.literal("Tidak ada material khusus yang dibutuhkan."), detailX + 15, gridStartY + 10, 0xFFAAAAAA, true);
+            } else {
+                for (int i = 0; i < cachedMaterials.size(); i++) {
+                    var entry = cachedMaterials.get(i);
+                    int col = i % cols;
+                    int row = i / cols;
+                    int slotX = detailX + 15 + col * step;
+                    int slotY = gridStartY + row * step;
 
-            // Workflow note
-            graphics.drawString(mc.font, "Alur Pembangunan:", detailX + 15, startY + 165, 0xFFD700, false);
-            String note = "1. Klik tombol di bawah.\n2. Arahkan ke lahan kebun binatang Anda (preview berpendar hijau).\n3. Klik kanan untuk memulai kontraktor!";
-            graphics.drawWordWrap(mc.font, Component.literal(note), detailX + 15, startY + 180, detailWidth - 30, 0xAAAAAA);
+                    // Stop if overflowing panel before buttons
+                    if (slotY + slotSize > startY + detailHeight - 45) {
+                        int remaining = cachedMaterials.size() - i;
+                        graphics.drawString(mc.font, Component.literal("+" + remaining + " jenis lainnya..."), slotX, slotY + 6, 0xFF888888, true);
+                        break;
+                    }
+
+                    // Slot box background & border
+                    graphics.fill(slotX, slotY, slotX + slotSize, slotY + slotSize, 0xFF22262E);
+                    graphics.fill(slotX, slotY, slotX + slotSize, slotY + 1, 0xFF353B47);
+                    graphics.fill(slotX, slotY + slotSize - 1, slotX + slotSize, slotY + slotSize, 0xFF353B47);
+                    graphics.fill(slotX, slotY, slotX + 1, slotY + slotSize, 0xFF353B47);
+                    graphics.fill(slotX + slotSize - 1, slotY, slotX + slotSize, slotY + slotSize, 0xFF353B47);
+
+                    // Render material icon & quantity
+                    ItemStack stack = new ItemStack(entry.getKey());
+                    graphics.renderItem(stack, slotX + 3, slotY + 3);
+                    graphics.renderItemDecorations(mc.font, stack, slotX + 3, slotY + 3, String.valueOf(entry.getValue()));
+
+                    // Tooltip on hover
+                    if (mouseX >= slotX && mouseX <= slotX + slotSize && mouseY >= slotY && mouseY <= slotY + slotSize) {
+                        graphics.renderTooltip(mc.font, stack, mouseX, mouseY);
+                    }
+                }
+            }
         } else {
-            graphics.drawString(mc.font, "Pilih salah satu bangunan di daftar sebelah kiri.", detailX + 15, startY + 15, 0xAAAAAA, false);
+            graphics.drawString(mc.font, Component.literal("BELUM ADA BLUEPRINT TERSIMPAN DI KATEGORI INI"), detailX + 15, startY + 20, 0xFFFFFFFF, true);
+            graphics.fill(detailX + 15, startY + 36, detailX + detailWidth - 15, startY + 37, 0xFF242A38);
+
+            String help = "Katalog ini murni data-driven berdasarkan kreasi Anda sendiri.\n\n"
+                    + "Cara Membuat Bangunan Baru:\n"
+                    + "1. Klik tombol '+ Desain Baru di Studio (128x128)' di sebelah kiri.\n"
+                    + "2. Anda akan dipindahkan ke Studio Khusus berukuran 128x128 blok kosong.\n"
+                    + "3. Bangun kandang atau fasilitas kebun binatang sesuka Anda.\n"
+                    + "4. Klik tombol Simpan Blueprint, beri nama, lalu simpan.\n"
+                    + "5. Bangunan Anda otomatis siap dibangun di area tanah zoo!";
+            graphics.drawWordWrap(mc.font, Component.literal(help), detailX + 15, startY + 48, detailWidth - 30, 0xFFCCCCCC);
         }
     }
 

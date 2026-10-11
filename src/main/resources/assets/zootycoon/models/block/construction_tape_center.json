@@ -1,0 +1,23 @@
+{
+  "textures": {
+    "tape": "minecraft:block/white_wool",
+    "post": "minecraft:block/oak_planks",
+    "particle": "minecraft:block/oak_planks"
+  },
+  "elements": [
+    {
+      "name": "post",
+      "from": [6, 0, 6],
+      "to": [10, 16, 10],
+      "faces": {
+        "north": { "uv": [1, 0, 5, 16], "texture": "#post" },
+        "east": { "uv": [5, 0, 9, 16], "texture": "#post" },
+        "south": { "uv": [9, 0, 13, 16], "texture": "#post" },
+        "west": { "uv": [12, 0, 16, 16], "texture": "#post" },
+        "up": { "uv": [6, 6, 10, 10], "texture": "#post" },
+        "down": { "uv": [6, 6, 10, 10], "texture": "#post" }
+      }
+    }
+  ]
+}
+

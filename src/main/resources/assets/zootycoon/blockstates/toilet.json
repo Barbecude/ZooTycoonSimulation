@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=east": {
+      "model": "zootycoon:block/toilet",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "zootycoon:block/toilet"
+    },
+    "facing=south": {
+      "model": "zootycoon:block/toilet",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "zootycoon:block/toilet",
+      "y": 270
+    }
+  }
+}

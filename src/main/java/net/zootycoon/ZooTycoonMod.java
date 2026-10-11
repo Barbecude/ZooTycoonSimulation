@@ -29,8 +29,10 @@ public class ZooTycoonMod implements ModInitializer {
     public void onInitialize() {
         LOGGER.info("Initializing Zoo Tycoon Simulation for Fabric 26.3...");
 
-        // 1. Register items and blocks
+        // 1. Register items, blocks and entities
         ZooItems.register();
+        net.zootycoon.block.ZooBlocks.register();
+        net.zootycoon.entity.ZooEntities.register();
 
         // 2. Initialize schematic registry & scan default catalog
         ZooSchematicRegistry.init();
@@ -44,6 +46,29 @@ public class ZooTycoonMod implements ModInitializer {
         // 5. Initialize Construction Manager ticks
         ConstructionManager.initServerEvents();
 
+        // 5b. Initialize Zoo Animal Hunger, Hunter incursions, and Hostile Mob Claims Barrier
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_WORLD_TICK.register(level -> {
+            net.zootycoon.claim.ZooClaimManager.tickServer(level);
+            net.zootycoon.animal.ZooAnimalHungerManager.tickServer(level);
+            net.zootycoon.hunter.ZooHunterManager.tickServer(level);
+        });
+
+        // 5c. Spyglass right-click animal registration
+        net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
+            if (!world.isClientSide() && player instanceof net.minecraft.server.level.ServerPlayer sp && entity instanceof net.minecraft.world.entity.LivingEntity living) {
+                net.minecraft.world.item.ItemStack held = player.getItemInHand(hand);
+                if (held.is(Items.SPYGLASS)) {
+                    if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)) {
+                        boolean ok = net.zootycoon.animal.ZooAnimalHungerManager.registerAnimalFromSpyglass(sp, living);
+                        if (ok) {
+                            return net.minecraft.world.InteractionResult.SUCCESS;
+                        }
+                    }
+                }
+            }
+            return net.minecraft.world.InteractionResult.PASS;
+        });
+
         // 6. Initialize Creative Studio Dimension management
         StudioDimensionManager.initServerEvents();
 
@@ -54,10 +79,10 @@ public class ZooTycoonMod implements ModInitializer {
             if (!player.getTags().contains(starterTag)) {
                 player.addTag(starterTag);
 
-                // Give Build Tool
-                ItemStack buildTool = new ItemStack(ZooItems.BUILD_TOOL);
-                if (!player.getInventory().add(buildTool)) {
-                    player.drop(buildTool, false);
+                // Give Starter Sticks for Zoo Management
+                ItemStack starterSticks = new ItemStack(Items.STICK, 4);
+                if (!player.getInventory().add(starterSticks)) {
+                    player.drop(starterSticks, false);
                 }
 
                 // Give Starter Emeralds
@@ -70,6 +95,11 @@ public class ZooTycoonMod implements ModInitializer {
                 player.sendSystemMessage(Component.translatable("zootycoon.welcome.message"));
                 LOGGER.info("Gave starter pack to player {}", player.getName().getString());
             }
+
+            // Sync claims to player
+            ZooClaimManager.get((net.minecraft.server.level.ServerLevel) player.level()).syncToPlayer(player);
+            // Sync staff to player
+            net.zootycoon.economy.ZooStaffManager.get((net.minecraft.server.level.ServerLevel) player.level()).syncToPlayer(player);
         });
 
         LOGGER.info("Zoo Tycoon Simulation initialized successfully.");

@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "B": "minecraft:stone_button",
+    "Q": "minecraft:quartz"
+  },
+  "pattern": [
+    "QQQ",
+    "QBQ",
+    " Q "
+  ],
+  "result": {
+    "count": 1,
+    "id": "zootycoon:toilet"
+  }
+}
+

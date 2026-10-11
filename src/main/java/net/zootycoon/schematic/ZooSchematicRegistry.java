@@ -4,12 +4,17 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.Vec3i;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtAccounter;
+import net.minecraft.nbt.NbtIo;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.zootycoon.ZooTycoonMod;
 
 import java.io.File;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -21,61 +26,7 @@ public class ZooSchematicRegistry {
 
     public static void init() {
         SCHEMATICS.clear();
-        registerDefaultExamples();
         loadCustomSchematics();
-    }
-
-    private static void registerDefaultExamples() {
-        // Essentials
-        register(new ZooSchematic(
-                "zootycoon:builders_hut", "Builder's Hut", "essentials", "construction",
-                "Zoo Management", new Vec3i(7, 6, 7),
-                "Kantor dan bengkel kerja kontraktor kebun binatang.",
-                10, 20, false, ZooTycoonMod.id("builders_hut")
-        ));
-
-        register(new ZooSchematic(
-                "zootycoon:zoo_office", "Zoo Office", "essentials", "management",
-                "Zoo Management", new Vec3i(9, 7, 9),
-                "Kantor administrasi zoo, pelayanan informasi, dan keuangan.",
-                15, 35, false, ZooTycoonMod.id("zoo_office")
-        ));
-
-        register(new ZooSchematic(
-                "zootycoon:ice_cream_stall", "Ice Cream Stall", "essentials", "food",
-                "Zoo Management", new Vec3i(5, 5, 5),
-                "Kios es krim menyegarkan untuk pengunjung kebun binatang.",
-                8, 16, false, ZooTycoonMod.id("ice_cream_stall")
-        ));
-
-        register(new ZooSchematic(
-                "zootycoon:drinks_stall", "Drinks Stall", "essentials", "food",
-                "Zoo Management", new Vec3i(5, 5, 5),
-                "Kios aneka minuman dingin dan jus buah segar.",
-                8, 16, false, ZooTycoonMod.id("drinks_stall")
-        ));
-
-        register(new ZooSchematic(
-                "zootycoon:burger_stall", "Burger Stall", "essentials", "food",
-                "Zoo Management", new Vec3i(6, 5, 6),
-                "Kios burger dan makanan cepat saji untuk mengisi tenaga turis.",
-                8, 18, false, ZooTycoonMod.id("burger_stall")
-        ));
-
-        // Enclosures
-        register(new ZooSchematic(
-                "zootycoon:savanna_exhibit", "Kandang Sabana Terbuka", "enclosures", "savanna",
-                "Zoo Architecture", new Vec3i(16, 6, 16),
-                "Kandang sabana luas berpagar ganda dengan kolam minum alami.",
-                25, 50, false, ZooTycoonMod.id("savanna_exhibit")
-        ));
-
-        register(new ZooSchematic(
-                "zootycoon:aviary_dome", "Kubah Aviari Burung", "enclosures", "aviary",
-                "Zoo Architecture", new Vec3i(14, 10, 14),
-                "Kubah kaca tinggi untuk aneka burung tropis.",
-                30, 65, false, ZooTycoonMod.id("aviary_dome")
-        ));
     }
 
     public static Path getCustomSchematicsDir() {
@@ -106,7 +57,8 @@ public class ZooSchematicRegistry {
                 int hiringCost = obj.has("builderHiringCost") ? obj.get("builderHiringCost").getAsInt() : 10;
                 int price = obj.has("defaultPrice") ? obj.get("defaultPrice").getAsInt() : 20;
 
-                ResourceLocation nbtLoc = ZooTycoonMod.id("custom_" + file.getName().replace(".json", ""));
+                String baseName = file.getName().replace(".json", "");
+                ResourceLocation nbtLoc = ZooTycoonMod.id(baseName);
                 ZooSchematic schem = new ZooSchematic(
                         id, name, category, subcategory, author, dimensions, desc, hiringCost, price, true, nbtLoc
                 );
@@ -116,6 +68,48 @@ public class ZooSchematicRegistry {
                 ZooTycoonMod.LOGGER.error("Failed to load custom schematic from file: " + file.getName(), e);
             }
         }
+    }
+
+    public static CompoundTag loadSchematicTag(MinecraftServer server, ZooSchematic schem) {
+        if (schem == null || server == null) return null;
+        if (schem.isCustom()) {
+            Path nbtFile = getCustomSchematicsDir().resolve(schem.getStructureLocation().getPath() + ".nbt");
+            if (Files.exists(nbtFile)) {
+                try {
+                    return NbtIo.readCompressed(nbtFile, NbtAccounter.unlimitedHeap());
+                } catch (Exception e) {
+                    ZooTycoonMod.LOGGER.error("Failed to load custom schematic NBT tag: " + nbtFile, e);
+                }
+            }
+        } else {
+            try {
+                ResourceLocation id = schem.getStructureLocation();
+                ResourceLocation path = ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "structure/" + id.getPath() + ".nbt");
+                var resOpt = server.getResourceManager().getResource(path);
+                if (resOpt.isPresent()) {
+                    try (var is = resOpt.get().open()) {
+                        return NbtIo.readCompressed(is, NbtAccounter.unlimitedHeap());
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        return null;
+    }
+
+    public static StructureTemplate loadTemplate(MinecraftServer server, ZooSchematic schem) {
+        if (schem.isCustom()) {
+            CompoundTag tag = loadSchematicTag(server, schem);
+            if (tag != null) {
+                try {
+                    StructureTemplate template = new StructureTemplate();
+                    template.load(server.registryAccess().lookupOrThrow(Registries.BLOCK), tag);
+                    return template;
+                } catch (Exception e) {
+                    ZooTycoonMod.LOGGER.error("Failed to parse custom schematic template: " + schem.getName(), e);
+                }
+            }
+        }
+        return server.getStructureManager().getOrCreate(schem.getStructureLocation());
     }
 
     public static void register(ZooSchematic schematic) {
@@ -130,6 +124,23 @@ public class ZooSchematicRegistry {
         return Collections.unmodifiableCollection(SCHEMATICS.values());
     }
 
+    public static boolean deleteCustomSchematic(String id) {
+        ZooSchematic schem = SCHEMATICS.remove(id);
+        if (schem != null) {
+            String baseName = schem.getStructureLocation().getPath();
+            Path jsonFile = getCustomSchematicsDir().resolve(baseName + ".json");
+            Path nbtFile = getCustomSchematicsDir().resolve(baseName + ".nbt");
+            try {
+                Files.deleteIfExists(jsonFile);
+                Files.deleteIfExists(nbtFile);
+                return true;
+            } catch (Exception e) {
+                ZooTycoonMod.LOGGER.error("Failed to delete schematic files for " + id, e);
+            }
+        }
+        return false;
+    }
+
     public static List<ZooSchematic> getByCategory(String category) {
         List<ZooSchematic> list = new ArrayList<>();
         for (ZooSchematic s : SCHEMATICS.values()) {
@@ -140,4 +151,3 @@ public class ZooSchematicRegistry {
         return list;
     }
 }
-

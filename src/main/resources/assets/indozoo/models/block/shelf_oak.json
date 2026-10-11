@@ -1,1 +1,8 @@
-{\n  "parent": "indozoo:block/shelf_base",\n  "textures": {\n    "bottom": "minecraft:block/oak_planks",\n    "top": "minecraft:block/oak_planks",\n    "side": "minecraft:block/oak_planks"\n  }\n}\n
+{
+  "parent": "indozoo:block/shelf_base",
+  "textures": {
+    "bottom": "minecraft:block/oak_planks",
+    "top": "minecraft:block/oak_planks",
+    "side": "minecraft:block/oak_planks"
+  }
+}
