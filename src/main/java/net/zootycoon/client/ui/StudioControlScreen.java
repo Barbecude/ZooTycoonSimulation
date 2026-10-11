@@ -78,8 +78,13 @@ public class StudioControlScreen extends Screen {
     }
 
     @Override
+    protected void renderBlurredBackground(float delta) {
+        // Disable 1.21 menu background blur
+    }
+
+    @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        this.renderBackground(graphics, mouseX, mouseY, delta);
+        this.renderTransparentBackground(graphics);
 
         int panelWidth = 320;
         int panelHeight = 220;

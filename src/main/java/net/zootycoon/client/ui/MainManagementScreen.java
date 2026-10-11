@@ -113,33 +113,33 @@ public class MainManagementScreen extends Screen {
                             );
                         }
                     }
-            ).withIcon(ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/claim_land.png")));
+            ).withIcon(ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/claim_land.png"), 32, 32, 32, 32));
 
             // 2. Buildings Card -> OPENS BUILDINGS / ENCLOSURES CATALOG
             addRenderableWidget(new ZooGridCard(
                     col1X, row0Y, cardWidth, cardHeight,
                     "BANGUNAN",
                     card -> setView(ViewState.ENCLOSURES_CATALOG)
-            ).withIcon(ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/buildings.png")));
+            ).withIcon(ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/buildings.png"), 48, 48, 48, 48));
 
             // 3. Rekrut Pegawai Card -> OPENS STAFF RECRUITMENT VIEW
             addRenderableWidget(new ZooGridCard(
                     col0X, row1Y, cardWidth, cardHeight,
                     "REKRUT PEGAWAI",
                     card -> setView(ViewState.STAFF_RECRUITMENT)
-            ).withIcon(ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/staff.png")));
+            ).withIcon(ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/staff.png"), 32, 32, 32, 32));
 
             // 4. Kelola Kebun Binatang Card -> OPENS ANIMAL MANAGEMENT VIEW
             addRenderableWidget(new ZooGridCard(
                     col1X, row1Y, cardWidth, cardHeight,
                     "KELOLA KEBUN BINATANG",
                     card -> setView(ViewState.ANIMAL_MANAGEMENT)
-            ).withIcon(ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/animals.png")));
+            ).withIcon(ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/animals.png"), 32, 32, 32, 32));
         } else {
             // Essential-Mod Sub-view Header: Sleek Pill Back Button at top-left
             addRenderableWidget(new ZooButton(20, 14, 86, 22, Component.literal("Kembali"), b -> {
                 setView(ViewState.ROOT_GRID);
-            }).setCustomIcon(ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/back.png"), 15, 8).asPrimary());
+            }).setCustomIcon(ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/back.png"), 17, 9, 17, 9).asPrimary());
 
             // Initialize active subview
             switch (currentView) {
@@ -152,8 +152,13 @@ public class MainManagementScreen extends Screen {
     }
 
     @Override
+    protected void renderBlurredBackground(float delta) {
+        // Disable 1.21 menu background blur so the GUI remains crisp and doesn't conflict with shaders
+    }
+
+    @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        this.renderBackground(graphics, mouseX, mouseY, delta);
+        this.renderTransparentBackground(graphics);
 
         Minecraft mc = Minecraft.getInstance();
 
@@ -186,7 +191,7 @@ public class MainManagementScreen extends Screen {
                 graphics.fill(pillX, pillY - 2, pillX + 1, pillY + 14, 0xFF2B3342);
                 graphics.fill(pillX + pillW - 1, pillY - 2, pillX + pillW, pillY + 14, 0xFF2B3342);
 
-                graphics.blit(ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/emerald.png"), pillX + 4, pillY - 1, 0, 0, 12, 12, 12, 12);
+                graphics.blit(ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/emerald.png"), pillX + 4, pillY - 1, 0, 0, 12, 12, 16, 16);
                 graphics.drawString(this.font, Component.literal(balanceStr), pillX + 18, pillY + 2, 0xFF55FF55, false);
             }
         }

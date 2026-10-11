@@ -235,8 +235,8 @@ public class AnimalManagementTab {
 
                 if (!a.hasZookeeper()) {
                     // Exclamation mark for missing zookeeper
-                    graphics.blit(EXCLAMATION_ICON, badgeX, badgeY, 0, 0, 9, 16, 9, 16);
-                    if (mouseX >= badgeX && mouseX <= badgeX + 9 && mouseY >= badgeY && mouseY <= badgeY + 16) {
+                    graphics.blit(EXCLAMATION_ICON, badgeX, badgeY, 0, 0, 10, 10, 64, 64);
+                    if (mouseX >= badgeX && mouseX <= badgeX + 10 && mouseY >= badgeY && mouseY <= badgeY + 10) {
                         graphics.renderTooltip(font, Component.literal("Belum Ada Zookeeper!").withStyle(ChatFormatting.RED), mouseX, mouseY);
                     }
                     badgeX -= 13;
@@ -324,9 +324,9 @@ public class AnimalManagementTab {
         if (!selectedData.hasZookeeper()) {
             int titleW = font.width(rawSpecies);
             int exX = infoX + titleW + 6;
-            int exY = contentY + 11;
-            graphics.blit(EXCLAMATION_ICON, exX, exY, 0, 0, 9, 16, 9, 16);
-            if (mouseX >= exX && mouseX <= exX + 9 && mouseY >= exY && mouseY <= exY + 16) {
+            int exY = contentY + 13;
+            graphics.blit(EXCLAMATION_ICON, exX, exY, 0, 0, 11, 11, 64, 64);
+            if (mouseX >= exX && mouseX <= exX + 11 && mouseY >= exY && mouseY <= exY + 11) {
                 graphics.renderTooltip(font, Component.literal("Belum Ada Zookeeper Ditugaskan!").withStyle(ChatFormatting.RED), mouseX, mouseY);
             }
         }

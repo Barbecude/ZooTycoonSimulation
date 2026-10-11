@@ -16,6 +16,10 @@ public class ZooGridCard extends AbstractWidget {
     private final String cardSubtitle;
     private final OnPress onPress;
     private net.minecraft.resources.ResourceLocation iconTexture = null;
+    private int iconWidth = 32;
+    private int iconHeight = 32;
+    private int textureWidth = 32;
+    private int textureHeight = 32;
 
     public ZooGridCard(int x, int y, int width, int height,
                        String title, String subtitle,
@@ -33,7 +37,15 @@ public class ZooGridCard extends AbstractWidget {
     }
 
     public ZooGridCard withIcon(net.minecraft.resources.ResourceLocation icon) {
+        return withIcon(icon, 32, 32, 32, 32);
+    }
+
+    public ZooGridCard withIcon(net.minecraft.resources.ResourceLocation icon, int iconW, int iconH, int texW, int texH) {
         this.iconTexture = icon;
+        this.iconWidth = iconW;
+        this.iconHeight = iconH;
+        this.textureWidth = texW;
+        this.textureHeight = texH;
         return this;
     }
 
@@ -59,16 +71,15 @@ public class ZooGridCard extends AbstractWidget {
         // 3. Center the Icon, Title and Subtitle vertically
         int titleColor = hovered ? 0xFFFFFFFF : 0xFFE6EDF3;
         if (iconTexture != null) {
-            int iconSize = 48;
             int gap = 12;
             int textH = (cardSubtitle != null && !cardSubtitle.isEmpty()) ? 24 : 10;
-            int totalContentH = iconSize + gap + textH;
+            int totalContentH = iconHeight + gap + textH;
             int startContentY = this.getY() + (this.height - totalContentH) / 2;
 
-            int iconX = this.getX() + (this.width - iconSize) / 2;
-            graphics.blit(iconTexture, iconX, startContentY, 0, 0, iconSize, iconSize, iconSize, iconSize);
+            int iconX = this.getX() + (this.width - iconWidth) / 2;
+            graphics.blit(iconTexture, iconX, startContentY, 0, 0, iconWidth, iconHeight, textureWidth, textureHeight);
 
-            int titleY = startContentY + iconSize + gap;
+            int titleY = startContentY + iconHeight + gap;
             graphics.drawCenteredString(mc.font, Component.literal(cardTitle), this.getX() + (this.width / 2), titleY, titleColor);
 
             if (cardSubtitle != null && !cardSubtitle.isEmpty()) {

@@ -70,7 +70,7 @@ public class ZooHudOverlay {
         graphics.fill(x + badgeW - 1, y, x + badgeW, y + badgeH, 0xFF2A3140);
 
         // Custom Emerald Icon from Icons v.1.14
-        graphics.blit(EMERALD_ICON, x + 5, y + 3, 0, 0, 14, 14, 14, 14);
+        graphics.blit(EMERALD_ICON, x + 5, y + 3, 0, 0, 14, 14, 16, 16);
 
         // Emerald Count (Only the number)
         graphics.drawString(font, Component.literal(text), x + 23, y + 6, 0xFF55FF55, true);

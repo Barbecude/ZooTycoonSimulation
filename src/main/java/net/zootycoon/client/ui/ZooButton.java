@@ -20,6 +20,8 @@ public class ZooButton extends AbstractWidget {
     private net.minecraft.resources.ResourceLocation customIcon = null;
     private int customIconW = 0;
     private int customIconH = 0;
+    private int customTexW = 0;
+    private int customTexH = 0;
 
     // Palette Colors (Essential-Mod Minimalist Slate Aesthetic)
     private int bgColor = 0xFF14171F;
@@ -57,13 +59,19 @@ public class ZooButton extends AbstractWidget {
     }
 
     public ZooButton setCustomIcon(net.minecraft.resources.ResourceLocation icon) {
-        return setCustomIcon(icon, 14, 14);
+        return setCustomIcon(icon, 16, 16, 16, 16);
     }
 
     public ZooButton setCustomIcon(net.minecraft.resources.ResourceLocation icon, int w, int h) {
+        return setCustomIcon(icon, w, h, w, h);
+    }
+
+    public ZooButton setCustomIcon(net.minecraft.resources.ResourceLocation icon, int w, int h, int texW, int texH) {
         this.customIcon = icon;
         this.customIconW = w;
         this.customIconH = h;
+        this.customTexW = texW;
+        this.customTexH = texH;
         return this;
     }
 
@@ -147,17 +155,19 @@ public class ZooButton extends AbstractWidget {
         int textY = y + (h - 8) / 2;
 
         if (customIcon != null) {
-            int iW = customIconW > 0 ? customIconW : 14;
-            int iH = customIconH > 0 ? customIconH : 14;
+            int iW = customIconW > 0 ? customIconW : 16;
+            int iH = customIconH > 0 ? customIconH : 16;
+            int tW = customTexW > 0 ? customTexW : iW;
+            int tH = customTexH > 0 ? customTexH : iH;
             int iconY = y + (h - iH) / 2;
             if (leftAligned) {
-                graphics.blit(customIcon, x + 6, iconY, 0, 0, iW, iH, iW, iH);
+                graphics.blit(customIcon, x + 6, iconY, 0, 0, iW, iH, tW, tH);
                 graphics.drawString(mc.font, msg, x + 6 + iW + 4, textY, text, true);
             } else {
                 int textW = mc.font.width(msg);
                 int totalW = iW + 5 + textW;
                 int startX = x + (w - totalW) / 2;
-                graphics.blit(customIcon, startX, iconY, 0, 0, iW, iH, iW, iH);
+                graphics.blit(customIcon, startX, iconY, 0, 0, iW, iH, tW, tH);
                 graphics.drawString(mc.font, msg, startX + iW + 5, textY, text, true);
             }
         } else {

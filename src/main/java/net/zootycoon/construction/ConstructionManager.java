@@ -110,7 +110,6 @@ public class ConstructionManager {
                         int accepted = matchedSite.deliverMaterial(held);
                         if (accepted > 0) {
                             sLevel.playSound(null, entity.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-                            sLevel.playSound(null, entity.blockPosition(), SoundEvents.ANVIL_USE, SoundSource.NEUTRAL, 0.8f, 1.2f);
                             player.sendSystemMessage(
                                     Component.literal("[" + builderName + "] Menerima " + accepted + "x " + held.getHoverName().getString() + ". Terima kasih Bos!").withStyle(ChatFormatting.GREEN)
                             );
@@ -276,7 +275,7 @@ public class ConstructionManager {
         }
 
         ACTIVE_SITES.put(siteId, site);
-        level.playSound(null, origin, SoundEvents.ANVIL_USE, SoundSource.BLOCKS, 1.0f, 1.0f);
+        level.playSound(null, origin, SoundEvents.VILLAGER_WORK_MASON, SoundSource.BLOCKS, 1.0f, 1.0f);
         player.sendSystemMessage(
                 Component.literal("Proyek '" + schematic.getName() + "' dimulai! Kuli " + builderName + " bersiap bekerja (" + site.getTotalBlocks() + " blok).").withStyle(ChatFormatting.GREEN)
         );
@@ -392,14 +391,14 @@ public class ConstructionManager {
                     builder.getNavigation().moveTo(walkTarget.getX() + 0.5, walkTarget.getY(), walkTarget.getZ() + 0.5, 1.0);
                     builder.getLookControl().setLookAt(targetPos.getX() + 0.5, targetPos.getY() + 0.5, targetPos.getZ() + 0.5);
 
-                    if (site.getCooldown() % 6 == 0) {
+                    if (site.getCooldown() % 8 == 0) {
                         builder.swing(InteractionHand.MAIN_HAND, true);
                         level.sendParticles(
                                 new BlockParticleOption(ParticleTypes.BLOCK, targetState),
                                 targetPos.getX() + 0.5, targetPos.getY() + 0.5, targetPos.getZ() + 0.5,
                                 3, 0.15, 0.15, 0.15, 0.05
                         );
-                        level.playSound(null, targetPos, SoundEvents.ANVIL_USE, SoundSource.BLOCKS, 0.35f, 1.7f);
+                        level.playSound(null, targetPos, targetState.getSoundType().getHitSound(), SoundSource.BLOCKS, 0.5f, 1.0f);
                     }
                 }
                 continue;

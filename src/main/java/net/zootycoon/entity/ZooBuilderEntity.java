@@ -334,7 +334,6 @@ public class ZooBuilderEntity extends PathfinderMob {
                 int accepted = matchedSite.deliverMaterial(held);
                 if (accepted > 0) {
                     this.level().playSound(null, this.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-                    this.level().playSound(null, this.blockPosition(), SoundEvents.ANVIL_USE, SoundSource.NEUTRAL, 0.7f, 1.2f);
                     String builderName = this.getCustomName() != null ? this.getCustomName().getString() : "Budi Santoso";
                     player.sendSystemMessage(
                             Component.literal("[" + builderName + "] Menerima " + accepted + "x " + held.getHoverName().getString() + ". Terima kasih Bos!").withStyle(ChatFormatting.GREEN)
