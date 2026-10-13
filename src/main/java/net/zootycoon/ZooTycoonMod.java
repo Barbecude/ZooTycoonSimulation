@@ -46,23 +46,36 @@ public class ZooTycoonMod implements ModInitializer {
         // 5. Initialize Construction Manager ticks
         ConstructionManager.initServerEvents();
 
-        // 5b. Initialize Zoo Animal Hunger, Hunter incursions, and Hostile Mob Claims Barrier
+        // 5b. Initialize Zoo Animal Hunger, Hunter incursions, Hostile Mob Claims Barrier, and Economy absorption
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_WORLD_TICK.register(level -> {
             net.zootycoon.claim.ZooClaimManager.tickServer(level);
             net.zootycoon.animal.ZooAnimalHungerManager.tickServer(level);
             net.zootycoon.hunter.ZooHunterManager.tickServer(level);
+            if (level.getServer() != null) {
+                var eco = net.zootycoon.economy.ZooEconomyManager.get(level.getServer());
+                for (var player : level.players()) {
+                    eco.absorbPlayerEmeralds(player);
+                }
+            }
         });
 
-        // 5c. Spyglass right-click animal registration
+        // 5c. Spyglass/Field Guide right-click animal registration & direct player feeding with love particles
         net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
             if (!world.isClientSide() && player instanceof net.minecraft.server.level.ServerPlayer sp && entity instanceof net.minecraft.world.entity.LivingEntity living) {
                 net.minecraft.world.item.ItemStack held = player.getItemInHand(hand);
-                if (held.is(Items.SPYGLASS)) {
+                if (net.zootycoon.animal.ZooAnimalHungerManager.isScanningItem(held)) {
                     if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)) {
                         boolean ok = net.zootycoon.animal.ZooAnimalHungerManager.registerAnimalFromSpyglass(sp, living);
                         if (ok) {
                             return net.minecraft.world.InteractionResult.SUCCESS;
                         }
+                    }
+                } else if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)
+                        && net.zootycoon.animal.AnimalDietRegistry.isFoodValid(living, held)) {
+                    boolean fed = net.zootycoon.animal.ZooAnimalHungerManager.feedAnimal(living, held, sp);
+                    if (fed) {
+                        ZooNetworkPayloads.sendAnimalSync(sp);
+                        return net.minecraft.world.InteractionResult.SUCCESS;
                     }
                 }
             }
@@ -85,21 +98,20 @@ public class ZooTycoonMod implements ModInitializer {
                     player.drop(starterSticks, false);
                 }
 
-                // Give Starter Emeralds
-                int starterEmeralds = EconomyConfig.getStarterEmeralds();
-                ItemStack emeralds = new ItemStack(Items.EMERALD, starterEmeralds);
-                if (!player.getInventory().add(emeralds)) {
-                    player.drop(emeralds, false);
-                }
-
-                player.sendSystemMessage(Component.translatable("zootycoon.welcome.message"));
+                ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.info", "zootycoon.welcome.message", 0);
                 LOGGER.info("Gave starter pack to player {}", player.getName().getString());
             }
 
-            // Sync claims to player
+            // Sync claims, staff and emerald wallet balance to player
             ZooClaimManager.get((net.minecraft.server.level.ServerLevel) player.level()).syncToPlayer(player);
-            // Sync staff to player
             net.zootycoon.economy.ZooStaffManager.get((net.minecraft.server.level.ServerLevel) player.level()).syncToPlayer(player);
+            net.zootycoon.economy.ZooEconomyManager.get(server).syncToPlayer(player);
+
+            // Unlock Jake's Build Tools recipes if present
+            try {
+                var funcOpt = server.getFunctions().get(ResourceLocation.fromNamespaceAndPath("jbt", "give_recipes"));
+                funcOpt.ifPresent(func -> server.getFunctions().execute(func, player.createCommandSourceStack().withSuppressedOutput().withPermission(2)));
+            } catch (Exception ignored) {}
         });
 
         LOGGER.info("Zoo Tycoon Simulation initialized successfully.");

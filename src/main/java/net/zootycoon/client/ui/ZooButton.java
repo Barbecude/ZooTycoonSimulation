@@ -22,6 +22,7 @@ public class ZooButton extends AbstractWidget {
     private int customIconH = 0;
     private int customTexW = 0;
     private int customTexH = 0;
+    private ItemStack itemIcon = ItemStack.EMPTY;
 
     // Palette Colors (Essential-Mod Minimalist Slate Aesthetic)
     private int bgColor = 0xFF14171F;
@@ -72,6 +73,11 @@ public class ZooButton extends AbstractWidget {
         this.customIconH = h;
         this.customTexW = texW;
         this.customTexH = texH;
+        return this;
+    }
+
+    public ZooButton setItemIcon(ItemStack stack) {
+        this.itemIcon = stack != null ? stack : ItemStack.EMPTY;
         return this;
     }
 
@@ -150,11 +156,25 @@ public class ZooButton extends AbstractWidget {
             graphics.fill(x + 1, y + h - 2, x + w - 1, y + h, 0xFF388BFD);
         }
 
-        // 3. Optional Custom Icon (from Icons pack)
+        // 3. Optional Custom Icon or Item Icon
         Component msg = this.getMessage();
         int textY = y + (h - 8) / 2;
 
-        if (customIcon != null) {
+        if (!itemIcon.isEmpty()) {
+            int iW = 16;
+            int iH = 16;
+            int iconY = y + (h - iH) / 2;
+            if (leftAligned) {
+                graphics.renderFakeItem(itemIcon, x + 6, iconY);
+                graphics.drawString(mc.font, msg, x + 6 + iW + 4, textY, text, false);
+            } else {
+                int textW = mc.font.width(msg);
+                int totalW = iW + 5 + textW;
+                int startX = x + (w - totalW) / 2;
+                graphics.renderFakeItem(itemIcon, startX, iconY);
+                graphics.drawString(mc.font, msg, startX + iW + 5, textY, text, false);
+            }
+        } else if (customIcon != null) {
             int iW = customIconW > 0 ? customIconW : 16;
             int iH = customIconH > 0 ? customIconH : 16;
             int tW = customTexW > 0 ? customTexW : iW;
@@ -162,21 +182,21 @@ public class ZooButton extends AbstractWidget {
             int iconY = y + (h - iH) / 2;
             if (leftAligned) {
                 graphics.blit(customIcon, x + 6, iconY, 0, 0, iW, iH, tW, tH);
-                graphics.drawString(mc.font, msg, x + 6 + iW + 4, textY, text, true);
+                graphics.drawString(mc.font, msg, x + 6 + iW + 4, textY, text, false);
             } else {
                 int textW = mc.font.width(msg);
                 int totalW = iW + 5 + textW;
                 int startX = x + (w - totalW) / 2;
                 graphics.blit(customIcon, startX, iconY, 0, 0, iW, iH, tW, tH);
-                graphics.drawString(mc.font, msg, startX + iW + 5, textY, text, true);
+                graphics.drawString(mc.font, msg, startX + iW + 5, textY, text, false);
             }
         } else {
             if (leftAligned) {
-                graphics.drawString(mc.font, msg, x + 8, textY, text, true);
+                graphics.drawString(mc.font, msg, x + 8, textY, text, false);
             } else {
                 int textW = mc.font.width(msg);
                 int textX = x + (w - textW) / 2;
-                graphics.drawString(mc.font, msg, textX, textY, text, true);
+                graphics.drawString(mc.font, msg, textX, textY, text, false);
             }
         }
     }

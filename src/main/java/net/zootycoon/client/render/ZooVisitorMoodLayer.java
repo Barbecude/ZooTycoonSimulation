@@ -17,8 +17,6 @@ import net.zootycoon.entity.ZooVisitorEntity;
 
 public class ZooVisitorMoodLayer extends RenderLayer<ZooVisitorEntity, ZooVisitorModel> {
 
-    private static final ResourceLocation HAPPY =
-            ZooTycoonMod.id("textures/gui/moods/mood_happy.png");
     private static final ResourceLocation NEUTRAL =
             ZooTycoonMod.id("textures/gui/moods/mood_neutral.png");
     private static final ResourceLocation TOILET =
@@ -46,7 +44,6 @@ public class ZooVisitorMoodLayer extends RenderLayer<ZooVisitorEntity, ZooVisito
         }
 
         ResourceLocation tex = switch (mood) {
-            case HAPPY -> HAPPY;
             case TOILET -> TOILET;
             case AMAZED -> AMAZED;
             case ADORED -> ADORED;

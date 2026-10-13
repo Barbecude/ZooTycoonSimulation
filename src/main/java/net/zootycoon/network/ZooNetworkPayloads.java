@@ -252,6 +252,19 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // 10g. Sync Emerald Balance Payload (S2C)
+    public record SyncEmeraldBalancePayload(int balance, int delta) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<SyncEmeraldBalancePayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("sync_emerald_balance"));
+        public static final StreamCodec<FriendlyByteBuf, SyncEmeraldBalancePayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeInt(payload.balance);
+                    buf.writeInt(payload.delta);
+                },
+                buf -> new SyncEmeraldBalancePayload(buf.readInt(), buf.readInt())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
 
     // 11. Open Builder Screen Payload (S2C)
     public record OpenBuilderScreenPayload(
@@ -484,6 +497,156 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // 16. Open Security Screen Payload (S2C)
+    public record OpenSecurityScreenPayload(
+            int entityId,
+            UUID securityUuid,
+            String securityName,
+            boolean isAlert,
+            String targetName,
+            int health,
+            int maxHealth
+    ) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<OpenSecurityScreenPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("open_security_screen"));
+        public static final StreamCodec<FriendlyByteBuf, OpenSecurityScreenPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeInt(payload.entityId);
+                    buf.writeUUID(payload.securityUuid);
+                    buf.writeUtf(payload.securityName != null ? payload.securityName : net.zootycoon.util.ZooTranslations.get("zootycoon.dialog.security.default_name"));
+                    buf.writeBoolean(payload.isAlert);
+                    buf.writeUtf(payload.targetName != null ? payload.targetName : "");
+                    buf.writeInt(payload.health);
+                    buf.writeInt(payload.maxHealth);
+                },
+                buf -> new OpenSecurityScreenPayload(
+                        buf.readInt(),
+                        buf.readUUID(),
+                        buf.readUtf(),
+                        buf.readBoolean(),
+                        buf.readUtf(),
+                        buf.readInt(),
+                        buf.readInt()
+                )
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 17. Open Visitor Screen Payload (S2C)
+    public record OpenVisitorScreenPayload(
+            int entityId,
+            UUID visitorUuid,
+            int variant,
+            boolean isChild,
+            String moodName,
+            String moodLabel,
+            int hunger,
+            int thirst,
+            boolean needsToilet,
+            boolean hasTrash
+    ) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<OpenVisitorScreenPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("open_visitor_screen"));
+        public static final StreamCodec<FriendlyByteBuf, OpenVisitorScreenPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeInt(payload.entityId);
+                    buf.writeUUID(payload.visitorUuid);
+                    buf.writeInt(payload.variant);
+                    buf.writeBoolean(payload.isChild);
+                    buf.writeUtf(payload.moodName != null ? payload.moodName : "NEUTRAL");
+                    buf.writeUtf(payload.moodLabel != null ? payload.moodLabel : "");
+                    buf.writeInt(payload.hunger);
+                    buf.writeInt(payload.thirst);
+                    buf.writeBoolean(payload.needsToilet);
+                    buf.writeBoolean(payload.hasTrash);
+                },
+                buf -> new OpenVisitorScreenPayload(
+                        buf.readInt(),
+                        buf.readUUID(),
+                        buf.readInt(),
+                        buf.readBoolean(),
+                        buf.readUtf(),
+                        buf.readUtf(),
+                        buf.readInt(),
+                        buf.readInt(),
+                        buf.readBoolean(),
+                        buf.readBoolean()
+                )
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 18. Greet Visitor Payload (C2S)
+    public record GreetVisitorPayload(int entityId) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<GreetVisitorPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("greet_visitor"));
+        public static final StreamCodec<FriendlyByteBuf, GreetVisitorPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> buf.writeInt(payload.entityId),
+                buf -> new GreetVisitorPayload(buf.readInt())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 19. Interact Security Payload (C2S)
+    public record InteractSecurityPayload(int entityId) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<InteractSecurityPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("interact_security"));
+        public static final StreamCodec<FriendlyByteBuf, InteractSecurityPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> buf.writeInt(payload.entityId),
+                buf -> new InteractSecurityPayload(buf.readInt())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 20. Show Toast Notification Payload (S2C)
+    public record ShowToastPayload(String titleKey, String msgKey, List<String> args, int toastType) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<ShowToastPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("show_toast"));
+        public static final StreamCodec<FriendlyByteBuf, ShowToastPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeUtf(payload.titleKey != null ? payload.titleKey : "zootycoon.toast.title.info");
+                    buf.writeUtf(payload.msgKey != null ? payload.msgKey : "");
+                    List<String> list = payload.args != null ? payload.args : List.of();
+                    buf.writeInt(list.size());
+                    for (String s : list) {
+                        buf.writeUtf(s != null ? s : "");
+                    }
+                    buf.writeInt(payload.toastType);
+                },
+                buf -> {
+                    String titleKey = buf.readUtf();
+                    String msgKey = buf.readUtf();
+                    int count = buf.readInt();
+                    List<String> args = new ArrayList<>(count);
+                    for (int i = 0; i < count; i++) {
+                        args.add(buf.readUtf());
+                    }
+                    int toastType = buf.readInt();
+                    return new ShowToastPayload(titleKey, msgKey, args, toastType);
+                }
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 21. Request Client Selection Save Payload (S2C) for /kandang and /fasilitas
+    public record RequestClientSelectionSavePayload(String name, String category) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<RequestClientSelectionSavePayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("req_client_sel_save"));
+        public static final StreamCodec<FriendlyByteBuf, RequestClientSelectionSavePayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeUtf(payload.name);
+                    buf.writeUtf(payload.category);
+                },
+                buf -> new RequestClientSelectionSavePayload(buf.readUtf(), buf.readUtf())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    public static void sendToast(ServerPlayer player, String titleKey, String msgKey, int toastType, Object... args) {
+        if (player == null) return;
+        List<String> strArgs = new ArrayList<>();
+        if (args != null) {
+            for (Object a : args) {
+                strArgs.add(String.valueOf(a));
+            }
+        }
+        ServerPlayNetworking.send(player, new ShowToastPayload(titleKey, msgKey, strArgs, toastType));
+    }
+
     public static void registerServerReceivers() {
         PayloadTypeRegistry.playC2S().register(ClaimLandPayload.TYPE, ClaimLandPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ClaimBoxPayload.TYPE, ClaimBoxPayload.CODEC);
@@ -503,13 +666,20 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playC2S().register(FeedAnimalFromGuiPayload.TYPE, FeedAnimalFromGuiPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestAnimalSyncPayload.TYPE, RequestAnimalSyncPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SupplyZookeeperFoodPayload.TYPE, SupplyZookeeperFoodPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(GreetVisitorPayload.TYPE, GreetVisitorPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(InteractSecurityPayload.TYPE, InteractSecurityPayload.CODEC);
 
         PayloadTypeRegistry.playS2C().register(SyncClaimsPayload.TYPE, SyncClaimsPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncStudioStatePayload.TYPE, SyncStudioStatePayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncStaffPayload.TYPE, SyncStaffPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenBuilderScreenPayload.TYPE, OpenBuilderScreenPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenZookeeperScreenPayload.TYPE, OpenZookeeperScreenPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(OpenSecurityScreenPayload.TYPE, OpenSecurityScreenPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(OpenVisitorScreenPayload.TYPE, OpenVisitorScreenPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncAnimalsPayload.TYPE, SyncAnimalsPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(SyncEmeraldBalancePayload.TYPE, SyncEmeraldBalancePayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(ShowToastPayload.TYPE, ShowToastPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(RequestClientSelectionSavePayload.TYPE, RequestClientSelectionSavePayload.CODEC);
 
         // Handler: Claim Land (Old / Direct)
         ServerPlayNetworking.registerGlobalReceiver(ClaimLandPayload.TYPE, (payload, context) -> {
@@ -548,10 +718,7 @@ public class ZooNetworkPayloads {
                     }
                     ConstructionManager.startConstruction(player, payload.origin, schem, template, rot);
                 } else {
-                    player.displayClientMessage(
-                            Component.literal("Skematik tidak ditemukan!").withStyle(ChatFormatting.RED),
-                            true
-                    );
+                    sendToast(player, "zootycoon.toast.title.error", "zootycoon.build.not_found", 3);
                 }
             });
         });
@@ -571,9 +738,9 @@ public class ZooNetworkPayloads {
                     }
                     if (totalAccepted > 0) {
                         player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.ITEM_PICKUP, net.minecraft.sounds.SoundSource.PLAYERS, 1.0f, 1.0f);
-                        player.sendSystemMessage(Component.literal("Mantap Bos! " + totalAccepted + " bahan udah diserahin ke kuli.").withStyle(ChatFormatting.GREEN));
+                        sendToast(player, "zootycoon.toast.title.builder", "zootycoon.builder.materials_given", 1, totalAccepted);
                     } else {
-                        player.displayClientMessage(Component.literal("Gak ada bahan yang cocok di badan Bos buat proyek ini!").withStyle(ChatFormatting.YELLOW), true);
+                        sendToast(player, "zootycoon.toast.title.builder", "zootycoon.builder.no_materials_in_hand", 2);
                     }
                 });
             });
@@ -587,7 +754,7 @@ public class ZooNetworkPayloads {
                     boolean success = site.depositTools(player);
                     if (success) {
                         player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.ITEM_PICKUP, net.minecraft.sounds.SoundSource.PLAYERS, 1.0f, 1.0f);
-                        player.sendSystemMessage(Component.literal("Mantap Bos! Alat kerja udah diserahin ke kuli. Siap babat lahan!").withStyle(ChatFormatting.GREEN));
+                        sendToast(player, "zootycoon.toast.title.builder", "zootycoon.builder.tools_given", 1);
                         if (site.getBuilderUuid() != null) {
                             ServerLevel sLevel = (ServerLevel) player.level();
                             var ent = sLevel.getEntity(site.getBuilderUuid());
@@ -607,7 +774,7 @@ public class ZooNetworkPayloads {
                             }
                         }
                     } else {
-                        player.displayClientMessage(Component.literal("Bos gak lagi bawa alat kerja yang dibutuhin (Sekop/Beliung/Kapak)!").withStyle(ChatFormatting.YELLOW), true);
+                        sendToast(player, "zootycoon.toast.title.builder", "zootycoon.builder.no_tools_in_hand", 2);
                     }
                 });
             });
@@ -620,9 +787,9 @@ public class ZooNetworkPayloads {
                 boolean success = net.zootycoon.economy.ZooStaffManager.get(context.server()).hireStaff(player, payload.staffType());
                 if (success) {
                     player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.PLAYER_LEVELUP, net.minecraft.sounds.SoundSource.PLAYERS, 0.8f, 1.2f);
-                    player.displayClientMessage(Component.literal("Berhasil merekrut pegawai baru (" + payload.staffType() + ")!").withStyle(ChatFormatting.GREEN), true);
+                    sendToast(player, "zootycoon.toast.title.success", "zootycoon.staff.hired", 1, payload.staffType());
                 } else {
-                    player.displayClientMessage(Component.literal("Emerald tidak cukup untuk merekrut pegawai ini!").withStyle(ChatFormatting.RED), true);
+                    sendToast(player, "zootycoon.toast.title.error", "zootycoon.staff.not_enough_emeralds", 3);
                 }
             });
         });
@@ -646,7 +813,6 @@ public class ZooNetworkPayloads {
             });
         });
 
-
         // Handler: Enter Studio
         ServerPlayNetworking.registerGlobalReceiver(EnterStudioPayload.TYPE, (payload, context) -> {
             ServerPlayer player = context.player();
@@ -666,7 +832,7 @@ public class ZooNetworkPayloads {
                 boolean saved = SchematicCaptureService.captureAndSave(
                         player, payload.pos1, payload.pos2, payload.name, payload.category, payload.desc
                 );
-                if (saved) {
+                if (saved && StudioDimensionManager.isInStudio(player.getUUID())) {
                     StudioDimensionManager.exitStudio(player);
                 }
             });
@@ -696,7 +862,7 @@ public class ZooNetworkPayloads {
                             living.getX(), living.getY() + living.getBbHeight() * 0.8, living.getZ(),
                             15, 0.4, 0.4, 0.4, 0.02);
                     level.playSound(null, living.blockPosition(), net.minecraft.sounds.SoundEvents.EXPERIENCE_ORB_PICKUP, net.minecraft.sounds.SoundSource.PLAYERS, 0.8f, 1.1f);
-                    player.sendSystemMessage(Component.literal("Berhasil memberi nama satwa: " + payload.newName).withStyle(ChatFormatting.GREEN));
+                    sendToast(player, "zootycoon.toast.title.animal", "zootycoon.animal.renamed", 1, payload.newName);
                 }
             });
         });
@@ -709,7 +875,7 @@ public class ZooNetworkPayloads {
             });
         });
 
-        // Handler: Scan Animal with Spyglass
+        // Handler: Scan Animal with Spyglass / Field Guide
         ServerPlayNetworking.registerGlobalReceiver(ScanAnimalPayload.TYPE, (payload, context) -> {
             ServerPlayer player = context.player();
             context.server().execute(() -> {
@@ -740,10 +906,12 @@ public class ZooNetworkPayloads {
                     if (!foundFood.isEmpty()) {
                         boolean fed = net.zootycoon.animal.ZooAnimalHungerManager.feedAnimal(living, foundFood, player);
                         if (fed) {
-                            player.sendSystemMessage(Component.literal("Berhasil menyuapi satwa! Rasa lapar berkurang.").withStyle(ChatFormatting.GREEN));
+                            int hungerAfter = net.zootycoon.animal.ZooAnimalHungerManager.getHunger(living);
+                            sendToast(player, "zootycoon.toast.title.animal", "zootycoon.animal.fed", 1, living.getName().getString(), hungerAfter);
+                            sendAnimalSync(player);
                         }
                     } else {
-                        player.displayClientMessage(Component.literal("Bos tidak memiliki makanan yang cocok di tas!").withStyle(ChatFormatting.RED), true);
+                        sendToast(player, "zootycoon.toast.title.animal", "zootycoon.animal.wrong_food", 3);
                     }
                 }
             });
@@ -763,6 +931,33 @@ public class ZooNetworkPayloads {
                 net.minecraft.world.entity.Entity ent = level.getEntity(payload.keeperUuid());
                 if (ent instanceof net.zootycoon.entity.ZooZookeeperEntity keeper) {
                     keeper.handleFoodTransfer(player);
+                }
+            });
+        });
+
+        // Handler: Greet Visitor from GUI
+        ServerPlayNetworking.registerGlobalReceiver(GreetVisitorPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            net.minecraft.server.level.ServerLevel level = (net.minecraft.server.level.ServerLevel) player.level();
+            context.server().execute(() -> {
+                net.minecraft.world.entity.Entity ent = level.getEntity(payload.entityId());
+                if (ent instanceof net.zootycoon.entity.ZooVisitorEntity visitor) {
+                    level.playSound(null, visitor.blockPosition(), net.minecraft.sounds.SoundEvents.VILLAGER_YES, net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 1.0F);
+                    level.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, visitor.getX(), visitor.getY() + 1.2D, visitor.getZ(), 5, 0.25, 0.25, 0.25, 0.05);
+                    sendToast(player, "zootycoon.toast.title.info", "zootycoon.visitor.greeted", 1);
+                }
+            });
+        });
+
+        // Handler: Interact Security from GUI
+        ServerPlayNetworking.registerGlobalReceiver(InteractSecurityPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            net.minecraft.server.level.ServerLevel level = (net.minecraft.server.level.ServerLevel) player.level();
+            context.server().execute(() -> {
+                net.minecraft.world.entity.Entity ent = level.getEntity(payload.entityId());
+                if (ent instanceof net.zootycoon.entity.ZooSecurityEntity security) {
+                    level.playSound(null, security.blockPosition(), net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_IRON.value(), net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 1.0F);
+                    sendToast(player, "zootycoon.toast.title.security", "zootycoon.security.patrol_ordered", 0);
                 }
             });
         });

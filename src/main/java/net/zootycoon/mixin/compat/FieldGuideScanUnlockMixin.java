@@ -12,13 +12,13 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Pseudo
-@Mixin(targets = "com.evandev.fieldguide.network.ScanUnlockPacket", remap = false)
+@Mixin(targets = "com.evandev.fieldguide.network.ScanUnlockPacket")
 public abstract class FieldGuideScanUnlockMixin {
 
-    @Shadow
+    @Shadow(remap = false)
     private int targetEntityId;
 
-    @Inject(method = "handleServer(Lnet/minecraft/server/level/ServerPlayer;)V", at = @At("TAIL"), require = 0)
+    @Inject(method = "handleServer", at = @At("TAIL"), remap = false, require = 0)
     private void zootycoon$onFieldGuideScanServer(ServerPlayer player, CallbackInfo ci) {
         if (player == null || player.level() == null) return;
         if (this.targetEntityId <= 0) return;

@@ -55,7 +55,22 @@ public class ZooWorldIndicatorRenderer {
             // 1. Zookeeper indicator: orange exclamation mark if out of food stock
             if (entity instanceof ZooZookeeperEntity keeper) {
                 if (keeper.getFoodStock() <= 0) {
-                    double renderY = (pos.y + keeper.getBbHeight() + 0.65D + bob) - camPos.y;
+                    double renderY = (pos.y + keeper.getBbHeight() + 1.25D + bob) - camPos.y;
+                    renderBillboard(
+                            buffer, poseStack, RenderType.entityCutout(EXCLAMATION_TEXTURE),
+                            dx, renderY, dz,
+                            0.20f, 0.28f,
+                            camRot,
+                            255, 255, 255, 255
+                    );
+                }
+                continue;
+            }
+
+            // 1b. Builder indicator: orange exclamation mark if needing tools, materials, or wage payment
+            if (entity instanceof net.zootycoon.entity.ZooBuilderEntity builder) {
+                if (builder.needsSomething()) {
+                    double renderY = (pos.y + builder.getBbHeight() + 1.25D + bob) - camPos.y;
                     renderBillboard(
                             buffer, poseStack, RenderType.entityCutout(EXCLAMATION_TEXTURE),
                             dx, renderY, dz,

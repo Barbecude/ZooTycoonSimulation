@@ -157,6 +157,7 @@ public class AnimalDietRegistry {
 
     public static boolean isFoodValid(Entity entity, ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
+        if (entity instanceof Animal a && a.isFood(stack)) return true;
         Item item = stack.getItem();
         List<Item> accepted = getAcceptedFoods(entity);
         return accepted.contains(item);

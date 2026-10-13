@@ -1,26 +1,68 @@
 package net.zootycoon.hunter;
 
-import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.zootycoon.claim.ZooClaim;
 import net.zootycoon.claim.ZooClaimManager;
 import net.zootycoon.entity.ZooEntities;
 import net.zootycoon.entity.ZooHunterEntity;
+import net.zootycoon.network.ZooNetworkPayloads;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ZooHunterManager {
     private static long lastCheckTick = 0L;
+    // Tracks temporary dirt blocks placed by stuck hunters -> expire gameTime tick (10s = 200 ticks)
+    private static final Map<GlobalPos, Long> TEMP_DIRT_BLOCKS = new ConcurrentHashMap<>();
+
+    public static void placeTempDirt(ServerLevel level, BlockPos pos) {
+        if (level == null || pos == null) return;
+        BlockState existing = level.getBlockState(pos);
+        if (existing.isAir() || existing.canBeReplaced()) {
+            level.setBlock(pos, Blocks.DIRT.defaultBlockState(), 3);
+            level.playSound(null, pos, SoundEvents.GRAVEL_PLACE, SoundSource.BLOCKS, 0.8f, 1.0f);
+            GlobalPos gPos = GlobalPos.of(level.dimension(), pos.immutable());
+            TEMP_DIRT_BLOCKS.put(gPos, level.getGameTime() + 200L); // 10 seconds
+        }
+    }
+
+    private static void tickTempDirtCleanup(ServerLevel level) {
+        if (TEMP_DIRT_BLOCKS.isEmpty()) return;
+        long now = level.getGameTime();
+        Iterator<Map.Entry<GlobalPos, Long>> it = TEMP_DIRT_BLOCKS.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<GlobalPos, Long> entry = it.next();
+            GlobalPos gPos = entry.getKey();
+            if (!gPos.dimension().equals(level.dimension())) continue;
+            if (now >= entry.getValue()) {
+                BlockPos pos = gPos.pos();
+                if (level.getBlockState(pos).is(Blocks.DIRT)) {
+                    level.levelEvent(2001, pos, Block.getId(Blocks.DIRT.defaultBlockState()));
+                    level.removeBlock(pos, false);
+                }
+                it.remove();
+            }
+        }
+    }
 
     public static void tickServer(ServerLevel level) {
+        // 1. Clean up temporary hunter dirt blocks after 10 seconds (200 ticks)
+        tickTempDirtCleanup(level);
+
+        // 2. Periodic hunter incursion check every 2 minutes
         long currentTick = level.getGameTime();
-        if (currentTick - lastCheckTick < 2400) { // Every 2 minutes
+        if (currentTick - lastCheckTick < 2400) {
             return;
         }
         lastCheckTick = currentTick;
@@ -44,10 +86,7 @@ public class ZooHunterManager {
                     hunter.setPos(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5);
                     level.addFreshEntity(hunter);
 
-                    player.displayClientMessage(
-                            Component.literal("[Peringatan] Pemburu liar terdeteksi menyusup ke area kebun binatang!").withStyle(ChatFormatting.RED),
-                            true
-                    );
+                    ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.security", "zootycoon.hunter.incursion_warning", 3);
                     level.playSound(null, player.blockPosition(), SoundEvents.ARROW_HIT, SoundSource.HOSTILE, 1.0f, 0.8f);
                 }
             }
@@ -68,14 +107,10 @@ public class ZooHunterManager {
             hunter.setPos(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5);
             level.addFreshEntity(hunter);
 
-            player.displayClientMessage(
-                    Component.literal("[Spawn] Pemburu liar muncul di dekat Anda!").withStyle(ChatFormatting.RED),
-                    true
-            );
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.security", "zootycoon.hunter.spawned_near", 3);
             level.playSound(null, player.blockPosition(), SoundEvents.ARROW_HIT, SoundSource.HOSTILE, 1.0f, 1.0f);
             return true;
         }
         return false;
     }
 }
-

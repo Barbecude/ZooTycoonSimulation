@@ -3,11 +3,13 @@ package net.zootycoon.construction;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.chat.Component;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.DoubleTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,24 +18,29 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.npc.Villager;
-import net.minecraft.world.entity.npc.VillagerProfession;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import net.minecraft.world.phys.Vec3;
 import net.zootycoon.ZooTycoonMod;
+import net.zootycoon.animal.ZooAnimalHungerManager;
 import net.zootycoon.claim.ZooClaimManager;
 import net.zootycoon.economy.TransactionHelper;
 import net.zootycoon.network.ZooNetworkPayloads;
 import net.zootycoon.schematic.SchematicScanner;
 import net.zootycoon.schematic.ZooSchematic;
+import net.zootycoon.schematic.ZooSchematicRegistry;
+import net.zootycoon.util.ZooTranslations;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -67,42 +74,45 @@ public class ConstructionManager {
                 }
 
                 if (matchedSite != null) {
-                    String builderName = entity.getCustomName() != null ? entity.getCustomName().getString() : "Budi Santoso";
+                    String builderName = entity.getCustomName() != null ? entity.getCustomName().getString() : ZooTranslations.get("zootycoon.dialog.builder.default_name");
                     ItemStack held = player.getMainHandItem();
                     if (!held.isEmpty()) {
                         // Check if held item is a tool needed during land clearing phase
                         if (matchedSite.isClearingPhase()) {
                             if (matchedSite.needsShovel() && !matchedSite.hasShovel() && held.is(net.minecraft.tags.ItemTags.SHOVELS)) {
                                 matchedSite.setEquippedShovel(held);
-                                if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
+                                if (entity instanceof LivingEntity living) {
                                     living.setItemSlot(EquipmentSlot.MAINHAND, held.copyWithCount(1));
                                 }
                                 String toolName = held.getHoverName().getString();
                                 held.shrink(1);
                                 sLevel.playSound(null, entity.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-                                player.sendSystemMessage(Component.literal("[" + builderName + "] Menerima " + toolName + "! Mantap Bos, langsung saya pakai untuk menggali tanah.").withStyle(ChatFormatting.GREEN));
+                                ZooNetworkPayloads.sendToast(serverPlayer, "zootycoon.toast.title.construction", "zootycoon.builder.received_tool", 1, builderName, toolName);
+                                if (entity instanceof net.zootycoon.entity.ZooBuilderEntity zb) zb.updateNeedsIndicator();
                                 return InteractionResult.SUCCESS;
                             }
                             if (matchedSite.needsPickaxe() && !matchedSite.hasPickaxe() && held.is(net.minecraft.tags.ItemTags.PICKAXES)) {
                                 matchedSite.setEquippedPickaxe(held);
-                                if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
+                                if (entity instanceof LivingEntity living) {
                                     living.setItemSlot(EquipmentSlot.MAINHAND, held.copyWithCount(1));
                                 }
                                 String toolName = held.getHoverName().getString();
                                 held.shrink(1);
                                 sLevel.playSound(null, entity.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-                                player.sendSystemMessage(Component.literal("[" + builderName + "] Menerima " + toolName + "! Mantap Bos, langsung saya pakai untuk menghancurkan batu.").withStyle(ChatFormatting.GREEN));
+                                ZooNetworkPayloads.sendToast(serverPlayer, "zootycoon.toast.title.construction", "zootycoon.builder.received_tool", 1, builderName, toolName);
+                                if (entity instanceof net.zootycoon.entity.ZooBuilderEntity zb) zb.updateNeedsIndicator();
                                 return InteractionResult.SUCCESS;
                             }
                             if (matchedSite.needsAxe() && !matchedSite.hasAxe() && held.is(net.minecraft.tags.ItemTags.AXES)) {
                                 matchedSite.setEquippedAxe(held);
-                                if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
+                                if (entity instanceof LivingEntity living) {
                                     living.setItemSlot(EquipmentSlot.MAINHAND, held.copyWithCount(1));
                                 }
                                 String toolName = held.getHoverName().getString();
                                 held.shrink(1);
                                 sLevel.playSound(null, entity.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-                                player.sendSystemMessage(Component.literal("[" + builderName + "] Menerima " + toolName + "! Mantap Bos, langsung saya pakai untuk menebang kayu.").withStyle(ChatFormatting.GREEN));
+                                ZooNetworkPayloads.sendToast(serverPlayer, "zootycoon.toast.title.construction", "zootycoon.builder.received_tool", 1, builderName, toolName);
+                                if (entity instanceof net.zootycoon.entity.ZooBuilderEntity zb) zb.updateNeedsIndicator();
                                 return InteractionResult.SUCCESS;
                             }
                         }
@@ -110,9 +120,8 @@ public class ConstructionManager {
                         int accepted = matchedSite.deliverMaterial(held);
                         if (accepted > 0) {
                             sLevel.playSound(null, entity.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-                            player.sendSystemMessage(
-                                    Component.literal("[" + builderName + "] Menerima " + accepted + "x " + held.getHoverName().getString() + ". Terima kasih Bos!").withStyle(ChatFormatting.GREEN)
-                            );
+                            ZooNetworkPayloads.sendToast(serverPlayer, "zootycoon.toast.title.construction", "zootycoon.builder.received_material_single", 1, builderName, accepted, held.getHoverName().getString());
+                            if (entity instanceof net.zootycoon.entity.ZooBuilderEntity zb) zb.updateNeedsIndicator();
                             return InteractionResult.SUCCESS;
                         }
                     }
@@ -173,10 +182,7 @@ public class ConstructionManager {
         }
 
         if (!hasValidClaim) {
-            player.displayClientMessage(
-                    Component.literal("Bangunan harus ditempatkan di dalam area kebun binatang Anda!").withStyle(ChatFormatting.RED),
-                    true
-            );
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.construction", "zootycoon.construction.must_be_in_claim", 3);
             return Optional.empty();
         }
 
@@ -184,10 +190,7 @@ public class ConstructionManager {
         int hiredBuilders = net.zootycoon.economy.ZooStaffManager.get(level).getBuilderCount(player.getUUID());
         int activeSites = getActiveSitesForPlayer(player.getUUID()).size();
         if (!player.isCreative() && activeSites >= hiredBuilders) {
-            player.displayClientMessage(
-                    Component.literal("Semua kuli Bos (" + hiredBuilders + ") lagi sibuk! Rekrut kuli baru di menu Pegawai atau tunggu proyek kelar ya.").withStyle(ChatFormatting.RED),
-                    true
-            );
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.construction", "zootycoon.construction.all_builders_busy", 2, hiredBuilders);
             return Optional.empty();
         }
 
@@ -195,10 +198,7 @@ public class ConstructionManager {
         if (!player.isCreative()) {
             int hiringCost = schematic.getBuilderHiringCost();
             if (hiringCost > 0 && !TransactionHelper.hasEnoughEmeralds(player, hiringCost)) {
-                player.displayClientMessage(
-                        Component.literal("Waduh Bos, Emeraldnya kurang buat sewa kuli (Butuh " + hiringCost + " Emerald)!").withStyle(ChatFormatting.RED),
-                        true
-                );
+                ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.economy", "zootycoon.construction.not_enough_emerald_hire", 3, hiringCost);
                 return Optional.empty();
             }
 
@@ -207,13 +207,10 @@ public class ConstructionManager {
             }
         }
 
-        // Scan template for bill of materials with rotation applied
+        // Scan template for bill of materials with rotation applied (entities are never counted as material needs!)
         var scan = SchematicScanner.scan(template, rotation);
         if (scan.sortedBlocksToPlace().isEmpty()) {
-            player.displayClientMessage(
-                    Component.literal("Skematik ini tidak memiliki blok untuk dibangun!").withStyle(ChatFormatting.RED),
-                    true
-            );
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.construction", "zootycoon.construction.empty_schematic", 3);
             return Optional.empty();
         }
 
@@ -250,7 +247,7 @@ public class ConstructionManager {
         }
 
         net.zootycoon.entity.ZooBuilderEntity builder = net.zootycoon.entity.ZooEntities.BUILDER.create(level);
-        String builderName = "Budi Santoso";
+        String builderName = ZooTranslations.get("zootycoon.dialog.builder.default_name");
         if (builder != null) {
             builder.setPos(entrance.getX() + 0.5, entrance.getY(), entrance.getZ() + 0.5);
             builder.setSiteId(siteId);
@@ -273,21 +270,14 @@ public class ConstructionManager {
                 autoDelivered += accepted;
             }
         }
+        if (builder != null) {
+            builder.updateNeedsIndicator();
+        }
 
         ACTIVE_SITES.put(siteId, site);
         level.playSound(null, origin, SoundEvents.VILLAGER_WORK_MASON, SoundSource.BLOCKS, 1.0f, 1.0f);
-        player.sendSystemMessage(
-                Component.literal("Proyek '" + schematic.getName() + "' dimulai! Kuli " + builderName + " bersiap bekerja (" + site.getTotalBlocks() + " blok).").withStyle(ChatFormatting.GREEN)
-        );
-        if (autoDelivered > 0) {
-            player.sendSystemMessage(
-                    Component.literal("Kuli mengambil " + autoDelivered + " material dari Anda dan langsung mulai membangun!").withStyle(ChatFormatting.AQUA)
-            );
-        } else if (!player.isCreative()) {
-            player.sendSystemMessage(
-                    Component.literal("Klik kuli " + builderName + " untuk memeriksa kebutuhan material atau menyerahkan peralatan.").withStyle(ChatFormatting.AQUA)
-            );
-        }
+        ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.construction", "zootycoon.construction.project_started", 1, schematic.getName(), builderName, site.getTotalBlocks());
+
         net.zootycoon.economy.ZooStaffManager.get(level).syncToPlayer(player);
         ZooTycoonMod.LOGGER.info("Started construction site {} for player {} ({} blocks)", siteId, player.getName().getString(), site.getTotalBlocks());
         return Optional.of(site);
@@ -328,10 +318,12 @@ public class ConstructionManager {
                     if (!hasTool) {
                         // Kuli lacks the required tool! Pause and wait for player to provide it
                         site.flagToolNeeded(obsState);
-                        if (builder != null && owner != null && owner.distanceToSqr(builder) < 20 * 20) {
-                            builder.getLookControl().setLookAt(owner.getX(), owner.getEyeY(), owner.getZ());
+                        if (builder != null) {
+                            builder.setNeedsSomething(true);
+                            if (owner != null && owner.distanceToSqr(builder) < 20 * 20) {
+                                builder.getLookControl().setLookAt(owner.getX(), owner.getEyeY(), owner.getZ());
+                            }
                         }
-                        // PAUSE! Do not clear and DO NOT BUILD!
                         continue;
                     }
 
@@ -358,7 +350,6 @@ public class ConstructionManager {
                         site.removeObstructingBlock(obsPos);
                         site.setCooldown(isOwnerCreative ? 2 : 5);
                     }
-                    // CRITICAL: NEVER BUILD ANY BLOCK WHILE CLEARING!
                     continue;
                 }
             }
@@ -369,8 +360,11 @@ public class ConstructionManager {
             int actionIdx = site.findNextPlaceableIndex(level, isOwnerCreative);
             if (actionIdx == -1) {
                 // WAITING STATE: No placeable block right now (waiting for materials)
-                if (builder != null && owner != null && owner.distanceToSqr(builder) < 20 * 20) {
-                    builder.getLookControl().setLookAt(owner.getX(), owner.getEyeY(), owner.getZ());
+                if (builder != null) {
+                    builder.setNeedsSomething(!isOwnerCreative && !site.getMissingMaterials().isEmpty());
+                    if (owner != null && owner.distanceToSqr(builder) < 20 * 20) {
+                        builder.getLookControl().setLookAt(owner.getX(), owner.getEyeY(), owner.getZ());
+                    }
                 }
                 continue;
             }
@@ -449,26 +443,87 @@ public class ConstructionManager {
 
         String builderName = (builderEntity != null && builderEntity.getCustomName() != null)
                 ? builderEntity.getCustomName().getString()
-                : "Budi Santoso";
+                : ZooTranslations.get("zootycoon.dialog.builder.default_name");
 
-        // Re-verify and ensure biomes are fully set upon completion
+        // 1. Re-verify and ensure biomes are fully set upon completion
         net.zootycoon.biome.ZooBiomeApplier.applySchematicBiomes(level, site.getOrigin(), site.getBounds(), site.getSchematic(), site.getRotation());
 
-        // Builder does NOT disappear yet! Sets awaitingPayment state and follows player!
+        // 2. Spawn entities (NPCs, Cashiers, Visitors, Animals) saved inside the StructureTemplate!
+        StructureTemplate template = ZooSchematicRegistry.loadTemplate(level.getServer(), site.getSchematic());
+        if (template != null) {
+            spawnSchematicEntities(level, site, template);
+        }
+
+        // 3. Builder does NOT disappear yet! Sets awaitingPayment state and follows player!
         if (builderEntity != null) {
             builderEntity.setAwaitingPayment(site.getOwnerUuid(), site.getSchematic().getName(), totalBlocks, wageDue);
             level.playSound(null, builderEntity.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.PLAYERS, 1.0f, 1.0f);
         }
 
         if (player != null) {
-            player.sendSystemMessage(
-                    Component.literal("Beres Bos! Bangunan '" + site.getSchematic().getName() + "' udah kelar dibangun 100%!").withStyle(ChatFormatting.GOLD)
-            );
-            player.sendSystemMessage(
-                    Component.literal("[" + builderName + "] Bos, kerjaan udah beres nih (" + totalBlocks + " blok). Minta upah " + wageDue + " Emerald ya Bos!").withStyle(ChatFormatting.YELLOW)
-            );
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.construction", "zootycoon.construction.completed_wage", 1, site.getSchematic().getName(), builderName, wageDue);
             level.playSound(null, site.getOrigin(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0f, 1.0f);
             net.zootycoon.economy.ZooStaffManager.get(level).syncToPlayer(player);
+            ZooNetworkPayloads.sendAnimalSync(player);
+        }
+    }
+
+    private static void spawnSchematicEntities(ServerLevel level, ConstructionSite site, StructureTemplate template) {
+        try {
+            CompoundTag saved = template.save(new CompoundTag());
+            ListTag entitiesList = saved.getList("entities", 10);
+            if (entitiesList.isEmpty()) return;
+
+            BlockPos origin = site.getOrigin();
+            Rotation rotation = site.getRotation();
+
+            for (int i = 0; i < entitiesList.size(); i++) {
+                CompoundTag entry = entitiesList.getCompound(i);
+                ListTag posList = entry.getList("pos", 6); // 6 = TAG_Double
+                if (posList.size() < 3) continue;
+
+                double relX = posList.getDouble(0);
+                double relY = posList.getDouble(1);
+                double relZ = posList.getDouble(2);
+
+                Vec3 rotatedOffset = StructureTemplate.transform(new Vec3(relX, relY, relZ), Mirror.NONE, rotation, BlockPos.ZERO);
+                Vec3 worldPos = rotatedOffset.add(origin.getX(), origin.getY(), origin.getZ());
+
+                CompoundTag entityNbt = entry.getCompound("nbt").copy();
+                entityNbt.remove("UUID");
+
+                // Skip spawning another builder entity if one was accidentally captured
+                String idStr = entityNbt.getString("id");
+                if ("zootycoon:builder".equals(idStr) || "minecraft:player".equals(idStr)) {
+                    continue;
+                }
+
+                ListTag newPos = new ListTag();
+                newPos.add(DoubleTag.valueOf(worldPos.x));
+                newPos.add(DoubleTag.valueOf(worldPos.y));
+                newPos.add(DoubleTag.valueOf(worldPos.z));
+                entityNbt.put("Pos", newPos);
+
+                Entity spawned = EntityType.loadEntityRecursive(entityNbt, level, ent -> {
+                    float yRot = ent.rotate(rotation);
+                    ent.moveTo(worldPos.x, worldPos.y, worldPos.z, yRot, ent.getXRot());
+                    return ent;
+                });
+
+                if (spawned != null) {
+                    if (spawned instanceof Mob mob) {
+                        mob.setPersistenceRequired();
+                    }
+                    if (spawned instanceof LivingEntity living && ZooAnimalHungerManager.isZooAnimalCandidate(living)) {
+                        ZooAnimalHungerManager.setTagged(living, true);
+                        ZooAnimalHungerManager.setOwner(living, site.getOwnerUuid());
+                        ZooAnimalHungerManager.setHunger(living, ZooAnimalHungerManager.MAX_HUNGER);
+                    }
+                    level.addFreshEntityWithPassengers(spawned);
+                }
+            }
+        } catch (Exception e) {
+            ZooTycoonMod.LOGGER.error("Failed to spawn entities from schematic {}", site.getSchematic().getId(), e);
         }
     }
 

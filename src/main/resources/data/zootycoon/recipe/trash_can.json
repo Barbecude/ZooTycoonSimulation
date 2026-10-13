@@ -2,7 +2,9 @@
   "type": "minecraft:crafting_shaped",
   "category": "building",
   "key": {
-    "I": "minecraft:iron_ingot"
+    "I": {
+      "item": "minecraft:iron_ingot"
+    }
   },
   "pattern": [
     "I I",
@@ -14,4 +16,3 @@
     "id": "zootycoon:trash_can"
   }
 }
-

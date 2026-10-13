@@ -158,11 +158,7 @@ public class ZooClaimManager {
         for (ZooClaim existing : claims.values()) {
             if (!existing.getOwnerUuid().equals(player.getUUID())) {
                 if (existing.intersects(box)) {
-                    player.displayClientMessage(
-                            Component.literal("[Tabrakan] Wilayah ini bertabrakan dengan lahan milik " + existing.getOwnerName() + "!")
-                                    .withStyle(ChatFormatting.RED),
-                            true
-                    );
+                    ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.claim", "zootycoon.claim.overlap_owner", 3, existing.getOwnerName());
                     return false;
                 }
             }
@@ -194,11 +190,7 @@ public class ZooClaimManager {
         if (cost > 0 && !player.isCreative()) {
             if (!TransactionHelper.hasEnoughEmeralds(player, cost)) {
                 int current = TransactionHelper.countEmeralds(player);
-                player.displayClientMessage(
-                        Component.literal("[Emerald Kurang] Butuh " + cost + " Emerald untuk " + newBlocks + " blok baru (Punya: " + current + " Emerald).")
-                                .withStyle(ChatFormatting.GOLD),
-                        true
-                );
+                ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.economy", "zootycoon.claim.not_enough_emeralds_detail", 3, cost, newBlocks, current);
                 return false;
             }
 
@@ -236,11 +228,11 @@ public class ZooClaimManager {
         saveToFile();
         syncToAll();
 
-        String msg = (cost == 0)
-                ? "[Tanah Diperluas] Semua blok sudah Anda miliki (Gratis)"
-                : "[Tanah Berhasil Dibeli] " + newBlocks + " blok baru seharga " + cost + " Emerald (" + (totalBlocks - newBlocks) + " blok gratis karena sudah Anda miliki)";
-        player.displayClientMessage(Component.literal(msg).withStyle(ChatFormatting.GREEN), true);
-        player.sendSystemMessage(Component.literal(msg).withStyle(ChatFormatting.GREEN));
+        if (cost == 0) {
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.claim", "zootycoon.claim.expanded_free", 1);
+        } else {
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.claim", "zootycoon.claim.purchased_detail", 1, newBlocks, cost, totalBlocks - newBlocks);
+        }
         return true;
     }
 
@@ -250,10 +242,7 @@ public class ZooClaimManager {
         // Check overlapping claims
         for (ZooClaim existing : claims.values()) {
             if (existing.intersects(newClaim)) {
-                player.displayClientMessage(
-                        Component.translatable("zootycoon.claim.overlap").withStyle(ChatFormatting.RED),
-                        true
-                );
+                ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.claim", "zootycoon.claim.overlap", 3);
                 return false;
             }
         }
@@ -261,10 +250,7 @@ public class ZooClaimManager {
         // Check and deduct emerald cost
         int cost = tier.getCostInEmeralds();
         if (!TransactionHelper.hasEnoughEmeralds(player, cost)) {
-            player.displayClientMessage(
-                    Component.translatable("zootycoon.claim.not_enough_emeralds").withStyle(ChatFormatting.RED),
-                    true
-            );
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.economy", "zootycoon.claim.not_enough_emeralds", 3);
             return false;
         }
 
@@ -276,10 +262,7 @@ public class ZooClaimManager {
         saveToFile();
         syncToAll();
 
-        player.displayClientMessage(
-                Component.translatable("zootycoon.claim.success").withStyle(ChatFormatting.GREEN),
-                true
-        );
+        ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.claim", "zootycoon.claim.success", 1);
         return true;
     }
 
@@ -312,10 +295,9 @@ public class ZooClaimManager {
             if (level instanceof ServerLevel serverLevel) {
                 ZooClaimManager manager = get(serverLevel);
                 if (!manager.canPlayerModify(player, pos)) {
-                    player.displayClientMessage(
-                            Component.literal("Anda tidak memiliki izin di lahan kebun binatang ini!").withStyle(ChatFormatting.RED),
-                            true
-                    );
+                    if (player instanceof ServerPlayer sp) {
+                        ZooNetworkPayloads.sendToast(sp, "zootycoon.toast.title.claim", "zootycoon.claim.no_permission", 3);
+                    }
                     return false; // Prevent break
                 }
             }
@@ -327,10 +309,9 @@ public class ZooClaimManager {
                 ZooClaimManager manager = get(serverLevel);
                 BlockPos pos = hitResult.getBlockPos();
                 if (!manager.canPlayerModify(player, pos)) {
-                    player.displayClientMessage(
-                            Component.literal("Lahan ini dilindungi oleh pemilik zoo!").withStyle(ChatFormatting.RED),
-                            true
-                    );
+                    if (player instanceof ServerPlayer sp) {
+                        ZooNetworkPayloads.sendToast(sp, "zootycoon.toast.title.claim", "zootycoon.claim.protected_area", 3);
+                    }
                     return InteractionResult.FAIL;
                 }
             }
@@ -341,7 +322,7 @@ public class ZooClaimManager {
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
             if (isHostileMonster(entity)) {
                 ZooClaimManager manager = get(world);
-                if (manager.getClaimAt(entity.blockPosition()) != null) {
+                if (manager.getClaimAt(entity.blockPosition()).isPresent()) {
                     entity.discard();
                 }
             }

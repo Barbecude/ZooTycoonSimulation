@@ -80,20 +80,12 @@ public class ClaimBoundaryRenderer {
             claimOffsetX = 0;
             claimOffsetZ = 0;
             if (player != null) {
-                player.displayClientMessage(
-                        Component.literal("[Sudut 1 Ditentukan: (" + pos1.getX() + ", " + pos1.getZ() + ")] Klik blok lain untuk Sudut 2")
-                                .withStyle(ChatFormatting.AQUA),
-                        true
-                );
+                net.zootycoon.client.ui.ZooHudOverlay.showToast("zootycoon.toast.title.claim", "zootycoon.claim.pos1", net.zootycoon.client.ui.ZooHudOverlay.TOAST_INFO, pos1.getX(), pos1.getZ());
             }
         } else if (pos2 == null) {
             if (clickedPos.equals(pos1)) {
                 if (player != null) {
-                    player.displayClientMessage(
-                            Component.literal("Sudut 2 harus berbeda dari Sudut 1! Silakan pilih blok lain.")
-                                    .withStyle(ChatFormatting.GOLD),
-                            true
-                    );
+                    net.zootycoon.client.ui.ZooHudOverlay.showToast("zootycoon.toast.title.claim", "zootycoon.claim.same_pos", net.zootycoon.client.ui.ZooHudOverlay.TOAST_WARNING);
                 }
                 return;
             }
@@ -106,11 +98,7 @@ public class ClaimBoundaryRenderer {
             claimOffsetX = 0;
             claimOffsetZ = 0;
             if (player != null) {
-                player.displayClientMessage(
-                        Component.literal("[Sudut 1 Ditentukan: (" + pos1.getX() + ", " + pos1.getZ() + ")] Klik blok lain untuk Sudut 2")
-                                .withStyle(ChatFormatting.AQUA),
-                        true
-                );
+                net.zootycoon.client.ui.ZooHudOverlay.showToast("zootycoon.toast.title.claim", "zootycoon.claim.pos1", net.zootycoon.client.ui.ZooHudOverlay.TOAST_INFO, pos1.getX(), pos1.getZ());
             }
         }
     }
@@ -256,6 +244,8 @@ public class ClaimBoundaryRenderer {
         }
 
         // 2. Render Existing Claims
+        double pY = player.getY() - camPos.y;
+
         for (ZooClaim claim : CLIENT_CLAIMS) {
             if (mergedClaimIds.contains(claim.getClaimId())) {
                 continue;
@@ -266,7 +256,7 @@ public class ClaimBoundaryRenderer {
             float r = isOwner ? 0.0f : 1.0f;
             float g = isOwner ? 0.9f : 0.2f;
             float b = isOwner ? 1.0f : 0.2f;
-            float a = 0.8f;
+            float a = 0.85f;
 
             double minX = box.minX() - camPos.x;
             double maxX = box.maxX() + 1.0 - camPos.x;
@@ -275,24 +265,31 @@ public class ClaimBoundaryRenderer {
             double minZ = box.minZ() - camPos.z;
             double maxZ = box.maxZ() + 1.0 - camPos.z;
 
-            LevelRenderer.renderLineBox(poseStack, lineConsumer, minX, minY, minZ, maxX, maxY, maxZ, r, g, b, a);
+            // Full height wireframe
+            LevelRenderer.renderLineBox(poseStack, lineConsumer, minX, minY, minZ, maxX, maxY, maxZ, r, g, b, 0.35f);
+            // Ground-level visible border ring
+            renderHorizontalPerimeter(poseStack, lineConsumer, minX, maxX, pY + 0.05, minZ, maxZ, r, g, b, a);
+            renderHorizontalPerimeter(poseStack, lineConsumer, minX, maxX, pY + 1.05, minZ, maxZ, r, g, b, a * 0.6f);
         }
 
         // 3. Render Active Selection
         if (pos1 != null && pos2 == null) {
-            double minX = pos1.getX() - camPos.x;
-            double maxX = pos1.getX() + 1.0 - camPos.x;
-            double minY = worldMinY - camPos.y;
-            double maxY = worldMaxY - camPos.y;
-            double minZ = pos1.getZ() - camPos.z;
-            double maxZ = pos1.getZ() + 1.0 - camPos.z;
+            double bMinX = pos1.getX() - camPos.x;
+            double bMaxX = pos1.getX() + 1.0 - camPos.x;
+            double bMinY = pos1.getY() - camPos.y;
+            double bMaxY = pos1.getY() + 1.0 - camPos.y;
+            double bMinZ = pos1.getZ() - camPos.z;
+            double bMaxZ = pos1.getZ() + 1.0 - camPos.z;
 
-            LevelRenderer.renderLineBox(poseStack, lineConsumer, minX, minY, minZ, maxX, maxY, maxZ, 0.0f, 1.0f, 0.2f, 0.9f);
+            // 1x1 block marker around Corner 1
+            LevelRenderer.renderLineBox(poseStack, lineConsumer, bMinX, bMinY, bMinZ, bMaxX, bMaxY, bMaxZ, 0.0f, 1.0f, 0.4f, 1.0f);
+            // Vertical beam
+            LevelRenderer.renderLineBox(poseStack, lineConsumer, bMinX, worldMinY - camPos.y, bMinZ, bMaxX, worldMaxY - camPos.y, bMaxZ, 0.0f, 1.0f, 0.4f, 0.4f);
         } else if (hasActiveBox) {
             float r = conflictOther ? 1.0f : 0.0f;
             float g = conflictOther ? 0.1f : 1.0f;
-            float b = conflictOther ? 0.1f : 0.2f;
-            float a = 0.9f;
+            float b = conflictOther ? 0.1f : 0.3f;
+            float a = 0.95f;
 
             double minX = selMinX - camPos.x;
             double maxX = selMaxX - camPos.x;
@@ -301,7 +298,66 @@ public class ClaimBoundaryRenderer {
             double minZ = selMinZ - camPos.z;
             double maxZ = selMaxZ - camPos.z;
 
-            LevelRenderer.renderLineBox(poseStack, lineConsumer, minX, minY, minZ, maxX, maxY, maxZ, r, g, b, a);
+            // 1x1 Block marker at Corner 1
+            double c1X = (pos1.getX() + claimOffsetX) - camPos.x;
+            double c1Y = pos1.getY() - camPos.y;
+            double c1Z = (pos1.getZ() + claimOffsetZ) - camPos.z;
+            LevelRenderer.renderLineBox(poseStack, lineConsumer, c1X, c1Y, c1Z, c1X + 1.0, c1Y + 1.0, c1Z + 1.0, 0.0f, 1.0f, 0.5f, 1.0f);
+
+            // 1x1 Block marker at Corner 2
+            double c2X = (pos2.getX() + claimOffsetX) - camPos.x;
+            double c2Y = pos2.getY() - camPos.y;
+            double c2Z = (pos2.getZ() + claimOffsetZ) - camPos.z;
+            LevelRenderer.renderLineBox(poseStack, lineConsumer, c2X, c2Y, c2Z, c2X + 1.0, c2Y + 1.0, c2Z + 1.0, 0.0f, 1.0f, 0.5f, 1.0f);
+
+            // Ground perimeter rings (feet, waist, head height)
+            renderHorizontalPerimeter(poseStack, lineConsumer, minX, maxX, pY + 0.05, minZ, maxZ, r, g, b, a);
+            renderHorizontalPerimeter(poseStack, lineConsumer, minX, maxX, pY + 1.0, minZ, maxZ, r, g, b, a * 0.8f);
+            renderHorizontalPerimeter(poseStack, lineConsumer, minX, maxX, pY + 2.0, minZ, maxZ, r, g, b, a * 0.6f);
+
+            // Corner vertical pillars
+            renderVerticalPillars(poseStack, lineConsumer, minX, maxX, pY - 8.0, pY + 16.0, minZ, maxZ, r, g, b, a);
+
+            // Full world box wireframe
+            LevelRenderer.renderLineBox(poseStack, lineConsumer, minX, minY, minZ, maxX, maxY, maxZ, r, g, b, 0.35f);
         }
+    }
+
+    private static void renderHorizontalPerimeter(
+            PoseStack poseStack, VertexConsumer consumer,
+            double minX, double maxX, double y, double minZ, double maxZ,
+            float r, float g, float b, float a
+    ) {
+        var pose = poseStack.last();
+        consumer.addVertex(pose, (float) minX, (float) y, (float) minZ).setColor(r, g, b, a).setNormal(pose, 1, 0, 0);
+        consumer.addVertex(pose, (float) maxX, (float) y, (float) minZ).setColor(r, g, b, a).setNormal(pose, 1, 0, 0);
+
+        consumer.addVertex(pose, (float) maxX, (float) y, (float) minZ).setColor(r, g, b, a).setNormal(pose, 0, 0, 1);
+        consumer.addVertex(pose, (float) maxX, (float) y, (float) maxZ).setColor(r, g, b, a).setNormal(pose, 0, 0, 1);
+
+        consumer.addVertex(pose, (float) maxX, (float) y, (float) maxZ).setColor(r, g, b, a).setNormal(pose, -1, 0, 0);
+        consumer.addVertex(pose, (float) minX, (float) y, (float) maxZ).setColor(r, g, b, a).setNormal(pose, -1, 0, 0);
+
+        consumer.addVertex(pose, (float) minX, (float) y, (float) maxZ).setColor(r, g, b, a).setNormal(pose, 0, 0, -1);
+        consumer.addVertex(pose, (float) minX, (float) y, (float) minZ).setColor(r, g, b, a).setNormal(pose, 0, 0, -1);
+    }
+
+    private static void renderVerticalPillars(
+            PoseStack poseStack, VertexConsumer consumer,
+            double minX, double maxX, double minY, double maxY, double minZ, double maxZ,
+            float r, float g, float b, float a
+    ) {
+        var pose = poseStack.last();
+        consumer.addVertex(pose, (float) minX, (float) minY, (float) minZ).setColor(r, g, b, a).setNormal(pose, 0, 1, 0);
+        consumer.addVertex(pose, (float) minX, (float) maxY, (float) minZ).setColor(r, g, b, a).setNormal(pose, 0, 1, 0);
+
+        consumer.addVertex(pose, (float) maxX, (float) minY, (float) minZ).setColor(r, g, b, a).setNormal(pose, 0, 1, 0);
+        consumer.addVertex(pose, (float) maxX, (float) maxY, (float) minZ).setColor(r, g, b, a).setNormal(pose, 0, 1, 0);
+
+        consumer.addVertex(pose, (float) maxX, (float) minY, (float) maxZ).setColor(r, g, b, a).setNormal(pose, 0, 1, 0);
+        consumer.addVertex(pose, (float) maxX, (float) maxY, (float) maxZ).setColor(r, g, b, a).setNormal(pose, 0, 1, 0);
+
+        consumer.addVertex(pose, (float) minX, (float) minY, (float) maxZ).setColor(r, g, b, a).setNormal(pose, 0, 1, 0);
+        consumer.addVertex(pose, (float) minX, (float) maxY, (float) maxZ).setColor(r, g, b, a).setNormal(pose, 0, 1, 0);
     }
 }

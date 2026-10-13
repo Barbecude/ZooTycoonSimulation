@@ -1,7 +1,6 @@
 package net.zootycoon.client.ui;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.registries.Registries;
@@ -11,14 +10,15 @@ import net.minecraft.nbt.NbtIo;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.zootycoon.ZooTycoonMod;
 import net.zootycoon.client.render.PlacementPreviewRenderer;
-import net.zootycoon.item.ZooItems;
 import net.zootycoon.network.ZooNetworkPayloads;
 import net.zootycoon.schematic.SchematicScanner;
 import net.zootycoon.schematic.ZooSchematic;
 import net.zootycoon.schematic.ZooSchematicRegistry;
+import net.zootycoon.util.ZooTranslations;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -58,7 +58,6 @@ public class SchematicCatalogTab {
                 var scan = SchematicScanner.scan(template);
                 List<Map.Entry<Item, Integer>> list = new ArrayList<>(scan.requiredMaterials().entrySet());
                 list.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
-                ZooTycoonMod.LOGGER.info("Loaded {} distinct materials for schematic {}", list.size(), schem.getName());
                 return list;
             } catch (Exception e) {
                 ZooTycoonMod.LOGGER.error("Failed to load materials for " + schem.getName(), e);
@@ -81,11 +80,10 @@ public class SchematicCatalogTab {
         int listWidth = 190;
         int listX = 20;
 
-        // Category Switcher Buttons: Kandang vs Fasilitas with active state
         int catBtnW = (listWidth - 4) / 2;
         int catY = 48;
 
-        ZooButton kandangBtn = new ZooButton(listX, catY, catBtnW, 20, Component.literal("Kandang"), b -> {
+        ZooButton kandangBtn = new ZooButton(listX, catY, catBtnW, 20, ZooTranslations.component("zootycoon.ui.catalog.tab_enclosures"), b -> {
             if (!"enclosures".equals(this.category)) {
                 this.category = "enclosures";
                 this.selectedSchematic = null;
@@ -95,7 +93,7 @@ public class SchematicCatalogTab {
         kandangBtn.setSelected("enclosures".equals(this.category));
         screen.addWidgetPublic(kandangBtn);
 
-        ZooButton fasilitasBtn = new ZooButton(listX + catBtnW + 4, catY, catBtnW, 20, Component.literal("Fasilitas"), b -> {
+        ZooButton fasilitasBtn = new ZooButton(listX + catBtnW + 4, catY, catBtnW, 20, ZooTranslations.component("zootycoon.ui.catalog.tab_essentials"), b -> {
             if (!"essentials".equals(this.category)) {
                 this.category = "essentials";
                 this.selectedSchematic = null;
@@ -107,13 +105,11 @@ public class SchematicCatalogTab {
 
         int startY = catY + 24;
 
-        // Custom Button: + Desain Baru di Studio
-        screen.addWidgetPublic(new ZooButton(listX, startY, listWidth, 22, Component.literal("+ Desain Baru di Studio (128x128)"), b -> {
+        screen.addWidgetPublic(new ZooButton(listX, startY, listWidth, 22, ZooTranslations.component("zootycoon.ui.catalog.btn_new_studio"), b -> {
             ClientPlayNetworking.send(new ZooNetworkPayloads.EnterStudioPayload(category));
             screen.onClose();
         }).setCustomIcon(ZooTycoonMod.id("textures/gui/icons/add_enclosure.png")).asPrimary());
 
-        // Custom Buttons for schematics list
         int itemY = startY + 28;
         for (ZooSchematic schem : schematics) {
             String label = (schem == selectedSchematic ? "> " : "  ") + schem.getName();
@@ -124,7 +120,6 @@ public class SchematicCatalogTab {
             itemY += 26;
         }
 
-        // Action Buttons: Place, Edit, Delete (Custom ZooButtons)
         if (selectedSchematic != null) {
             int detailX = listX + listWidth + 25;
             int detailWidth = parent.width - detailX - 25;
@@ -134,14 +129,13 @@ public class SchematicCatalogTab {
             int btnWidth2 = (int) (detailWidth * 0.34);
             int btnWidth3 = detailWidth - btnWidth1 - btnWidth2 - 8;
 
-            // Place button
-            screen.addWidgetPublic(new ZooButton(detailX, actionBtnY, btnWidth1, 24, Component.literal("Tempatkan di Zoo"), b -> {
+            screen.addWidgetPublic(new ZooButton(detailX, actionBtnY, btnWidth1, 24, ZooTranslations.component("zootycoon.ui.catalog.btn_place"), b -> {
                 PlacementPreviewRenderer.setActiveSchematic(selectedSchematic);
                 Minecraft mc = Minecraft.getInstance();
                 if (mc.player != null) {
                     boolean hasStick = false;
                     for (int i = 0; i < 9; i++) {
-                        if (mc.player.getInventory().getItem(i).is(net.minecraft.world.item.Items.STICK)) {
+                        if (mc.player.getInventory().getItem(i).is(Items.STICK)) {
                             mc.player.getInventory().selected = i;
                             hasStick = true;
                             break;
@@ -149,36 +143,27 @@ public class SchematicCatalogTab {
                     }
                     if (!hasStick) {
                         for (int i = 9; i < mc.player.getInventory().getContainerSize(); i++) {
-                            if (mc.player.getInventory().getItem(i).is(net.minecraft.world.item.Items.STICK)) {
+                            if (mc.player.getInventory().getItem(i).is(Items.STICK)) {
                                 hasStick = true;
                                 break;
                             }
                         }
                     }
                     if (!hasStick) {
-                        mc.player.displayClientMessage(
-                                Component.literal("Bos butuh Stick di tas untuk menempatkan cetak biru!").withStyle(ChatFormatting.YELLOW),
-                                true
-                        );
+                        ZooHudOverlay.showToast("zootycoon.toast.title.warning", "zootycoon.build.need_stick", ZooHudOverlay.TOAST_WARNING);
                         return;
                     }
-                    mc.player.displayClientMessage(
-                            Component.literal("Arahkan ke area tanah zoo, lalu Klik Kanan dengan Stick untuk membangun.")
-                                    .withStyle(ChatFormatting.AQUA),
-                            true
-                    );
+                    ZooHudOverlay.showToast("zootycoon.toast.title.info", "zootycoon.build.place_guide", ZooHudOverlay.TOAST_INFO);
                 }
                 screen.onClose();
             }).setCustomIcon(ZooTycoonMod.id("textures/gui/icons/add_green.png")).asEmerald());
 
-            // Edit in Studio button
-            screen.addWidgetPublic(new ZooButton(detailX + btnWidth1 + 4, actionBtnY, btnWidth2, 24, Component.literal("Edit Desain di Studio"), b -> {
+            screen.addWidgetPublic(new ZooButton(detailX + btnWidth1 + 4, actionBtnY, btnWidth2, 24, ZooTranslations.component("zootycoon.ui.catalog.btn_edit"), b -> {
                 ClientPlayNetworking.send(new ZooNetworkPayloads.EditStudioPayload(selectedSchematic.getId(), category));
                 screen.onClose();
             }).setCustomIcon(ZooTycoonMod.id("textures/gui/icons/pencil.png")).asGold());
 
-            // Delete button
-            screen.addWidgetPublic(new ZooButton(detailX + btnWidth1 + btnWidth2 + 8, actionBtnY, btnWidth3, 24, Component.literal("Hapus"), b -> {
+            screen.addWidgetPublic(new ZooButton(detailX + btnWidth1 + btnWidth2 + 8, actionBtnY, btnWidth3, 24, ZooTranslations.component("zootycoon.ui.catalog.btn_delete"), b -> {
                 ZooSchematicRegistry.deleteCustomSchematic(selectedSchematic.getId());
                 this.selectedSchematic = null;
                 screen.setView(screen.getCurrentView());
@@ -195,7 +180,6 @@ public class SchematicCatalogTab {
         int panelStartY = 44;
         int detailHeight = parent.height - panelStartY - 48;
 
-        // 1. Left List Container Background & Border (Essential Obsidian Slate)
         int listTotalHeight = parent.height - panelStartY - 25;
         graphics.fill(listX - 5, panelStartY, listX + listWidth + 5, panelStartY + listTotalHeight, 0xF20F1219);
         graphics.fill(listX - 5, panelStartY, listX + listWidth + 5, panelStartY + 1, 0xFF242A38);
@@ -203,7 +187,6 @@ public class SchematicCatalogTab {
         graphics.fill(listX - 5, panelStartY, listX - 4, panelStartY + listTotalHeight, 0xFF242A38);
         graphics.fill(listX + listWidth + 4, panelStartY, listX + listWidth + 5, panelStartY + listTotalHeight, 0xFF242A38);
 
-        // 2. Right Detail Panel Background & Border (Essential Obsidian Slate)
         graphics.fill(detailX, panelStartY, detailX + detailWidth, panelStartY + detailHeight, 0xF20F1219);
         graphics.fill(detailX, panelStartY, detailX + detailWidth, panelStartY + 1, 0xFF242A38);
         graphics.fill(detailX, panelStartY + detailHeight - 1, detailX + detailWidth, panelStartY + detailHeight, 0xFF242A38);
@@ -213,23 +196,16 @@ public class SchematicCatalogTab {
         int startY = panelStartY;
 
         if (selectedSchematic != null) {
-            // Header: Blueprint Title
             graphics.drawString(mc.font, Component.literal(selectedSchematic.getName()), detailX + 15, startY + 15, 0xFFFFFFFF, true);
 
-            // Subtitle / Dimensions
             var dim = selectedSchematic.getDimensions();
-            String dimText = "Dimensi: " + dim.getX() + " x " + dim.getY() + " x " + dim.getZ() + " Blok (Volume: " + (dim.getX() * dim.getY() * dim.getZ()) + " m3)";
-            graphics.drawString(mc.font, Component.literal(dimText), detailX + 15, startY + 30, 0xFF8B949E, false);
+            graphics.drawString(mc.font, ZooTranslations.component("zootycoon.ui.catalog.dimensions", dim.getX(), dim.getY(), dim.getZ(), (dim.getX() * dim.getY() * dim.getZ())), detailX + 15, startY + 30, 0xFF8B949E, false);
 
-            // Cost summary
-            String costText = "Biaya Jasa Pembangun: " + selectedSchematic.getBuilderHiringCost() + " Emerald";
-            graphics.drawString(mc.font, Component.literal(costText), detailX + 15, startY + 44, 0xFFD0D7DE, true);
+            graphics.drawString(mc.font, ZooTranslations.component("zootycoon.ui.catalog.builder_cost", selectedSchematic.getBuilderHiringCost()), detailX + 15, startY + 44, 0xFFD0D7DE, true);
 
-            // Divider
             graphics.fill(detailX + 15, startY + 62, detailX + detailWidth - 15, startY + 63, 0xFF2A2E37);
 
-            // Material List Header (Grid)
-            graphics.drawString(mc.font, Component.literal("Daftar Kebutuhan Material (" + cachedMaterials.size() + " Jenis):"), detailX + 15, startY + 74, 0xFFFFFFFF, true);
+            graphics.drawString(mc.font, ZooTranslations.component("zootycoon.ui.catalog.materials_header", cachedMaterials.size()), detailX + 15, startY + 74, 0xFFFFFFFF, true);
 
             int gridStartY = startY + 90;
             int slotSize = 22;
@@ -238,7 +214,7 @@ public class SchematicCatalogTab {
             int cols = Math.max(1, (detailWidth - 30) / step);
 
             if (cachedMaterials.isEmpty()) {
-                graphics.drawString(mc.font, Component.literal("Tidak ada material khusus yang dibutuhkan."), detailX + 15, gridStartY + 10, 0xFFAAAAAA, true);
+                graphics.drawString(mc.font, ZooTranslations.component("zootycoon.ui.catalog.no_materials"), detailX + 15, gridStartY + 10, 0xFFAAAAAA, true);
             } else {
                 for (int i = 0; i < cachedMaterials.size(); i++) {
                     var entry = cachedMaterials.get(i);
@@ -247,43 +223,31 @@ public class SchematicCatalogTab {
                     int slotX = detailX + 15 + col * step;
                     int slotY = gridStartY + row * step;
 
-                    // Stop if overflowing panel before buttons
                     if (slotY + slotSize > startY + detailHeight - 45) {
                         int remaining = cachedMaterials.size() - i;
-                        graphics.drawString(mc.font, Component.literal("+" + remaining + " jenis lainnya..."), slotX, slotY + 6, 0xFF888888, true);
+                        graphics.drawString(mc.font, ZooTranslations.component("zootycoon.ui.catalog.more_materials", remaining), slotX, slotY + 6, 0xFF888888, true);
                         break;
                     }
 
-                    // Slot box background & border
                     graphics.fill(slotX, slotY, slotX + slotSize, slotY + slotSize, 0xFF22262E);
                     graphics.fill(slotX, slotY, slotX + slotSize, slotY + 1, 0xFF353B47);
                     graphics.fill(slotX, slotY + slotSize - 1, slotX + slotSize, slotY + slotSize, 0xFF353B47);
                     graphics.fill(slotX, slotY, slotX + 1, slotY + slotSize, 0xFF353B47);
                     graphics.fill(slotX + slotSize - 1, slotY, slotX + slotSize, slotY + slotSize, 0xFF353B47);
 
-                    // Render material icon & quantity
                     ItemStack stack = new ItemStack(entry.getKey());
                     graphics.renderItem(stack, slotX + 3, slotY + 3);
                     graphics.renderItemDecorations(mc.font, stack, slotX + 3, slotY + 3, String.valueOf(entry.getValue()));
 
-                    // Tooltip on hover
                     if (mouseX >= slotX && mouseX <= slotX + slotSize && mouseY >= slotY && mouseY <= slotY + slotSize) {
                         graphics.renderTooltip(mc.font, stack, mouseX, mouseY);
                     }
                 }
             }
         } else {
-            graphics.drawString(mc.font, Component.literal("BELUM ADA BLUEPRINT TERSIMPAN DI KATEGORI INI"), detailX + 15, startY + 20, 0xFFFFFFFF, true);
+            graphics.drawString(mc.font, ZooTranslations.component("zootycoon.ui.catalog.empty_title"), detailX + 15, startY + 20, 0xFFFFFFFF, true);
             graphics.fill(detailX + 15, startY + 36, detailX + detailWidth - 15, startY + 37, 0xFF242A38);
-
-            String help = "Katalog ini murni data-driven berdasarkan kreasi Anda sendiri.\n\n"
-                    + "Cara Membuat Bangunan Baru:\n"
-                    + "1. Klik tombol '+ Desain Baru di Studio (128x128)' di sebelah kiri.\n"
-                    + "2. Anda akan dipindahkan ke Studio Khusus berukuran 128x128 blok kosong.\n"
-                    + "3. Bangun kandang atau fasilitas kebun binatang sesuka Anda.\n"
-                    + "4. Klik tombol Simpan Blueprint, beri nama, lalu simpan.\n"
-                    + "5. Bangunan Anda otomatis siap dibangun di area tanah zoo!";
-            graphics.drawWordWrap(mc.font, Component.literal(help), detailX + 15, startY + 48, detailWidth - 30, 0xFFCCCCCC);
+            graphics.drawWordWrap(mc.font, ZooTranslations.component("zootycoon.ui.catalog.empty_help"), detailX + 15, startY + 48, detailWidth - 30, 0xFFCCCCCC);
         }
     }
 

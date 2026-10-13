@@ -1,30 +1,39 @@
 package net.zootycoon.client;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.zootycoon.ZooTycoonMod;
+import net.zootycoon.animal.ZooAnimalHungerManager;
 import net.zootycoon.claim.ClaimTier;
 import net.zootycoon.claim.ZooClaim;
 import net.zootycoon.client.render.ClaimBoundaryRenderer;
 import net.zootycoon.client.render.PlacementPreviewRenderer;
 import net.zootycoon.client.ui.MainManagementScreen;
 import net.zootycoon.client.ui.StudioControlScreen;
+import net.zootycoon.client.ui.ZooHudOverlay;
+import net.zootycoon.item.ZooItems;
 import net.zootycoon.network.ZooNetworkPayloads;
-import com.mojang.blaze3d.platform.InputConstants;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
-import net.minecraft.client.KeyMapping;
+import net.zootycoon.util.ZooTranslations;
+
+import java.lang.reflect.Method;
 
 public class ZooTycoonClient implements ClientModInitializer {
 
@@ -43,12 +52,19 @@ public class ZooTycoonClient implements ClientModInitializer {
     public static int clientActiveBuilders = 0;
     public static int clientZookeepers = 0;
     public static int clientSecurity = 0;
+    public static int clientEmeraldBalance = 0;
     public static java.util.List<ZooNetworkPayloads.AnimalSyncData> clientAnimals = new java.util.ArrayList<>();
     public static final java.util.Map<Integer, ZooNetworkPayloads.AnimalSyncData> clientAnimalMap = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static int clientScopeTicks = 0;
     private static int clientLastTargetId = -1;
     private static int clientSpyglassCooldown = 0;
+
+    // Reflection cache for Field Guide integration
+    private static boolean fieldGuideChecked = false;
+    private static Method fgGetInstance = null;
+    private static Method fgGetScanningTarget = null;
+    private static Method fgGetFadingTarget = null;
 
     public static ZooNetworkPayloads.AnimalSyncData getAnimalData(int entityId) {
         return clientAnimalMap.get(entityId);
@@ -58,6 +74,14 @@ public class ZooTycoonClient implements ClientModInitializer {
     public void onInitializeClient() {
         ZooTycoonMod.LOGGER.info("Initializing Zoo Tycoon Client for Fabric 26.3...");
 
+        // 0. Register Spawn Egg color providers for Visitor and Cashier spawn eggs
+        ColorProviderRegistry.ITEM.register((stack, tintIndex) -> {
+            if (stack.getItem() instanceof SpawnEggItem egg) {
+                return 0xFF000000 | egg.getColor(tintIndex);
+            }
+            return -1;
+        }, ZooItems.VISITOR_SPAWN_EGG, ZooItems.CASHIER_SPAWN_EGG);
+
         // 1. Right-click actions with Stick (minecraft:stick)
         net.fabricmc.fabric.api.event.player.UseItemCallback.EVENT.register((player, level, hand) -> {
             ItemStack stack = player.getItemInHand(hand);
@@ -66,7 +90,7 @@ public class ZooTycoonClient implements ClientModInitializer {
                 if (PlacementPreviewRenderer.getActiveSchematic() != null) {
                     if (player.isShiftKeyDown()) {
                         PlacementPreviewRenderer.clear();
-                        player.displayClientMessage(net.minecraft.network.chat.Component.literal("Penempatan bangunan dibatalkan.").withStyle(net.minecraft.ChatFormatting.YELLOW), true);
+                        ZooHudOverlay.showToast("zootycoon.toast.title.info", "zootycoon.placement.cancelled", 2);
                     } else {
                         PlacementPreviewRenderer.confirmBuild(null);
                     }
@@ -83,7 +107,7 @@ public class ZooTycoonClient implements ClientModInitializer {
                 if (ClaimBoundaryRenderer.isBoxReady()) {
                     if (player.isShiftKeyDown()) {
                         ClaimBoundaryRenderer.clearClaimPreview();
-                        player.displayClientMessage(net.minecraft.network.chat.Component.literal("Seleksi beli tanah dibatalkan.").withStyle(net.minecraft.ChatFormatting.YELLOW), true);
+                        ZooHudOverlay.showToast("zootycoon.toast.title.claim", "zootycoon.claim.selection_cancelled", 2);
                     } else {
                         ClaimBoundaryRenderer.confirmActiveClaim();
                     }
@@ -98,7 +122,7 @@ public class ZooTycoonClient implements ClientModInitializer {
                 if (PlacementPreviewRenderer.getActiveSchematic() != null) {
                     if (player.isShiftKeyDown()) {
                         PlacementPreviewRenderer.clear();
-                        player.displayClientMessage(net.minecraft.network.chat.Component.literal("Penempatan bangunan dibatalkan.").withStyle(net.minecraft.ChatFormatting.YELLOW), true);
+                        ZooHudOverlay.showToast("zootycoon.toast.title.info", "zootycoon.placement.cancelled", 2);
                     } else {
                         PlacementPreviewRenderer.confirmBuild(hitResult.getBlockPos());
                     }
@@ -108,10 +132,21 @@ public class ZooTycoonClient implements ClientModInitializer {
                 if (ClaimBoundaryRenderer.isBoxReady()) {
                     if (player.isShiftKeyDown()) {
                         ClaimBoundaryRenderer.clearClaimPreview();
-                        player.displayClientMessage(net.minecraft.network.chat.Component.literal("Seleksi beli tanah dibatalkan.").withStyle(net.minecraft.ChatFormatting.YELLOW), true);
+                        ZooHudOverlay.showToast("zootycoon.toast.title.claim", "zootycoon.claim.selection_cancelled", 2);
                     } else {
                         ClaimBoundaryRenderer.confirmActiveClaim();
                     }
+                    return InteractionResult.SUCCESS;
+                } else if (ClaimBoundaryRenderer.hasSelection()) {
+                    if (player.isShiftKeyDown()) {
+                        ClaimBoundaryRenderer.clearClaimPreview();
+                        ZooHudOverlay.showToast("zootycoon.toast.title.claim", "zootycoon.claim.selection_cancelled", 2);
+                    } else {
+                        boolean ok = ClaimBoundaryRenderer.handleRightClickBlock(hitResult.getBlockPos());
+                        if (ok) return InteractionResult.SUCCESS;
+                    }
+                } else {
+                    ClaimBoundaryRenderer.handleLeftClick(hitResult.getBlockPos());
                     return InteractionResult.SUCCESS;
                 }
             }
@@ -156,12 +191,54 @@ public class ZooTycoonClient implements ClientModInitializer {
             });
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.SyncEmeraldBalancePayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                clientEmeraldBalance = payload.balance();
+                net.zootycoon.economy.ZooEconomyManager.setClientEmeraldBalance(payload.balance());
+                if (payload.delta() != 0) {
+                    ZooHudOverlay.addDelta(payload.delta());
+                }
+            });
+        });
+
         ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.SyncAnimalsPayload.TYPE, (payload, context) -> {
             context.client().execute(() -> {
                 clientAnimals = new java.util.ArrayList<>(payload.animals());
                 clientAnimalMap.clear();
                 for (var a : payload.animals()) {
                     clientAnimalMap.put(a.entityId(), a);
+                }
+            });
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.ShowToastPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                Object[] fmtArgs = payload.args() != null ? payload.args().toArray() : new Object[0];
+                ZooHudOverlay.showToast(payload.titleKey(), payload.msgKey(), payload.toastType(), fmtArgs);
+            });
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.RequestClientSelectionSavePayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                if (ClaimBoundaryRenderer.isBoxReady()) {
+                    BlockPos p1 = ClaimBoundaryRenderer.getPos1();
+                    BlockPos p2 = ClaimBoundaryRenderer.getPos2();
+                    ClientPlayNetworking.send(new ZooNetworkPayloads.SaveCustomSchematicPayload(
+                            p1, p2, payload.name(), payload.category(),
+                            ZooTranslations.get("zootycoon.studio.custom_desc")
+                    ));
+                    ClaimBoundaryRenderer.clearClaimPreview();
+                } else if (inStudio) {
+                    ClientPlayNetworking.send(new ZooNetworkPayloads.SaveCustomSchematicPayload(
+                            BlockPos.ZERO, BlockPos.ZERO, payload.name(), payload.category(),
+                            ZooTranslations.get("zootycoon.studio.custom_desc")
+                    ));
+                } else {
+                    ZooHudOverlay.showToast(
+                            "zootycoon.toast.title.warning",
+                            "zootycoon.schematic.select_area_first",
+                            2
+                    );
                 }
             });
         });
@@ -205,12 +282,43 @@ public class ZooTycoonClient implements ClientModInitializer {
             });
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.OpenSecurityScreenPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                Minecraft.getInstance().setScreen(new net.zootycoon.client.ui.SecurityDialogScreen(
+                        payload.entityId(),
+                        payload.securityUuid(),
+                        payload.securityName(),
+                        payload.isAlert(),
+                        payload.targetName(),
+                        payload.health(),
+                        payload.maxHealth()
+                ));
+            });
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.OpenVisitorScreenPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                Minecraft.getInstance().setScreen(new net.zootycoon.client.ui.VisitorDialogScreen(
+                        payload.entityId(),
+                        payload.visitorUuid(),
+                        payload.variant(),
+                        payload.isChild(),
+                        payload.moodName(),
+                        payload.moodLabel(),
+                        payload.hunger(),
+                        payload.thirst(),
+                        payload.needsToilet(),
+                        payload.hasTrash()
+                ));
+            });
+        });
+
         // 3b. Register Entity Renderer & Model Layer for Humanoid Builder NPC
         EntityModelLayerRegistry.registerModelLayer(
                 net.zootycoon.client.model.ZooBuilderModel.LAYER_LOCATION,
                 net.zootycoon.client.model.ZooBuilderModel::createMesh
         );
-        net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
+        EntityRendererRegistry.register(
                 net.zootycoon.entity.ZooEntities.BUILDER,
                 net.zootycoon.client.render.ZooBuilderRenderer::new
         );
@@ -220,7 +328,7 @@ public class ZooTycoonClient implements ClientModInitializer {
                 net.zootycoon.client.model.ZooZookeeperModel.LAYER_LOCATION,
                 net.zootycoon.client.model.ZooZookeeperModel::createMesh
         );
-        net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
+        EntityRendererRegistry.register(
                 net.zootycoon.entity.ZooEntities.ZOOKEEPER,
                 net.zootycoon.client.render.ZooZookeeperRenderer::new
         );
@@ -230,7 +338,7 @@ public class ZooTycoonClient implements ClientModInitializer {
                 net.zootycoon.client.model.ZooSecurityModel.LAYER_LOCATION,
                 net.zootycoon.client.model.ZooSecurityModel::createMesh
         );
-        net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
+        EntityRendererRegistry.register(
                 net.zootycoon.entity.ZooEntities.SECURITY,
                 net.zootycoon.client.render.ZooSecurityRenderer::new
         );
@@ -240,23 +348,27 @@ public class ZooTycoonClient implements ClientModInitializer {
                 net.zootycoon.client.model.ZooHunterModel.LAYER_LOCATION,
                 net.zootycoon.client.model.ZooHunterModel::createMesh
         );
-        net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
+        EntityRendererRegistry.register(
                 net.zootycoon.entity.ZooEntities.HUNTER,
                 net.zootycoon.client.render.ZooHunterRenderer::new
         );
 
-        // 3f. Register Entity Renderer & Model Layer for Zoo Visitor NPC
+        // 3f. Register Entity Renderer & Model Layer for Zoo Visitor NPC & Cashier NPC
         EntityModelLayerRegistry.registerModelLayer(
                 net.zootycoon.client.model.ZooVisitorModel.LAYER_LOCATION,
                 net.zootycoon.client.model.ZooVisitorModel::createMesh
         );
-        net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
+        EntityRendererRegistry.register(
                 net.zootycoon.entity.ZooEntities.VISITOR,
                 net.zootycoon.client.render.ZooVisitorRenderer::new
         );
+        EntityRendererRegistry.register(
+                net.zootycoon.entity.ZooEntities.CASHIER,
+                net.zootycoon.client.render.ZooCashierRenderer::new
+        );
 
         // 3g. Register Entity Renderer for Toilet Seat
-        net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
+        EntityRendererRegistry.register(
                 net.zootycoon.entity.ZooEntities.TOILET_SEAT,
                 net.zootycoon.client.render.ToiletSeatRenderer::new
         );
@@ -281,17 +393,24 @@ public class ZooTycoonClient implements ClientModInitializer {
             }
             lastRShiftDown = rShiftDown;
 
-            // Client-side Spyglass scoping animal registration
+            // Client-side Spyglass & Field Guide long-range animal registration
             if (client.player != null && client.level != null) {
-                boolean scoping = client.player.isScoping()
-                        || (client.player.isUsingItem() && client.player.getUseItem().is(net.minecraft.world.item.Items.SPYGLASS))
-                        || client.player.getMainHandItem().is(net.minecraft.world.item.Items.SPYGLASS)
-                        || client.player.getOffhandItem().is(net.minecraft.world.item.Items.SPYGLASS);
+                if (clientSpyglassCooldown > 0) {
+                    clientSpyglassCooldown--;
+                }
 
-                if (scoping && (client.player.isScoping() || client.player.isUsingItem())) {
-                    if (clientSpyglassCooldown > 0) {
-                        clientSpyglassCooldown--;
-                    } else {
+                // 5a. Poll FieldGuideScanState directly if Field Guide mod is installed
+                pollFieldGuideScanTarget();
+
+                // 5b. Long-range 64-block raycast while scoping or using Spyglass / Field Guide
+                boolean hasScanItem = ZooAnimalHungerManager.isScanningItem(client.player.getMainHandItem())
+                        || ZooAnimalHungerManager.isScanningItem(client.player.getOffhandItem())
+                        || ZooAnimalHungerManager.isScanningItem(client.player.getUseItem());
+                boolean activelyScanning = client.player.isScoping()
+                        || (hasScanItem && client.player.isUsingItem());
+
+                if (activelyScanning) {
+                    if (clientSpyglassCooldown <= 0) {
                         var eyePos = client.player.getEyePosition();
                         var lookVec = client.player.getViewVector(1.0f);
                         var reachVec = eyePos.add(lookVec.scale(64.0));
@@ -299,16 +418,16 @@ public class ZooTycoonClient implements ClientModInitializer {
 
                         var hit = net.minecraft.world.entity.projectile.ProjectileUtil.getEntityHitResult(
                                 client.player, eyePos, reachVec, box,
-                                e -> e instanceof net.minecraft.world.entity.LivingEntity living && living.isAlive() && net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living),
-                                0.5
+                                e -> e instanceof LivingEntity living && living.isAlive() && ZooAnimalHungerManager.isZooAnimalCandidate(living),
+                                64.0 * 64.0
                         );
 
-                        if (hit != null && hit.getEntity() instanceof net.minecraft.world.entity.LivingEntity target) {
+                        if (hit != null && hit.getEntity() instanceof LivingEntity target) {
                             if (target.getId() == clientLastTargetId) {
                                 clientScopeTicks++;
-                                if (clientScopeTicks >= 6) { // ~0.3s of scoping
+                                if (clientScopeTicks >= 6) {
                                     ClientPlayNetworking.send(new ZooNetworkPayloads.ScanAnimalPayload(target.getId()));
-                                    clientSpyglassCooldown = 40; // 2s cooldown
+                                    clientSpyglassCooldown = 30;
                                     clientScopeTicks = 0;
                                 }
                             } else {
@@ -322,16 +441,56 @@ public class ZooTycoonClient implements ClientModInitializer {
                 } else {
                     clientScopeTicks = 0;
                     clientLastTargetId = -1;
-                    if (clientSpyglassCooldown > 0) clientSpyglassCooldown--;
                 }
             }
         });
 
-        // 6. Register sleek top-left HUD overlay
-        net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback.EVENT.register(
-                net.zootycoon.client.ui.ZooHudOverlay::render
-        );
+        // 6. Register sleek top-left HUD overlay + Essential-Mod style Toasts
+        HudRenderCallback.EVENT.register(ZooHudOverlay::render);
 
         ZooTycoonMod.LOGGER.info("Zoo Tycoon Client initialized successfully.");
+    }
+
+    private static void pollFieldGuideScanTarget() {
+        try {
+            if (!fieldGuideChecked) {
+                fieldGuideChecked = true;
+                Class<?> stateClass = Class.forName("com.evandev.fieldguide.client.scan.FieldGuideScanState");
+                fgGetInstance = stateClass.getMethod("getInstance");
+                fgGetScanningTarget = stateClass.getMethod("getScanningTarget");
+                fgGetFadingTarget = stateClass.getMethod("getFadingTarget");
+            }
+            if (fgGetInstance != null) {
+                Object state = fgGetInstance.invoke(null);
+                if (state != null) {
+                    Object fading = fgGetFadingTarget != null ? fgGetFadingTarget.invoke(state) : null;
+                    Object scanning = fgGetScanningTarget != null ? fgGetScanningTarget.invoke(state) : null;
+
+                    Object candidate = fading != null ? fading : scanning;
+                    if (candidate instanceof LivingEntity living && living.isAlive() && ZooAnimalHungerManager.isZooAnimalCandidate(living)) {
+                        if (!clientAnimalMap.containsKey(living.getId()) && clientSpyglassCooldown <= 0) {
+                            if (fading != null) {
+                                ClientPlayNetworking.send(new ZooNetworkPayloads.ScanAnimalPayload(living.getId()));
+                                clientSpyglassCooldown = 30;
+                            } else {
+                                if (living.getId() == clientLastTargetId) {
+                                    clientScopeTicks++;
+                                    if (clientScopeTicks >= 8) {
+                                        ClientPlayNetworking.send(new ZooNetworkPayloads.ScanAnimalPayload(living.getId()));
+                                        clientSpyglassCooldown = 30;
+                                        clientScopeTicks = 0;
+                                    }
+                                } else {
+                                    clientLastTargetId = living.getId();
+                                    clientScopeTicks = 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+            // Field Guide not installed or class structure differs
+        }
     }
 }

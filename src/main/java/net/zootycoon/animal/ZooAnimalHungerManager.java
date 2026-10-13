@@ -1,23 +1,28 @@
 package net.zootycoon.animal;
 
-import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.network.chat.Component;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.Container;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.zootycoon.claim.ZooClaim;
 import net.zootycoon.claim.ZooClaimManager;
+import net.zootycoon.network.ZooNetworkPayloads;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -42,15 +47,26 @@ public class ZooAnimalHungerManager {
         if (e instanceof net.zootycoon.entity.ZooSecurityEntity) return false;
         if (e instanceof net.zootycoon.entity.ZooHunterEntity) return false;
         if (e instanceof net.zootycoon.entity.ZooVisitorEntity) return false;
+        if (e instanceof net.zootycoon.entity.ZooCashierEntity) return false;
         if (e.getTags().contains("zootycoon_staff")) return false;
         if (ZooClaimManager.isHostileMonster(e)) return false;
 
         // Exclude Bat (Kelelawar) from Zoo Animals
         if (e instanceof net.minecraft.world.entity.ambient.Bat) return false;
-        String typeKey = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).getPath();
+        String typeKey = BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).getPath();
         if (typeKey.equals("bat") || typeKey.endsWith("_bat") || typeKey.startsWith("bat_")) return false;
 
         return true;
+    }
+
+    public static boolean isScanningItem(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        if (stack.is(Items.SPYGLASS)) return true;
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        if (id != null && "fieldguide".equals(id.getNamespace())) {
+            return true;
+        }
+        return false;
     }
 
     public static UUID getOwnerUuid(Entity entity) {
@@ -83,18 +99,13 @@ public class ZooAnimalHungerManager {
         if (!isZooAnimalCandidate(animal)) return false;
 
         if (isTagged(animal) && isOwnedBy(animal, player.getUUID())) {
-            player.sendSystemMessage(
-                    Component.literal("ℹ Satwa ini sudah terdaftar di kebun binatang Anda!").withStyle(ChatFormatting.YELLOW)
-            );
             return false;
         }
 
         if (isTagged(animal) && !isOwnedBy(animal, player.getUUID())) {
             UUID otherOwner = getOwnerUuid(animal);
             if (otherOwner != null) {
-                player.sendSystemMessage(
-                        Component.literal("✖ Satwa ini sudah menjadi milik kebun binatang pemain lain!").withStyle(ChatFormatting.RED)
-                );
+                ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.warning", "zootycoon.animal.owned_by_other", 2);
                 return false;
             }
         }
@@ -102,7 +113,7 @@ public class ZooAnimalHungerManager {
         // Register animal
         setTagged(animal, true);
         setOwner(animal, player.getUUID());
-        if (animal instanceof net.minecraft.world.entity.Mob mob) {
+        if (animal instanceof Mob mob) {
             mob.setPersistenceRequired();
         }
         setHunger(animal, MAX_HUNGER);
@@ -112,21 +123,19 @@ public class ZooAnimalHungerManager {
         level.sendParticles(ParticleTypes.HAPPY_VILLAGER, animal.getX(), animal.getY() + animal.getBbHeight() * 0.5, animal.getZ(), 20, 0.4, 0.4, 0.4, 0.05);
 
         String animalName = animal.hasCustomName() ? animal.getCustomName().getString() : animal.getType().getDescription().getString();
-        player.sendSystemMessage(
-                Component.literal("✔ Satwa [" + animalName + "] berhasil didaftarkan ke Kebun Binatang!").withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD)
-        );
-        player.displayClientMessage(
-                Component.literal("✔ Satwa [" + animalName + "] Terdaftar di Zoo!").withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD),
-                true
-        );
+        ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.animal", "zootycoon.animal.registered", 1, animalName);
 
-        net.zootycoon.network.ZooNetworkPayloads.sendAnimalSync(player);
+        ZooNetworkPayloads.sendAnimalSync(player);
         return true;
     }
 
     private static void tickVanillaSpyglassScoping(ServerLevel level) {
         for (ServerPlayer player : level.players()) {
-            if (player.isScoping() || player.getUseItem().is(net.minecraft.world.item.Items.SPYGLASS)) {
+            boolean activelyScanning = player.isScoping()
+                    || isScanningItem(player.getUseItem())
+                    || (player.isUsingItem() && (isScanningItem(player.getMainHandItem()) || isScanningItem(player.getOffhandItem())));
+
+            if (activelyScanning) {
                 Vec3 eyePos = player.getEyePosition();
                 Vec3 lookVec = player.getViewVector(1.0f);
                 Vec3 reachVec = eyePos.add(lookVec.scale(64.0));
@@ -135,7 +144,7 @@ public class ZooAnimalHungerManager {
                 var hit = net.minecraft.world.entity.projectile.ProjectileUtil.getEntityHitResult(
                         player, eyePos, reachVec, box,
                         e -> e instanceof LivingEntity living && isZooAnimalCandidate(living),
-                        0.5
+                        64.0 * 64.0
                 );
 
                 if (hit != null && hit.getEntity() instanceof LivingEntity targetAnimal) {
@@ -172,7 +181,7 @@ public class ZooAnimalHungerManager {
     }
 
     public static void tickServer(ServerLevel level) {
-        // Vanilla Spyglass Scoping Fallback (when Field Guide is NOT loaded)
+        // Spyglass & Field Guide long-range scoping detection
         tickVanillaSpyglassScoping(level);
 
         if (level.getGameTime() % 20 != 0) return; // Hunger and health checks every 1 second
@@ -180,7 +189,15 @@ public class ZooAnimalHungerManager {
         // Iterate over all entities loaded in this level
         for (Entity entity : level.getAllEntities()) {
             if (!(entity instanceof LivingEntity animal)) continue;
-            if (!animal.isAlive() || !isTagged(animal) || !isZooAnimalCandidate(animal)) continue;
+            if (!animal.isAlive() || !isZooAnimalCandidate(animal)) continue;
+
+            // Also allow untagged animals near feeder troughs to eat and emit love particles
+            if (!isTagged(animal)) {
+                if (level.getGameTime() % 80 == 0) {
+                    tryEatFromNearbyFeederTrough(level, animal, MAX_HUNGER);
+                }
+                continue;
+            }
 
             UUID ownerUuid = getOwnerUuid(animal);
             // Backward compatibility: If no owner tag but inside a claim, tag the claim's owner
@@ -205,6 +222,13 @@ public class ZooAnimalHungerManager {
                 }
             }
 
+            // Feeder trough feeding (works even when hunger is high or on cooldown, emitting love particles)
+            if (level.getGameTime() % 60 == 0 && (currentHunger <= 90 || level.getGameTime() % 180 == 0)) {
+                if (tryEatFromNearbyFeederTrough(level, animal, currentHunger)) {
+                    currentHunger = getHunger(animal);
+                }
+            }
+
             // Emergency foraging for herbivores on grass
             if (currentHunger < 30 && AnimalDietRegistry.getFeedingType(animal) == AnimalDietRegistry.FeedingType.TROUGH) {
                 var standingOn = level.getBlockState(animal.blockPosition().below());
@@ -213,7 +237,7 @@ public class ZooAnimalHungerManager {
                     currentHunger = Math.min(MAX_HUNGER, currentHunger + 15);
                     setHunger(animal, currentHunger);
                     level.playSound(null, animal.blockPosition(), SoundEvents.GENERIC_EAT, SoundSource.NEUTRAL, 0.6f, 1.0f);
-                    level.sendParticles(ParticleTypes.HAPPY_VILLAGER, animal.getX(), animal.getY() + 0.5, animal.getZ(), 4, 0.2, 0.2, 0.2, 0.01);
+                    level.sendParticles(ParticleTypes.HEART, animal.getX(), animal.getY() + animal.getBbHeight() + 0.25, animal.getZ(), 4, 0.3, 0.2, 0.3, 0.02);
                 }
             }
 
@@ -221,9 +245,7 @@ public class ZooAnimalHungerManager {
             if (currentHunger <= CRITICAL_THRESHOLD && currentHunger > 0) {
                 if (owner != null && level.getGameTime() % 600 == 0) {
                     String name = animal.hasCustomName() ? animal.getCustomName().getString() : animal.getType().getDescription().getString();
-                    owner.sendSystemMessage(
-                            Component.literal("[Peringatan] Satwa [" + name + "] sekarat kelaparan (" + currentHunger + "%)! Segera beri makan!").withStyle(ChatFormatting.RED)
-                    );
+                    ZooNetworkPayloads.sendToast(owner, "zootycoon.toast.title.warning", "zootycoon.animal.starving_warning", 2, name, currentHunger);
                 }
             }
 
@@ -231,9 +253,7 @@ public class ZooAnimalHungerManager {
             if (currentHunger <= 0) {
                 String name = animal.hasCustomName() ? animal.getCustomName().getString() : animal.getType().getDescription().getString();
                 if (owner != null) {
-                    owner.sendSystemMessage(
-                            Component.literal("[Kematian] Satwa [" + name + "] mati karena kelaparan di kebun binatang Anda!").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD)
-                    );
+                    ZooNetworkPayloads.sendToast(owner, "zootycoon.toast.title.error", "zootycoon.animal.starved_death", 3, name);
                 }
                 level.playSound(null, animal.blockPosition(), SoundEvents.WITHER_DEATH, SoundSource.NEUTRAL, 0.6f, 0.8f);
                 level.sendParticles(ParticleTypes.SMOKE, animal.getX(), animal.getY() + 0.5, animal.getZ(), 15, 0.3, 0.3, 0.3, 0.05);
@@ -244,9 +264,35 @@ public class ZooAnimalHungerManager {
         // Periodic sync to client so in-world hunger indicators update smoothly
         if (level.getGameTime() % 40 == 0) {
             for (ServerPlayer player : level.players()) {
-                net.zootycoon.network.ZooNetworkPayloads.sendAnimalSync(player);
+                ZooNetworkPayloads.sendAnimalSync(player);
             }
         }
+    }
+
+    private static boolean tryEatFromNearbyFeederTrough(ServerLevel level, LivingEntity animal, int currentHunger) {
+        BlockPos center = animal.blockPosition();
+        for (BlockPos bp : BlockPos.betweenClosed(center.offset(-6, -2, -6), center.offset(6, 2, 6))) {
+            var be = level.getBlockEntity(bp);
+            if (be instanceof Container container) {
+                for (int i = 0; i < container.getContainerSize(); i++) {
+                    ItemStack st = container.getItem(i);
+                    if (!st.isEmpty() && AnimalDietRegistry.isFoodValid(animal, st)) {
+                        double distSqr = animal.distanceToSqr(bp.getX() + 0.5, bp.getY() + 0.5, bp.getZ() + 0.5);
+                        if (distSqr <= 4.0 * 4.0) {
+                            boolean fed = feedAnimal(animal, st, null);
+                            if (fed) {
+                                container.setChanged();
+                                return true;
+                            }
+                        } else if (animal instanceof Mob mob) {
+                            mob.getNavigation().moveTo(bp.getX() + 0.5, bp.getY(), bp.getZ() + 0.5, 1.0);
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     public static boolean isTagged(Entity entity) {
@@ -294,11 +340,9 @@ public class ZooAnimalHungerManager {
                     SPYGLASS_TICKS_MAP.remove(player.getUUID());
 
                     String name = animal.hasCustomName() ? animal.getCustomName().getString() : animal.getType().getDescription().getString();
-                    player.sendSystemMessage(
-                            Component.literal("✔ Satwa [" + name + "] telah dilepaskan dari Kebun Binatang!").withStyle(ChatFormatting.YELLOW)
-                    );
+                    ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.animal", "zootycoon.animal.unregistered", 2, name);
                     sLevel.playSound(null, animal.blockPosition(), SoundEvents.CHICKEN_EGG, SoundSource.PLAYERS, 1.0f, 0.8f);
-                    net.zootycoon.network.ZooNetworkPayloads.sendAnimalSync(player);
+                    ZooNetworkPayloads.sendAnimalSync(player);
                     return true;
                 }
             }
@@ -365,23 +409,32 @@ public class ZooAnimalHungerManager {
         if (!AnimalDietRegistry.isFoodValid(animal, foodStack)) return false;
 
         int current = getHunger(animal);
-        if (current >= MAX_HUNGER) return false;
-
         int restored = Math.min(MAX_HUNGER, current + 35);
         setHunger(animal, restored);
-        setTagged(animal, true); // Feeding also ensures it's tagged
+        if (feeder != null && !isTagged(animal)) {
+            setTagged(animal, true);
+            if (getOwnerUuid(animal) == null) {
+                setOwner(animal, feeder.getUUID());
+            }
+        }
 
-        ItemStack particleStack = foodStack.copy();
-        foodStack.shrink(1);
+        ItemStack particleStack = foodStack.copyWithCount(1);
+        if (feeder == null || !feeder.getAbilities().instabuild) {
+            foodStack.shrink(1);
+        }
 
         if (animal.level() instanceof ServerLevel sl) {
             sl.playSound(null, animal.blockPosition(), SoundEvents.GENERIC_EAT, SoundSource.NEUTRAL, 1.0f, 1.0f);
-            sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, animal.getX(), animal.getY() + animal.getBbHeight() * 0.6, animal.getZ(), 8, 0.3, 0.3, 0.3, 0.02);
+            // Always emit HEART (love) particles when fed by player, zookeeper, or feeder trough!
+            sl.sendParticles(ParticleTypes.HEART,
+                    animal.getX(), animal.getY() + animal.getBbHeight() + 0.25, animal.getZ(),
+                    7, 0.35, 0.25, 0.35, 0.02);
             sl.sendParticles(new ItemParticleOption(ParticleTypes.ITEM, particleStack),
-                    animal.getX(), animal.getY() + animal.getBbHeight() * 0.5, animal.getZ(), 6, 0.2, 0.2, 0.2, 0.01);
+                    animal.getX(), animal.getY() + animal.getBbHeight() * 0.5, animal.getZ(),
+                    6, 0.2, 0.2, 0.2, 0.01);
         }
 
-        if (animal instanceof Animal a && restored >= 80 && a.canFallInLove()) {
+        if (animal instanceof Animal a && a.canFallInLove()) {
             a.setInLove(feeder);
         }
 

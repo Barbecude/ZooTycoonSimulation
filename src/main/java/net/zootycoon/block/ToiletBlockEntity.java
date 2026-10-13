@@ -73,9 +73,34 @@ public class ToiletBlockEntity extends BlockEntity {
         sl.sendParticles(ParticleTypes.SPLASH, worldPosition.getX() + 0.5, worldPosition.getY() + 0.8, worldPosition.getZ() + 0.5, 8, 0.2, 0.1, 0.2, 0.05);
     }
 
+    public void seatVisitor(ServerLevel sl, ZooVisitorEntity visitor) {
+        if (sl == null || visitor == null) return;
+        openNearbyDoors();
+
+        Vec3 seatPos = computeSeatPos();
+        ToiletSeatEntity seat = new ToiletSeatEntity(ZooEntities.TOILET_SEAT, sl);
+        seat.setSeatBlockPos(worldPosition);
+        seat.setPos(seatPos.x, seatPos.y, seatPos.z);
+        seat.setYRot(visitor.getYRot());
+        sl.addFreshEntity(seat);
+
+        this.seatEntityId = seat.getId();
+        this.doorCloseTicks = 0;
+        setChanged();
+
+        visitor.startRiding(seat, true);
+        sl.playSound(null, worldPosition, SoundEvents.WOODEN_DOOR_OPEN, SoundSource.BLOCKS, 0.8f, 1.05f);
+    }
+
     public void releaseVisitorOccupant(UUID uuid) {
         if (uuid != null && uuid.equals(visitorOccupant)) {
             visitorOccupant = null;
+            if (this.seatEntityId >= 0 && level instanceof ServerLevel sl) {
+                if (sl.getEntity(this.seatEntityId) instanceof ToiletSeatEntity seat) {
+                    seat.discard();
+                }
+            }
+            this.seatEntityId = -1;
             openNearbyDoors();
             doorCloseTicks = 20;
             setChanged();
@@ -95,10 +120,12 @@ public class ToiletBlockEntity extends BlockEntity {
                 queue.add(player.getUUID());
                 setChanged();
             }
-            player.displayClientMessage(
-                    Component.literal("Toilet sedang digunakan! Antrian: " + (queue.size() + visitorQueue.size()))
-                            .withStyle(net.minecraft.ChatFormatting.GOLD),
-                    true
+            net.zootycoon.network.ZooNetworkPayloads.sendToast(
+                    player,
+                    "zootycoon.toast.title.warning",
+                    "zootycoon.toilet.occupied",
+                    2,
+                    queue.size() + visitorQueue.size()
             );
             if (level instanceof ServerLevel sl) {
                 sl.sendParticles(ParticleTypes.ANGRY_VILLAGER, worldPosition.getX() + 0.5, worldPosition.getY() + 1.0, worldPosition.getZ() + 0.5, 2, 0.2, 0.2, 0.2, 0.01);

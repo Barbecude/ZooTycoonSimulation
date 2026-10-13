@@ -80,6 +80,20 @@ public class ZooEntities {
                     .build("zootycoon:visitor")
     );
 
+    public static final ResourceKey<EntityType<?>> CASHIER_KEY = ResourceKey.create(
+            Registries.ENTITY_TYPE,
+            ZooTycoonMod.id("cashier")
+    );
+
+    public static final EntityType<ZooCashierEntity> CASHIER = Registry.register(
+            BuiltInRegistries.ENTITY_TYPE,
+            ZooTycoonMod.id("cashier"),
+            EntityType.Builder.of(ZooCashierEntity::new, MobCategory.MISC)
+                    .sized(0.6f, 1.8f)
+                    .eyeHeight(1.62f)
+                    .build("zootycoon:cashier")
+    );
+
     public static final ResourceKey<EntityType<?>> TOILET_SEAT_KEY = ResourceKey.create(
             Registries.ENTITY_TYPE,
             ZooTycoonMod.id("toilet_seat")
@@ -99,6 +113,7 @@ public class ZooEntities {
         FabricDefaultAttributeRegistry.register(SECURITY, ZooSecurityEntity.createAttributes());
         FabricDefaultAttributeRegistry.register(HUNTER, ZooHunterEntity.createAttributes());
         FabricDefaultAttributeRegistry.register(VISITOR, ZooVisitorEntity.createAttributes());
-        ZooTycoonMod.LOGGER.info("Registered Zoo Tycoon NPC entities: Builder, Zookeeper, Security, Hunter, and Visitor.");
+        FabricDefaultAttributeRegistry.register(CASHIER, ZooCashierEntity.createAttributes());
+        ZooTycoonMod.LOGGER.info("Registered Zoo Tycoon NPC entities: Builder, Zookeeper, Security, Hunter, Visitor, and Cashier.");
     }
 }

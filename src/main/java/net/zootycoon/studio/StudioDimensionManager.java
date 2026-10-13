@@ -1,23 +1,26 @@
 package net.zootycoon.studio;
 
+import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.ChatFormatting;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import net.minecraft.world.phys.AABB;
 import net.zootycoon.ZooTycoonMod;
 import net.zootycoon.network.ZooNetworkPayloads;
 import net.zootycoon.schematic.ZooSchematic;
 import net.zootycoon.schematic.ZooSchematicRegistry;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -45,7 +48,7 @@ public class StudioDimensionManager {
                             exitStudio(player);
                             return 1;
                         } else if (player != null) {
-                            player.sendSystemMessage(Component.literal("Anda tidak sedang berada di Studio.").withStyle(ChatFormatting.RED));
+                            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.warning", "zootycoon.studio.not_in_studio", 2);
                         }
                         return 0;
                     }))
@@ -58,6 +61,7 @@ public class StudioDimensionManager {
                         return 0;
                     }))
             );
+
             dispatcher.register(Commands.literal("zootycoon")
                     .then(Commands.literal("exit").executes(ctx -> {
                         ServerPlayer player = ctx.getSource().getPlayer();
@@ -65,7 +69,7 @@ public class StudioDimensionManager {
                             exitStudio(player);
                             return 1;
                         } else if (player != null) {
-                            player.sendSystemMessage(Component.literal("Anda tidak sedang berada di Studio.").withStyle(ChatFormatting.RED));
+                            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.warning", "zootycoon.studio.not_in_studio", 2);
                         }
                         return 0;
                     }))
@@ -73,6 +77,32 @@ public class StudioDimensionManager {
                         ServerPlayer player = ctx.getSource().getPlayer();
                         if (player != null) {
                             net.zootycoon.hunter.ZooHunterManager.spawnHunterNear(player);
+                            return 1;
+                        }
+                        return 0;
+                    }))
+            );
+
+            // Command: /kandang [nama kandang] -> Save design into "enclosures"
+            dispatcher.register(Commands.literal("kandang")
+                    .then(Commands.argument("nama", StringArgumentType.greedyString()).executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer();
+                        if (player != null) {
+                            String name = StringArgumentType.getString(ctx, "nama").trim();
+                            ServerPlayNetworking.send(player, new ZooNetworkPayloads.RequestClientSelectionSavePayload(name, "enclosures"));
+                            return 1;
+                        }
+                        return 0;
+                    }))
+            );
+
+            // Command: /fasilitas [nama fasilitas] -> Save design into "essentials"
+            dispatcher.register(Commands.literal("fasilitas")
+                    .then(Commands.argument("nama", StringArgumentType.greedyString()).executes(ctx -> {
+                        ServerPlayer player = ctx.getSource().getPlayer();
+                        if (player != null) {
+                            String name = StringArgumentType.getString(ctx, "nama").trim();
+                            ServerPlayNetworking.send(player, new ZooNetworkPayloads.RequestClientSelectionSavePayload(name, "essentials"));
                             return 1;
                         }
                         return 0;
@@ -93,6 +123,16 @@ public class StudioDimensionManager {
 
     public static void clearStudioPlot(ServerLevel level, BlockPos center) {
         int radius = 64;
+        // 0. Discard any non-player entities on the studio plot
+        List<Entity> plotEntities = level.getEntitiesOfClass(
+                Entity.class,
+                new AABB(center.getX() - radius, 99, center.getZ() - radius, center.getX() + radius + 1, 185, center.getZ() + radius + 1),
+                e -> !(e instanceof Player)
+        );
+        for (Entity ent : plotEntities) {
+            ent.discard();
+        }
+
         // 1. Clear any blocks above the floor up to height 80
         for (int dx = -radius; dx <= radius; dx++) {
             for (int dz = -radius; dz <= radius; dz++) {
@@ -130,7 +170,6 @@ public class StudioDimensionManager {
         int plotOffset = (Math.abs(player.getUUID().hashCode()) % 500) * 300 + 10000;
         BlockPos center = new BlockPos(plotOffset, 100, plotOffset);
 
-        // Guaranteed blank, clean plot for new designs
         clearStudioPlot(level, center);
 
         PlayerSurvivalSnapshot snapshot = new PlayerSurvivalSnapshot(
@@ -149,13 +188,7 @@ public class StudioDimensionManager {
         giveStudioBiomeKit(player);
 
         ServerPlayNetworking.send(player, new ZooNetworkPayloads.SyncStudioStatePayload(true, targetCategory));
-
-        player.sendSystemMessage(Component.literal("--------------------------------------------------").withStyle(ChatFormatting.GOLD));
-        player.sendSystemMessage(Component.literal("SELAMAT DATANG DI STUDIO DESAIN BLUEPRINT!").withStyle(ChatFormatting.AQUA));
-        player.sendSystemMessage(Component.literal("Area luas 128x128 blok kosong, bebas Anda bangun di Creative mode.").withStyle(ChatFormatting.YELLOW));
-        player.sendSystemMessage(Component.literal("- Selesai? Klik Kanan Build Tool untuk SIMPAN atau KELUAR!").withStyle(ChatFormatting.GREEN));
-        player.sendSystemMessage(Component.literal("- Atau ketik '/zoo exit' untuk keluar.").withStyle(ChatFormatting.GRAY));
-        player.sendSystemMessage(Component.literal("--------------------------------------------------").withStyle(ChatFormatting.GOLD));
+        ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.info", "zootycoon.studio.entered", 0);
 
         ZooTycoonMod.LOGGER.info("Player {} entered Studio Dimension session for new design (Plot: {}).", player.getName().getString(), center);
         return true;
@@ -170,10 +203,8 @@ public class StudioDimensionManager {
         int plotOffset = (Math.abs(player.getUUID().hashCode()) % 500) * 300 + 10000;
         BlockPos center = new BlockPos(plotOffset, 100, plotOffset);
 
-        // 1. Wipe plot completely
         clearStudioPlot(level, center);
 
-        // 2. Load and place existing schematic onto the studio plot center
         var schemOpt = ZooSchematicRegistry.get(schematicId);
         if (schemOpt.isEmpty()) {
             ZooSchematicRegistry.loadCustomSchematics();
@@ -211,12 +242,8 @@ public class StudioDimensionManager {
         giveStudioBiomeKit(player);
 
         ServerPlayNetworking.send(player, new ZooNetworkPayloads.SyncStudioStatePayload(true, targetCategory));
-
-        player.sendSystemMessage(Component.literal("--------------------------------------------------").withStyle(ChatFormatting.GOLD));
-        player.sendSystemMessage(Component.literal("MODE EDIT STUDIO: " + (schemOpt.isPresent() ? schemOpt.get().getName() : schematicId)).withStyle(ChatFormatting.AQUA));
-        player.sendSystemMessage(Component.literal("Desain lama telah dimuat di Studio untuk Anda modifikasi.").withStyle(ChatFormatting.YELLOW));
-        player.sendSystemMessage(Component.literal("- Klik Kanan Build Tool untuk Simpan Pembaruan atau Keluar.").withStyle(ChatFormatting.GREEN));
-        player.sendSystemMessage(Component.literal("--------------------------------------------------").withStyle(ChatFormatting.GOLD));
+        String editName = schemOpt.isPresent() ? schemOpt.get().getName() : schematicId;
+        ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.info", "zootycoon.studio.editing", 0, editName);
 
         ZooTycoonMod.LOGGER.info("Player {} entered Studio Dimension to edit schematic {} (Plot: {}).", player.getName().getString(), schematicId, center);
         return true;
@@ -231,9 +258,7 @@ public class StudioDimensionManager {
         player.teleportTo(snapshot.originLevel(), snapshot.x(), snapshot.y(), snapshot.z(), snapshot.yRot(), snapshot.xRot());
         player.setGameMode(snapshot.previousGameMode());
 
-        player.sendSystemMessage(
-                Component.literal("Kembali ke dunia Survival.").withStyle(ChatFormatting.YELLOW)
-        );
+        ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.info", "zootycoon.studio.exited", 0);
         return true;
     }
 
@@ -243,12 +268,10 @@ public class StudioDimensionManager {
 
     public static void giveStudioBiomeKit(ServerPlayer player) {
         if (player == null) return;
-        // Always provide a Spyglass if missing
         if (!player.getInventory().contains(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SPYGLASS))) {
             player.getInventory().add(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SPYGLASS));
         }
 
-        // Check if Biome Blends is loaded or any biome blend items exist in registry
         for (var entry : net.minecraft.core.registries.BuiltInRegistries.ITEM.entrySet()) {
             if ("biomeblends".equals(entry.getKey().location().getNamespace())) {
                 String path = entry.getKey().location().getPath();

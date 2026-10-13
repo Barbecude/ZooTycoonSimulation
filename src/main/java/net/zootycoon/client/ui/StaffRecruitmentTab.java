@@ -5,21 +5,24 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.zootycoon.ZooTycoonMod;
 import net.zootycoon.client.ZooTycoonClient;
 import net.zootycoon.network.ZooNetworkPayloads;
+import net.zootycoon.util.ZooTranslations;
 
 import java.util.List;
 
 public class StaffRecruitmentTab {
     private final MainManagementScreen parent;
+    private static final ItemStack VANILLA_EMERALD_ITEM = new ItemStack(Items.EMERALD);
 
     public StaffRecruitmentTab(MainManagementScreen parent) {
         this.parent = parent;
     }
 
     public void init(MainManagementScreen screen) {
-        // Request latest staff count from server on opening
         ClientPlayNetworking.send(new ZooNetworkPayloads.RequestStaffSyncPayload());
 
         int totalWidth = Math.min(screen.width - 40, 720);
@@ -32,18 +35,18 @@ public class StaffRecruitmentTab {
         int btnHeight = 24;
         int btnY = startY + cardHeight - btnHeight - 12;
 
-        // Button 1: Rekrut Kuli Bangunan (15 Emeralds)
-        screen.addWidgetPublic(new ZooButton(startX + 12, btnY, cardWidth - 24, btnHeight, Component.literal("Rekrut Kuli (15 Em.)"), b -> {
+        // Button 1: Rekrut Kuli Bangunan
+        screen.addWidgetPublic(new ZooButton(startX + 12, btnY, cardWidth - 24, btnHeight, ZooTranslations.component("zootycoon.ui.staff.btn_hire_builder"), b -> {
             ClientPlayNetworking.send(new ZooNetworkPayloads.HireStaffPayload("builder"));
         }).asEmerald());
 
-        // Button 2: Rekrut Zookeeper (25 Emeralds)
-        screen.addWidgetPublic(new ZooButton(startX + cardWidth + cardGap + 12, btnY, cardWidth - 24, btnHeight, Component.literal("Rekrut Zookeeper (25 Em.)"), b -> {
+        // Button 2: Rekrut Zookeeper
+        screen.addWidgetPublic(new ZooButton(startX + cardWidth + cardGap + 12, btnY, cardWidth - 24, btnHeight, ZooTranslations.component("zootycoon.ui.staff.btn_hire_zookeeper"), b -> {
             ClientPlayNetworking.send(new ZooNetworkPayloads.HireStaffPayload("zookeeper"));
         }).asEmerald());
 
-        // Button 3: Rekrut Security (30 Emeralds)
-        screen.addWidgetPublic(new ZooButton(startX + (cardWidth + cardGap) * 2 + 12, btnY, cardWidth - 24, btnHeight, Component.literal("Rekrut Security (30 Em.)"), b -> {
+        // Button 3: Rekrut Security
+        screen.addWidgetPublic(new ZooButton(startX + (cardWidth + cardGap) * 2 + 12, btnY, cardWidth - 24, btnHeight, ZooTranslations.component("zootycoon.ui.staff.btn_hire_security"), b -> {
             ClientPlayNetworking.send(new ZooNetworkPayloads.HireStaffPayload("security"));
         }).asEmerald());
     }
@@ -68,11 +71,12 @@ public class StaffRecruitmentTab {
                 startX, startY, cardWidth, cardHeight,
                 mouseX, mouseY,
                 ZooTycoonMod.id("textures/gui/staff/builder_large.png"),
-                "KULI BANGUNAN",
+                ZooTranslations.get("zootycoon.ui.staff.builder.title"),
+                15,
                 List.of(
-                        "Dimiliki: " + ZooTycoonClient.clientBuilders + " Orang",
-                        "Aktif Bekerja: " + ZooTycoonClient.clientActiveBuilders + " Orang",
-                        "Tersedia: " + Math.max(0, ZooTycoonClient.clientBuilders - ZooTycoonClient.clientActiveBuilders) + " Orang"
+                        ZooTranslations.get("zootycoon.ui.staff.builder.stat1", ZooTycoonClient.clientBuilders),
+                        ZooTranslations.get("zootycoon.ui.staff.builder.stat2", ZooTycoonClient.clientActiveBuilders),
+                        ZooTranslations.get("zootycoon.ui.staff.builder.stat3", Math.max(0, ZooTycoonClient.clientBuilders - ZooTycoonClient.clientActiveBuilders))
                 )
         );
 
@@ -82,11 +86,12 @@ public class StaffRecruitmentTab {
                 startX + cardWidth + cardGap, startY, cardWidth, cardHeight,
                 mouseX, mouseY,
                 ZooTycoonMod.id("textures/gui/staff/zookeeper_large.png"),
-                "ZOOKEEPER",
+                ZooTranslations.get("zootycoon.ui.staff.zookeeper.title"),
+                25,
                 List.of(
-                        "Dimiliki: " + ZooTycoonClient.clientZookeepers + " Orang",
-                        "Tugas: Merawat Satwa Zoo",
-                        "Status: Siap Bertugas"
+                        ZooTranslations.get("zootycoon.ui.staff.zookeeper.stat1", ZooTycoonClient.clientZookeepers),
+                        ZooTranslations.get("zootycoon.ui.staff.zookeeper.stat2"),
+                        ZooTranslations.get("zootycoon.ui.staff.zookeeper.stat3")
                 )
         );
 
@@ -96,11 +101,12 @@ public class StaffRecruitmentTab {
                 startX + (cardWidth + cardGap) * 2, startY, cardWidth, cardHeight,
                 mouseX, mouseY,
                 ZooTycoonMod.id("textures/gui/staff/security_large.png"),
-                "SECURITY",
+                ZooTranslations.get("zootycoon.ui.staff.security.title"),
+                30,
                 List.of(
-                        "Dimiliki: " + ZooTycoonClient.clientSecurity + " Orang",
-                        "Tugas: Berpatroli & Keamanan",
-                        "Status: Bersenjata"
+                        ZooTranslations.get("zootycoon.ui.staff.security.stat1", ZooTycoonClient.clientSecurity),
+                        ZooTranslations.get("zootycoon.ui.staff.security.stat2"),
+                        ZooTranslations.get("zootycoon.ui.staff.security.stat3")
                 )
         );
     }
@@ -111,6 +117,7 @@ public class StaffRecruitmentTab {
             int mouseX, int mouseY,
             ResourceLocation iconTexture,
             String title,
+            int cost,
             List<String> stats
     ) {
         boolean hovered = mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height;
@@ -118,16 +125,13 @@ public class StaffRecruitmentTab {
         int bgColor = hovered ? 0xF8141924 : 0xF20F1219;
         int borderColor = hovered ? 0xFFFFFFFF : 0xFF242A38;
 
-        // Card Background Fill
         graphics.fill(x, y, x + width, y + height, bgColor);
 
-        // 1px Border
         graphics.fill(x, y, x + width, y + 1, borderColor);
         graphics.fill(x, y + height - 1, x + width, y + height, borderColor);
         graphics.fill(x, y + 1, x + 1, y + height, borderColor);
         graphics.fill(x + width - 1, y, x + width, y + height, borderColor);
 
-        // Large 100x48 Header Illustration
         int imgW = 100;
         int imgH = 48;
         int imgX = x + (width - imgW) / 2;
@@ -141,20 +145,26 @@ public class StaffRecruitmentTab {
 
         graphics.blit(iconTexture, imgX, imgY, 0, 0, imgW, imgH, imgW, imgH);
 
-        // Title
         int titleColor = hovered ? 0xFFFFFFFF : 0xFFE6EDF3;
         int titleY = imgY + imgH + 10;
         graphics.drawCenteredString(mc.font, Component.literal(title), x + (width / 2), titleY, titleColor);
 
-        // Divider
         int divY = titleY + 14;
         graphics.fill(x + 14, divY, x + width - 14, divY + 1, 0xFF242A38);
 
-        // Stats section
-        int statY = divY + 10;
+        int statY = divY + 8;
         for (String stat : stats) {
             graphics.drawString(mc.font, Component.literal("• " + stat), x + 18, statY, 0xFFC9D1D9, false);
-            statY += 15;
+            statY += 14;
         }
+
+        int costY = y + height - 48;
+        String costText = String.valueOf(cost);
+        int costTextW = mc.font.width(costText);
+        int badgeTotalW = 16 + 4 + costTextW;
+        int badgeStartX = x + (width - badgeTotalW) / 2;
+
+        graphics.renderItem(VANILLA_EMERALD_ITEM, badgeStartX, costY - 4);
+        graphics.drawString(mc.font, Component.literal(costText), badgeStartX + 18, costY, 0xFF55FF55, true);
     }
 }

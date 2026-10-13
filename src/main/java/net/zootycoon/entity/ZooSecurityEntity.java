@@ -82,9 +82,9 @@ public class ZooSecurityEntity extends PathfinderMob {
         if (!level().isClientSide() && tickCount % 20 == 0) {
             String name = getSecurityName();
             if (getTarget() instanceof ZooHunterEntity) {
-                this.setCustomName(Component.literal(name + " [Combat Alert!]").withStyle(ChatFormatting.RED));
+                this.setCustomName(Component.literal(name + " " + net.zootycoon.util.ZooTranslations.get("zootycoon.entity.security.combat_tag")).withStyle(ChatFormatting.RED));
             } else {
-                this.setCustomName(Component.literal(name + " [Security]").withStyle(ChatFormatting.AQUA));
+                this.setCustomName(Component.literal(name + " " + net.zootycoon.util.ZooTranslations.get("zootycoon.entity.security.tag")).withStyle(ChatFormatting.AQUA));
             }
         }
     }
@@ -93,17 +93,17 @@ public class ZooSecurityEntity extends PathfinderMob {
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         if (!level().isClientSide() && hand == InteractionHand.MAIN_HAND && player instanceof ServerPlayer sPlayer) {
             String name = getSecurityName();
-            if (getTarget() != null) {
-                sPlayer.displayClientMessage(
-                        Component.literal("[" + name + "] Awas Bos! Sedang menghabisi pemburu liar!").withStyle(ChatFormatting.RED),
-                        true
-                );
-            } else {
-                sPlayer.displayClientMessage(
-                        Component.literal("[" + name + "] Siap Bos! Area kebun binatang aman dari pemburu.").withStyle(ChatFormatting.AQUA),
-                        true
-                );
-            }
+            boolean isAlert = getTarget() != null;
+            String targetName = isAlert ? getTarget().getName().getString() : "";
+            net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(sPlayer, new net.zootycoon.network.ZooNetworkPayloads.OpenSecurityScreenPayload(
+                    this.getId(),
+                    this.getUUID(),
+                    name,
+                    isAlert,
+                    targetName,
+                    (int) this.getHealth(),
+                    (int) this.getMaxHealth()
+            ));
             this.playSound(SoundEvents.VILLAGER_YES, 1.0F, 1.0F);
             return InteractionResult.SUCCESS;
         }

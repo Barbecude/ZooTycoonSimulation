@@ -60,20 +60,23 @@ public class ZooVisitorEntity extends PathfinderMob {
     private static final int MAX_STAY = 2400; // 2 minutes (2400 ticks)
 
     public enum VisitorMood {
-        HAPPY("Senang", 0x00FF00),
-        NEUTRAL("Biasa", 0xFFFFFF),
-        TOILET("Kebelet Pipis", 0xFFA500),
-        AMAZED("Takjub", 0x00FFFF),
-        ADORED("Gemas", 0xFF69B4),
-        HUNGRY("Lapar", 0xFF0000),
-        THIRSTY("Haus", 0x0000FF);
+        NEUTRAL("zootycoon.visitor.mood.neutral", 0xFFFFFF),
+        TOILET("zootycoon.visitor.mood.toilet", 0xFFA500),
+        AMAZED("zootycoon.visitor.mood.amazed", 0x00FFFF),
+        ADORED("zootycoon.visitor.mood.adored", 0xFF69B4),
+        HUNGRY("zootycoon.visitor.mood.hungry", 0xFF0000),
+        THIRSTY("zootycoon.visitor.mood.thirsty", 0x0000FF);
 
-        public final String label;
+        public final String labelKey;
         public final int color;
 
-        VisitorMood(String label, int color) {
-            this.label = label;
+        VisitorMood(String labelKey, int color) {
+            this.labelKey = labelKey;
             this.color = color;
+        }
+
+        public String getLabel() {
+            return net.zootycoon.util.ZooTranslations.get(this.labelKey);
         }
 
         public static VisitorMood fromOrdinal(int ordinal) {
@@ -220,7 +223,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             } else if (watchingAnimalSize == 0) {
                 setMood(VisitorMood.ADORED);
             } else {
-                setMood(VisitorMood.HAPPY);
+                setMood(VisitorMood.NEUTRAL);
             }
             return;
         }
@@ -239,9 +242,9 @@ public class ZooVisitorEntity extends PathfinderMob {
                 setThirst(getThirst() + 10);
             }
 
-            // Every 5 seconds (100 ticks): random chance to need toilet
-            if (this.tickCount % 100 == 0 && !needsToilet()) {
-                if (this.random.nextFloat() < 0.14F) {
+            // Every 20 seconds (400 ticks): small chance to need toilet
+            if (this.tickCount % 400 == 0 && !needsToilet()) {
+                if (this.random.nextFloat() < 0.035F) {
                     setNeedsToilet(true);
                 }
             }
@@ -293,13 +296,18 @@ public class ZooVisitorEntity extends PathfinderMob {
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         if (!this.level().isClientSide() && hand == InteractionHand.MAIN_HAND && player instanceof ServerPlayer sPlayer) {
             VisitorMood currentMood = getMood();
-            String childText = isChildVisitor() ? " (Anak-anak)" : "";
-            sPlayer.displayClientMessage(
-                    Component.literal(String.format("[Pengunjung #%d%s] Mood: %s | Lapar: %d%% | Haus: %d%%",
-                            getVariant(), childText, currentMood.label, getHunger(), getThirst()))
-                            .withStyle(ChatFormatting.YELLOW),
-                    true
-            );
+            net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(sPlayer, new net.zootycoon.network.ZooNetworkPayloads.OpenVisitorScreenPayload(
+                    this.getId(),
+                    this.getUUID(),
+                    getVariant(),
+                    isChildVisitor(),
+                    currentMood.name(),
+                    currentMood.getLabel(),
+                    getHunger(),
+                    getThirst(),
+                    needsToilet(),
+                    hasTrash()
+            ));
             this.playSound(SoundEvents.VILLAGER_YES, 1.0F, 1.0F);
             return InteractionResult.SUCCESS;
         }
@@ -454,7 +462,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             if (animal.getBbWidth() > 1.4F || animal.getBbHeight() > 1.8F) {
                 return 2; // Big / imposing (AMAZED / Takjub)
             }
-            return 1; // Normal (HAPPY / Senang)
+            return 1; // Normal (NEUTRAL / Biasa)
         }
 
         private BlockPos computeWatchPos(Animal target) {
@@ -683,6 +691,9 @@ public class ZooVisitorEntity extends PathfinderMob {
                     toilet.releaseVisitorOccupant(visitor.getUUID());
                 }
             }
+            if (visitor.isPassenger()) {
+                visitor.stopRiding();
+            }
             if (visitor.getPose() == net.minecraft.world.entity.Pose.CROUCHING) {
                 visitor.setPose(net.minecraft.world.entity.Pose.STANDING);
             }
@@ -711,11 +722,13 @@ public class ZooVisitorEntity extends PathfinderMob {
 
             if (stage == Stage.USING) {
                 visitor.getNavigation().stop();
-                visitor.setPose(net.minecraft.world.entity.Pose.CROUCHING);
                 if (usingTicks > 0) {
                     usingTicks--;
                 }
                 if (usingTicks <= 0) {
+                    if (visitor.isPassenger()) {
+                        visitor.stopRiding();
+                    }
                     visitor.setPose(net.minecraft.world.entity.Pose.STANDING);
                     visitor.toiletTimer = 0;
                     visitor.setNeedsToilet(false);
@@ -749,6 +762,9 @@ public class ZooVisitorEntity extends PathfinderMob {
                         visitor.getNavigation().stop();
                         stage = Stage.USING;
                         usingTicks = 80;
+                        if (visitor.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                            toilet.seatVisitor(sl, visitor);
+                        }
                     }
                     return;
                 }
@@ -777,6 +793,9 @@ public class ZooVisitorEntity extends PathfinderMob {
                         if (toilet.isVisitorOccupant(visitor.getUUID())) {
                             stage = Stage.USING;
                             usingTicks = 80;
+                            if (visitor.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                                toilet.seatVisitor(sl, visitor);
+                            }
                             return;
                         }
 
@@ -784,6 +803,9 @@ public class ZooVisitorEntity extends PathfinderMob {
                         if (granted) {
                             stage = Stage.USING;
                             usingTicks = 80;
+                            if (visitor.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                                toilet.seatVisitor(sl, visitor);
+                            }
                         } else {
                             stage = Stage.QUEUING;
                             queueTicks = 0;

@@ -2,7 +2,6 @@ package net.zootycoon.entity;
 
 import net.minecraft.world.level.Level;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -32,6 +31,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.zootycoon.construction.ConstructionManager;
 import net.zootycoon.construction.ConstructionSite;
 import net.zootycoon.network.ZooNetworkPayloads;
+import net.zootycoon.util.ZooTranslations;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +40,8 @@ import java.util.UUID;
 public class ZooBuilderEntity extends PathfinderMob {
     private static final EntityDataAccessor<Integer> DATA_SKIN_VARIANT =
             SynchedEntityData.defineId(ZooBuilderEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> DATA_NEEDS_SOMETHING =
+            SynchedEntityData.defineId(ZooBuilderEntity.class, EntityDataSerializers.BOOLEAN);
 
     private static final String[] INDONESIAN_NAMES = {
             "Budi Santoso", "Joko Wibowo", "Agus Setiawan", "Rian Pratama",
@@ -108,6 +110,49 @@ public class ZooBuilderEntity extends PathfinderMob {
         this.wagePaidSoFar = paid;
     }
 
+    public boolean needsSomething() {
+        return this.entityData.get(DATA_NEEDS_SOMETHING);
+    }
+
+    public void setNeedsSomething(boolean needs) {
+        this.entityData.set(DATA_NEEDS_SOMETHING, needs);
+    }
+
+    public void updateNeedsIndicator() {
+        if (this.level().isClientSide()) return;
+        if (this.awaitingPayment && getRemainingWage() > 0) {
+            setNeedsSomething(true);
+            return;
+        }
+        ConstructionSite matchedSite = resolveSite();
+        if (matchedSite != null && !matchedSite.isCompleted()) {
+            if (matchedSite.isClearingPhase()) {
+                boolean missingTool = (matchedSite.needsShovel() && !matchedSite.hasShovel())
+                        || (matchedSite.needsPickaxe() && !matchedSite.hasPickaxe())
+                        || (matchedSite.needsAxe() && !matchedSite.hasAxe());
+                setNeedsSomething(missingTool);
+            } else {
+                setNeedsSomething(!matchedSite.getMissingMaterials().isEmpty());
+            }
+        } else {
+            setNeedsSomething(false);
+        }
+    }
+
+    private ConstructionSite resolveSite() {
+        if (siteId != null) {
+            var opt = ConstructionManager.getSite(siteId);
+            if (opt.isPresent()) return opt.get();
+        }
+        for (var s : ConstructionManager.getActiveSites()) {
+            if (this.getUUID().equals(s.getBuilderUuid()) || (siteId != null && siteId.equals(s.getSiteId()))) {
+                this.siteId = s.getSiteId();
+                return s;
+            }
+        }
+        return null;
+    }
+
     public void setAwaitingPayment(UUID payerUuid, String projectName, int blocksBuilt, int wageDue) {
         this.awaitingPayment = true;
         this.payerUuid = payerUuid;
@@ -116,6 +161,7 @@ public class ZooBuilderEntity extends PathfinderMob {
         this.wageDue = wageDue;
         this.wagePaidSoFar = 0;
         this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.EMERALD));
+        this.setNeedsSomething(true);
     }
 
     @Override
@@ -124,6 +170,10 @@ public class ZooBuilderEntity extends PathfinderMob {
 
         if (this.level().isClientSide()) {
             return;
+        }
+
+        if (this.tickCount % 10 == 0) {
+            updateNeedsIndicator();
         }
 
         // ==========================================
@@ -174,9 +224,9 @@ public class ZooBuilderEntity extends PathfinderMob {
                             payoutWage(payer != null ? payer : (Player) this.level().getNearestPlayer(this, 10));
                             return;
                         } else {
-                            String bName = this.getCustomName() != null ? this.getCustomName().getString() : "Budi Santoso";
-                            if (payer != null) {
-                                payer.sendSystemMessage(Component.literal("[" + bName + "] Nerima " + take + " Emerald. Masih kurang " + getRemainingWage() + " Emerald lagi ya Bos!").withStyle(ChatFormatting.YELLOW));
+                            String bName = this.getCustomName() != null ? this.getCustomName().getString() : ZooTranslations.get("zootycoon.dialog.builder.default_name");
+                            if (payer instanceof ServerPlayer sp) {
+                                ZooNetworkPayloads.sendToast(sp, "zootycoon.toast.title.construction", "zootycoon.builder.partial_wage", 2, bName, take, getRemainingWage());
                             }
                         }
                     }
@@ -189,22 +239,8 @@ public class ZooBuilderEntity extends PathfinderMob {
 
         // Kuli builder disappears from the world if there is no active project
         if (this.tickCount % 20 == 0 && this.tickCount > 40) {
-            boolean hasActiveSite = false;
-            if (siteId != null) {
-                var opt = ConstructionManager.getSite(siteId);
-                if (opt.isPresent() && !opt.get().isCompleted()) {
-                    hasActiveSite = true;
-                }
-            }
-            if (!hasActiveSite) {
-                for (var s : ConstructionManager.getActiveSites()) {
-                    if (this.getUUID().equals(s.getBuilderUuid()) && !s.isCompleted()) {
-                        hasActiveSite = true;
-                        this.siteId = s.getSiteId();
-                        break;
-                    }
-                }
-            }
+            ConstructionSite site = resolveSite();
+            boolean hasActiveSite = site != null && !site.isCompleted();
             if (!hasActiveSite) {
                 if (this.level() instanceof ServerLevel sl) {
                     sl.sendParticles(ParticleTypes.POOF, this.getX(), this.getY() + 1.0, this.getZ(), 15, 0.3, 0.5, 0.3, 0.05);
@@ -218,6 +254,7 @@ public class ZooBuilderEntity extends PathfinderMob {
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(DATA_SKIN_VARIANT, 0);
+        builder.define(DATA_NEEDS_SOMETHING, true);
     }
 
     public int getSkinVariant() {
@@ -238,6 +275,7 @@ public class ZooBuilderEntity extends PathfinderMob {
             this.addTag(siteId.toString());
             this.addTag("zootycoon_builder");
         }
+        updateNeedsIndicator();
     }
 
     @Override
@@ -265,8 +303,8 @@ public class ZooBuilderEntity extends PathfinderMob {
                     payoutWage(player);
                     return InteractionResult.SUCCESS;
                 } else {
-                    String bName = this.getCustomName() != null ? this.getCustomName().getString() : "Budi Santoso";
-                    player.sendSystemMessage(Component.literal("[" + bName + "] Nerima " + take + " Emerald. Masih kurang " + getRemainingWage() + " Emerald lagi ya Bos!").withStyle(ChatFormatting.YELLOW));
+                    String bName = this.getCustomName() != null ? this.getCustomName().getString() : ZooTranslations.get("zootycoon.dialog.builder.default_name");
+                    ZooNetworkPayloads.sendToast(serverPlayer, "zootycoon.toast.title.construction", "zootycoon.builder.partial_wage", 2, bName, take, getRemainingWage());
                     return InteractionResult.SUCCESS;
                 }
             }
@@ -275,24 +313,7 @@ public class ZooBuilderEntity extends PathfinderMob {
             return InteractionResult.SUCCESS;
         }
 
-        ConstructionSite matchedSite = null;
-
-        // Find active construction site
-        if (siteId != null) {
-            var siteOpt = ConstructionManager.getSite(siteId);
-            if (siteOpt.isPresent()) {
-                matchedSite = siteOpt.get();
-            }
-        }
-
-        if (matchedSite == null) {
-            for (ConstructionSite s : ConstructionManager.getActiveSites()) {
-                if (this.getUUID().equals(s.getBuilderUuid()) || (siteId != null && siteId.equals(s.getSiteId()))) {
-                    matchedSite = s;
-                    break;
-                }
-            }
-        }
+        ConstructionSite matchedSite = resolveSite();
 
         if (matchedSite != null) {
             // Check if player holds matching item to deposit directly
@@ -305,8 +326,9 @@ public class ZooBuilderEntity extends PathfinderMob {
                         String toolName = held.getHoverName().getString();
                         held.shrink(1);
                         this.level().playSound(null, this.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-                        String builderName = this.getCustomName() != null ? this.getCustomName().getString() : "Budi Santoso";
-                        player.sendSystemMessage(Component.literal("[" + builderName + "] Menerima " + toolName + "! Mantap Bos, langsung saya pakai.").withStyle(ChatFormatting.GREEN));
+                        String builderName = this.getCustomName() != null ? this.getCustomName().getString() : ZooTranslations.get("zootycoon.dialog.builder.default_name");
+                        ZooNetworkPayloads.sendToast(serverPlayer, "zootycoon.toast.title.construction", "zootycoon.builder.received_tool", 1, builderName, toolName);
+                        updateNeedsIndicator();
                         return InteractionResult.SUCCESS;
                     }
                     if (matchedSite.needsPickaxe() && !matchedSite.hasPickaxe() && held.is(net.minecraft.tags.ItemTags.PICKAXES)) {
@@ -315,8 +337,9 @@ public class ZooBuilderEntity extends PathfinderMob {
                         String toolName = held.getHoverName().getString();
                         held.shrink(1);
                         this.level().playSound(null, this.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-                        String builderName = this.getCustomName() != null ? this.getCustomName().getString() : "Budi Santoso";
-                        player.sendSystemMessage(Component.literal("[" + builderName + "] Menerima " + toolName + "! Mantap Bos, langsung saya pakai.").withStyle(ChatFormatting.GREEN));
+                        String builderName = this.getCustomName() != null ? this.getCustomName().getString() : ZooTranslations.get("zootycoon.dialog.builder.default_name");
+                        ZooNetworkPayloads.sendToast(serverPlayer, "zootycoon.toast.title.construction", "zootycoon.builder.received_tool", 1, builderName, toolName);
+                        updateNeedsIndicator();
                         return InteractionResult.SUCCESS;
                     }
                     if (matchedSite.needsAxe() && !matchedSite.hasAxe() && held.is(net.minecraft.tags.ItemTags.AXES)) {
@@ -325,8 +348,9 @@ public class ZooBuilderEntity extends PathfinderMob {
                         String toolName = held.getHoverName().getString();
                         held.shrink(1);
                         this.level().playSound(null, this.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-                        String builderName = this.getCustomName() != null ? this.getCustomName().getString() : "Budi Santoso";
-                        player.sendSystemMessage(Component.literal("[" + builderName + "] Menerima " + toolName + "! Mantap Bos, langsung saya pakai.").withStyle(ChatFormatting.GREEN));
+                        String builderName = this.getCustomName() != null ? this.getCustomName().getString() : ZooTranslations.get("zootycoon.dialog.builder.default_name");
+                        ZooNetworkPayloads.sendToast(serverPlayer, "zootycoon.toast.title.construction", "zootycoon.builder.received_tool", 1, builderName, toolName);
+                        updateNeedsIndicator();
                         return InteractionResult.SUCCESS;
                     }
                 }
@@ -334,10 +358,9 @@ public class ZooBuilderEntity extends PathfinderMob {
                 int accepted = matchedSite.deliverMaterial(held);
                 if (accepted > 0) {
                     this.level().playSound(null, this.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-                    String builderName = this.getCustomName() != null ? this.getCustomName().getString() : "Budi Santoso";
-                    player.sendSystemMessage(
-                            Component.literal("[" + builderName + "] Menerima " + accepted + "x " + held.getHoverName().getString() + ". Terima kasih Bos!").withStyle(ChatFormatting.GREEN)
-                    );
+                    String builderName = this.getCustomName() != null ? this.getCustomName().getString() : ZooTranslations.get("zootycoon.dialog.builder.default_name");
+                    ZooNetworkPayloads.sendToast(serverPlayer, "zootycoon.toast.title.construction", "zootycoon.builder.received_material_single", 1, builderName, accepted, held.getHoverName().getString());
+                    updateNeedsIndicator();
                     return InteractionResult.SUCCESS;
                 }
             }
@@ -349,7 +372,7 @@ public class ZooBuilderEntity extends PathfinderMob {
                 missingList.add(new ZooNetworkPayloads.ItemEntry(key.toString(), entry.getValue()));
             }
 
-            String builderName = this.getCustomName() != null ? this.getCustomName().getString() : "Budi Santoso";
+            String builderName = this.getCustomName() != null ? this.getCustomName().getString() : ZooTranslations.get("zootycoon.dialog.builder.default_name");
             int phase = matchedSite.isClearingPhase() ? 0 : 1;
             int obsCount = matchedSite.getObstructingBlocks().size();
 
@@ -371,10 +394,21 @@ public class ZooBuilderEntity extends PathfinderMob {
             ));
             return InteractionResult.SUCCESS;
         } else {
-            String builderName = this.getCustomName() != null ? this.getCustomName().getString() : "Budi Santoso";
-            player.sendSystemMessage(
-                    Component.literal("[" + builderName + "] Halo Bos! Belum ada proyek nih, santai dulu.").withStyle(ChatFormatting.YELLOW)
-            );
+            String builderName = this.getCustomName() != null ? this.getCustomName().getString() : ZooTranslations.get("zootycoon.dialog.builder.default_name");
+            ServerPlayNetworking.send(serverPlayer, new ZooNetworkPayloads.OpenBuilderScreenPayload(
+                    UUID.randomUUID(),
+                    ZooTranslations.get("zootycoon.dialog.builder.no_project"),
+                    0.0f,
+                    0,
+                    0,
+                    List.of(),
+                    builderName,
+                    3, // Phase 3: Idle
+                    0,
+                    false, false, false, false, false, false,
+                    0,
+                    this.getUUID()
+            ));
             return InteractionResult.SUCCESS;
         }
     }
@@ -388,19 +422,16 @@ public class ZooBuilderEntity extends PathfinderMob {
             payoutWage(player);
         } else {
             int current = net.zootycoon.economy.TransactionHelper.countEmeralds(player);
-            player.displayClientMessage(
-                    Component.literal("Waduh Bos, Emeraldnya kurang! Butuh " + remaining + " Emerald (Bos punya " + current + ").").withStyle(ChatFormatting.RED),
-                    true
-            );
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.economy", "zootycoon.builder.not_enough_emerald_wage", 3, remaining, current);
             player.level().playSound(null, player.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 1.0f, 1.0f);
         }
     }
 
     public void openWageDialog(ServerPlayer player) {
-        String bName = this.getCustomName() != null ? this.getCustomName().getString() : "Budi Santoso";
+        String bName = this.getCustomName() != null ? this.getCustomName().getString() : ZooTranslations.get("zootycoon.dialog.builder.default_name");
         ServerPlayNetworking.send(player, new ZooNetworkPayloads.OpenBuilderScreenPayload(
                 this.siteId != null ? this.siteId : UUID.randomUUID(),
-                this.finishedProjectName != null && !this.finishedProjectName.isEmpty() ? this.finishedProjectName : "Bangunan",
+                this.finishedProjectName != null && !this.finishedProjectName.isEmpty() ? this.finishedProjectName : ZooTranslations.get("zootycoon.dialog.builder.default_project"),
                 100.0f,
                 this.blocksBuilt,
                 this.blocksBuilt,
@@ -416,20 +447,17 @@ public class ZooBuilderEntity extends PathfinderMob {
 
     public void payoutWage(Player player) {
         if (!this.level().isClientSide() && this.level() instanceof ServerLevel sl) {
-            String builderName = this.getCustomName() != null ? this.getCustomName().getString() : "Budi Santoso";
+            String builderName = this.getCustomName() != null ? this.getCustomName().getString() : ZooTranslations.get("zootycoon.dialog.builder.default_name");
             sl.playSound(null, this.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0f, 1.2f);
             sl.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.PLAYERS, 1.0f, 1.0f);
             sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, this.getX(), this.getY() + 1.2, this.getZ(), 20, 0.4, 0.4, 0.4, 0.05);
 
-            if (player != null) {
-                player.sendSystemMessage(
-                        Component.literal("[" + builderName + "] Alhamdulillah, terima kasih banyak Bos! Gaji " + this.wageDue + " Emerald udah lunas. Ane pamit dulu ya Bos!").withStyle(ChatFormatting.GREEN)
-                );
-                if (player instanceof ServerPlayer sp) {
-                    net.zootycoon.economy.ZooStaffManager.get(sl).syncToPlayer(sp);
-                }
+            if (player instanceof ServerPlayer sp) {
+                ZooNetworkPayloads.sendToast(sp, "zootycoon.toast.title.success", "zootycoon.builder.wage_paid_farewell", 1, builderName, this.wageDue);
+                net.zootycoon.economy.ZooStaffManager.get(sl).syncToPlayer(sp);
             }
 
+            this.setNeedsSomething(false);
             sl.sendParticles(ParticleTypes.POOF, this.getX(), this.getY() + 1.0, this.getZ(), 25, 0.35, 0.5, 0.35, 0.05);
             this.discard();
         }
@@ -477,4 +505,3 @@ public class ZooBuilderEntity extends PathfinderMob {
         this.wagePaidSoFar = tag.getInt("WagePaidSoFar");
     }
 }
-

@@ -19,4 +19,9 @@ public class ZooHunterRenderer extends HumanoidMobRenderer<ZooHunterEntity, ZooH
     public ResourceLocation getTextureLocation(ZooHunterEntity entity) {
         return TEXTURE;
     }
+
+    @Override
+    protected boolean shouldShowName(ZooHunterEntity entity) {
+        return false;
+    }
 }

@@ -9,8 +9,11 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import net.minecraft.world.phys.AABB;
 import net.zootycoon.ZooTycoonMod;
 import net.zootycoon.schematic.ZooSchematic;
 import net.zootycoon.schematic.ZooSchematicRegistry;
@@ -63,25 +66,51 @@ public class SchematicCaptureService {
                 min = new BlockPos(center.getX() - 8, 100, center.getZ() - 8);
                 max = new BlockPos(center.getX() + 8, 108, center.getZ() + 8);
             } else {
+                // Include +2 Y headroom so entities/NPCs standing on top of blocks are captured
                 min = new BlockPos(minX, minY, minZ);
-                max = new BlockPos(maxX, maxY, maxZ);
+                max = new BlockPos(maxX, maxY + 2, maxZ);
             }
         } else {
-            min = new BlockPos(
-                    Math.min(pos1.getX(), pos2.getX()),
-                    Math.min(pos1.getY(), pos2.getY()),
-                    Math.min(pos1.getZ(), pos2.getZ())
-            );
-            max = new BlockPos(
-                    Math.max(pos1.getX(), pos2.getX()),
-                    Math.max(pos1.getY(), pos2.getY()),
-                    Math.max(pos1.getZ(), pos2.getZ())
-            );
+            int minX = Math.min(pos1.getX(), pos2.getX());
+            int minY = Math.min(pos1.getY(), pos2.getY());
+            int minZ = Math.min(pos1.getZ(), pos2.getZ());
+            int maxX = Math.max(pos1.getX(), pos2.getX());
+            int maxY = Math.max(pos1.getY(), pos2.getY());
+            int maxZ = Math.max(pos1.getZ(), pos2.getZ());
+
+            // If player selected two ground corners (shallow Y span), scan upward to capture full building & entities
+            if (maxY - minY < 4) {
+                int highestY = maxY;
+                for (int x = minX; x <= maxX; x++) {
+                    for (int z = minZ; z <= maxZ; z++) {
+                        for (int y = minY; y <= minY + 40; y++) {
+                            if (!level.getBlockState(new BlockPos(x, y, z)).isAir()) {
+                                highestY = Math.max(highestY, y);
+                            }
+                        }
+                    }
+                }
+                List<Entity> ents = level.getEntitiesOfClass(
+                        Entity.class,
+                        new AABB(minX, minY, minZ, maxX + 1, minY + 40, maxZ + 1),
+                        e -> !(e instanceof Player)
+                );
+                for (Entity e : ents) {
+                    highestY = Math.max(highestY, (int) Math.ceil(e.getBoundingBox().maxY));
+                }
+                maxY = highestY + 2;
+            } else {
+                maxY += 2;
+            }
+
+            min = new BlockPos(minX, minY, minZ);
+            max = new BlockPos(maxX, maxY, maxZ);
         }
 
         Vec3i size = new Vec3i(max.getX() - min.getX() + 1, max.getY() - min.getY() + 1, max.getZ() - min.getZ() + 1);
 
         StructureTemplate template = new StructureTemplate();
+        // includeEntities = true captures all NPCs & animals inside the schematic without counting them as block materials!
         template.fillFromWorld(level, min, size, true, Blocks.BEDROCK);
 
         String safeId = "custom_" + schematicName.toLowerCase().replaceAll("[^a-z0-9_]", "_");
@@ -135,7 +164,7 @@ public class SchematicCaptureService {
             biomeTag.put("palette", paletteList);
             biomeTag.putIntArray("data", biomeIndices);
 
-            // 2. Save .nbt with StructureTemplate blocks + ZooBiomes
+            // 2. Save .nbt with StructureTemplate blocks + entities + ZooBiomes
             File nbtFile = baseDir.resolve(safeId + ".nbt").toFile();
             CompoundTag nbtData = template.save(new CompoundTag());
             nbtData.put("ZooBiomes", biomeTag);
@@ -164,7 +193,7 @@ public class SchematicCaptureService {
                 GSON.toJson(obj, writer);
             }
 
-            // 3. Register into memory
+            // 4. Register into memory
             ZooSchematic customSchem = new ZooSchematic(
                     "zootycoon:" + safeId, schematicName, category, "custom",
                     player.getName().getString(), size, description,
@@ -182,4 +211,3 @@ public class SchematicCaptureService {
         }
     }
 }
-

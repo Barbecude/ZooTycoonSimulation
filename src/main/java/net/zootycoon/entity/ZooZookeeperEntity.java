@@ -241,7 +241,7 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
             // Check hunger
             int hunger = ZooAnimalHungerManager.getHunger(assignedAnimal);
-            if (hunger <= ZooAnimalHungerManager.HUNGRY_THRESHOLD && feedCooldown <= 0) {
+            if (hunger <= 85 && feedCooldown <= 0) {
                 performFeeding(sLevel, assignedAnimal);
             }
 
@@ -260,7 +260,7 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
     private void searchAndTakeFoodFromFeeders(ServerLevel sLevel, LivingEntity animal) {
         BlockPos center = this.blockPosition();
-        for (BlockPos bp : BlockPos.betweenClosed(center.offset(-5, -2, -5), center.offset(5, 2, 5))) {
+        for (BlockPos bp : BlockPos.betweenClosed(center.offset(-6, -2, -6), center.offset(6, 2, 6))) {
             var be = sLevel.getBlockEntity(bp);
             if (be instanceof net.minecraft.world.Container container) {
                 for (int i = 0; i < container.getContainerSize(); i++) {
@@ -308,20 +308,18 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
         var diet = AnimalDietRegistry.getDiet(animal);
         Item foodItem = !diet.acceptedFoods.isEmpty() ? diet.acceptedFoods.get(0) : Items.WHEAT;
-        ItemStack foodStack = new ItemStack(foodItem);
+        ItemStack foodStack = new ItemStack(foodItem, 2);
 
         if (diet.feedingType == AnimalDietRegistry.FeedingType.THROWN_MEAT) {
-            // Throw meat at carnivore
             this.getLookControl().setLookAt(animal);
-            ZooAnimalHungerManager.throwFoodAtAnimal(sLevel, this, animal, foodStack);
-            ZooAnimalHungerManager.setHunger(animal, Math.min(100, ZooAnimalHungerManager.getHunger(animal) + 30));
+            ZooAnimalHungerManager.throwFoodAtAnimal(sLevel, this, animal, foodStack.copyWithCount(1));
+            ZooAnimalHungerManager.feedAnimal(animal, foodStack, null);
         } else {
-            // Feed herbivore directly or refill trough
             ZooAnimalHungerManager.feedAnimal(animal, foodStack, null);
         }
 
-        setFoodStock(getFoodStock() - 1);
-        feedCooldown = 400; // 20 seconds cooldown between feeds
+        setFoodStock(Math.max(0, getFoodStock() - 1));
+        feedCooldown = 300; // 15 seconds cooldown between feeds
     }
 
     @Override
@@ -369,11 +367,11 @@ public class ZooZookeeperEntity extends PathfinderMob {
         if (dialogOverride != null) {
             dialogText = dialogOverride;
         } else if (!hasAnimal) {
-            dialogText = "Halo Bos! Belum ada satwa yang ditugaskan ke saya. Beri tag nama pada satwa di menu zoo (Shift Kanan) terlebih dahulu agar saya bisa mulai merawatnya ya!";
+            dialogText = net.zootycoon.util.ZooTranslations.get("zootycoon.dialog.zookeeper.no_animal");
         } else if (getFoodStock() <= 0) {
-            dialogText = "Halo Bos! Saya sedang merawat satwa " + animalName + ". Tapi stok pakan di kantong saya KOSONG nih. Tolong berikan pakan lewat tombol di bawah atau isi di animal feeder ya!";
+            dialogText = net.zootycoon.util.ZooTranslations.get("zootycoon.dialog.zookeeper.empty_stock", animalName);
         } else {
-            dialogText = "Halo Bos! Saya sedang merawat satwa " + animalName + ". Stok pakan masih ada " + getFoodStock() + " buah di kantong saya. Saya akan merawatnya saat lapar!";
+            dialogText = net.zootycoon.util.ZooTranslations.get("zootycoon.dialog.zookeeper.has_stock", animalName, getFoodStock());
         }
 
         ServerPlayNetworking.send(player, new ZooNetworkPayloads.OpenZookeeperScreenPayload(
@@ -383,17 +381,18 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
     public void handleFoodTransfer(ServerPlayer player) {
         if (assignedAnimalUuid == null) {
-            openDialogScreen(player, "Belum ada satwa yang ditugaskan ke saya. Beri tag nama pada satwa di menu zoo (Shift Kanan) dulu ya Bos!");
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.warning", "zootycoon.zookeeper.no_animal_toast", 2);
+            openDialogScreen(player, net.zootycoon.util.ZooTranslations.get("zootycoon.dialog.zookeeper.no_animal"));
             return;
         }
         Entity aEnt = ((ServerLevel) this.level()).getEntity(assignedAnimalUuid);
         if (!(aEnt instanceof LivingEntity animal)) {
-            openDialogScreen(player, "Satwa binaan tidak ditemukan di sekitar area zoo.");
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.warning", "zootycoon.zookeeper.animal_missing_toast", 2);
+            openDialogScreen(player, net.zootycoon.util.ZooTranslations.get("zootycoon.dialog.zookeeper.animal_missing"));
             return;
         }
 
         int totalGiven = 0;
-        var diet = AnimalDietRegistry.getDiet(animal);
         for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
             ItemStack st = player.getInventory().getItem(i);
             if (!st.isEmpty() && AnimalDietRegistry.isFoodValid(animal, st)) {
@@ -408,11 +407,17 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
         String aName = animal.hasCustomName() ? animal.getCustomName().getString() : animal.getType().getDescription().getString();
         if (totalGiven > 0) {
-            this.level().playSound(null, this.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-            ((ServerLevel) this.level()).sendParticles(ParticleTypes.HAPPY_VILLAGER, this.getX(), this.getY() + 1.0, this.getZ(), 5, 0.2, 0.2, 0.2, 0.02);
-            openDialogScreen(player, "Terima kasih banyak Bos! Menerima " + totalGiven + " pakan untuk " + aName + ". Total stok di kantong sekarang: " + this.getFoodStock() + " buah.");
+            ServerLevel sLevel = (ServerLevel) this.level();
+            sLevel.playSound(null, this.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
+            sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, this.getX(), this.getY() + 1.0, this.getZ(), 5, 0.2, 0.2, 0.2, 0.02);
+            // Immediately feed the assigned animal so love particles appear right away!
+            this.feedCooldown = 0;
+            this.performFeeding(sLevel, animal);
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.zookeeper.food_given_toast", 1, totalGiven, aName);
+            openDialogScreen(player, net.zootycoon.util.ZooTranslations.get("zootycoon.dialog.zookeeper.received_food", totalGiven, aName, this.getFoodStock()));
         } else {
-            openDialogScreen(player, "Bos belum membawa makanan yang disukai oleh " + aName + " di tas. Periksa daftar pakan di bawah ya!");
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.warning", "zootycoon.zookeeper.wrong_food_toast", 2, aName);
+            openDialogScreen(player, net.zootycoon.util.ZooTranslations.get("zootycoon.dialog.zookeeper.wrong_food", aName));
         }
     }
 

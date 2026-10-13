@@ -21,5 +21,18 @@ public class ZooHunterModel extends HumanoidModel<ZooHunterEntity> {
         MeshDefinition meshdefinition = HumanoidModel.createMesh(CubeDeformation.NONE, 0.0F);
         return LayerDefinition.create(meshdefinition, 64, 64);
     }
-}
 
+    @Override
+    public void setupAnim(ZooHunterEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+        super.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
+        if (entity.isVehicle()) {
+            // Raise both arms overhead when carrying a kidnapped zoo animal
+            this.rightArm.xRot = -2.85F;
+            this.leftArm.xRot = -2.85F;
+            this.rightArm.zRot = 0.15F;
+            this.leftArm.zRot = -0.15F;
+            this.rightArm.yRot = 0.0F;
+            this.leftArm.yRot = 0.0F;
+        }
+    }
+}
