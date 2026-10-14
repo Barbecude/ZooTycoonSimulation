@@ -31,6 +31,8 @@ public class ZookeeperDialogScreen extends EasyNpcDialogScreen {
     private int dropdownW = 0;
     private int dropdownH = 0;
 
+    private int animalScrollOffset = 0;
+
     public ZookeeperDialogScreen(
             UUID keeperUuid,
             String keeperName,
@@ -107,6 +109,9 @@ public class ZookeeperDialogScreen extends EasyNpcDialogScreen {
                 ZooButton selectBtn = new ZooButton(startX + 12, btnY, btnW, 22,
                         ZooTranslations.component("zootycoon.dialog.zookeeper.btn.select_animal"), b -> {
                     this.dropdownOpen = !this.dropdownOpen;
+                    if (this.dropdownOpen) {
+                        this.animalScrollOffset = 0;
+                    }
                 }).asPrimary();
                 addRenderableWidget(selectBtn);
 
@@ -183,36 +188,67 @@ public class ZookeeperDialogScreen extends EasyNpcDialogScreen {
         graphics.renderOutline(dropdownX, dropdownY, dropdownW, dropdownH, 0xFF475569);
 
         int itemH = 26;
-        int curY = dropdownY + 2;
-        int count = Math.min(availableAnimals.size(), 5);
+        int totalContentH = availableAnimals.size() * itemH;
+        int maxScroll = Math.max(0, totalContentH - (dropdownH - 4));
+        animalScrollOffset = Math.clamp(animalScrollOffset, 0, maxScroll);
 
-        for (int i = 0; i < count; i++) {
+        graphics.enableScissor(dropdownX + 1, dropdownY + 2, dropdownX + dropdownW - 1, dropdownY + dropdownH - 2);
+
+        int curY = dropdownY + 2 - animalScrollOffset;
+        for (int i = 0; i < availableAnimals.size(); i++) {
             var animal = availableAnimals.get(i);
-            boolean hovered = mouseX >= dropdownX && mouseX <= dropdownX + dropdownW && mouseY >= curY && mouseY <= curY + itemH;
-            if (hovered) {
-                graphics.fill(dropdownX + 2, curY, dropdownX + dropdownW - 2, curY + itemH, 0xFF334155);
+            if (curY + itemH >= dropdownY && curY <= dropdownY + dropdownH) {
+                boolean isAlreadyAssigned = animal.hasZookeeper();
+                boolean hovered = mouseX >= dropdownX && mouseX <= dropdownX + (maxScroll > 0 ? dropdownW - 6 : dropdownW)
+                        && mouseY >= curY && mouseY <= curY + itemH && mouseY >= dropdownY + 2 && mouseY <= dropdownY + dropdownH - 2;
+
+                if (hovered && !isAlreadyAssigned) {
+                    graphics.fill(dropdownX + 2, curY, dropdownX + dropdownW - (maxScroll > 0 ? 8 : 2), curY + itemH, 0xFF334155);
+                } else if (isAlreadyAssigned) {
+                    graphics.fill(dropdownX + 2, curY, dropdownX + dropdownW - (maxScroll > 0 ? 8 : 2), curY + itemH, 0x4011151D);
+                }
+
+                // 3D Model of animal
+                LivingEntity ent = resolveAnimalEntity(animal);
+                if (ent != null) {
+                    float bbH = Math.max(0.4f, ent.getBbHeight());
+                    float bbW = Math.max(0.4f, ent.getBbWidth());
+                    float maxDim = Math.max(bbH, bbW * 0.8f);
+                    int scale = (int) Math.clamp(14.0f / maxDim, 6, 16);
+                    InventoryScreen.renderEntityInInventoryFollowsMouse(
+                            graphics,
+                            dropdownX + 6, curY + 2, dropdownX + 28, curY + 24,
+                            scale, 0.0f, (float) mouseX, (float) mouseY, ent
+                    );
+                }
+
+                String displayName = animal.customName().isEmpty() ? formatSpecies(animal.entityTypeId()) : animal.customName();
+                if (isAlreadyAssigned) {
+                    // Disabled style: cannot be selected
+                    String zkLabel = displayName + " (Sudah ada zookeeper)";
+                    graphics.drawString(this.font, Component.literal(zkLabel).withStyle(ChatFormatting.DARK_GRAY),
+                            dropdownX + 32, curY + 9, 0xFF888888, false);
+                } else {
+                    // Available: active style
+                    graphics.drawString(this.font, Component.literal(displayName).withStyle(hovered ? ChatFormatting.GOLD : ChatFormatting.WHITE),
+                            dropdownX + 32, curY + 9, 0xFFFFFFFF, false);
+                }
             }
-
-            // 3D Model of animal instead of emoji
-            LivingEntity ent = resolveAnimalEntity(animal);
-            if (ent != null) {
-                float bbH = Math.max(0.4f, ent.getBbHeight());
-                float bbW = Math.max(0.4f, ent.getBbWidth());
-                float maxDim = Math.max(bbH, bbW * 0.8f);
-                int scale = (int) Math.clamp(14.0f / maxDim, 6, 16);
-                InventoryScreen.renderEntityInInventoryFollowsMouse(
-                        graphics,
-                        dropdownX + 6, curY + 2, dropdownX + 28, curY + 24,
-                        scale, 0.0f, (float) mouseX, (float) mouseY, ent
-                );
-            }
-
-            // Animal display name without emoji and without percent
-            String displayName = animal.customName().isEmpty() ? formatSpecies(animal.entityTypeId()) : animal.customName();
-            graphics.drawString(this.font, Component.literal(displayName).withStyle(hovered ? ChatFormatting.GOLD : ChatFormatting.WHITE),
-                    dropdownX + 32, curY + 9, 0xFFFFFFFF, false);
-
             curY += itemH;
+        }
+
+        graphics.disableScissor();
+
+        // Scrollbar if needed
+        if (maxScroll > 0) {
+            int barX = dropdownX + dropdownW - 5;
+            int barY = dropdownY + 2;
+            int barH = dropdownH - 4;
+            graphics.fill(barX, barY, barX + 3, barY + barH, 0xFF0F172A);
+            float ratio = (float) barH / (float) totalContentH;
+            int thumbH = Math.max(12, (int) (barH * ratio));
+            int thumbY = barY + (int) ((barH - thumbH) * ((float) animalScrollOffset / (float) maxScroll));
+            graphics.fill(barX, thumbY, barX + 3, thumbY + thumbH, 0xFF38BDF8);
         }
 
         graphics.pose().popPose();
@@ -222,20 +258,38 @@ public class ZookeeperDialogScreen extends EasyNpcDialogScreen {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (dropdownOpen && !availableAnimals.isEmpty()) {
             if (mouseX >= dropdownX && mouseX <= dropdownX + dropdownW && mouseY >= dropdownY && mouseY <= dropdownY + dropdownH) {
-                int clickedIdx = (int) ((mouseY - (dropdownY + 2)) / 26);
-                int count = Math.min(availableAnimals.size(), 5);
-                if (clickedIdx >= 0 && clickedIdx < count) {
+                double relativeY = (mouseY - (dropdownY + 2)) + animalScrollOffset;
+                int clickedIdx = (int) (relativeY / 26);
+                if (clickedIdx >= 0 && clickedIdx < availableAnimals.size()) {
                     var selected = availableAnimals.get(clickedIdx);
-                    ClientPlayNetworking.send(new ZooNetworkPayloads.AssignZookeeperPayload(selected.entityId(), this.keeperUuid));
-                    dropdownOpen = false;
-                    this.onClose();
-                    return true;
+                    if (!selected.hasZookeeper()) {
+                        ClientPlayNetworking.send(new ZooNetworkPayloads.AssignZookeeperPayload(selected.entityId(), this.keeperUuid));
+                        dropdownOpen = false;
+                        this.onClose();
+                        return true;
+                    }
                 }
+                return true;
             } else {
                 dropdownOpen = false;
             }
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (dropdownOpen && !availableAnimals.isEmpty()) {
+            if (mouseX >= dropdownX && mouseX <= dropdownX + dropdownW && mouseY >= dropdownY && mouseY <= dropdownY + dropdownH) {
+                int totalContentH = availableAnimals.size() * 26;
+                int maxScroll = Math.max(0, totalContentH - (dropdownH - 4));
+                if (maxScroll > 0) {
+                    this.animalScrollOffset = Math.clamp(this.animalScrollOffset - (int) (verticalAmount * 26), 0, maxScroll);
+                    return true;
+                }
+            }
+        }
+        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
 
     private static String formatSpecies(String entityTypeId) {
