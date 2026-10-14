@@ -10,8 +10,11 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -23,8 +26,10 @@ import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.nbt.CompoundTag;
 import net.zootycoon.ZooTycoonMod;
+import net.zootycoon.animal.ZooAnimalHungerManager;
 import net.zootycoon.block.ToiletBlockEntity;
 
 import java.util.EnumSet;
@@ -88,6 +93,12 @@ public class ZooVisitorEntity extends PathfinderMob {
         }
     }
 
+    private static final net.minecraft.resources.ResourceLocation SPRINT_MODIFIER_ID =
+            ZooTycoonMod.id("visitor_sprint_boost");
+    private static final net.minecraft.world.entity.ai.attributes.AttributeModifier SPRINT_MODIFIER =
+            new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+                    SPRINT_MODIFIER_ID, 0.40D, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
+
     private BlockPos gatePos = null;
     private int stayTime = 0;
     private int toiletTimer = 0;
@@ -95,9 +106,16 @@ public class ZooVisitorEntity extends PathfinderMob {
     // 0 = small/baby, 1 = normal, 2 = big
     private int watchingAnimalSize = -1;
     private int eatTimer = 0;
+    private int runBurstTimer = 0;
+    private int runBurstType = 0; // 0 = none, 1 = run only, 2 = run & jump
+    private int jumpCooldown = 0;
+    private int sitCooldown = 0;
 
     public ZooVisitorEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
+        if (isChildVisitor()) {
+            this.refreshDimensions();
+        }
     }
 
     @Override
@@ -109,7 +127,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         builder.define(THIRST, 0);
         builder.define(MOOD, VisitorMood.NEUTRAL.ordinal());
         builder.define(HAS_TRASH, false);
-        builder.define(NEEDS_TOILET, false);
+        builder.define(NEEDS_TOILET, Math.random() < 0.15); // 15% arrive already needing restroom
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -126,10 +144,11 @@ public class ZooVisitorEntity extends PathfinderMob {
         this.goalSelector.addGoal(2, new FindToiletGoal(this));
         this.goalSelector.addGoal(2, new FindTrashCanGoal(this));
         this.goalSelector.addGoal(3, new OpenDoorGoal(this, true));
-        this.goalSelector.addGoal(4, new WatchAnimalsGoal(this));
-        this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.7D));
-        this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 6.0F));
-        this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(4, new FindSeatGoal(this));
+        this.goalSelector.addGoal(5, new WatchAnimalsGoal(this));
+        this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 0.7D));
+        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 6.0F));
+        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
     }
 
     public VisitorMood getMood() {
@@ -154,6 +173,32 @@ public class ZooVisitorEntity extends PathfinderMob {
 
     public void setChildVisitor(boolean child) {
         this.entityData.set(IS_CHILD, child);
+        this.refreshDimensions();
+    }
+
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
+        super.onSyncedDataUpdated(key);
+        if (IS_CHILD.equals(key)) {
+            this.refreshDimensions();
+        }
+    }
+
+    @Override
+    public EntityDimensions getDefaultDimensions(Pose pose) {
+        EntityDimensions dimensions = super.getDefaultDimensions(pose);
+        if (isChildVisitor()) {
+            return dimensions.scale(0.6F);
+        }
+        return dimensions;
+    }
+
+    @Override
+    public Vec3 getVehicleAttachmentPoint(Entity vehicle) {
+        if (isChildVisitor()) {
+            return new Vec3(0.0, Player.DEFAULT_VEHICLE_ATTACHMENT.y * 0.6D, 0.0);
+        }
+        return Player.DEFAULT_VEHICLE_ATTACHMENT;
     }
 
     public int getHunger() {
@@ -242,17 +287,24 @@ public class ZooVisitorEntity extends PathfinderMob {
                 setThirst(getThirst() + 10);
             }
 
-            // Every 20 seconds (400 ticks): small chance to need toilet
-            if (this.tickCount % 400 == 0 && !needsToilet()) {
-                if (this.random.nextFloat() < 0.035F) {
+            // Every 10 seconds (200 ticks): check chance to need toilet
+            if (this.tickCount % 200 == 0 && !needsToilet()) {
+                float toiletChance = 0.12F;
+                if (isChildVisitor()) {
+                    toiletChance += 0.06F; // Children have smaller bladders
+                }
+                if (getThirst() >= 30 || getHunger() >= 30) {
+                    toiletChance += 0.08F; // Higher chance when thirsty / hungry
+                }
+                if (this.random.nextFloat() < toiletChance) {
                     setNeedsToilet(true);
                 }
             }
 
-            // Toilet timer check: if toilet need isn't met for 30s (600 ticks), visitor leaves
+            // Toilet timer check: if toilet need isn't met for 60s (1200 ticks), visitor leaves
             if (needsToilet()) {
                 toiletTimer++;
-                if (toiletTimer > 600) {
+                if (toiletTimer > 1200) {
                     forceLeave();
                 }
             } else {
@@ -277,7 +329,66 @@ public class ZooVisitorEntity extends PathfinderMob {
             if (this.tickCount % 5 == 0) {
                 updateMood();
             }
+
+            // Natural running and jumping behavior
+            if (this.isPassenger() || needsToilet()) {
+                if (runBurstTimer > 0) {
+                    runBurstTimer = 0;
+                    runBurstType = 0;
+                    this.setSprinting(false);
+                    var attr = this.getAttribute(Attributes.MOVEMENT_SPEED);
+                    if (attr != null && attr.hasModifier(SPRINT_MODIFIER_ID)) {
+                        attr.removeModifier(SPRINT_MODIFIER_ID);
+                    }
+                }
+            } else if (runBurstTimer > 0) {
+                runBurstTimer--;
+                this.setSprinting(true);
+
+                var attr = this.getAttribute(Attributes.MOVEMENT_SPEED);
+                if (attr != null && !attr.hasModifier(SPRINT_MODIFIER_ID)) {
+                    attr.addTransientModifier(SPRINT_MODIFIER);
+                }
+
+                if (runBurstType == 2) { // Lari sambil loncat
+                    if (jumpCooldown > 0) {
+                        jumpCooldown--;
+                    }
+                    if (jumpCooldown <= 0 && this.onGround() && this.getDeltaMovement().horizontalDistanceSqr() > 0.003D) {
+                        this.getJumpControl().jump();
+                        jumpCooldown = 12 + this.random.nextInt(8); // jump cadence every ~0.6-1.0s
+                    }
+                }
+
+                if (runBurstTimer <= 0) {
+                    this.setSprinting(false);
+                    runBurstType = 0;
+                    if (attr != null && attr.hasModifier(SPRINT_MODIFIER_ID)) {
+                        attr.removeModifier(SPRINT_MODIFIER_ID);
+                    }
+                }
+            } else {
+                // Periodically decide if visitor wants a burst of excitement/running
+                int interval = isChildVisitor() ? 50 : 90;
+                if (this.tickCount % interval == 0) {
+                    float chance = isChildVisitor() ? 0.30F : 0.12F;
+                    if (this.random.nextFloat() < chance && (!this.getNavigation().isDone() || this.getDeltaMovement().horizontalDistanceSqr() > 0.002D)) {
+                        runBurstTimer = 40 + this.random.nextInt(60); // 2 to 5 seconds
+                        runBurstType = this.random.nextBoolean() ? 1 : 2; // 50% run only, 50% run and jump!
+                        jumpCooldown = 4;
+                        this.setSprinting(true);
+                    }
+                }
+            }
         }
+    }
+
+    @Override
+    public boolean hurt(net.minecraft.world.damagesource.DamageSource damageSource, float amount) {
+        if (this.isPassenger()) {
+            this.stopRiding();
+        }
+        return super.hurt(damageSource, amount);
     }
 
     public void forceLeave() {
@@ -330,6 +441,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         tag.putInt("Mood", getMood().ordinal());
         tag.putBoolean("HasTrash", hasTrash());
         tag.putBoolean("NeedsToilet", needsToilet());
+        tag.putInt("SitCooldown", sitCooldown);
     }
 
     @Override
@@ -350,6 +462,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         setMood(VisitorMood.fromOrdinal(tag.contains("Mood") ? tag.getInt("Mood") : VisitorMood.NEUTRAL.ordinal()));
         setHasTrash(tag.getBoolean("HasTrash"));
         setNeedsToilet(tag.getBoolean("NeedsToilet"));
+        sitCooldown = tag.getInt("SitCooldown");
     }
 
     // =========================================================================
@@ -376,11 +489,11 @@ public class ZooVisitorEntity extends PathfinderMob {
             if (visitor.isTimeToLeave()) return false;
             if (visitor.tickCount % 40 != 0) return false;
 
-            // Search for nearby animals within 24 blocks
+            // Search for nearby animals within 24 blocks (ONLY registered zoo animals!)
             List<Animal> nearbyAnimals = visitor.level().getEntitiesOfClass(
                     Animal.class,
                     visitor.getBoundingBox().inflate(24.0D),
-                    a -> a.isAlive()
+                    a -> a.isAlive() && ZooAnimalHungerManager.isTagged(a)
             );
 
             if (nearbyAnimals.isEmpty()) return false;
@@ -643,7 +756,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             BlockPos bestPos = null;
             int bestQueue = Integer.MAX_VALUE;
 
-            for (BlockPos pos : BlockPos.betweenClosed(p.offset(-32, -5, -32), p.offset(32, 5, 32))) {
+            for (BlockPos pos : BlockPos.betweenClosed(p.offset(-48, -6, -48), p.offset(48, 6, 48))) {
                 if (!visitor.level().getBlockState(pos).is(net.zootycoon.block.ZooBlocks.TOILET)) continue;
                 int queueLen = 0;
                 if (visitor.level().getBlockEntity(pos) instanceof ToiletBlockEntity toilet) {
@@ -876,6 +989,127 @@ public class ZooVisitorEntity extends PathfinderMob {
                 }
             }
             return best;
+        }
+    }
+
+    /**
+     * Goal for finding nearby seatable objects (chairs, benches, sofas, stools from any furniture mod)
+     * and sitting down to relax for a while.
+     */
+    public static class FindSeatGoal extends Goal {
+        private final ZooVisitorEntity visitor;
+        private BlockPos targetPos;
+        private int sitTicks = 0;
+        private int searchCooldown = 0;
+        private boolean isSeated = false;
+
+        public FindSeatGoal(ZooVisitorEntity visitor) {
+            this.visitor = visitor;
+            this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+        }
+
+        @Override
+        public boolean canUse() {
+            if (visitor.isTimeToLeave()) return false;
+            if (visitor.needsToilet()) return false;
+            if (visitor.hasTrash()) return false;
+            if (visitor.isPassenger()) return false;
+            if (visitor.sitCooldown > 0) {
+                visitor.sitCooldown--;
+                return false;
+            }
+
+            if (searchCooldown > 0) {
+                searchCooldown--;
+                return false;
+            }
+            searchCooldown = 40 + visitor.getRandom().nextInt(30);
+
+            // Search within 14 blocks horizontally and 2 blocks vertically
+            BlockPos current = visitor.blockPosition();
+            BlockPos best = null;
+            double bestDist = Double.MAX_VALUE;
+
+            for (BlockPos p : BlockPos.betweenClosed(current.offset(-14, -2, -14), current.offset(14, 2, 14))) {
+                if (net.zootycoon.util.ZooSeatHelper.isSeatableBlock(visitor.level(), p, visitor.level().getBlockState(p))) {
+                    double d = visitor.distanceToSqr(p.getX() + 0.5, p.getY(), p.getZ() + 0.5);
+                    if (d < bestDist) {
+                        bestDist = d;
+                        best = p.immutable();
+                    }
+                }
+            }
+
+            if (best != null) {
+                this.targetPos = best;
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            if (visitor.isTimeToLeave() || visitor.needsToilet()) return false;
+            if (isSeated) {
+                return sitTicks > 0 && visitor.isPassenger();
+            }
+            return targetPos != null && net.zootycoon.util.ZooSeatHelper.isSeatNotOccupied(visitor.level(), targetPos);
+        }
+
+        @Override
+        public void start() {
+            this.isSeated = false;
+            this.sitTicks = 0;
+            if (targetPos != null) {
+                visitor.getNavigation().moveTo(targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, 1.0D);
+            }
+        }
+
+        @Override
+        public void stop() {
+            if (visitor.isPassenger()) {
+                visitor.stopRiding();
+            }
+            this.targetPos = null;
+            this.isSeated = false;
+            this.sitTicks = 0;
+            visitor.sitCooldown = 500 + visitor.getRandom().nextInt(600); // 25-55s cooldown
+        }
+
+        @Override
+        public void tick() {
+            if (isSeated) {
+                sitTicks--;
+                // Occasionally look around peacefully while sitting
+                if (visitor.getRandom().nextInt(30) == 0) {
+                    double angle = visitor.getYRot() + (visitor.getRandom().nextFloat() - 0.5F) * 70.0F;
+                    double rad = Math.toRadians(angle);
+                    visitor.getLookControl().setLookAt(visitor.getX() + Math.sin(rad) * 4.0, visitor.getEyeY(), visitor.getZ() + Math.cos(rad) * 4.0);
+                }
+                if (sitTicks <= 0) {
+                    visitor.stopRiding();
+                    isSeated = false;
+                }
+                return;
+            }
+
+            if (targetPos == null) return;
+
+            double distSq = visitor.distanceToSqr(targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5);
+            if (distSq <= 2.2D) {
+                if (visitor.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                    boolean success = net.zootycoon.util.ZooSeatHelper.seatVisitorAt(sl, targetPos, visitor);
+                    if (success) {
+                        this.isSeated = true;
+                        this.sitTicks = 180 + visitor.getRandom().nextInt(240); // 9-21 seconds sitting
+                        visitor.getNavigation().stop();
+                        return;
+                    }
+                }
+                this.targetPos = null;
+            } else if (visitor.getNavigation().isDone() || visitor.tickCount % 20 == 0) {
+                visitor.getNavigation().moveTo(targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, 1.0D);
+            }
         }
     }
 }

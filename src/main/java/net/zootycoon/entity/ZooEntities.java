@@ -7,6 +7,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.player.Player;
 import net.zootycoon.ZooTycoonMod;
 
 public class ZooEntities {
@@ -21,6 +22,7 @@ public class ZooEntities {
             EntityType.Builder.of(ZooBuilderEntity::new, MobCategory.MISC)
                     .sized(0.6f, 1.8f)
                     .eyeHeight(1.62f)
+                    .vehicleAttachment(Player.DEFAULT_VEHICLE_ATTACHMENT)
                     .build("zootycoon:builder")
     );
 
@@ -35,6 +37,7 @@ public class ZooEntities {
             EntityType.Builder.of(ZooZookeeperEntity::new, MobCategory.MISC)
                     .sized(0.6f, 1.8f)
                     .eyeHeight(1.62f)
+                    .vehicleAttachment(Player.DEFAULT_VEHICLE_ATTACHMENT)
                     .build("zootycoon:zookeeper")
     );
 
@@ -49,6 +52,7 @@ public class ZooEntities {
             EntityType.Builder.of(ZooSecurityEntity::new, MobCategory.MISC)
                     .sized(0.6f, 1.8f)
                     .eyeHeight(1.62f)
+                    .vehicleAttachment(Player.DEFAULT_VEHICLE_ATTACHMENT)
                     .build("zootycoon:security")
     );
 
@@ -63,6 +67,7 @@ public class ZooEntities {
             EntityType.Builder.of(ZooHunterEntity::new, MobCategory.MONSTER)
                     .sized(0.6f, 1.8f)
                     .eyeHeight(1.62f)
+                    .vehicleAttachment(Player.DEFAULT_VEHICLE_ATTACHMENT)
                     .build("zootycoon:hunter")
     );
 
@@ -77,6 +82,7 @@ public class ZooEntities {
             EntityType.Builder.of(ZooVisitorEntity::new, MobCategory.MISC)
                     .sized(0.6f, 1.8f)
                     .eyeHeight(1.62f)
+                    .vehicleAttachment(Player.DEFAULT_VEHICLE_ATTACHMENT)
                     .build("zootycoon:visitor")
     );
 
@@ -91,6 +97,7 @@ public class ZooEntities {
             EntityType.Builder.of(ZooCashierEntity::new, MobCategory.MISC)
                     .sized(0.6f, 1.8f)
                     .eyeHeight(1.62f)
+                    .vehicleAttachment(Player.DEFAULT_VEHICLE_ATTACHMENT)
                     .build("zootycoon:cashier")
     );
 
