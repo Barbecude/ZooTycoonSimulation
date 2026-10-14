@@ -17,10 +17,10 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
 
     public CashierDialogScreen(int entityId, String currentRole, String cashierName) {
         super(
-                Component.literal(cashierName.isEmpty() ? "Kasir Zoo" : cashierName),
-                Component.literal(cashierName.isEmpty() ? "Kasir Kebun Binatang" : cashierName),
-                Component.literal("Pegawai Layanan Pengunjung"),
-                Component.literal("Halo Bos! Senang bisa bergabung di kebun binatang ini. Mau tugaskan saya jaga stand kasir yang mana nih?"),
+                Component.literal(cashierName.isEmpty() ? ZooTranslations.get("zootycoon.dialog.cashier.default_name") : cashierName),
+                Component.literal(cashierName.isEmpty() ? ZooTranslations.get("zootycoon.dialog.cashier.title") : cashierName),
+                ZooTranslations.component("zootycoon.dialog.cashier.role"),
+                ZooTranslations.component("zootycoon.dialog.cashier.speech"),
                 resolveCashierEntity(entityId)
         );
         this.entityId = entityId;
@@ -45,36 +45,61 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
         int rightW = panelWidth - (rightX - startX) - 14;
         int btnH = 22;
         int gap = 4;
-        int startBtnY = startY + 95;
+        int startBtnY = startY + 86;
+
+        boolean isIceCream = "ICE_CREAM".equalsIgnoreCase(currentRole);
+        boolean isSouvenir = "SOUVENIR".equalsIgnoreCase(currentRole);
+        boolean isTicket = "TICKET".equalsIgnoreCase(currentRole);
 
         // Button 1: Kasir Stand Es Krim
-        var iceCreamBtn = new ZooButton(rightX, startBtnY, rightW, btnH,
-                Component.literal("🍦 Kasir Stand Es Krim"), b -> {
+        Component iceText = isIceCream ?
+                ZooTranslations.component("zootycoon.dialog.cashier.btn.ice_cream_active") :
+                ZooTranslations.component("zootycoon.dialog.cashier.btn.ice_cream");
+        var iceCreamBtn = new ZooButton(rightX, startBtnY, rightW, btnH, iceText, b -> {
             ClientPlayNetworking.send(new ZooNetworkPayloads.SetCashierRolePayload(this.entityId, "ICE_CREAM"));
             this.onClose();
         }).asPrimary();
+        if (isIceCream) iceCreamBtn.active = false;
         addRenderableWidget(iceCreamBtn);
 
         // Button 2: Kasir Toko Souvenir
-        var souvenirBtn = new ZooButton(rightX, startBtnY + btnH + gap, rightW, btnH,
-                Component.literal("🧸 Kasir Toko Souvenir"), b -> {
+        Component souvText = isSouvenir ?
+                ZooTranslations.component("zootycoon.dialog.cashier.btn.souvenir_active") :
+                ZooTranslations.component("zootycoon.dialog.cashier.btn.souvenir");
+        var souvenirBtn = new ZooButton(rightX, startBtnY + btnH + gap, rightW, btnH, souvText, b -> {
             ClientPlayNetworking.send(new ZooNetworkPayloads.SetCashierRolePayload(this.entityId, "SOUVENIR"));
             this.onClose();
         }).asPrimary();
+        if (isSouvenir) souvenirBtn.active = false;
         addRenderableWidget(souvenirBtn);
 
         // Button 3: Kasir Loket Tiket
-        var ticketBtn = new ZooButton(rightX, startBtnY + (btnH + gap) * 2, rightW, btnH,
-                Component.literal("🎟️ Kasir Loket Tiket"), b -> {
+        Component ticketText = isTicket ?
+                ZooTranslations.component("zootycoon.dialog.cashier.btn.ticket_active") :
+                ZooTranslations.component("zootycoon.dialog.cashier.btn.ticket");
+        var ticketBtn = new ZooButton(rightX, startBtnY + (btnH + gap) * 2, rightW, btnH, ticketText, b -> {
             ClientPlayNetworking.send(new ZooNetworkPayloads.SetCashierRolePayload(this.entityId, "TICKET"));
             this.onClose();
         }).asPrimary();
+        if (isTicket) ticketBtn.active = false;
         addRenderableWidget(ticketBtn);
+
+        // Button 4: Nanti dulu yaa (Batal / Tutup)
+        var closeBtn = new ZooButton(rightX, startBtnY + (btnH + gap) * 3, rightW, btnH,
+                ZooTranslations.component("zootycoon.dialog.cashier.btn.later"), b -> {
+            this.onClose();
+        }).asPrimary();
+        addRenderableWidget(closeBtn);
+    }
+
+    @Override
+    protected int getContentHeight() {
+        return 48;
     }
 
     @Override
     protected int getSpeechBubbleHeight() {
-        return 50;
+        return 44;
     }
 
     @Override

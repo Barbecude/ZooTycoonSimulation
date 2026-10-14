@@ -14,6 +14,7 @@ import java.util.UUID;
 public class SecurityDialogScreen extends EasyNpcDialogScreen {
 
     private final int entityId;
+    private final boolean isAlert;
 
     public SecurityDialogScreen(
             int entityId,
@@ -32,6 +33,7 @@ public class SecurityDialogScreen extends EasyNpcDialogScreen {
                 resolveSecurityEntity(entityId, securityUuid)
         );
         this.entityId = entityId;
+        this.isAlert = isAlert;
     }
 
     private static LivingEntity resolveSecurityEntity(int entityId, UUID uuid) {
@@ -58,15 +60,21 @@ public class SecurityDialogScreen extends EasyNpcDialogScreen {
         int btnY = startY + panelHeight - 30;
         int btnW = (panelWidth - 24 - 8) / 2;
 
-        // Button 1: Patroli Area (No generic icon)
-        var patrolBtn = new ZooButton(startX + 12, btnY, btnW, 22, ZooTranslations.component("zootycoon.dialog.security.btn.patrol"), b -> {
+        Component actionText = isAlert ?
+                ZooTranslations.component("zootycoon.dialog.security.btn.alert_action") :
+                ZooTranslations.component("zootycoon.dialog.security.btn.patrol");
+
+        var patrolBtn = new ZooButton(startX + 12, btnY, btnW, 22, actionText, b -> {
             ClientPlayNetworking.send(new ZooNetworkPayloads.InteractSecurityPayload(this.entityId));
             this.onClose();
         }).asPrimary();
         addRenderableWidget(patrolBtn);
 
-        // Button 2: Okey
-        var closeBtn = new ZooButton(startX + 12 + btnW + 8, btnY, btnW, 22, ZooTranslations.component("zootycoon.dialog.btn.okay"), b -> {
+        Component closeText = isAlert ?
+                ZooTranslations.component("zootycoon.dialog.security.btn.caution") :
+                ZooTranslations.component("zootycoon.dialog.security.btn.standby");
+
+        var closeBtn = new ZooButton(startX + 12 + btnW + 8, btnY, btnW, 22, closeText, b -> {
             this.onClose();
         }).asPrimary();
         addRenderableWidget(closeBtn);

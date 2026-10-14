@@ -15,6 +15,9 @@ import java.util.UUID;
 public class VisitorDialogScreen extends EasyNpcDialogScreen {
 
     private final int entityId;
+    private final boolean needsToilet;
+    private final int thirst;
+    private final int hunger;
 
     public VisitorDialogScreen(
             int entityId,
@@ -36,6 +39,9 @@ public class VisitorDialogScreen extends EasyNpcDialogScreen {
                 resolveVisitorEntity(entityId, visitorUuid, variant, isChild)
         );
         this.entityId = entityId;
+        this.needsToilet = needsToilet;
+        this.thirst = thirst;
+        this.hunger = hunger;
     }
 
     private static Component getVisitorDialogue(String moodName, int hunger, int thirst, boolean needsToilet) {
@@ -83,15 +89,32 @@ public class VisitorDialogScreen extends EasyNpcDialogScreen {
         int btnY = startY + panelHeight - 30;
         int btnW = (panelWidth - 24 - 8) / 2;
 
-        // Button 1: Sapa Pengunjung (No generic icon)
-        var greetBtn = new ZooButton(startX + 12, btnY, btnW, 22, ZooTranslations.component("zootycoon.dialog.visitor.btn.greet"), b -> {
+        Component actionText;
+        Component closeText;
+
+        if (needsToilet) {
+            actionText = ZooTranslations.component("zootycoon.dialog.visitor.btn.toilet");
+            closeText = ZooTranslations.component("zootycoon.dialog.visitor.btn.toilet_close");
+        } else if (thirst >= 50) {
+            actionText = ZooTranslations.component("zootycoon.dialog.visitor.btn.thirsty");
+            closeText = ZooTranslations.component("zootycoon.dialog.visitor.btn.thirsty_close");
+        } else if (hunger >= 50) {
+            actionText = ZooTranslations.component("zootycoon.dialog.visitor.btn.hungry");
+            closeText = ZooTranslations.component("zootycoon.dialog.visitor.btn.hungry_close");
+        } else {
+            actionText = ZooTranslations.component("zootycoon.dialog.visitor.btn.greet");
+            closeText = ZooTranslations.component("zootycoon.dialog.visitor.btn.bye");
+        }
+
+        // Button 1: Contextual greeting or advice
+        var greetBtn = new ZooButton(startX + 12, btnY, btnW, 22, actionText, b -> {
             ClientPlayNetworking.send(new ZooNetworkPayloads.GreetVisitorPayload(this.entityId));
             this.onClose();
         }).asPrimary();
         addRenderableWidget(greetBtn);
 
-        // Button 2: Okey
-        var closeBtn = new ZooButton(startX + 12 + btnW + 8, btnY, btnW, 22, ZooTranslations.component("zootycoon.dialog.btn.okay"), b -> {
+        // Button 2: Friendly close
+        var closeBtn = new ZooButton(startX + 12 + btnW + 8, btnY, btnW, 22, closeText, b -> {
             this.onClose();
         }).asPrimary();
         addRenderableWidget(closeBtn);
