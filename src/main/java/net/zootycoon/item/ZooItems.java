@@ -62,6 +62,24 @@ public class ZooItems {
             new Item.Properties()
     );
 
+    public static final ResourceKey<Item> MAGNIFYING_GLASS_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("magnifying_glass")
+    );
+
+    public static final Item MAGNIFYING_GLASS = new MagnifyingGlassItem(
+            new Item.Properties()
+    );
+
+    public static final ResourceKey<Item> BROOM_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("broom")
+    );
+
+    public static final Item BROOM = new BroomItem(
+            new Item.Properties()
+    );
+
     public static List<ItemStack> createJakesBuildToolsItems() {
         List<ItemStack> list = new ArrayList<>();
 
@@ -145,8 +163,13 @@ public class ZooItems {
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, CREATIVE_TAB_KEY, CREATIVE_TAB);
         Registry.register(BuiltInRegistries.ITEM, VISITOR_SPAWN_EGG_KEY, VISITOR_SPAWN_EGG);
         Registry.register(BuiltInRegistries.ITEM, CASHIER_SPAWN_EGG_KEY, CASHIER_SPAWN_EGG);
+        Registry.register(BuiltInRegistries.ITEM, MAGNIFYING_GLASS_KEY, MAGNIFYING_GLASS);
+        Registry.register(BuiltInRegistries.ITEM, BROOM_KEY, BROOM);
 
         ItemGroupEvents.modifyEntriesEvent(CREATIVE_TAB_KEY).register(entries -> {
+            entries.accept(net.zootycoon.block.ZooBlocks.FEEDING_TROUGH_ITEM);
+            entries.accept(MAGNIFYING_GLASS);
+            entries.accept(BROOM);
             entries.accept(net.zootycoon.block.ZooBlocks.TOILET_ITEM);
             entries.accept(net.zootycoon.block.ZooBlocks.TRASH_CAN_ITEM);
             entries.accept(net.zootycoon.block.ZooBlocks.TRASH_ITEM);

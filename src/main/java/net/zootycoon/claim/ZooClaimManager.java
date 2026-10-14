@@ -239,9 +239,9 @@ public class ZooClaimManager {
     public boolean tryClaim(ServerPlayer player, BlockPos center, ClaimTier tier) {
         ZooClaim newClaim = ZooClaim.create(player.getUUID(), player.getName().getString(), center, tier);
 
-        // Check overlapping claims
+        // Check overlapping claims belonging to ANOTHER player
         for (ZooClaim existing : claims.values()) {
-            if (existing.intersects(newClaim)) {
+            if (!existing.getOwnerUuid().equals(player.getUUID()) && existing.intersects(newClaim)) {
                 ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.claim", "zootycoon.claim.overlap", 3);
                 return false;
             }
@@ -258,7 +258,33 @@ public class ZooClaimManager {
             return false;
         }
 
-        claims.put(newClaim.getClaimId(), newClaim);
+        // Merge with existing touching/overlapping claims of this player
+        List<ZooClaim> owned = getClaimsForPlayer(player.getUUID());
+        var box = newClaim.getBox();
+        int finalMinX = box.minX();
+        int finalMaxX = box.maxX();
+        int finalMinZ = box.minZ();
+        int finalMaxZ = box.maxZ();
+
+        List<ZooClaim> toRemove = new ArrayList<>();
+        for (ZooClaim existing : owned) {
+            var eb = existing.getBox();
+            if (existing.intersects(box) || !(eb.maxX() < box.minX() - 1 || eb.minX() > box.maxX() + 1 || eb.maxZ() < box.minZ() - 1 || eb.minZ() > box.maxZ() + 1)) {
+                finalMinX = Math.min(finalMinX, eb.minX());
+                finalMaxX = Math.max(finalMaxX, eb.maxX());
+                finalMinZ = Math.min(finalMinZ, eb.minZ());
+                finalMaxZ = Math.max(finalMaxZ, eb.maxZ());
+                toRemove.add(existing);
+            }
+        }
+
+        for (ZooClaim rem : toRemove) {
+            claims.remove(rem.getClaimId());
+        }
+
+        var mergedBox = new net.minecraft.world.level.levelgen.structure.BoundingBox(finalMinX, -64, finalMinZ, finalMaxX, 320, finalMaxZ);
+        ZooClaim mergedClaim = new ZooClaim(UUID.randomUUID(), player.getUUID(), player.getName().getString(), mergedBox, tier, System.currentTimeMillis());
+        claims.put(mergedClaim.getClaimId(), mergedClaim);
         saveToFile();
         syncToAll();
 

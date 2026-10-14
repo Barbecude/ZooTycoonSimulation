@@ -71,13 +71,13 @@ public abstract class EasyNpcDialogScreen extends Screen {
         // 2. Left Column: Large Borderless 3D Entity Preview (No inner box container)
         int previewX = startX + 6;
         int previewY = startY + 8;
-        int previewW = 104;
+        int previewW = 114;
         int previewH = 190;
 
         if (previewEntity != null) {
             try {
                 float bbH = Math.max(0.6f, previewEntity.getBbHeight());
-                int scale = (int) Math.clamp(78.0f / bbH, 28, 82);
+                int scale = (int) Math.clamp(142.0f / bbH, 50, 105);
                 InventoryScreen.renderEntityInInventoryFollowsMouse(
                         graphics,
                         previewX, previewY, previewX + previewW, previewY + previewH,

@@ -307,5 +307,18 @@
   "jbt:tape": "Tape Measure",
   "jbt:iron_trowel": "Iron Trowel",
   "jbt:diamond_trowel": "Diamond Trowel",
-  "jbt:wrench": "Block Wrench"
+  "jbt:wrench": "Block Wrench",
+  "block.zootycoon.feeding_trough": "Palung Pakan Satwa",
+  "item.zootycoon.magnifying_glass": "Kaca Pembesar Satwa",
+  "item.zootycoon.magnifying_glass.desc": "Periksa satwa untuk melihat info darah, lapar, haus, dan kecocokan habitat.",
+  "item.zootycoon.magnifying_glass.desc2": "Tahan klik kanan untuk memindai satwa dari kejauhan.",
+  "item.zootycoon.broom": "Sapu Lidi Zoo",
+  "item.zootycoon.broom.desc": "Sapu sampah pengunjung agar kebun binatang tetap bersih dan rapi.",
+  "zootycoon.animal.scan_toast": "Berhasil memindai %s!",
+  "zootycoon.cashier.assigned": "Menugaskan kasir untuk peran %s!",
+  "zootycoon.zookeeper.received_food_toast": "Menerima %s pakan dari Bos!",
+  "zootycoon.zookeeper.ask_food_toast": "Zookeeper butuh pakan tambahan untuk mengisi palung pakan!",
+  "zootycoon.zookeeper.sweeping_toast": "Zookeeper sedang menyapu sampah yang berserakan!",
+  "zootycoon.zookeeper.all_good_toast": "Semua palung pakan terisi dan zoo bersih rapi!"
 }
+

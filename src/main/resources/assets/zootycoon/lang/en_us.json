@@ -307,5 +307,18 @@
   "jbt:tape": "Tape Measure",
   "jbt:iron_trowel": "Iron Trowel",
   "jbt:diamond_trowel": "Diamond Trowel",
-  "jbt:wrench": "Block Wrench"
+  "jbt:wrench": "Block Wrench",
+  "block.zootycoon.feeding_trough": "Feeding Trough",
+  "item.zootycoon.magnifying_glass": "Magnifying Glass",
+  "item.zootycoon.magnifying_glass.desc": "Inspect animals to view detailed health, hunger, thirst, and habitat compatibility.",
+  "item.zootycoon.magnifying_glass.desc2": "Hold right-click to scan animals at a distance.",
+  "item.zootycoon.broom": "Broom",
+  "item.zootycoon.broom.desc": "Sweep visitor litter to keep your zoo sparkling clean.",
+  "zootycoon.animal.scan_toast": "Successfully scanned %s!",
+  "zootycoon.cashier.assigned": "Assigned cashier to %s role!",
+  "zootycoon.zookeeper.received_food_toast": "Received %s food from boss!",
+  "zootycoon.zookeeper.ask_food_toast": "Zookeeper needs more food to refill feeding troughs!",
+  "zootycoon.zookeeper.sweeping_toast": "Zookeeper is sweeping litter in the zoo!",
+  "zootycoon.zookeeper.all_good_toast": "All feeding troughs are filled and zoo is clean!"
 }
+

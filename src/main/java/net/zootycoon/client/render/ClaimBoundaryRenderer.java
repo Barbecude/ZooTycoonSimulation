@@ -265,11 +265,8 @@ public class ClaimBoundaryRenderer {
             double minZ = box.minZ() - camPos.z;
             double maxZ = box.maxZ() + 1.0 - camPos.z;
 
-            // Full height wireframe
-            LevelRenderer.renderLineBox(poseStack, lineConsumer, minX, minY, minZ, maxX, maxY, maxZ, r, g, b, 0.35f);
-            // Ground-level visible border ring
-            renderHorizontalPerimeter(poseStack, lineConsumer, minX, maxX, pY + 0.05, minZ, maxZ, r, g, b, a);
-            renderHorizontalPerimeter(poseStack, lineConsumer, minX, maxX, pY + 1.05, minZ, maxZ, r, g, b, a * 0.6f);
+            // Single clean subtle ground-level perimeter
+            renderHorizontalPerimeter(poseStack, lineConsumer, minX, maxX, pY + 0.05, minZ, maxZ, r, g, b, 0.45f);
         }
 
         // 3. Render Active Selection
@@ -281,10 +278,8 @@ public class ClaimBoundaryRenderer {
             double bMinZ = pos1.getZ() - camPos.z;
             double bMaxZ = pos1.getZ() + 1.0 - camPos.z;
 
-            // 1x1 block marker around Corner 1
+            // Clean 1x1 block marker around Corner 1
             LevelRenderer.renderLineBox(poseStack, lineConsumer, bMinX, bMinY, bMinZ, bMaxX, bMaxY, bMaxZ, 0.0f, 1.0f, 0.4f, 1.0f);
-            // Vertical beam
-            LevelRenderer.renderLineBox(poseStack, lineConsumer, bMinX, worldMinY - camPos.y, bMinZ, bMaxX, worldMaxY - camPos.y, bMaxZ, 0.0f, 1.0f, 0.4f, 0.4f);
         } else if (hasActiveBox) {
             float r = conflictOther ? 1.0f : 0.0f;
             float g = conflictOther ? 0.1f : 1.0f;
@@ -310,16 +305,11 @@ public class ClaimBoundaryRenderer {
             double c2Z = (pos2.getZ() + claimOffsetZ) - camPos.z;
             LevelRenderer.renderLineBox(poseStack, lineConsumer, c2X, c2Y, c2Z, c2X + 1.0, c2Y + 1.0, c2Z + 1.0, 0.0f, 1.0f, 0.5f, 1.0f);
 
-            // Ground perimeter rings (feet, waist, head height)
+            // Single clean ground perimeter ring (NO double lines!)
             renderHorizontalPerimeter(poseStack, lineConsumer, minX, maxX, pY + 0.05, minZ, maxZ, r, g, b, a);
-            renderHorizontalPerimeter(poseStack, lineConsumer, minX, maxX, pY + 1.0, minZ, maxZ, r, g, b, a * 0.8f);
-            renderHorizontalPerimeter(poseStack, lineConsumer, minX, maxX, pY + 2.0, minZ, maxZ, r, g, b, a * 0.6f);
 
-            // Corner vertical pillars
-            renderVerticalPillars(poseStack, lineConsumer, minX, maxX, pY - 8.0, pY + 16.0, minZ, maxZ, r, g, b, a);
-
-            // Full world box wireframe
-            LevelRenderer.renderLineBox(poseStack, lineConsumer, minX, minY, minZ, maxX, maxY, maxZ, r, g, b, 0.35f);
+            // Corner vertical pillars for depth
+            renderVerticalPillars(poseStack, lineConsumer, minX, maxX, pY - 2.0, pY + 4.0, minZ, maxZ, r, g, b, a * 0.7f);
         }
     }
 

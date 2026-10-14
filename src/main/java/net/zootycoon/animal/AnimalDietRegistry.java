@@ -163,6 +163,19 @@ public class AnimalDietRegistry {
         return accepted.contains(item);
     }
 
+    public static boolean isAnyTroughFood(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        Item item = stack.getItem();
+        for (AnimalDiet d : DIET_REGISTRY.values()) {
+            if (d.feedingType == FeedingType.TROUGH && d.acceptedFoods.contains(item)) {
+                return true;
+            }
+        }
+        return stack.is(Items.WHEAT) || stack.is(Items.CARROT) || stack.is(Items.POTATO)
+                || stack.is(Items.BEETROOT) || stack.is(Items.APPLE) || stack.is(Items.SWEET_BERRIES)
+                || stack.is(Items.HAY_BLOCK) || stack.is(Items.BREAD);
+    }
+
     public static String getDietDescription(Entity entity) {
         return getDiet(entity).description;
     }

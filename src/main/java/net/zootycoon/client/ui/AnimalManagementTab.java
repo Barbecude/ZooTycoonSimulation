@@ -92,7 +92,7 @@ public class AnimalManagementTab {
                 ClientPlayNetworking.send(new ZooNetworkPayloads.RenameAnimalPayload(selectedData.entityId(), newName));
                 selectedData = new ZooNetworkPayloads.AnimalSyncData(
                         selectedData.entityId(), selectedData.entityTypeId(), newName,
-                        selectedData.hunger(), selectedData.health(), selectedData.maxHealth(),
+                        selectedData.hunger(), selectedData.thirst(), selectedData.health(), selectedData.maxHealth(),
                         selectedData.hasZookeeper(), selectedData.zookeeperName()
                 );
             }

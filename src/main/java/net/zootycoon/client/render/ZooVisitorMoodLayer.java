@@ -56,26 +56,24 @@ public class ZooVisitorMoodLayer extends RenderLayer<ZooVisitorEntity, ZooVisito
             return;
         }
 
+        Camera camera = Minecraft.getInstance().getEntityRenderDispatcher().camera;
+        if (camera == null) return;
+
         poseStack.pushPose();
 
-        // Place icon above entity head (adjusting for adult vs child)
-        float headAbove = visitor.isChildVisitor() ? -0.5f : -1.1f;
-        poseStack.translate(0.0f, headAbove, 0.0f);
+        // 1. Position cleanly above the visitor's head
+        float headOffset = -visitor.getBbHeight() - 0.45f;
+        float bob = (float) Math.sin((ageInTicks + partialTick) * 0.12f) * 0.03f;
+        poseStack.translate(0.0f, headOffset - bob, 0.0f);
 
-        // Billboard: orient directly to face the camera
-        Camera camera = Minecraft.getInstance().getEntityRenderDispatcher().camera;
-        if (camera != null) {
-            poseStack.mulPose(Axis.YP.rotationDegrees(visitor.yBodyRot - 180.0f));
-            poseStack.mulPose(Axis.YP.rotationDegrees(-camera.getYRot()));
-            poseStack.mulPose(Axis.XP.rotationDegrees(camera.getXRot()));
-        }
+        // 2. Cancel entity body rotation to align with world axes
+        poseStack.mulPose(Axis.YP.rotationDegrees(visitor.yBodyRot - 180.0f));
 
-        // Slight bobbing animation
-        float bob = (float) Math.sin((ageInTicks + partialTick) * 0.15f) * 0.04f;
-        poseStack.translate(0.0f, -bob, 0.0f);
+        // 3. True camera-facing billboard
+        poseStack.mulPose(camera.rotation());
 
-        // Scale: 0.4 blocks wide
-        float sc = 0.4f;
+        // 4. Scale: compact, crisp icon
+        float sc = 0.42f;
         poseStack.scale(sc, sc, sc);
 
         float size = 1.0f;

@@ -313,6 +313,16 @@ public class ZooTycoonClient implements ClientModInitializer {
             });
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.OpenCashierScreenPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                Minecraft.getInstance().setScreen(new net.zootycoon.client.ui.CashierDialogScreen(
+                        payload.entityId(),
+                        payload.currentRole(),
+                        payload.cashierName()
+                ));
+            });
+        });
+
         // 3b. Register Entity Renderer & Model Layer for Humanoid Builder NPC
         EntityModelLayerRegistry.registerModelLayer(
                 net.zootycoon.client.model.ZooBuilderModel.LAYER_LOCATION,
@@ -373,11 +383,18 @@ public class ZooTycoonClient implements ClientModInitializer {
                 net.zootycoon.client.render.ToiletSeatRenderer::new
         );
 
-        // 4. Register in-world render event for boundaries & Litematica-style preview
+        // 3h. Register Block Entity Renderer for Feeding Trough (Dynamic 3D food items)
+        net.minecraft.client.renderer.blockentity.BlockEntityRenderers.register(
+                net.zootycoon.block.ZooBlocks.FEEDING_TROUGH_BLOCK_ENTITY,
+                net.zootycoon.client.render.ZooFeedingTroughRenderer::new
+        );
+
+        // 4. Register in-world render event for boundaries & Litematica-style preview & Holograms
         WorldRenderEvents.AFTER_ENTITIES.register(context -> {
             ClaimBoundaryRenderer.render(context);
             PlacementPreviewRenderer.render(context);
             net.zootycoon.client.render.ZooWorldIndicatorRenderer.render(context);
+            net.zootycoon.client.render.ZooAnimalHologramRenderer.render(context);
         });
 
         // 5. Register client-tick particles and overlays + Right Shift menu opening

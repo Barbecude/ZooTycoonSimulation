@@ -57,7 +57,18 @@ public class ZooBlocks {
             new Item.Properties()
     );
 
-    // 5. Toilet Block Entity
+    // 5. Feeding Trough Block
+    public static final ResourceKey<Item> FEEDING_TROUGH_ITEM_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("feeding_trough")
+    );
+    public static final Block FEEDING_TROUGH = new ZooFeedingTroughBlock();
+    public static final BlockItem FEEDING_TROUGH_ITEM = new BlockItem(
+            FEEDING_TROUGH,
+            new Item.Properties()
+    );
+
+    // 6. Toilet Block Entity
     public static final ResourceKey<BlockEntityType<?>> TOILET_BE_KEY = ResourceKey.create(
             Registries.BLOCK_ENTITY_TYPE,
             ZooTycoonMod.id("toilet")
@@ -68,17 +79,30 @@ public class ZooBlocks {
             FabricBlockEntityTypeBuilder.create(ToiletBlockEntity::new, TOILET).build()
     );
 
+    // 7. Feeding Trough Block Entity
+    public static final ResourceKey<BlockEntityType<?>> FEEDING_TROUGH_BE_KEY = ResourceKey.create(
+            Registries.BLOCK_ENTITY_TYPE,
+            ZooTycoonMod.id("feeding_trough")
+    );
+    public static final BlockEntityType<ZooFeedingTroughBlockEntity> FEEDING_TROUGH_BLOCK_ENTITY = Registry.register(
+            BuiltInRegistries.BLOCK_ENTITY_TYPE,
+            ZooTycoonMod.id("feeding_trough"),
+            FabricBlockEntityTypeBuilder.create(ZooFeedingTroughBlockEntity::new, FEEDING_TROUGH).build()
+    );
+
     public static void register() {
         // Blocks
         Registry.register(BuiltInRegistries.BLOCK, ConstructionTapeBlock.BLOCK_KEY, CONSTRUCTION_TAPE);
         Registry.register(BuiltInRegistries.BLOCK, ToiletBlock.BLOCK_KEY, TOILET);
         Registry.register(BuiltInRegistries.BLOCK, TrashCanBlock.BLOCK_KEY, TRASH_CAN);
         Registry.register(BuiltInRegistries.BLOCK, TrashBlock.BLOCK_KEY, TRASH);
+        Registry.register(BuiltInRegistries.BLOCK, ZooTycoonMod.id("feeding_trough"), FEEDING_TROUGH);
 
         // Block Items
         Registry.register(BuiltInRegistries.ITEM, CONSTRUCTION_TAPE_ITEM_KEY, CONSTRUCTION_TAPE_ITEM);
         Registry.register(BuiltInRegistries.ITEM, TOILET_ITEM_KEY, TOILET_ITEM);
         Registry.register(BuiltInRegistries.ITEM, TRASH_CAN_ITEM_KEY, TRASH_CAN_ITEM);
         Registry.register(BuiltInRegistries.ITEM, TRASH_ITEM_KEY, TRASH_ITEM);
+        Registry.register(BuiltInRegistries.ITEM, FEEDING_TROUGH_ITEM_KEY, FEEDING_TROUGH_ITEM);
     }
 }

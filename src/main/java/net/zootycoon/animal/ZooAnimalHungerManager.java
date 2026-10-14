@@ -20,8 +20,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
+import net.zootycoon.block.ZooFeedingTroughBlock;
+import net.zootycoon.block.ZooFeedingTroughBlockEntity;
 import net.zootycoon.claim.ZooClaim;
 import net.zootycoon.claim.ZooClaimManager;
+import net.zootycoon.compat.SereneSeasonsCompat;
+import net.zootycoon.item.ZooItems;
 import net.zootycoon.network.ZooNetworkPayloads;
 
 import java.util.*;
@@ -34,7 +38,11 @@ public class ZooAnimalHungerManager {
     public static final int CRITICAL_THRESHOLD = 15;
     private static final int DECAY_INTERVAL_TICKS = 240; // Every 12 seconds, loses 1%
 
+    public static final int MAX_THIRST = 100;
+    public static final int THIRSTY_THRESHOLD = 50;
+
     private static final Map<UUID, Integer> HUNGER_MAP = new ConcurrentHashMap<>();
+    private static final Map<UUID, Integer> THIRST_MAP = new ConcurrentHashMap<>();
     private static final Map<UUID, UUID> ZOOKEEPER_MAP = new ConcurrentHashMap<>();
     private static final Map<UUID, UUID> SPYGLASS_TARGET_MAP = new ConcurrentHashMap<>();
     private static final Map<UUID, Integer> SPYGLASS_TICKS_MAP = new ConcurrentHashMap<>();
@@ -62,6 +70,7 @@ public class ZooAnimalHungerManager {
     public static boolean isScanningItem(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
         if (stack.is(Items.SPYGLASS)) return true;
+        if (stack.is(ZooItems.MAGNIFYING_GLASS)) return true;
         ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (id != null && "fieldguide".equals(id.getNamespace())) {
             return true;
@@ -117,6 +126,7 @@ public class ZooAnimalHungerManager {
             mob.setPersistenceRequired();
         }
         setHunger(animal, MAX_HUNGER);
+        setThirst(animal, MAX_THIRST);
 
         ServerLevel level = (ServerLevel) player.level();
         level.playSound(null, animal.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0f, 1.2f);
@@ -184,12 +194,35 @@ public class ZooAnimalHungerManager {
         // Spyglass & Field Guide long-range scoping detection
         tickVanillaSpyglassScoping(level);
 
-        if (level.getGameTime() % 20 != 0) return; // Hunger and health checks every 1 second
+        if (level.getGameTime() % 20 != 0) return; // Hunger, thirst, and health checks every 1 second
+
+        int thirstDecayInterval = 260; // Every 13 seconds, loses 1%
+        try {
+            if (SereneSeasonsCompat.isLoaded()) {
+                String season = SereneSeasonsCompat.getCurrentSeason(level);
+                if (season.contains("SUMMER")) {
+                    thirstDecayInterval = 160; // Summer heat accelerates thirst
+                }
+            }
+        } catch (Throwable ignored) {}
 
         // Iterate over all entities loaded in this level
         for (Entity entity : level.getAllEntities()) {
             if (!(entity instanceof LivingEntity animal)) continue;
             if (!animal.isAlive() || !isZooAnimalCandidate(animal)) continue;
+
+            // Universal thirst decay
+            if (level.getGameTime() % thirstDecayInterval == 0) {
+                int thirst = getThirst(animal);
+                if (thirst > 0) {
+                    setThirst(animal, thirst - 1);
+                }
+            }
+
+            // Universal Animal pathing to feeding trough and water source for ALL animals (modded & vanilla)
+            if (animal instanceof Mob mob) {
+                handleUniversalAnimalNeeds(level, mob);
+            }
 
             // Also allow untagged animals near feeder troughs to eat and emit love particles
             if (!isTagged(animal)) {
@@ -269,6 +302,110 @@ public class ZooAnimalHungerManager {
         }
     }
 
+    public static void handleUniversalAnimalNeeds(ServerLevel level, Mob mob) {
+        // High performance check: stagger every 30 ticks per entity ID to preserve 20 TPS
+        if ((mob.getId() + level.getGameTime()) % 30 != 0) return;
+
+        int thirst = getThirst(mob);
+        int hunger = getHunger(mob);
+
+        // 1. Thirst pathing: if thirst <= 65, search for water trough first, then water block
+        if (thirst <= 65) {
+            BlockPos closestWaterTrough = null;
+            ZooFeedingTroughBlockEntity targetWaterTrough = null;
+            double closestTroughDist = Double.MAX_VALUE;
+
+            for (BlockPos tp : ZooFeedingTroughBlock.KNOWN_TROUGHS) {
+                if (tp.distSqr(mob.blockPosition()) <= 324) { // within 18 blocks
+                    if (level.getBlockEntity(tp) instanceof ZooFeedingTroughBlockEntity trough && trough.hasWater()) {
+                        double d = mob.distanceToSqr(tp.getX() + 0.5, tp.getY() + 0.5, tp.getZ() + 0.5);
+                        if (d < closestTroughDist) {
+                            closestTroughDist = d;
+                            closestWaterTrough = tp;
+                            targetWaterTrough = trough;
+                        }
+                    }
+                }
+            }
+
+            if (closestWaterTrough != null && targetWaterTrough != null) {
+                if (closestTroughDist <= 3.2 * 3.2) {
+                    mob.getNavigation().stop();
+                    setThirst(mob, MAX_THIRST);
+                    level.playSound(null, mob.blockPosition(), SoundEvents.GENERIC_DRINK, SoundSource.NEUTRAL, 0.8f, 1.0f);
+                    level.sendParticles(ParticleTypes.SPLASH, mob.getX(), mob.getY() + 0.3, mob.getZ(), 8, 0.25, 0.15, 0.25, 0.05);
+                    return;
+                } else {
+                    mob.getNavigation().moveTo(closestWaterTrough.getX() + 0.5, closestWaterTrough.getY(), closestWaterTrough.getZ() + 0.5, 1.1);
+                    return;
+                }
+            }
+
+            // Fallback: search for nearby water block (river, lake, etc.)
+            BlockPos center = mob.blockPosition();
+            BlockPos closestWater = null;
+            double minWaterDist = Double.MAX_VALUE;
+
+            for (BlockPos bp : BlockPos.betweenClosed(center.offset(-8, -2, -8), center.offset(8, 2, 8))) {
+                if (level.getFluidState(bp).is(net.minecraft.tags.FluidTags.WATER)) {
+                    double d = mob.distanceToSqr(bp.getX() + 0.5, bp.getY() + 0.5, bp.getZ() + 0.5);
+                    if (d < minWaterDist) {
+                        minWaterDist = d;
+                        closestWater = bp.immutable();
+                    }
+                }
+            }
+
+            if (closestWater != null) {
+                if (minWaterDist <= 3.2 * 3.2) {
+                    mob.getNavigation().stop();
+                    setThirst(mob, MAX_THIRST);
+                    level.playSound(null, mob.blockPosition(), SoundEvents.GENERIC_DRINK, SoundSource.NEUTRAL, 0.8f, 1.0f);
+                    level.sendParticles(ParticleTypes.SPLASH, mob.getX(), mob.getY() + 0.3, mob.getZ(), 8, 0.25, 0.15, 0.25, 0.05);
+                    return;
+                } else {
+                    mob.getNavigation().moveTo(closestWater.getX() + 0.5, closestWater.getY(), closestWater.getZ() + 0.5, 1.05);
+                    return;
+                }
+            }
+        }
+
+        // 2. Hunger pathing: if hunger <= 80, path to feeding trough with valid food
+        if (hunger <= 80) {
+            BlockPos closestFoodTrough = null;
+            ZooFeedingTroughBlockEntity targetFoodTrough = null;
+            double closestFoodDist = Double.MAX_VALUE;
+
+            for (BlockPos tp : ZooFeedingTroughBlock.KNOWN_TROUGHS) {
+                if (tp.distSqr(mob.blockPosition()) <= 324) { // within 18 blocks
+                    if (level.getBlockEntity(tp) instanceof ZooFeedingTroughBlockEntity trough && trough.hasFood()) {
+                        if (AnimalDietRegistry.isFoodValid(mob, trough.getFoodStack())) {
+                            double d = mob.distanceToSqr(tp.getX() + 0.5, tp.getY() + 0.5, tp.getZ() + 0.5);
+                            if (d < closestFoodDist) {
+                                closestFoodDist = d;
+                                closestFoodTrough = tp;
+                                targetFoodTrough = trough;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (closestFoodTrough != null && targetFoodTrough != null) {
+                if (closestFoodDist <= 3.2 * 3.2) {
+                    ItemStack food = targetFoodTrough.extractFood(1);
+                    if (!food.isEmpty()) {
+                        mob.getNavigation().stop();
+                        feedAnimal(mob, food, null); // Emits HEART particles and restores hunger
+                        targetFoodTrough.setChanged();
+                    }
+                } else {
+                    mob.getNavigation().moveTo(closestFoodTrough.getX() + 0.5, closestFoodTrough.getY(), closestFoodTrough.getZ() + 0.5, 1.1);
+                }
+            }
+        }
+    }
+
     private static boolean tryEatFromNearbyFeederTrough(ServerLevel level, LivingEntity animal, int currentHunger) {
         BlockPos center = animal.blockPosition();
         for (BlockPos bp : BlockPos.betweenClosed(center.offset(-6, -2, -6), center.offset(6, 2, 6))) {
@@ -307,6 +444,9 @@ public class ZooAnimalHungerManager {
             if (!HUNGER_MAP.containsKey(entity.getUUID())) {
                 setHunger(entity, MAX_HUNGER);
             }
+            if (!THIRST_MAP.containsKey(entity.getUUID())) {
+                setThirst(entity, MAX_THIRST);
+            }
         } else {
             entity.getTags().removeIf(t -> t.contains("registered"));
         }
@@ -333,8 +473,9 @@ public class ZooAnimalHungerManager {
                     setTagged(animal, false);
                     setOwner(animal, null);
                     setAssignedZookeeper(animal, null);
-                    animal.getTags().removeIf(t -> t.contains("registered") || t.contains("owner_") || t.contains("hunger_") || t.contains("zoo_zk_"));
+                    animal.getTags().removeIf(t -> t.contains("registered") || t.contains("owner_") || t.contains("hunger_") || t.contains("thirst_") || t.contains("zoo_zk_"));
                     HUNGER_MAP.remove(animal.getUUID());
+                    THIRST_MAP.remove(animal.getUUID());
                     ZOOKEEPER_MAP.remove(animal.getUUID());
                     SPYGLASS_TARGET_MAP.remove(player.getUUID());
                     SPYGLASS_TICKS_MAP.remove(player.getUUID());
@@ -374,6 +515,32 @@ public class ZooAnimalHungerManager {
 
         entity.getTags().removeIf(t -> t.startsWith("zoo_hunger_"));
         entity.addTag("zoo_hunger_" + clamped);
+    }
+
+    public static int getThirst(Entity entity) {
+        if (entity == null) return MAX_THIRST;
+        Integer cached = THIRST_MAP.get(entity.getUUID());
+        if (cached != null) return cached;
+
+        for (String tag : entity.getTags()) {
+            if (tag.startsWith("zoo_thirst_")) {
+                try {
+                    int val = Integer.parseInt(tag.substring("zoo_thirst_".length()));
+                    THIRST_MAP.put(entity.getUUID(), val);
+                    return val;
+                } catch (Exception ignored) {}
+            }
+        }
+        return MAX_THIRST;
+    }
+
+    public static void setThirst(Entity entity, int thirst) {
+        if (entity == null) return;
+        int clamped = Math.clamp(thirst, 0, MAX_THIRST);
+        THIRST_MAP.put(entity.getUUID(), clamped);
+
+        entity.getTags().removeIf(t -> t.startsWith("zoo_thirst_"));
+        entity.addTag("zoo_thirst_" + clamped);
     }
 
     public static UUID getAssignedZookeeper(Entity entity) {
