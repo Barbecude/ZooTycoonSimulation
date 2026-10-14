@@ -127,7 +127,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         builder.define(THIRST, 0);
         builder.define(MOOD, VisitorMood.NEUTRAL.ordinal());
         builder.define(HAS_TRASH, false);
-        builder.define(NEEDS_TOILET, Math.random() < 0.15); // 15% arrive already needing restroom
+        builder.define(NEEDS_TOILET, Math.random() < 0.08); // 8% arrive already needing restroom
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -289,12 +289,12 @@ public class ZooVisitorEntity extends PathfinderMob {
 
             // Every 10 seconds (200 ticks): check chance to need toilet
             if (this.tickCount % 200 == 0 && !needsToilet()) {
-                float toiletChance = 0.12F;
+                float toiletChance = 0.07F;
                 if (isChildVisitor()) {
-                    toiletChance += 0.06F; // Children have smaller bladders
+                    toiletChance += 0.04F; // Children have smaller bladders
                 }
-                if (getThirst() >= 30 || getHunger() >= 30) {
-                    toiletChance += 0.08F; // Higher chance when thirsty / hungry
+                if (getThirst() >= 40 || getHunger() >= 40) {
+                    toiletChance += 0.05F; // Slightly higher chance when thirsty / hungry
                 }
                 if (this.random.nextFloat() < toiletChance) {
                     setNeedsToilet(true);
