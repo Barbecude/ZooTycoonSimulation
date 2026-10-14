@@ -294,7 +294,6 @@
   "zootycoon.visitor.mood.hungry": "Lapar",
   "zootycoon.visitor.mood.thirsty": "Haus",
   "zootycoon.dialog.zookeeper.no_animal": "Halo Bos! satwa yang harus saya rawat yang mana ya?",
-  "zootycoon.dialog.zookeeper.empty_stock": "Halo Bos! Saya lagi ngerawat %s, tapi stok pakan lagi habis!",
   "zootycoon.dialog.zookeeper.has_stock": "Halo, Bos! Lagi ngurusin %s nih. Aku punya sisa pakan %s.",
   "zootycoon.zookeeper.no_animal_toast": "Zookeper ini belum memiliki satwa yang ditugaskan!",
   "zootycoon.zookeeper.animal_missing_toast": "Satwa yang ditugaskan tidak ditemukan di sekitar kandang!",

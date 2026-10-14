@@ -1,22 +1,22 @@
 package net.zootycoon.util;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.zootycoon.ZooTycoonMod;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.IllegalFormatException;
 import java.util.Map;
 
 /**
- * Loads strings directly from assets/zootycoon/lang/id_id.json so that
- * any edit to id_id.json is always respected on both client and server
+ * Loads strings directly from assets/zootycoon/lang so that
+ * any edit to lang files is always respected on both client and server
  * without any hardcoded strings in Java code.
  */
 public final class ZooTranslations {
@@ -25,20 +25,26 @@ public final class ZooTranslations {
 
     private ZooTranslations() {}
 
-    public static synchronized void ensureLoaded() {
-        if (loaded) return;
-        loaded = true;
-        try (InputStream stream = ZooTranslations.class.getResourceAsStream("/assets/zootycoon/lang/id_id.json")) {
+    private static void loadLangFile(String resourcePath) {
+        try (InputStream stream = ZooTranslations.class.getResourceAsStream(resourcePath)) {
             if (stream != null) {
-                Type type = new TypeToken<Map<String, String>>() {}.getType();
-                Map<String, String> parsed = new Gson().fromJson(new InputStreamReader(stream, StandardCharsets.UTF_8), type);
-                if (parsed != null) {
-                    TRANSLATIONS.putAll(parsed);
+                JsonObject obj = JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8)).getAsJsonObject();
+                for (Map.Entry<String, JsonElement> entry : obj.entrySet()) {
+                    if (entry.getValue().isJsonPrimitive()) {
+                        TRANSLATIONS.put(entry.getKey(), entry.getValue().getAsString());
+                    }
                 }
             }
         } catch (Exception e) {
-            ZooTycoonMod.LOGGER.error("Failed to load id_id.json translations", e);
+            ZooTycoonMod.LOGGER.error("Failed to load translations from " + resourcePath, e);
         }
+    }
+
+    public static synchronized void ensureLoaded() {
+        if (loaded && !TRANSLATIONS.isEmpty()) return;
+        loadLangFile("/assets/zootycoon/lang/en_us.json");
+        loadLangFile("/assets/zootycoon/lang/id_id.json");
+        loaded = !TRANSLATIONS.isEmpty();
     }
 
     public static String get(String key, Object... args) {
