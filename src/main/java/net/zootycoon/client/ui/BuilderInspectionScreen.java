@@ -5,6 +5,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -41,6 +42,8 @@ public class BuilderInspectionScreen extends EasyNpcDialogScreen {
 
     private final int wageDue;
     private final UUID builderUuid;
+    private float materialScroll = 0;
+    private int materialMaxScroll = 0;
 
     public BuilderInspectionScreen(
             UUID siteId, String schematicName, float progress, int placed, int total,
@@ -55,7 +58,13 @@ public class BuilderInspectionScreen extends EasyNpcDialogScreen {
                 Component.literal(builderName != null && !builderName.isEmpty() ? builderName : ZooTranslations.get("zootycoon.dialog.builder.default_name")),
                 Component.literal(builderName != null && !builderName.isEmpty() ? builderName : ZooTranslations.get("zootycoon.dialog.builder.default_name")),
                 ZooTranslations.component("zootycoon.dialog.builder.role"),
-                getInitialSpeech(phase, schematicName != null ? schematicName : ZooTranslations.get("zootycoon.dialog.builder.default_project"), wageDue),
+                getInitialSpeech(
+                        phase,
+                        schematicName != null ? schematicName : ZooTranslations.get("zootycoon.dialog.builder.default_project"),
+                        wageDue,
+                        (needsShovel && !hasShovel) || (needsPickaxe && !hasPickaxe) || (needsAxe && !hasAxe),
+                        missing == null || missing.isEmpty()
+                ),
                 resolveBuilderEntity(builderUuid)
         );
         this.siteId = siteId;
@@ -115,10 +124,16 @@ public class BuilderInspectionScreen extends EasyNpcDialogScreen {
         );
     }
 
-    private static Component getInitialSpeech(int phase, String schematicName, int wageDue) {
+    private static Component getInitialSpeech(int phase, String schematicName, int wageDue, boolean toolsNeeded, boolean materialsComplete) {
         if (phase == 0) {
+            if (!toolsNeeded) {
+                return ZooTranslations.component("zootycoon.dialog.builder.speech_phase0_working", schematicName);
+            }
             return ZooTranslations.component("zootycoon.dialog.builder.speech_phase0", schematicName);
         } else if (phase == 1) {
+            if (materialsComplete) {
+                return ZooTranslations.component("zootycoon.dialog.builder.speech_phase1_working", schematicName);
+            }
             return ZooTranslations.component("zootycoon.dialog.builder.speech_phase1", schematicName);
         } else if (phase == 2) {
             return ZooTranslations.component("zootycoon.dialog.builder.speech_phase2", schematicName, wageDue);
@@ -137,7 +152,11 @@ public class BuilderInspectionScreen extends EasyNpcDialogScreen {
                     }
                 }
             }
-            return ZooEntities.BUILDER.create(mc.level);
+            LivingEntity b = ZooEntities.BUILDER.create(mc.level);
+            if (b != null) {
+                b.setItemSlot(EquipmentSlot.HEAD, net.zootycoon.item.ZooItems.createHardhat());
+            }
+            return b;
         }
         return null;
     }
@@ -166,32 +185,44 @@ public class BuilderInspectionScreen extends EasyNpcDialogScreen {
         boolean toolsNeeded = (needsShovel && !hasShovel) || (needsPickaxe && !hasPickaxe) || (needsAxe && !hasAxe);
 
         if (phase == 0) {
-            // PHASE 0: PEMBERSIHAN LAHAN (No generic icon on Serahkan Alat)
-            Component btn1Text = ZooTranslations.component(toolsNeeded ? "zootycoon.dialog.builder.btn.give_tools" : "zootycoon.dialog.builder.btn.tools_ready");
-            var btn1 = new ZooButton(startX + 12, btnY, btnW, 22, btn1Text, b -> {
-                ClientPlayNetworking.send(new ZooNetworkPayloads.DepositToolsPayload(siteId));
-                this.onClose();
-            }).asPrimary();
-            btn1.active = toolsNeeded;
-            addRenderableWidget(btn1);
+            // PHASE 0: PEMBERSIHAN LAHAN
+            if (!toolsNeeded) {
+                var workBtn = new ZooButton(startX + 12, btnY, panelWidth - 24, 22, ZooTranslations.component("zootycoon.dialog.builder.btn.working_well"), b -> {
+                    this.onClose();
+                }).asPrimary();
+                addRenderableWidget(workBtn);
+            } else {
+                var btn1 = new ZooButton(startX + 12, btnY, btnW, 22, ZooTranslations.component("zootycoon.dialog.builder.btn.give_tools"), b -> {
+                    ClientPlayNetworking.send(new ZooNetworkPayloads.DepositToolsPayload(siteId));
+                    this.onClose();
+                }).asPrimary();
+                addRenderableWidget(btn1);
 
-            var closeBtn = new ZooButton(startX + 12 + btnW + 8, btnY, btnW, 22, ZooTranslations.component("zootycoon.dialog.builder.btn.later"), b -> {
-                this.onClose();
-            }).asPrimary();
-            addRenderableWidget(closeBtn);
+                var closeBtn = new ZooButton(startX + 12 + btnW + 8, btnY, btnW, 22, ZooTranslations.component("zootycoon.dialog.builder.btn.later"), b -> {
+                    this.onClose();
+                }).asPrimary();
+                addRenderableWidget(closeBtn);
+            }
 
         } else if (phase == 1) {
-            // PHASE 1: KONSTRUKSI BANGUNAN (No generic icon on Serahkan Bahan)
-            var depositBtn = new ZooButton(startX + 12, btnY, btnW, 22, ZooTranslations.component("zootycoon.dialog.builder.btn.give_materials"), b -> {
-                ClientPlayNetworking.send(new ZooNetworkPayloads.DepositMaterialsPayload(siteId));
-                this.onClose();
-            }).asPrimary();
-            addRenderableWidget(depositBtn);
+            // PHASE 1: KONSTRUKSI BANGUNAN
+            if (missingMaterials.isEmpty()) {
+                var workBtn = new ZooButton(startX + 12, btnY, panelWidth - 24, 22, ZooTranslations.component("zootycoon.dialog.builder.btn.working_well"), b -> {
+                    this.onClose();
+                }).asPrimary();
+                addRenderableWidget(workBtn);
+            } else {
+                var depositBtn = new ZooButton(startX + 12, btnY, btnW, 22, ZooTranslations.component("zootycoon.dialog.builder.btn.give_materials"), b -> {
+                    ClientPlayNetworking.send(new ZooNetworkPayloads.DepositMaterialsPayload(siteId));
+                    this.onClose();
+                }).asPrimary();
+                addRenderableWidget(depositBtn);
 
-            var closeBtn = new ZooButton(startX + 12 + btnW + 8, btnY, btnW, 22, ZooTranslations.component("zootycoon.dialog.builder.btn.later"), b -> {
-                this.onClose();
-            }).asPrimary();
-            addRenderableWidget(closeBtn);
+                var closeBtn = new ZooButton(startX + 12 + btnW + 8, btnY, btnW, 22, ZooTranslations.component("zootycoon.dialog.builder.btn.later"), b -> {
+                    this.onClose();
+                }).asPrimary();
+                addRenderableWidget(closeBtn);
+            }
 
         } else if (phase == 2) {
             // PHASE 2: GAJIAN / BAYAR UPAH (Authentic vanilla emerald icon for price display)
@@ -220,13 +251,42 @@ public class BuilderInspectionScreen extends EasyNpcDialogScreen {
     }
 
     @Override
+    protected int getContentHeight() {
+        boolean toolsNeeded = (needsShovel && !hasShovel) || (needsPickaxe && !hasPickaxe) || (needsAxe && !hasAxe);
+        if (phase == 0) return toolsNeeded ? 48 : 0;
+        if (phase == 1) return missingMaterials.isEmpty() ? 0 : 72;
+        if (phase == 2) return 20;
+        return 0;
+    }
+
+    @Override
     protected int getSpeechBubbleHeight() {
-        return (phase == 0 || phase == 1) ? 48 : 118;
+        if (getContentHeight() == 0) {
+            return 118;
+        }
+        int bubbleW = panelWidth - 114 - 8 - 12 - 12;
+        if (this.font != null && dialogMessage != null) {
+            int lines = Math.max(1, this.font.split(dialogMessage, bubbleW - 16).size());
+            return Math.max(48, 16 + lines * 11);
+        }
+        return (phase == 0 || phase == 1) ? 58 : 118;
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (phase == 1 && materialMaxScroll > 0) {
+            materialScroll = (float) Math.clamp(materialScroll - (float) verticalAmount * 24.0f, 0, materialMaxScroll);
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
 
     @Override
     protected void renderDialogContent(GuiGraphics graphics, int contentX, int contentY, int contentW, int contentH, int mouseX, int mouseY, float delta) {
         if (phase == 0) {
+            boolean toolsNeeded = (needsShovel && !hasShovel) || (needsPickaxe && !hasPickaxe) || (needsAxe && !hasAxe);
+            if (!toolsNeeded) return;
+
             // Missing tools info (Kept below dialog as requested)
             graphics.drawString(this.font, ZooTranslations.component("zootycoon.dialog.builder.clearing_label").withStyle(ChatFormatting.GRAY)
                     .append(ZooTranslations.component("zootycoon.dialog.builder.blocks_count", obstructingCount).withStyle(ChatFormatting.YELLOW)), contentX, contentY, 0xFFFFFFFF, false);
@@ -238,6 +298,10 @@ public class BuilderInspectionScreen extends EasyNpcDialogScreen {
             renderToolStatus(graphics, contentX + 160, contentY + 24, ZooTranslations.get("zootycoon.dialog.builder.tool.axe"), needsAxe, hasAxe, new ItemStack(Items.IRON_AXE));
 
         } else if (phase == 1) {
+            if (missingMaterials.isEmpty()) {
+                return;
+            }
+
             // Missing blocks info (Kept below dialog as requested)
             int progPercent = (int) progress;
             graphics.drawString(this.font, ZooTranslations.component("zootycoon.dialog.builder.progress_label").withStyle(ChatFormatting.GRAY)
@@ -264,11 +328,21 @@ public class BuilderInspectionScreen extends EasyNpcDialogScreen {
                 graphics.drawString(this.font, ZooTranslations.component("zootycoon.dialog.builder.materials_complete").withStyle(ChatFormatting.GREEN), contentX, slotY + 4, 0xFF2ECC71, false);
             } else {
                 List<Map.Entry<Item, Integer>> entryList = new ArrayList<>(missingMaterials.entrySet());
+                int totalWidth = entryList.size() * (slotSize + 4) - 4;
+                materialMaxScroll = Math.max(0, totalWidth - contentW);
+                materialScroll = Math.clamp(materialScroll, 0, materialMaxScroll);
+
                 ItemStack hoveredItem = null;
-                for (int i = 0; i < Math.min(entryList.size(), 8); i++) {
+                graphics.enableScissor(contentX, slotY - 2, contentX + contentW, slotY + slotSize + 2);
+
+                for (int i = 0; i < entryList.size(); i++) {
                     var entry = entryList.get(i);
                     ItemStack stack = new ItemStack(entry.getKey());
-                    int sx = slotX + (i * (slotSize + 4));
+                    int sx = slotX + (i * (slotSize + 4)) - (int) materialScroll;
+
+                    if (sx + slotSize < contentX || sx > contentX + contentW) {
+                        continue;
+                    }
 
                     graphics.fill(sx, slotY, sx + slotSize, slotY + slotSize, 0xFF141720);
                     graphics.fill(sx, slotY, sx + slotSize, slotY + 1, 0xFF2B3344);
@@ -279,9 +353,22 @@ public class BuilderInspectionScreen extends EasyNpcDialogScreen {
                     graphics.renderFakeItem(stack, sx + 2, slotY + 2);
                     graphics.renderItemDecorations(this.font, stack, sx + 2, slotY + 2, String.valueOf(entry.getValue()));
 
-                    if (mouseX >= sx && mouseX <= sx + slotSize && mouseY >= slotY && mouseY <= slotY + slotSize) {
+                    if (mouseX >= sx && mouseX <= sx + slotSize && mouseY >= slotY && mouseY <= slotY + slotSize
+                            && mouseX >= contentX && mouseX <= contentX + contentW) {
                         hoveredItem = stack;
                     }
+                }
+
+                graphics.disableScissor();
+
+                // Scrollbar indicator if items overflow
+                if (materialMaxScroll > 0) {
+                    int barTrackY = slotY + slotSize + 4;
+                    int barTrackW = contentW;
+                    graphics.fill(contentX, barTrackY, contentX + barTrackW, barTrackY + 2, 0xFF1C2230);
+                    int thumbW = Math.max(16, (int) ((float) contentW / totalWidth * barTrackW));
+                    int thumbX = contentX + (int) ((materialScroll / materialMaxScroll) * (barTrackW - thumbW));
+                    graphics.fill(thumbX, barTrackY, thumbX + thumbW, barTrackY + 2, 0xFF388BFD);
                 }
 
                 if (hoveredItem != null) {

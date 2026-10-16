@@ -163,6 +163,7 @@
   "zootycoon.dialog.builder.speech_phase0": "Halo Bos! Proyek %s masih ada puing yang menghalangi. Saya gapunya alat buat ngebersihin nya bos...",
   "zootycoon.dialog.builder.speech_phase0_working": "Alat kerja sudah lengkap bos! Saya lagi fokus bersihin sisa puing di area proyek %s, tunggu sebentar ya!",
   "zootycoon.dialog.builder.speech_phase1": "Emm.. boss.. saya kan lagi ngebangun proyek %s tapi masih kurang bahan bangunan nya, boleh tolong cariin bahan - bahan nya ngga?",
+  "zootycoon.dialog.builder.speech_phase1_working": "Please wait boss, %s is currently being built.",
   "zootycoon.dialog.builder.speech_phase2": "Permisi bos... Proyek %s udah beres, Boleh minta upah nya?",
   "zootycoon.dialog.builder.speech_idle": "Halo Bos! Belum ada proyek aktif. Siap membangun fasilitas kebun binatang kapan saja!",
   "zootycoon.dialog.builder.btn.give_tools": "Serahkan Alat",

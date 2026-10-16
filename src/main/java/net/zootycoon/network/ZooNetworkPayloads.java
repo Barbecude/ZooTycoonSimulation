@@ -820,6 +820,12 @@ public class ZooNetworkPayloads {
                 ConstructionManager.getSite(payload.siteId).ifPresent(site -> {
                     if (player.isCreative()) {
                         site.fulfillAllMaterials();
+                        if (site.getBuilderUuid() != null) {
+                            var b = ((ServerLevel) player.level()).getEntity(site.getBuilderUuid());
+                            if (b instanceof net.zootycoon.entity.ZooBuilderEntity zb) {
+                                zb.updateNeedsIndicator();
+                            }
+                        }
                         player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.ITEM_PICKUP, net.minecraft.sounds.SoundSource.PLAYERS, 1.0f, 1.0f);
                         sendToast(player, "zootycoon.toast.title.builder", "zootycoon.builder.materials_given", 1, 999);
                         return;
@@ -830,6 +836,12 @@ public class ZooNetworkPayloads {
                         if (!stack.isEmpty()) {
                             int accepted = site.deliverMaterial(stack);
                             totalAccepted += accepted;
+                        }
+                    }
+                    if (site.getBuilderUuid() != null) {
+                        var b = ((ServerLevel) player.level()).getEntity(site.getBuilderUuid());
+                        if (b instanceof net.zootycoon.entity.ZooBuilderEntity zb) {
+                            zb.updateNeedsIndicator();
                         }
                     }
                     if (totalAccepted > 0) {
@@ -860,6 +872,9 @@ public class ZooNetworkPayloads {
                         if (site.getBuilderUuid() != null) {
                             ServerLevel sLevel = (ServerLevel) player.level();
                             var ent = sLevel.getEntity(site.getBuilderUuid());
+                            if (ent instanceof net.zootycoon.entity.ZooBuilderEntity zb) {
+                                zb.updateNeedsIndicator();
+                            }
                             if (ent instanceof net.minecraft.world.entity.LivingEntity living) {
                                 if (site.isClearingPhase()) {
                                     BlockPos obs = site.getNextObstructingBlock(sLevel);

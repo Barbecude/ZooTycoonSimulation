@@ -15,6 +15,7 @@ import java.util.UUID;
 public class VisitorDialogScreen extends EasyNpcDialogScreen {
 
     private final int entityId;
+    private final String moodName;
     private final boolean needsToilet;
     private final int thirst;
     private final int hunger;
@@ -35,22 +36,23 @@ public class VisitorDialogScreen extends EasyNpcDialogScreen {
                 ZooTranslations.component("zootycoon.dialog.visitor.title", variant),
                 Component.literal(ZooTranslations.get("zootycoon.dialog.visitor.title", variant) + (isChild ? ZooTranslations.get("zootycoon.dialog.visitor.child_suffix") : "")),
                 ZooTranslations.component("zootycoon.dialog.visitor.role"),
-                getVisitorDialogue(moodName, hunger, thirst, needsToilet),
+                getVisitorDialogue(moodName),
                 resolveVisitorEntity(entityId, visitorUuid, variant, isChild)
         );
         this.entityId = entityId;
+        this.moodName = moodName != null ? moodName : "NEUTRAL";
         this.needsToilet = needsToilet;
         this.thirst = thirst;
         this.hunger = hunger;
     }
 
-    private static Component getVisitorDialogue(String moodName, int hunger, int thirst, boolean needsToilet) {
-        if (needsToilet) {
+    private static Component getVisitorDialogue(String moodName) {
+        if ("TOILET".equalsIgnoreCase(moodName)) {
             return ZooTranslations.component("zootycoon.dialog.visitor.speech.toilet");
-        } else if (thirst >= 50) {
-            return ZooTranslations.component("zootycoon.dialog.visitor.speech.thirsty");
-        } else if (hunger >= 50) {
+        } else if ("HUNGRY".equalsIgnoreCase(moodName)) {
             return ZooTranslations.component("zootycoon.dialog.visitor.speech.hungry");
+        } else if ("THIRSTY".equalsIgnoreCase(moodName)) {
+            return ZooTranslations.component("zootycoon.dialog.visitor.speech.thirsty");
         } else if ("AMAZED".equalsIgnoreCase(moodName)) {
             return ZooTranslations.component("zootycoon.dialog.visitor.speech.amazed");
         } else if ("ADORED".equalsIgnoreCase(moodName)) {
@@ -92,15 +94,15 @@ public class VisitorDialogScreen extends EasyNpcDialogScreen {
         Component actionText;
         Component closeText;
 
-        if (needsToilet) {
+        if ("TOILET".equalsIgnoreCase(moodName)) {
             actionText = ZooTranslations.component("zootycoon.dialog.visitor.btn.toilet");
             closeText = ZooTranslations.component("zootycoon.dialog.visitor.btn.toilet_close");
-        } else if (thirst >= 50) {
-            actionText = ZooTranslations.component("zootycoon.dialog.visitor.btn.thirsty");
-            closeText = ZooTranslations.component("zootycoon.dialog.visitor.btn.thirsty_close");
-        } else if (hunger >= 50) {
+        } else if ("HUNGRY".equalsIgnoreCase(moodName)) {
             actionText = ZooTranslations.component("zootycoon.dialog.visitor.btn.hungry");
             closeText = ZooTranslations.component("zootycoon.dialog.visitor.btn.hungry_close");
+        } else if ("THIRSTY".equalsIgnoreCase(moodName)) {
+            actionText = ZooTranslations.component("zootycoon.dialog.visitor.btn.thirsty");
+            closeText = ZooTranslations.component("zootycoon.dialog.visitor.btn.thirsty_close");
         } else {
             actionText = ZooTranslations.component("zootycoon.dialog.visitor.btn.greet");
             closeText = ZooTranslations.component("zootycoon.dialog.visitor.btn.bye");

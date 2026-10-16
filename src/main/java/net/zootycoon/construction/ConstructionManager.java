@@ -48,6 +48,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ConstructionManager {
     private static final Map<UUID, ConstructionSite> ACTIVE_SITES = new ConcurrentHashMap<>();
 
+    public static void reset() {
+        ACTIVE_SITES.clear();
+    }
+
     public static void initServerEvents() {
         ServerTickEvents.END_WORLD_TICK.register(ConstructionManager::onWorldTick);
 
@@ -261,15 +265,6 @@ public class ConstructionManager {
             }
         }
 
-        // Auto-deposit matching materials player is currently carrying so builder starts immediately
-        int autoDelivered = 0;
-        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-            ItemStack stack = player.getInventory().getItem(i);
-            if (!stack.isEmpty()) {
-                int accepted = site.deliverMaterial(stack);
-                autoDelivered += accepted;
-            }
-        }
         if (builder != null) {
             builder.updateNeedsIndicator();
         }
@@ -314,7 +309,7 @@ public class ConstructionManager {
                 BlockPos obsPos = site.getNextObstructingBlock(level);
                 if (obsPos != null) {
                     BlockState obsState = level.getBlockState(obsPos);
-                    boolean hasTool = isOwnerCreative || site.hasToolFor(obsState);
+                    boolean hasTool = site.hasToolFor(obsState);
                     if (!hasTool) {
                         // Kuli lacks the required tool! Pause and wait for player to provide it
                         site.flagToolNeeded(obsState);
@@ -357,11 +352,11 @@ public class ConstructionManager {
             // ==========================================
             // PHASE 2: BLOCK PLACEMENT (Land is clean!)
             // ==========================================
-            int actionIdx = site.findNextPlaceableIndex(level, isOwnerCreative);
+            int actionIdx = site.findNextPlaceableIndex(level, false);
             if (actionIdx == -1) {
                 // WAITING STATE: No placeable block right now (waiting for materials)
                 if (builder != null) {
-                    builder.setNeedsSomething(!isOwnerCreative && !site.getMissingMaterials().isEmpty());
+                    builder.setNeedsSomething(!site.getMissingMaterials().isEmpty());
                     if (owner != null && owner.distanceToSqr(builder) < 20 * 20) {
                         builder.getLookControl().setLookAt(owner.getX(), owner.getEyeY(), owner.getZ());
                     }
