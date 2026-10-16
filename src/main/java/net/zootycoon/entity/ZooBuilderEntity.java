@@ -30,6 +30,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.nbt.CompoundTag;
 import net.zootycoon.construction.ConstructionManager;
 import net.zootycoon.construction.ConstructionSite;
+import net.zootycoon.item.ZooItems;
 import net.zootycoon.network.ZooNetworkPayloads;
 import net.zootycoon.util.ZooTranslations;
 
@@ -71,6 +72,8 @@ public class ZooBuilderEntity extends PathfinderMob {
             this.setCustomName(Component.literal(chosenName));
             this.setCustomNameVisible(true);
             this.setSkinVariant(this.random.nextInt(4));
+            this.setItemSlot(EquipmentSlot.HEAD, ZooItems.createHardhat());
+            this.setDropChance(EquipmentSlot.HEAD, 0.0f);
             this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
         }
     }
@@ -142,11 +145,20 @@ public class ZooBuilderEntity extends PathfinderMob {
     private ConstructionSite resolveSite() {
         if (siteId != null) {
             var opt = ConstructionManager.getSite(siteId);
-            if (opt.isPresent()) return opt.get();
+            if (opt.isPresent()) {
+                ConstructionSite s = opt.get();
+                if (s.getBuilderUuid() == null || !this.getUUID().equals(s.getBuilderUuid())) {
+                    s.setBuilderUuid(this.getUUID());
+                }
+                return s;
+            }
         }
         for (var s : ConstructionManager.getActiveSites()) {
             if (this.getUUID().equals(s.getBuilderUuid()) || (siteId != null && siteId.equals(s.getSiteId()))) {
                 this.siteId = s.getSiteId();
+                if (s.getBuilderUuid() == null || !this.getUUID().equals(s.getBuilderUuid())) {
+                    s.setBuilderUuid(this.getUUID());
+                }
                 return s;
             }
         }
@@ -174,6 +186,10 @@ public class ZooBuilderEntity extends PathfinderMob {
 
         if (this.tickCount % 10 == 0) {
             updateNeedsIndicator();
+            if (this.getItemBySlot(EquipmentSlot.HEAD).isEmpty()) {
+                this.setItemSlot(EquipmentSlot.HEAD, ZooItems.createHardhat());
+                this.setDropChance(EquipmentSlot.HEAD, 0.0f);
+            }
         }
 
         // ==========================================
@@ -238,7 +254,10 @@ public class ZooBuilderEntity extends PathfinderMob {
         }
 
         // Kuli builder disappears from the world if there is no active project
-        if (this.tickCount % 20 == 0 && this.tickCount > 40) {
+        if (this.tickCount % 20 == 0 && this.tickCount > 100) {
+            if (!ConstructionManager.isLoaded()) {
+                return;
+            }
             ConstructionSite site = resolveSite();
             boolean hasActiveSite = site != null && !site.isCompleted();
             if (!hasActiveSite) {

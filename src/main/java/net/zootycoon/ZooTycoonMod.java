@@ -46,17 +46,41 @@ public class ZooTycoonMod implements ModInitializer {
         // 5. Initialize Construction Manager ticks
         ConstructionManager.initServerEvents();
 
-        // 5b. Initialize Zoo Animal Hunger, Hunter incursions, Hostile Mob Claims Barrier, and Economy absorption
+        // 5b. Initialize Zoo Animal Hunger, Hunter incursions, Visitor arrivals, Hostile Mob Claims Barrier, and Economy absorption
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_WORLD_TICK.register(level -> {
             net.zootycoon.claim.ZooClaimManager.tickServer(level);
             net.zootycoon.animal.ZooAnimalHungerManager.tickServer(level);
             net.zootycoon.hunter.ZooHunterManager.tickServer(level);
+            net.zootycoon.visitor.ZooVisitorManager.tickServer(level);
             if (level.getServer() != null) {
                 var eco = net.zootycoon.economy.ZooEconomyManager.get(level.getServer());
                 for (var player : level.players()) {
                     eco.absorbPlayerEmeralds(player);
                 }
             }
+        });
+
+        // 5bb. Reset static manager state across world loads to prevent cross-world state leakage
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            net.zootycoon.construction.ConstructionManager.saveToFile(server);
+            net.zootycoon.claim.ZooClaimManager.reset();
+            net.zootycoon.economy.ZooStaffManager.reset();
+            net.zootycoon.economy.ZooEconomyManager.reset();
+            net.zootycoon.construction.ConstructionManager.reset();
+            net.zootycoon.block.ZooFeedingTroughBlock.reset();
+            net.zootycoon.hunter.ZooHunterManager.reset();
+            net.zootycoon.visitor.ZooVisitorManager.reset();
+        });
+
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTING.register(server -> {
+            net.zootycoon.claim.ZooClaimManager.reset();
+            net.zootycoon.economy.ZooStaffManager.reset();
+            net.zootycoon.economy.ZooEconomyManager.reset();
+            net.zootycoon.construction.ConstructionManager.reset();
+            net.zootycoon.block.ZooFeedingTroughBlock.reset();
+            net.zootycoon.hunter.ZooHunterManager.reset();
+            net.zootycoon.visitor.ZooVisitorManager.reset();
+            net.zootycoon.construction.ConstructionManager.loadFromFile(server);
         });
 
         // 5c. Spyglass/Field Guide right-click animal registration & direct player feeding with love particles
@@ -69,6 +93,13 @@ public class ZooTycoonMod implements ModInitializer {
                         if (ok) {
                             return net.minecraft.world.InteractionResult.SUCCESS;
                         }
+                    }
+                } else if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)
+                        && (held.is(Items.BRUSH) || held.is(net.zootycoon.item.ZooItems.BROOM))) {
+                    boolean cleaned = net.zootycoon.animal.ZooAnimalHungerManager.cleanAnimal(living, sp);
+                    if (cleaned) {
+                        ZooNetworkPayloads.sendAnimalSync(sp);
+                        return net.minecraft.world.InteractionResult.SUCCESS;
                     }
                 } else if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)
                         && net.zootycoon.animal.AnimalDietRegistry.isFoodValid(living, held)) {
@@ -84,6 +115,118 @@ public class ZooTycoonMod implements ModInitializer {
 
         // 6. Initialize Creative Studio Dimension management
         StudioDimensionManager.initServerEvents();
+
+        // 6b. Physical Vehicles Placement Interceptor: Spawns vehicle facing player with valid quaternion (Never a Pig!)
+        net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
+            net.minecraft.world.item.ItemStack stack = player.getItemInHand(hand);
+            if (!world.isClientSide() && player instanceof net.minecraft.server.level.ServerPlayer sp && stack.is(net.minecraft.world.item.Items.DOLPHIN_SPAWN_EGG)) {
+                net.minecraft.world.item.component.CustomData customData = stack.get(net.minecraft.core.component.DataComponents.ENTITY_DATA);
+                if (customData != null && customData.contains("Tags")) {
+                    net.minecraft.nbt.CompoundTag nbt = customData.copyTag();
+                    net.minecraft.nbt.ListTag tags = nbt.getList("Tags", net.minecraft.nbt.Tag.TAG_STRING);
+                    boolean isVehicleEgg = false;
+                    for (int i = 0; i < tags.size(); i++) {
+                        if ("phys_veh.spawn".equals(tags.getString(i))) {
+                            isVehicleEgg = true;
+                            break;
+                        }
+                    }
+                    if (isVehicleEgg) {
+                        net.minecraft.server.level.ServerLevel sl = sp.serverLevel();
+                        net.minecraft.world.phys.Vec3 spawnPos = hitResult.getBlockPos().relative(hitResult.getDirection()).getBottomCenter();
+
+                        // Tag player for orientation calculation in spawn_data.mcfunction
+                        sp.addTag("midwut.used.dolphin_spawn_egg.selected_player");
+
+                        net.minecraft.world.entity.animal.Pig pig = net.minecraft.world.entity.EntityType.PIG.create(sl);
+                        if (pig != null) {
+                            pig.moveTo(spawnPos.x, spawnPos.y + 0.25, spawnPos.z, sp.getYRot(), 0.0f);
+                            customData.loadInto(pig);
+                            pig.setSilent(true);
+                            pig.setNoAi(true);
+                            pig.setInvulnerable(true);
+                            sl.addFreshEntity(pig);
+
+                            sl.getServer().getCommands().performPrefixedCommand(
+                                pig.createCommandSourceStack().withSuppressedOutput().withPermission(2),
+                                "function physical_vehicles:zzz/summon_data/summon"
+                            );
+
+                            if (pig.isAlive()) {
+                                pig.discard();
+                            }
+                        }
+
+                        sp.removeTag("midwut.used.dolphin_spawn_egg.selected_player");
+
+                        if (!sp.getAbilities().instabuild) {
+                            stack.shrink(1);
+                        }
+                        sl.playSound(null, net.minecraft.core.BlockPos.containing(spawnPos), net.minecraft.sounds.SoundEvents.ITEM_PICKUP, net.minecraft.sounds.SoundSource.PLAYERS, 1.0f, 1.0f);
+                        return net.minecraft.world.InteractionResult.SUCCESS;
+                    }
+                }
+            }
+            return net.minecraft.world.InteractionResult.PASS;
+        });
+
+        // 6c. Fallback Pig safety net: Convert any stray vehicle spawn pigs immediately
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register((entity, serverLevel) -> {
+            if (entity instanceof net.minecraft.world.entity.animal.Pig pig && pig.getTags().contains("phys_veh.spawn")) {
+                net.minecraft.world.entity.player.Player nearest = serverLevel.getNearestPlayer(pig, 32.0);
+                if (nearest != null) {
+                    nearest.addTag("midwut.used.dolphin_spawn_egg.selected_player");
+                }
+                serverLevel.getServer().getCommands().performPrefixedCommand(
+                    pig.createCommandSourceStack().withSuppressedOutput().withPermission(2),
+                    "function physical_vehicles:zzz/summon_data/summon"
+                );
+                if (nearest != null) {
+                    nearest.removeTag("midwut.used.dolphin_spawn_egg.selected_player");
+                }
+                if (pig.isAlive()) {
+                    pig.discard();
+                }
+            }
+        });
+
+        // 6d. Bridge Player Vehicle Inputs in MC 1.21.1 to Physical Vehicles Scoreboard
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> {
+            var scoreboard = server.getScoreboard();
+            var mainScore = scoreboard.getObjective("main_score");
+            if (mainScore == null) return;
+
+            for (net.minecraft.server.level.ServerPlayer player : server.getPlayerList().getPlayers()) {
+                net.minecraft.world.entity.Entity vehicle = player.getVehicle();
+                if (vehicle != null && vehicle.getTags().contains("phys_veh.seat")) {
+                    scoreboard.getOrCreatePlayerScore(net.minecraft.world.scores.ScoreHolder.forNameOnly("#afk_timer"), mainScore).set(118);
+
+                    if (player.zza > 0.05f) {
+                        scoreboard.getOrCreatePlayerScore(net.minecraft.world.scores.ScoreHolder.forNameOnly("#throttle_pedal"), mainScore).set(1);
+                    }
+                    if (player.zza < -0.05f) {
+                        scoreboard.getOrCreatePlayerScore(net.minecraft.world.scores.ScoreHolder.forNameOnly("#brake_pedal"), mainScore).set(1);
+                    }
+
+                    if (player.xxa > 0.05f) { // Left (A)
+                        var angleScore = scoreboard.getOrCreatePlayerScore(net.minecraft.world.scores.ScoreHolder.forNameOnly("#wheel_angle"), mainScore);
+                        angleScore.set(angleScore.get() + 1);
+                    }
+                    if (player.xxa < -0.05f) { // Right (D)
+                        var angleScore = scoreboard.getOrCreatePlayerScore(net.minecraft.world.scores.ScoreHolder.forNameOnly("#wheel_angle"), mainScore);
+                        angleScore.set(angleScore.get() - 1);
+                    }
+
+                    if (((net.zootycoon.mixin.LivingEntityAccessor) player).zt_isJumping()) {
+                        scoreboard.getOrCreatePlayerScore(net.minecraft.world.scores.ScoreHolder.forNameOnly("#hand_brake"), mainScore).set(1);
+                    }
+
+                    if (player.isSprinting()) {
+                        scoreboard.getOrCreatePlayerScore(net.minecraft.world.scores.ScoreHolder.forNameOnly("#clutch_pedal"), mainScore).set(1);
+                    }
+                }
+            }
+        });
 
         // 7. Player Onboarding: First-join Starter Pack
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {

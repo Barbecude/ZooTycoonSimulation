@@ -828,6 +828,7 @@ public class ZooNetworkPayloads {
                         }
                         player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.ITEM_PICKUP, net.minecraft.sounds.SoundSource.PLAYERS, 1.0f, 1.0f);
                         sendToast(player, "zootycoon.toast.title.builder", "zootycoon.builder.materials_given", 1, 999);
+                        ConstructionManager.saveToFile(player.server);
                         return;
                     }
                     int totalAccepted = 0;
@@ -850,6 +851,7 @@ public class ZooNetworkPayloads {
                     } else {
                         sendToast(player, "zootycoon.toast.title.builder", "zootycoon.builder.no_materials_in_hand", 2);
                     }
+                    ConstructionManager.saveToFile(player.server);
                 });
             });
         });
@@ -890,6 +892,7 @@ public class ZooNetworkPayloads {
                                 }
                             }
                         }
+                        ConstructionManager.saveToFile(player.server);
                     } else {
                         sendToast(player, "zootycoon.toast.title.builder", "zootycoon.builder.no_tools_in_hand", 2);
                     }

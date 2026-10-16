@@ -1,12 +1,18 @@
 package net.zootycoon.construction;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.zootycoon.economy.EconomyConfig;
@@ -104,7 +110,7 @@ public class ConstructionSite {
                 for (int y = maxY; y >= minY; y--) {
                     BlockPos p = new BlockPos(x, y, z);
                     var s = level.getBlockState(p);
-                    if (s.isAir() || s.is(net.minecraft.world.level.block.Blocks.BEDROCK) || s.is(net.minecraft.world.level.block.Blocks.BARRIER)) {
+                    if (s.isAir() || isReplaceableGrassOrPlant(s) || s.is(net.minecraft.world.level.block.Blocks.BEDROCK) || s.is(net.minecraft.world.level.block.Blocks.BARRIER)) {
                         continue;
                     }
                     var expected = expectedStates.get(p);
@@ -122,7 +128,30 @@ public class ConstructionSite {
         obstructingBlocks.sort((p1, p2) -> Integer.compare(p2.getY(), p1.getY()));
     }
 
+    public static boolean isReplaceableGrassOrPlant(net.minecraft.world.level.block.state.BlockState s) {
+        if (s == null || s.isAir()) return true;
+        if (s.canBeReplaced()) return true;
+        if (s.is(net.minecraft.tags.BlockTags.REPLACEABLE)) return true;
+        if (s.is(net.minecraft.world.level.block.Blocks.SHORT_GRASS)
+                || s.is(net.minecraft.world.level.block.Blocks.TALL_GRASS)
+                || s.is(net.minecraft.world.level.block.Blocks.FERN)
+                || s.is(net.minecraft.world.level.block.Blocks.LARGE_FERN)
+                || s.is(net.minecraft.world.level.block.Blocks.DEAD_BUSH)) {
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean isGrassOrFlowerItem(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        Item item = stack.getItem();
+        if (item == Items.GRASS_BLOCK || item == Items.SHORT_GRASS || item == Items.FERN || item == Items.LARGE_FERN) return true;
+        if (stack.is(net.minecraft.tags.ItemTags.FLOWERS)) return true;
+        return false;
+    }
+
     private void checkToolNeeded(net.minecraft.world.level.block.state.BlockState s) {
+        if (isReplaceableGrassOrPlant(s)) return;
         if (s.is(net.minecraft.tags.BlockTags.MINEABLE_WITH_AXE) || s.is(net.minecraft.tags.BlockTags.LOGS) || s.is(net.minecraft.tags.BlockTags.LEAVES)) {
             needsAxe = true;
         } else if (s.is(net.minecraft.tags.BlockTags.MINEABLE_WITH_SHOVEL) || s.is(net.minecraft.tags.BlockTags.DIRT) || s.is(net.minecraft.tags.BlockTags.SAND)) {
@@ -155,6 +184,25 @@ public class ConstructionSite {
         return any;
     }
 
+    public synchronized void fulfillAllTools() {
+        if (needsShovel && !hasShovel()) {
+            setEquippedShovel(new ItemStack(Items.DIAMOND_SHOVEL));
+        }
+        if (needsPickaxe && !hasPickaxe()) {
+            setEquippedPickaxe(new ItemStack(Items.DIAMOND_PICKAXE));
+        }
+        if (needsAxe && !hasAxe()) {
+            setEquippedAxe(new ItemStack(Items.DIAMOND_AXE));
+        }
+    }
+
+    public synchronized void fulfillAllMaterials() {
+        Map<Item, Integer> remaining = getRemainingRequiredMaterials();
+        for (var entry : remaining.entrySet()) {
+            deliveredMaterials.put(entry.getKey(), entry.getValue());
+        }
+    }
+
     public synchronized List<BlockPos> getObstructingBlocks() {
         return obstructingBlocks;
     }
@@ -167,7 +215,7 @@ public class ConstructionSite {
         while (!obstructingBlocks.isEmpty()) {
             BlockPos p = obstructingBlocks.get(0);
             var state = level.getBlockState(p);
-            if (state.isAir()) {
+            if (state.isAir() || isReplaceableGrassOrPlant(state)) {
                 obstructingBlocks.remove(0);
             } else {
                 return p;
@@ -202,7 +250,7 @@ public class ConstructionSite {
     }
 
     public boolean hasToolFor(net.minecraft.world.level.block.state.BlockState s) {
-        if (s.isAir() || s.canBeReplaced()) return true;
+        if (s.isAir() || isReplaceableGrassOrPlant(s)) return true;
         if (s.is(net.minecraft.tags.BlockTags.MINEABLE_WITH_AXE) || s.is(net.minecraft.tags.BlockTags.LOGS) || s.is(net.minecraft.tags.BlockTags.LEAVES)) {
             return hasAxe();
         } else if (s.is(net.minecraft.tags.BlockTags.MINEABLE_WITH_SHOVEL) || s.is(net.minecraft.tags.BlockTags.DIRT) || s.is(net.minecraft.tags.BlockTags.SAND)) {
@@ -223,6 +271,7 @@ public class ConstructionSite {
     }
 
     public void flagToolNeeded(net.minecraft.world.level.block.state.BlockState s) {
+        if (isReplaceableGrassOrPlant(s)) return;
         if (s.is(net.minecraft.tags.BlockTags.MINEABLE_WITH_AXE) || s.is(net.minecraft.tags.BlockTags.LOGS) || s.is(net.minecraft.tags.BlockTags.LEAVES)) {
             needsAxe = true;
         } else if (s.is(net.minecraft.tags.BlockTags.MINEABLE_WITH_SHOVEL) || s.is(net.minecraft.tags.BlockTags.DIRT) || s.is(net.minecraft.tags.BlockTags.SAND)) {
@@ -322,7 +371,7 @@ public class ConstructionSite {
     public synchronized Map<Item, Integer> getRemainingRequiredMaterials() {
         Map<Item, Integer> remaining = new HashMap<>();
         for (var b : pendingBlocks) {
-            Item item = b.state().getBlock().asItem();
+            Item item = net.zootycoon.schematic.SchematicScanner.getRequiredItemForState(b.state());
             if (item != Items.AIR) {
                 remaining.put(item, remaining.getOrDefault(item, 0) + 1);
             }
@@ -356,28 +405,55 @@ public class ConstructionSite {
         if (stack.isEmpty()) return 0;
         Item item = stack.getItem();
         Map<Item, Integer> remaining = getRemainingRequiredMaterials();
+
+        // 1. Direct match for required item
         int needed = remaining.getOrDefault(item, 0);
         int currentDelivered = deliveredMaterials.getOrDefault(item, 0);
 
-        if (currentDelivered >= needed) {
-            return 0; // Not needed or already fulfilled for remaining unplaced blocks
+        if (needed > currentDelivered) {
+            int stillNeeded = needed - currentDelivered;
+            int accepted = Math.min(stack.getCount(), stillNeeded);
+            stack.shrink(accepted);
+            deliveredMaterials.put(item, currentDelivered + accepted);
+            return accepted;
         }
 
-        int stillNeeded = needed - currentDelivered;
-        int accepted = Math.min(stack.getCount(), stillNeeded);
-        stack.shrink(accepted);
-        deliveredMaterials.put(item, currentDelivered + accepted);
-        return accepted;
+        // 2. Bonemeal substitution: If bonemeal is needed, accept bone_meal, bone, grass_block, short grass, fern, or flowers!
+        int boneMealNeeded = remaining.getOrDefault(Items.BONE_MEAL, 0);
+        int boneMealDelivered = deliveredMaterials.getOrDefault(Items.BONE_MEAL, 0);
+        if (boneMealNeeded > boneMealDelivered) {
+            int stillNeeded = boneMealNeeded - boneMealDelivered;
+            if (item == Items.BONE_MEAL) {
+                int accepted = Math.min(stack.getCount(), stillNeeded);
+                stack.shrink(accepted);
+                deliveredMaterials.put(Items.BONE_MEAL, boneMealDelivered + accepted);
+                return accepted;
+            } else if (item == Items.BONE) {
+                // 1 bone = 3 bone meals
+                int bonesToUse = (int) Math.ceil((double) stillNeeded / 3.0);
+                int acceptedBones = Math.min(stack.getCount(), bonesToUse);
+                stack.shrink(acceptedBones);
+                deliveredMaterials.put(Items.BONE_MEAL, Math.min(boneMealNeeded, boneMealDelivered + (acceptedBones * 3)));
+                return acceptedBones;
+            } else if (isGrassOrFlowerItem(stack)) {
+                int accepted = Math.min(stack.getCount(), stillNeeded);
+                stack.shrink(accepted);
+                deliveredMaterials.put(Items.BONE_MEAL, boneMealDelivered + accepted);
+                return accepted;
+            }
+        }
+
+        return 0;
     }
 
     public synchronized boolean hasAvailableItemFor(StructureTemplate.StructureBlockInfo blockInfo) {
-        Item item = blockInfo.state().getBlock().asItem();
+        Item item = net.zootycoon.schematic.SchematicScanner.getRequiredItemForState(blockInfo.state());
         if (item == Items.AIR) return true;
         return deliveredMaterials.getOrDefault(item, 0) > 0;
     }
 
     public synchronized boolean consumeItemFor(StructureTemplate.StructureBlockInfo blockInfo) {
-        Item item = blockInfo.state().getBlock().asItem();
+        Item item = net.zootycoon.schematic.SchematicScanner.getRequiredItemForState(blockInfo.state());
         if (item == Items.AIR) return true;
         int count = deliveredMaterials.getOrDefault(item, 0);
         if (count > 0) {
@@ -447,6 +523,137 @@ public class ConstructionSite {
 
     public synchronized int findNextActionableIndex(net.minecraft.server.level.ServerLevel level, boolean isCreative) {
         return findNextPlaceableIndex(level, isCreative);
+    }
+
+    public synchronized CompoundTag toNbt() {
+        CompoundTag tag = new CompoundTag();
+        tag.putUUID("SiteId", siteId);
+        tag.putUUID("OwnerUuid", ownerUuid);
+        tag.putLong("Origin", origin.asLong());
+        tag.putString("Dimension", dimension.location().toString());
+        tag.putString("SchematicId", schematic.getId());
+        tag.putString("Rotation", rotation.name());
+        if (builderUuid != null) {
+            tag.putUUID("BuilderUuid", builderUuid);
+        }
+        tag.putInt("PlacedBlocksCount", placedBlocksCount);
+        tag.putBoolean("Completed", completed);
+        tag.putInt("Cooldown", cooldown);
+        tag.putInt("BreakProgress", breakProgress);
+
+        tag.putBoolean("NeedsShovel", needsShovel);
+        tag.putBoolean("NeedsPickaxe", needsPickaxe);
+        tag.putBoolean("NeedsAxe", needsAxe);
+
+        if (!equippedShovel.isEmpty()) {
+            tag.putString("EquippedShovel", BuiltInRegistries.ITEM.getKey(equippedShovel.getItem()).toString());
+        }
+        if (!equippedPickaxe.isEmpty()) {
+            tag.putString("EquippedPickaxe", BuiltInRegistries.ITEM.getKey(equippedPickaxe.getItem()).toString());
+        }
+        if (!equippedAxe.isEmpty()) {
+            tag.putString("EquippedAxe", BuiltInRegistries.ITEM.getKey(equippedAxe.getItem()).toString());
+        }
+
+        CompoundTag deliveredTag = new CompoundTag();
+        for (var entry : deliveredMaterials.entrySet()) {
+            deliveredTag.putInt(BuiltInRegistries.ITEM.getKey(entry.getKey()).toString(), entry.getValue());
+        }
+        tag.put("DeliveredMaterials", deliveredTag);
+
+        tag.putLongArray("TapePositions", tapePositions.stream().mapToLong(BlockPos::asLong).toArray());
+
+        return tag;
+    }
+
+    public static ConstructionSite fromNbt(CompoundTag tag, MinecraftServer server) {
+        try {
+            UUID siteId = tag.getUUID("SiteId");
+            UUID ownerUuid = tag.getUUID("OwnerUuid");
+            BlockPos origin = BlockPos.of(tag.getLong("Origin"));
+            String dimStr = tag.getString("Dimension");
+            ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(dimStr));
+            String schemId = tag.getString("SchematicId");
+            ZooSchematic schem = net.zootycoon.schematic.ZooSchematicRegistry.get(schemId).orElse(null);
+            if (schem == null) {
+                net.zootycoon.schematic.ZooSchematicRegistry.loadCustomSchematics();
+                schem = net.zootycoon.schematic.ZooSchematicRegistry.get(schemId).orElse(null);
+            }
+            if (schem == null) {
+                return null;
+            }
+
+            Rotation rot;
+            try {
+                rot = Rotation.valueOf(tag.getString("Rotation"));
+            } catch (Exception e) {
+                rot = Rotation.NONE;
+            }
+
+            StructureTemplate template = net.zootycoon.schematic.ZooSchematicRegistry.loadTemplate(server, schem);
+            if (template == null) {
+                return null;
+            }
+
+            var scan = net.zootycoon.schematic.SchematicScanner.scan(template, rot);
+            ConstructionSite site = new ConstructionSite(
+                    siteId, ownerUuid, origin, dimension, schem, scan.requiredMaterials(), scan.sortedBlocksToPlace()
+            );
+            site.setRotation(rot);
+            if (tag.hasUUID("BuilderUuid")) {
+                site.setBuilderUuid(tag.getUUID("BuilderUuid"));
+            }
+            site.setCooldown(tag.getInt("Cooldown"));
+            site.breakProgress = tag.getInt("BreakProgress");
+            site.completed = tag.getBoolean("Completed");
+
+            site.needsShovel = tag.getBoolean("NeedsShovel");
+            site.needsPickaxe = tag.getBoolean("NeedsPickaxe");
+            site.needsAxe = tag.getBoolean("NeedsAxe");
+
+            if (tag.contains("EquippedShovel")) {
+                Item item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(tag.getString("EquippedShovel")));
+                if (item != Items.AIR) site.setEquippedShovel(new ItemStack(item));
+            }
+            if (tag.contains("EquippedPickaxe")) {
+                Item item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(tag.getString("EquippedPickaxe")));
+                if (item != Items.AIR) site.setEquippedPickaxe(new ItemStack(item));
+            }
+            if (tag.contains("EquippedAxe")) {
+                Item item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(tag.getString("EquippedAxe")));
+                if (item != Items.AIR) site.setEquippedAxe(new ItemStack(item));
+            }
+
+            CompoundTag delTag = tag.getCompound("DeliveredMaterials");
+            for (String key : delTag.getAllKeys()) {
+                try {
+                    Item item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(key));
+                    if (item != null && item != Items.AIR) {
+                        site.deliveredMaterials.put(item, delTag.getInt(key));
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            if (tag.contains("TapePositions")) {
+                long[] tapes = tag.getLongArray("TapePositions");
+                Set<BlockPos> tape = new HashSet<>();
+                for (long l : tapes) {
+                    tape.add(BlockPos.of(l));
+                }
+                site.addTapePositions(tape);
+            }
+
+            // Sync with actual world blocks if level is loaded
+            net.minecraft.server.level.ServerLevel sLevel = server.getLevel(dimension);
+            if (sLevel != null) {
+                site.scanObstructions(sLevel);
+            }
+
+            return site;
+        } catch (Exception e) {
+            net.zootycoon.ZooTycoonMod.LOGGER.error("Failed to deserialize ConstructionSite from NBT", e);
+            return null;
+        }
     }
 }
 

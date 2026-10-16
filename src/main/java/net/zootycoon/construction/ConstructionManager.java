@@ -10,7 +10,11 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.DoubleTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtAccounter;
+import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -31,6 +35,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.phys.Vec3;
 import net.zootycoon.ZooTycoonMod;
 import net.zootycoon.animal.ZooAnimalHungerManager;
@@ -42,14 +47,81 @@ import net.zootycoon.schematic.ZooSchematic;
 import net.zootycoon.schematic.ZooSchematicRegistry;
 import net.zootycoon.util.ZooTranslations;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ConstructionManager {
     private static final Map<UUID, ConstructionSite> ACTIVE_SITES = new ConcurrentHashMap<>();
+    private static MinecraftServer currentServer = null;
+    private static boolean isLoaded = false;
 
-    public static void reset() {
+    public static boolean isLoaded() {
+        return isLoaded;
+    }
+
+    private static Path getSavePath(MinecraftServer server) {
+        return server.getWorldPath(LevelResource.ROOT).resolve("zoo_construction.dat");
+    }
+
+    public static synchronized void reset() {
         ACTIVE_SITES.clear();
+        currentServer = null;
+        isLoaded = false;
+    }
+
+    public static synchronized void loadFromFile(MinecraftServer server) {
+        if (server == null) return;
+        currentServer = server;
+        Path path = getSavePath(server);
+        if (!Files.exists(path)) {
+            isLoaded = true;
+            return;
+        }
+
+        try {
+            CompoundTag root = NbtIo.readCompressed(path, NbtAccounter.unlimitedHeap());
+            ListTag list = root.getList("sites", Tag.TAG_COMPOUND);
+            ACTIVE_SITES.clear();
+            for (int i = 0; i < list.size(); i++) {
+                CompoundTag siteTag = list.getCompound(i);
+                ConstructionSite site = ConstructionSite.fromNbt(siteTag, server);
+                if (site != null && !site.isCompleted()) {
+                    ACTIVE_SITES.put(site.getSiteId(), site);
+                }
+            }
+            isLoaded = true;
+            ZooTycoonMod.LOGGER.info("Loaded {} active construction sites from disk.", ACTIVE_SITES.size());
+        } catch (Exception e) {
+            ZooTycoonMod.LOGGER.error("Failed to load active construction sites from disk", e);
+            isLoaded = true;
+        }
+    }
+
+    public static synchronized void saveToFile(MinecraftServer server) {
+        if (server == null) {
+            if (currentServer != null) {
+                server = currentServer;
+            } else {
+                return;
+            }
+        }
+        Path path = getSavePath(server);
+        try {
+            CompoundTag root = new CompoundTag();
+            ListTag list = new ListTag();
+            for (ConstructionSite site : ACTIVE_SITES.values()) {
+                if (!site.isCompleted()) {
+                    list.add(site.toNbt());
+                }
+            }
+            root.put("sites", list);
+            NbtIo.writeCompressed(root, path);
+        } catch (Exception e) {
+            ZooTycoonMod.LOGGER.error("Failed to save active construction sites to disk", e);
+        }
     }
 
     public static void initServerEvents() {
@@ -270,6 +342,7 @@ public class ConstructionManager {
         }
 
         ACTIVE_SITES.put(siteId, site);
+        saveToFile(level.getServer());
         level.playSound(null, origin, SoundEvents.VILLAGER_WORK_MASON, SoundSource.BLOCKS, 1.0f, 1.0f);
         ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.construction", "zootycoon.construction.project_started", 1, schematic.getName(), builderName, site.getTotalBlocks());
 
@@ -300,6 +373,37 @@ public class ConstructionManager {
 
             Entity ent = site.getBuilderUuid() != null ? level.getEntity(site.getBuilderUuid()) : null;
             net.zootycoon.entity.ZooBuilderEntity builder = (ent instanceof net.zootycoon.entity.ZooBuilderEntity b) ? b : null;
+            if (builder == null && level.isLoaded(site.getOrigin())) {
+                var nearbyBuilders = level.getEntitiesOfClass(
+                        net.zootycoon.entity.ZooBuilderEntity.class,
+                        net.minecraft.world.phys.AABB.of(site.getBounds()).inflate(16.0),
+                        b -> site.getSiteId().equals(b.getSiteId())
+                );
+                if (!nearbyBuilders.isEmpty()) {
+                    builder = nearbyBuilders.get(0);
+                    site.setBuilderUuid(builder.getUUID());
+                } else if (level.getGameTime() % 60 == 0) {
+                    BlockPos entrance = new BlockPos(site.getBounds().minX() + site.getBounds().getXSpan() / 2, site.getOrigin().getY(), site.getBounds().minZ() - 1);
+                    for (int dy = 3; dy >= -8; dy--) {
+                        BlockPos check = entrance.offset(0, dy, 0);
+                        if (level.getBlockState(check).isSolid()) {
+                            entrance = check.above();
+                            break;
+                        }
+                    }
+                    builder = net.zootycoon.entity.ZooEntities.BUILDER.create(level);
+                    if (builder != null) {
+                        builder.setPos(entrance.getX() + 0.5, entrance.getY(), entrance.getZ() + 0.5);
+                        builder.setSiteId(site.getSiteId());
+                        builder.setPersistenceRequired();
+                        builder.addTag("zootycoon_builder");
+                        builder.addTag(site.getSiteId().toString());
+                        level.addFreshEntity(builder);
+                        site.setBuilderUuid(builder.getUUID());
+                        builder.updateNeedsIndicator();
+                    }
+                }
+            }
 
             // ==========================================
             // PHASE 1: LAND CLEARING (Pembersihan Lahan)
@@ -410,6 +514,11 @@ public class ConstructionManager {
 
         for (UUID id : toRemove) {
             ACTIVE_SITES.remove(id);
+        }
+        if (!toRemove.isEmpty()) {
+            saveToFile(level.getServer());
+        } else if (level.getGameTime() % 200 == 0 && !ACTIVE_SITES.isEmpty()) {
+            saveToFile(level.getServer());
         }
     }
 
