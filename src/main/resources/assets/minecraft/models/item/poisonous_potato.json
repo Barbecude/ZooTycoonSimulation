@@ -1,0 +1,26 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "minecraft:item/poisonous_potato"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "custom_model_data": 30001
+      },
+      "model": "physical_vehicles:item/car_key"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 30002
+      },
+      "model": "physical_vehicles:item/pack"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 30003
+      },
+      "model": "physical_vehicles:item/torque_wrench"
+    }
+  ]
+}

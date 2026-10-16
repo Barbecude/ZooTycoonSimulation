@@ -1,0 +1,78 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "cases": [
+      {
+        "when": [
+          "body"
+        ],
+        "model": {
+          "type": "composite",
+          "models": [
+            {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:vehicle/buhanka/body"
+            },
+            {
+              "type": "select",
+              "property": "custom_model_data",
+              "index": 1,
+              "fallback": {
+                "type": "empty"
+              },
+              "cases": [
+                {
+                  "when": "parking_lights",
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:vehicle/buhanka/parking_lights"
+                  }
+                },
+                {
+                  "when": "headlights",
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:vehicle/buhanka/headlights"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "when": [
+          "wheel_left"
+        ],
+        "model": {
+          "type": "minecraft:model",
+          "model": "physical_vehicles:vehicle/buhanka/wheel_left"
+        }
+      },
+      {
+        "when": [
+          "wheel_right"
+        ],
+        "model": {
+          "type": "minecraft:model",
+          "model": "physical_vehicles:vehicle/buhanka/wheel_right"
+        }
+      },
+      {
+        "when": [
+          "steering_wheel"
+        ],
+        "model": {
+          "type": "minecraft:model",
+          "model": "physical_vehicles:vehicle/buhanka/steering_wheel"
+        }
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "physical_vehicles:vehicle/buhanka/item"
+    }
+  }
+}

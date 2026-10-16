@@ -1,0 +1,19 @@
+{
+    "parent": "physical_vehicles:block/road/model/texture_and_scale",
+    "textures": {
+        "particle": "#texture"
+    },
+    "elements": [
+        {
+            "from": [ 0, 0, 0 ],
+            "to": [ 16, 11, 16 ],
+            "faces": {
+                "up":    { "uv": [ 0, 0, 16, 16 ], "texture": "#texture", "tintindex": 0, "cullface": "up" },
+                "north": { "uv": [ 0, 5, 16, 16 ], "texture": "#texture", "tintindex": 0, "cullface": "north" },
+                "south": { "uv": [ 0, 5, 16, 16 ], "texture": "#texture", "tintindex": 0, "cullface": "south" },
+                "west":  { "uv": [ 0, 5, 16, 16 ], "texture": "#texture", "tintindex": 0, "cullface": "west" },
+                "east":  { "uv": [ 0, 5, 16, 16 ], "texture": "#texture", "tintindex": 0, "cullface": "east" }
+            }
+        }
+    ]
+}

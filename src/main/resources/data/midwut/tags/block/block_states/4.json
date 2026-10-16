@@ -1,0 +1,8 @@
+{
+    "values": [
+        "#midwut:block_states/part",
+        "#midwut:block_states/shape",
+        "#midwut:block_states/extended",
+        "#midwut:block_states/short"
+    ]
+}

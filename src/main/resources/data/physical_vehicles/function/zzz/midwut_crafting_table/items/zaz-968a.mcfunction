@@ -1,0 +1,1 @@
+return run clear @s *[minecraft:custom_data~{midwut.gui_item:true,physical_vehicles.zaz-968a:true}]

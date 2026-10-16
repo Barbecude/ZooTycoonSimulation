@@ -1,0 +1,2 @@
+execute if entity @s[tag=phys_veh.debug.particles] run function physical_vehicles:zzz/vehicle/collision/vertices/particles with storage midwut:main macros
+function physical_vehicles:zzz/vehicle/collision/vertices/collision_choice

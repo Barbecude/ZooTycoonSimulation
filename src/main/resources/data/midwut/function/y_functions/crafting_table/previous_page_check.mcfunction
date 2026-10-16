@@ -1,0 +1,1 @@
+return run data modify storage midwut:main midwut_crafting_table.previous_page set from storage midwut:main midwut_crafting_table.page

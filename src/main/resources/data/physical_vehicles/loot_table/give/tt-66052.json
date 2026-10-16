@@ -1,0 +1,70 @@
+{
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:dolphin_spawn_egg",
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "minecraft:entity_data": {
+                  "data": {
+                    "phys_veh": {
+                      "minecraft:custom_name": {
+                        "translate": "phys_veh.tt-66052",
+                        "fallback": "NEFAZ-66052 Tanker Truck"
+                      },
+                      "minecraft:lore": [
+                        {
+                          "translate": "phys_veh.model_by",
+                          "italic": false,
+                          "color": "gray",
+                          "with": [
+                            {
+                              "text": "Antoha256M",
+                              "color": "#FFAA00"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "Tags": [
+                    "phys_veh.spawn",
+                    "phys_veh.tt-66052"
+                  ],
+                  "id": "minecraft:pig",
+                  "Silent": true,
+                  "NoAI": true,
+                  "Invulnerable": true,
+                  "DeathLootTable": ""
+                },
+                "minecraft:lore": [
+                  {
+                    "translate": "phys_veh.model_by",
+                    "italic": false,
+                    "color": "gray",
+                    "with": [
+                      {
+                        "text": "Antoha256M",
+                        "color": "#FFAA00"
+                      }
+                    ]
+                  }
+                ],
+                "minecraft:custom_model_data": 20006,
+                "minecraft:custom_name": {
+                  "translate": "phys_veh.tt-66052",
+                  "fallback": "NEFAZ-66052 Tanker Truck"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

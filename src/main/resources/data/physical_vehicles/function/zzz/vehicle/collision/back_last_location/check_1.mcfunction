@@ -1,0 +1,1 @@
+$return run execute positioned ~$(x_s) ~$(y_s) ~$(z_s) run function midwut:help/check/air_only_collision

@@ -1,0 +1,21 @@
+{
+  "condition": "minecraft:any_of",
+  "terms": [
+    {
+      "condition": "minecraft:time_check",
+      "period": 24000,
+      "value": {
+        "max": 23460,
+        "min": 23999
+      }
+    },
+    {
+      "condition": "minecraft:time_check",
+      "period": 24000,
+      "value": {
+        "max": 0,
+        "min": 599
+      }
+    }
+  ]
+}

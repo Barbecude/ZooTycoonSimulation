@@ -1,0 +1,11 @@
+﻿{
+  "midwut.datapack_name": "MIDWUT",
+  "item.midwut.crafting_table": "MIDWUT станция крафтов",
+  "item.midwut.previous_tab": "Предыдущая вкладка",
+  "item.midwut.previous_page": "Предыдущая страница",
+  "item.midwut.next_page": "Следующая страница",
+  "midwut.craft.need": "Необходимые ингридиенты:",
+  "midwut.craft.no_need": "Ресурсы не требуются.",
+  "midwut.data_compilation": "Одноразовая компиляция данных, мир §nзаморожен§r на несколько секунд, пожалуйста, подождите.",
+  "midwut.data_compilation_end": "Компиляция завершена, мир §nразморожен§r."
+}

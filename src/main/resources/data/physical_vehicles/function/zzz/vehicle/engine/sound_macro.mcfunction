@@ -1,0 +1,1 @@
+$playsound $(sound_id) ambient @a[distance=..256] ~ ~ ~ $(volume) $(pitch)

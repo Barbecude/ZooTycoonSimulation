@@ -1,0 +1,1 @@
+$execute store result score #OUT:arctan2 main_score run data get storage midwut:trigonometry arctan[$(in)]

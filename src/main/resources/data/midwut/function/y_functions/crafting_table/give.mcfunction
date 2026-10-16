@@ -1,0 +1,1 @@
+give @s minecraft:dolphin_spawn_egg[minecraft:custom_data={midwut.crafting_table.spawn:true},minecraft:entity_data={id:"minecraft:marker",Tags:["midwut.crafting_table.spawn"]},minecraft:custom_name={"translate":"item.midwut.crafting_table","fallback":"MIDWUT Crafting Station"}]

@@ -1,0 +1,11 @@
+
+execute if block 2 0 0 minecraft:dead_tube_coral_wall_fan run return run data modify storage midwut:main output_block.block.Name set value "minecraft:dead_tube_coral_wall_fan"
+execute if block 2 0 0 minecraft:dead_brain_coral_wall_fan run return run data modify storage midwut:main output_block.block.Name set value "minecraft:dead_brain_coral_wall_fan"
+execute if block 2 0 0 minecraft:dead_bubble_coral_wall_fan run return run data modify storage midwut:main output_block.block.Name set value "minecraft:dead_bubble_coral_wall_fan"
+execute if block 2 0 0 minecraft:dead_fire_coral_wall_fan run return run data modify storage midwut:main output_block.block.Name set value "minecraft:dead_fire_coral_wall_fan"
+execute if block 2 0 0 minecraft:dead_horn_coral_wall_fan run return run data modify storage midwut:main output_block.block.Name set value "minecraft:dead_horn_coral_wall_fan"
+execute if block 2 0 0 minecraft:tube_coral_wall_fan run return run data modify storage midwut:main output_block.block.Name set value "minecraft:tube_coral_wall_fan"
+execute if block 2 0 0 minecraft:brain_coral_wall_fan run return run data modify storage midwut:main output_block.block.Name set value "minecraft:brain_coral_wall_fan"
+execute if block 2 0 0 minecraft:bubble_coral_wall_fan run return run data modify storage midwut:main output_block.block.Name set value "minecraft:bubble_coral_wall_fan"
+execute if block 2 0 0 minecraft:fire_coral_wall_fan run return run data modify storage midwut:main output_block.block.Name set value "minecraft:fire_coral_wall_fan"
+execute if block 2 0 0 minecraft:horn_coral_wall_fan run return run data modify storage midwut:main output_block.block.Name set value "minecraft:horn_coral_wall_fan"

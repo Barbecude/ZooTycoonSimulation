@@ -1,0 +1,1 @@
+$damage @s $(damage) physical_vehicles:shell by @a[limit=1,predicate=midwut:check/score_ranges/midwut.player_id]

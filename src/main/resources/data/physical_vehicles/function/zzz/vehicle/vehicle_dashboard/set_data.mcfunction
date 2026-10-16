@@ -1,0 +1,3 @@
+execute if data storage midwut:main data.phys_veh_transfer run function physical_vehicles:zzz/vehicle/vehicle_dashboard/transfer_set with storage midwut:main data
+execute if data storage midwut:main data.phys_veh_locking_center_differential run function physical_vehicles:zzz/vehicle/vehicle_dashboard/locking_center_differential_set with storage midwut:main data
+execute if data storage midwut:main data.phys_veh_locking_inter_wheel_differential run function physical_vehicles:zzz/vehicle/vehicle_dashboard/locking_inter_wheel_differential_set with storage midwut:main data

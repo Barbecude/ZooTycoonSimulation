@@ -1,0 +1,2 @@
+execute if score #vp.x main_score matches 1.. run return run function physical_vehicles:zzz/vehicle/collision/dynamic/normal_match/nx
+function physical_vehicles:zzz/vehicle/collision/dynamic/normal_match/px

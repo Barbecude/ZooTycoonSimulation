@@ -1,0 +1,15 @@
+{
+    "values": [
+        "#midwut:block_states/snowy",
+        "#midwut:block_states/dusted",
+        "#midwut:block_states/unstable",
+        "#midwut:block_states/moisture",
+        "#midwut:block_states/layers",
+        "#midwut:block_states/has_record",
+        "#midwut:block_states/bites",
+        "#midwut:block_states/drag",
+        "#midwut:block_states/charges",
+        "#midwut:block_states/bloom",
+        "#midwut:block_states/tip"
+    ]
+}

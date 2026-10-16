@@ -24,6 +24,15 @@ public class ZooHunterModel extends HumanoidModel<ZooHunterEntity> {
 
     @Override
     public void setupAnim(ZooHunterEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+        if (entity.isArcher()) {
+            if (entity.isUsingItem() || entity.isAggressive()) {
+                this.rightArmPose = HumanoidModel.ArmPose.BOW_AND_ARROW;
+            } else {
+                this.rightArmPose = HumanoidModel.ArmPose.ITEM;
+            }
+        } else {
+            this.rightArmPose = HumanoidModel.ArmPose.EMPTY;
+        }
         super.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
         if (entity.isVehicle()) {
             // Raise both arms overhead when carrying a kidnapped zoo animal

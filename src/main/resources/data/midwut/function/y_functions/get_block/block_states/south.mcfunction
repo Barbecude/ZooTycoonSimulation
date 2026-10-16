@@ -1,0 +1,7 @@
+execute if block 2 0 0 #midwut:block_states/south[south=false] run return run data modify storage midwut:main output_block.block.Properties.south set value "false"
+execute if block 2 0 0 #midwut:block_states/south[south=low] run return run data modify storage midwut:main output_block.block.Properties.south set value "low"
+execute if block 2 0 0 #midwut:block_states/south[south=none] run return run data modify storage midwut:main output_block.block.Properties.south set value "none"
+execute if block 2 0 0 #midwut:block_states/south[south=side] run return run data modify storage midwut:main output_block.block.Properties.south set value "side"
+execute if block 2 0 0 #midwut:block_states/south[south=tall] run return run data modify storage midwut:main output_block.block.Properties.south set value "tall"
+execute if block 2 0 0 #midwut:block_states/south[south=true] run return run data modify storage midwut:main output_block.block.Properties.south set value "true"
+execute if block 2 0 0 #midwut:block_states/south[south=up] run return run data modify storage midwut:main output_block.block.Properties.south set value "up"

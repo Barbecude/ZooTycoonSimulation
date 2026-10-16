@@ -1,5 +1,6 @@
 package net.zootycoon.animal;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
@@ -161,6 +162,16 @@ public class AnimalDietRegistry {
         Item item = stack.getItem();
         List<Item> accepted = getAcceptedFoods(entity);
         return accepted.contains(item);
+    }
+
+    public static boolean isAnyFood(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        if (stack.has(DataComponents.FOOD)) return true;
+        Item item = stack.getItem();
+        for (AnimalDiet d : DIET_REGISTRY.values()) {
+            if (d.acceptedFoods.contains(item)) return true;
+        }
+        return isAnyTroughFood(stack);
     }
 
     public static boolean isAnyTroughFood(ItemStack stack) {

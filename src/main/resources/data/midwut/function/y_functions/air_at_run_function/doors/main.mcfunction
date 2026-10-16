@@ -1,0 +1,2 @@
+execute if block ~ ~ ~ #minecraft:doors[open=true] run return run function midwut:y_functions/air_at_run_function/doors/open_true
+return run function midwut:y_functions/air_at_run_function/doors/open_false

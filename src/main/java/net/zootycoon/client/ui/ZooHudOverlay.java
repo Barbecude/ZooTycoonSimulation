@@ -97,6 +97,12 @@ public class ZooHudOverlay {
             return;
         }
 
+        // 1b. Studio Mode HUD
+        if (ZooTycoonClient.inStudio) {
+            renderStudioHud(graphics, mc.font);
+            return;
+        }
+
         // 2. Claim Selection Mode
         boolean holdingTool = player.getMainHandItem().is(Items.STICK)
                 || player.getOffhandItem().is(Items.STICK);
@@ -307,5 +313,31 @@ public class ZooHudOverlay {
             graphics.drawString(font, ZooTranslations.component("zootycoon.hud.claim.ctrl_move"), x + 8, y + 112, 0xFFFFFFFF, true);
             graphics.drawString(font, ZooTranslations.component("zootycoon.hud.ctrl_cancel"), x + 8, y + 124, 0xFFCCCCCC, true);
         }
+    }
+
+    private static void renderStudioHud(GuiGraphics graphics, Font font) {
+        int x = 12;
+        int y = 12;
+        int width = 240;
+        int height = 108;
+
+        graphics.fill(x, y, x + width, y + height, 0xD010141A);
+        graphics.fill(x, y, x + width, y + 1, 0xFF2A2E37);
+        graphics.fill(x, y + height - 1, x + width, y + height, 0xFF2A2E37);
+        graphics.fill(x, y + 1, x + 1, y + height, 0xFF2A2E37);
+        graphics.fill(x + width - 1, y, x + width, y + height, 0xFF2A2E37);
+
+        String catName = "enclosures".equalsIgnoreCase(ZooTycoonClient.studioCategory) ? "Kandang Satwa" : "Fasilitas Pengunjung";
+        graphics.drawString(font, ZooTranslations.component("zootycoon.hud.studio.title"), x + 8, y + 8, 0xFF00E5FF, true);
+        graphics.drawString(font, ZooTranslations.component("zootycoon.hud.studio.category", catName), x + 8, y + 20, 0xFFFFFFFF, true);
+        graphics.drawString(font, ZooTranslations.component("zootycoon.hud.studio.plot_info"), x + 8, y + 32, 0xFFAAAAAA, true);
+
+        graphics.fill(x + 8, y + 43, x + width - 8, y + 44, 0xFF2A2E37);
+
+        graphics.drawString(font, ZooTranslations.component("zootycoon.hud.controls.title"), x + 8, y + 47, 0xFFFFD700, true);
+        graphics.drawString(font, ZooTranslations.component("zootycoon.hud.studio.ctrl_stick"), x + 8, y + 59, 0xFF55FF55, true);
+        graphics.drawString(font, ZooTranslations.component("zootycoon.hud.studio.ctrl_save_enc"), x + 8, y + 71, 0xFFDDDDDD, true);
+        graphics.drawString(font, ZooTranslations.component("zootycoon.hud.studio.ctrl_save_ess"), x + 8, y + 83, 0xFFDDDDDD, true);
+        graphics.drawString(font, ZooTranslations.component("zootycoon.hud.studio.ctrl_exit"), x + 8, y + 95, 0xFFFF5555, true);
     }
 }

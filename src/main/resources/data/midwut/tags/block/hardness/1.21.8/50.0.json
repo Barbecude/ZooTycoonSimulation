@@ -1,0 +1,10 @@
+{
+    "values": [
+        "minecraft:obsidian",
+        "minecraft:netherite_block",
+        "minecraft:crying_obsidian",
+        "minecraft:respawn_anchor",
+        "minecraft:trial_spawner",
+        "minecraft:vault"
+    ]
+}

@@ -1,0 +1,37 @@
+{
+    "pools": [
+        {
+            "rolls": 1,
+            "entries": [
+                {
+                    "type": "minecraft:item",
+                    "name": "minecraft:dolphin_spawn_egg",
+                    "functions": [
+                        {
+                            "function": "minecraft:set_components",
+                            "components": {
+                                "minecraft:custom_data": {
+                                    "midwut.crafting_table.spawn": true
+                                },
+                                "minecraft:entity_data": {
+                                    "id": "minecraft:marker",
+                                    "Tags": [
+                                        "midwut.crafting_table.spawn"
+                                    ]
+                                },
+                                "minecraft:custom_name": {
+                                    "translate": "item.midwut.crafting_table",
+                                    "fallback": "MIDWUT Crafting Station"
+                                }
+                            }
+                        },
+                        {
+                            "function": "minecraft:copy_name",
+                            "source": "this"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

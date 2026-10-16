@@ -1,0 +1,1 @@
+execute if block ~ ~ ~ minecraft:sandstone_slab[type=bottom] run setblock ~ ~-1 ~ minecraft:sandstone_slab[type=double]

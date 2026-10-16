@@ -1,0 +1,78 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "cases": [
+      {
+        "when": [
+          "body"
+        ],
+        "model": {
+          "type": "composite",
+          "models": [
+            {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:vehicle/zil-130/body"
+            },
+            {
+              "type": "select",
+              "property": "custom_model_data",
+              "index": 1,
+              "fallback": {
+                "type": "empty"
+              },
+              "cases": [
+                {
+                  "when": "parking_lights",
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:vehicle/zil-130/parking_lights"
+                  }
+                },
+                {
+                  "when": "headlights",
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:vehicle/zil-130/headlights"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "when": [
+          "wheel_front"
+        ],
+        "model": {
+          "type": "minecraft:model",
+          "model": "physical_vehicles:vehicle/zil-130/wheel_front"
+        }
+      },
+      {
+        "when": [
+          "wheel_rear"
+        ],
+        "model": {
+          "type": "minecraft:model",
+          "model": "physical_vehicles:vehicle/zil-130/wheel_rear"
+        }
+      },
+      {
+        "when": [
+          "steering_wheel"
+        ],
+        "model": {
+          "type": "minecraft:model",
+          "model": "physical_vehicles:vehicle/zil-130/steering_wheel"
+        }
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "physical_vehicles:vehicle/zil-130/item"
+    }
+  }
+}

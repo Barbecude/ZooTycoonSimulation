@@ -1,0 +1,6 @@
+{
+    "parent": "physical_vehicles:block/road/model/3",
+    "textures": {
+        "texture": "minecraft:block/gray_concrete_powder"
+    }
+}

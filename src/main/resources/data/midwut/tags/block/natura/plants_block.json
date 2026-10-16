@@ -1,0 +1,24 @@
+{
+    "replace": false,
+    "values": [
+        "#minecraft:coral_blocks",
+        "#midwut:natura/coral/dead/blocks",
+        "minecraft:chorus_flower",
+        "minecraft:chorus_plant",
+        "minecraft:cactus",
+        "minecraft:melon",
+        "minecraft:pumpkin",
+        "#midwut:natura/moss",
+        "minecraft:carved_pumpkin",
+        "minecraft:sculk_sensor",
+        "minecraft:jack_o_lantern",
+        "minecraft:mushroom_stem",
+        "minecraft:red_mushroom_block",
+        "minecraft:brown_mushroom_block",
+        "minecraft:nether_wart_block",
+        "minecraft:hay_block",
+        "minecraft:dried_kelp_block",
+        "minecraft:sponge",
+        "minecraft:wet_sponge"
+    ]
+}

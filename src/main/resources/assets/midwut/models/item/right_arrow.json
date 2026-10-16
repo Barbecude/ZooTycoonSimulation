@@ -1,0 +1,44 @@
+{
+    "credit": "Made with Blockbench by Antoha256M",
+    "textures": {
+        "layer0": "midwut:item/right_arrow",
+        "particle": "midwut:item/right_arrow"
+    },
+    "gui_light": "front",
+    "elements": [
+        {
+            "from": [0, 0, 8],
+            "to": [16, 16, 8],
+            "faces": {
+                "north": {"uv": [0, 0, 16, 16], "texture": "#layer0"}
+            }
+        }
+    ],
+    "display": {
+        "thirdperson_righthand": {
+            "scale": [0, 0, 0]
+        },
+        "thirdperson_lefthand": {
+            "scale": [0, 0, 0]
+        },
+        "firstperson_righthand": {
+            "scale": [0, 0, 0]
+        },
+        "firstperson_lefthand": {
+            "scale": [0, 0, 0]
+        },
+        "ground": {
+            "scale": [0, 0, 0]
+        },
+        "gui": {
+            "rotation": [0, 180, 0]
+        },
+        "head": {
+            "translation": [0, 0, -6.5],
+            "scale": [0.81, 0.81, 0.81]
+        },
+        "fixed": {
+            "scale": [0, 0, 0]
+        }
+    }
+}

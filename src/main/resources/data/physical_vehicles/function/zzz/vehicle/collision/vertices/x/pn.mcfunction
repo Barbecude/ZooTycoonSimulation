@@ -1,0 +1,2 @@
+execute if score #vp.x main_score matches 1.. run return run function physical_vehicles:zzz/vehicle/collision/vertices/x/p
+execute unless score #vp.x main_score matches 0 run function physical_vehicles:zzz/vehicle/collision/vertices/x/n

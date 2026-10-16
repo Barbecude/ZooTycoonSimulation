@@ -1,0 +1,1 @@
+execute as @e[type=#physical_vehicles:refers_to_vehicle/wheel,tag=physical_vehicle,tag=phys_veh.wheel,tag=phys_veh.selected_part,distance=..96] run function physical_vehicles:zzz/vehicle/at_parts/wheel/part

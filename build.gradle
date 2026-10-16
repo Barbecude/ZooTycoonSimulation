@@ -59,7 +59,7 @@ jar {
 }
 
 // Copy mod jar to Modrinth profile after build
-def modrinthModsPath = "C:\\Users\\chill\\AppData\\Roaming\\ModrinthApp\\profiles\\Fabric 1.21\\mods"
+def modrinthModsPath = "C:\\Users\\Zevaldo\\AppData\\Roaming\\ModrinthApp\\profiles\\Fresh & Smooth\\mods"
 
 tasks.register('copyToModrinth') {
     doLast {

@@ -1,0 +1,14 @@
+{
+    "values": [
+        "minecraft:allay",
+        "minecraft:bat",
+        "minecraft:bee",
+        "minecraft:ender_dragon",
+        "minecraft:ghast",
+        "minecraft:happy_ghast",
+        "minecraft:phantom",
+        "minecraft:shulker",
+        "minecraft:vex",
+        "minecraft:wither"
+    ]
+}

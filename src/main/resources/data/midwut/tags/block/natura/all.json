@@ -1,0 +1,12 @@
+{
+  "replace": false,
+  "values": [
+    "#minecraft:saplings",
+    "#minecraft:leaves",
+    "#minecraft:small_flowers",
+    "#midwut:natura/double_plants",
+    "#midwut:natura/plants_block",
+    "#midwut:natura/plants",
+    "#midwut:natura/water_plants"
+  ]
+}

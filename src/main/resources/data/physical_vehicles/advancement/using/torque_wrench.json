@@ -1,0 +1,19 @@
+{
+    "criteria": {
+        "car": {
+            "trigger": "minecraft:using_item",
+            "conditions": {
+                "item": {
+                    "predicates": {
+                        "minecraft:custom_data": {
+                            "phys_veh.torque_wrench": true
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "rewards": {
+        "function": "physical_vehicles:zzz/player/use_torque_wrench/main"
+    }
+}

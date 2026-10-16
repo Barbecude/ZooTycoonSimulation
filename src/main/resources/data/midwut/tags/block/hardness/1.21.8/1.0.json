@@ -1,0 +1,17 @@
+{
+    "values": [
+        "minecraft:carved_pumpkin",
+        "minecraft:jack_o_lantern",
+        "minecraft:packed_mud",
+        "minecraft:infested_cobblestone",
+        "minecraft:pumpkin",
+        "minecraft:melon",
+        "minecraft:shroomlight",
+        "#midwut:banners/default",
+        "#midwut:banners/wall",
+        "#minecraft:sword_instantly_mines",
+        "#minecraft:wart_blocks",
+        "#midwut:heads/all",
+        "#minecraft:all_signs"
+    ]
+}

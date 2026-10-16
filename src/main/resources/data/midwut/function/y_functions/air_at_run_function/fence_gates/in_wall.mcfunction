@@ -1,0 +1,3 @@
+execute unless block ~ ~ ~ #fence_gates[facing=east] unless block ~ ~ ~ #fence_gates[facing=west] positioned ~ ~-0.0001 ~0.375 if entity @s[dx=0] positioned ~ ~-0.1875 ~-0.75 if entity @s[dx=0] run return 0
+execute unless block ~ ~ ~ #fence_gates[facing=north] unless block ~ ~ ~ #fence_gates[facing=south] positioned ~0.375 ~-0.0001 ~ if entity @s[dx=0] positioned ~-0.75 ~-0.1875 ~ if entity @s[dx=0] run return 0
+return 1

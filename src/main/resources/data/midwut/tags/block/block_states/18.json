@@ -1,0 +1,8 @@
+{
+    "values": [
+        "#midwut:block_states/vertical_direction",
+        "#midwut:block_states/berries",
+        "#midwut:block_states/flower_amount",
+        "#midwut:block_states/segment_amount"
+    ]
+}

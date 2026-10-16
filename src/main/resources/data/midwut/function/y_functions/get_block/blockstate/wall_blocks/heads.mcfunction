@@ -1,0 +1,7 @@
+execute if block 2 0 0 minecraft:skeleton_wall_skull run return run data modify storage midwut:main output_block.block.Name set value "minecraft:skeleton_wall_skull"
+execute if block 2 0 0 minecraft:wither_skeleton_wall_skull run return run data modify storage midwut:main output_block.block.Name set value "minecraft:wither_skeleton_wall_skull"
+execute if block 2 0 0 minecraft:zombie_wall_head run return run data modify storage midwut:main output_block.block.Name set value "minecraft:zombie_wall_head"
+execute if block 2 0 0 minecraft:player_wall_head run return run data modify storage midwut:main output_block.block.Name set value "minecraft:player_wall_head"
+execute if block 2 0 0 minecraft:creeper_wall_head run return run data modify storage midwut:main output_block.block.Name set value "minecraft:creeper_wall_head"
+execute if block 2 0 0 minecraft:dragon_wall_head run return run data modify storage midwut:main output_block.block.Name set value "minecraft:dragon_wall_head"
+execute if block 2 0 0 minecraft:piglin_wall_head run return run data modify storage midwut:main output_block.block.Name set value "minecraft:piglin_wall_head"

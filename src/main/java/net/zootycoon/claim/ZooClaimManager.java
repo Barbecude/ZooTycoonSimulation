@@ -45,12 +45,20 @@ public class ZooClaimManager {
     }
 
     public static synchronized ZooClaimManager get(ServerLevel level) {
-        if (instance == null) {
+        if (instance == null || instance.server != level.getServer()) {
             instance = new ZooClaimManager();
             instance.server = level.getServer();
             instance.loadFromFile();
         }
         return instance;
+    }
+
+    public static synchronized void reset() {
+        if (instance != null) {
+            instance.claims.clear();
+            instance.server = null;
+            instance = null;
+        }
     }
 
     private Path getSavePath() {

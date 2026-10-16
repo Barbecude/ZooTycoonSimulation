@@ -1,0 +1,108 @@
+{
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:dolphin_spawn_egg",
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "minecraft:entity_data": {
+                  "data": {
+                    "phys_veh": {
+                      "minecraft:custom_name": {
+                        "translate": "phys_veh.ecto-1a",
+                        "fallback": "Ecto-1A"
+                      },
+                      "minecraft:lore": [
+                        {
+                          "translate": "phys_veh.model_by",
+                          "italic": false,
+                          "color": "gray",
+                          "with": [
+                            [
+                              "",
+                              {
+                                "text": "WYLD",
+                                "color": "red"
+                              },
+                              ", ",
+                              {
+                                "text": "B2",
+                                "color": "#ffa500"
+                              }
+                            ]
+                          ]
+                        },
+                        {
+                          "translate": "phys_veh.from_mod",
+                          "italic": false,
+                          "color": "gray",
+                          "with": [
+                            {
+                              "text": "GhostBusters",
+                              "color": "#E42D19"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "Tags": [
+                    "phys_veh.spawn",
+                    "phys_veh.ecto-1a"
+                  ],
+                  "id": "minecraft:pig",
+                  "Silent": true,
+                  "NoAI": true,
+                  "Invulnerable": true,
+                  "DeathLootTable": ""
+                },
+                "minecraft:lore": [
+                  {
+                    "translate": "phys_veh.model_by",
+                    "italic": false,
+                    "color": "gray",
+                    "with": [
+                      [
+                        "",
+                        {
+                          "text": "WYLD",
+                          "color": "red"
+                        },
+                        ", ",
+                        {
+                          "text": "B2",
+                          "color": "#ffa500"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "translate": "phys_veh.from_mod",
+                    "italic": false,
+                    "color": "gray",
+                    "with": [
+                      {
+                        "text": "GhostBusters",
+                        "color": "#E42D19"
+                      }
+                    ]
+                  }
+                ],
+                "minecraft:custom_model_data": 20003,
+                "minecraft:custom_name": {
+                  "translate": "phys_veh.ecto-1a",
+                  "fallback": "Ecto-1A"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

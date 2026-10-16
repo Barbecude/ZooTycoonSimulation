@@ -1,0 +1,2 @@
+execute unless score #input2.use main_score matches 0 run return run execute if score @s phys_veh.input2.use matches ..99 run scoreboard players operation @s phys_veh.input2.use += #pedal_deltatime main_score
+execute if score @s phys_veh.input2.use matches 1.. run scoreboard players operation @s phys_veh.input2.use -= #pedal_deltatime main_score

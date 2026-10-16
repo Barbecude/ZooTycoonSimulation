@@ -1,0 +1,1 @@
+data modify storage midwut:main Tabs append value {id:"minecraft:poisonous_potato",Slot:-1b,components:{"minecraft:custom_name":{"translate":"phys_veh.datapack_name","fallback":"Physical Vehicles"},"minecraft:custom_data":{midwut.gui_item:true,kill:true,physical_vehicles.main_tab:true},"!minecraft:consumable":{}}}

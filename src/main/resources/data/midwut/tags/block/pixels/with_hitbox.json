@@ -1,0 +1,9 @@
+{
+    "values": [
+        "minecraft:lever",
+        "#minecraft:buttons",
+        "minecraft:tripwire_hook",
+        "minecraft:tripwire",
+        "minecraft:dragon_egg"
+    ]
+}

@@ -1,0 +1,21 @@
+{
+    "values": [
+        "minecraft:sandstone",
+        "minecraft:chiseled_sandstone",
+        "minecraft:cut_sandstone",
+        "minecraft:note_block",
+        "minecraft:sandstone_stairs",
+        "minecraft:quartz_block",
+        "minecraft:chiseled_quartz_block",
+        "minecraft:quartz_pillar",
+        "minecraft:quartz_stairs",
+        "minecraft:red_sandstone",
+        "minecraft:chiseled_red_sandstone",
+        "minecraft:cut_red_sandstone",
+        "minecraft:red_sandstone_stairs",
+        "minecraft:red_sandstone_wall",
+        "minecraft:sandstone_wall",
+        "minecraft:quartz_bricks",
+        "#minecraft:occludes_vibration_signals"
+    ]
+}

@@ -1,0 +1,4 @@
+execute if block 2 0 0 #midwut:block_states/copper_golem_pose[copper_golem_pose=running] run return run data modify storage midwut:main output_block.block.Properties.copper_golem_pose set value "running"
+execute if block 2 0 0 #midwut:block_states/copper_golem_pose[copper_golem_pose=sitting] run return run data modify storage midwut:main output_block.block.Properties.copper_golem_pose set value "sitting"
+execute if block 2 0 0 #midwut:block_states/copper_golem_pose[copper_golem_pose=standing] run return run data modify storage midwut:main output_block.block.Properties.copper_golem_pose set value "standing"
+execute if block 2 0 0 #midwut:block_states/copper_golem_pose[copper_golem_pose=star] run return run data modify storage midwut:main output_block.block.Properties.copper_golem_pose set value "star"

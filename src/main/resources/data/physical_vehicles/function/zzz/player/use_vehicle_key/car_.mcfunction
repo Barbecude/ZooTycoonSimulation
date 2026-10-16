@@ -1,0 +1,4 @@
+execute if items entity @s weapon.mainhand *[minecraft:custom_data~{phys_veh.car_key:true}] on vehicle run item replace entity @s armor.body from entity @a[tag=phys_veh.selected_player,limit=1] weapon.mainhand
+execute if items entity @s weapon.mainhand *[minecraft:custom_data~{phys_veh.car_key:true}] run item modify entity @s[gamemode=!creative] weapon.mainhand midwut:reomve_1_count
+execute if items entity @s weapon.offhand *[minecraft:custom_data~{phys_veh.car_key:true}] on vehicle run item replace entity @s armor.body from entity @a[tag=phys_veh.selected_player,limit=1] weapon.mainhand
+execute if items entity @s weapon.offhand *[minecraft:custom_data~{phys_veh.car_key:true}] run item modify entity @s[gamemode=!creative] weapon.mainhand midwut:reomve_1_count

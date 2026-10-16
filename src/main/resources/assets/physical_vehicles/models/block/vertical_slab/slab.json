@@ -1,0 +1,16 @@
+{
+    "credit": "Made with Blockbench by Antoha256M",
+    "parent": "minecraft:block/slab",
+    "textures": {
+        "bottom": "#texture",
+        "top": "#texture",
+        "side": "#texture"
+    },
+    "display": {
+        "fixed": {
+            "rotation": [0, 0, 0],
+            "translation": [13.335, 13.335, -2.15],
+            "scale": [2.6667, 2.6667, 2.6667]
+        }
+    }
+}

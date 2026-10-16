@@ -19,9 +19,18 @@ public class ZooFeedingTroughBlockEntity extends BlockEntity implements Containe
 
     private final NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
     private int waterLevel = 0; // 0: no water, 1-3: water level
+    private long placedGameTime = 0;
 
     public ZooFeedingTroughBlockEntity(BlockPos pos, BlockState state) {
         super(ZooBlocks.FEEDING_TROUGH_BLOCK_ENTITY, pos, state);
+    }
+
+    public void setPlacedGameTime(long time) {
+        this.placedGameTime = time;
+    }
+
+    public boolean isPlacementCooldown(long currentTime) {
+        return currentTime - placedGameTime < 600L; // 30 seconds protection after being placed
     }
 
     public boolean hasWater() {
@@ -105,7 +114,7 @@ public class ZooFeedingTroughBlockEntity extends BlockEntity implements Containe
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        items.clear();
+        this.items.set(0, ItemStack.EMPTY);
         ContainerHelper.loadAllItems(tag, items, registries);
         this.waterLevel = tag.getInt("WaterLevel");
     }
@@ -174,8 +183,8 @@ public class ZooFeedingTroughBlockEntity extends BlockEntity implements Containe
 
     @Override
     public void clearContent() {
-        items.clear();
-        waterLevel = 0;
+        this.items.set(0, ItemStack.EMPTY);
+        this.waterLevel = 0;
         markUpdated();
     }
 }

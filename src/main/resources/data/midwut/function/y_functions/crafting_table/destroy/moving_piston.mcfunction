@@ -1,0 +1,6 @@
+execute if block ~ ~ ~ minecraft:moving_piston[facing=south] run return run execute positioned ~ ~ ~1 if block ~ ~ ~ minecraft:moving_piston{blockState:{Name:"minecraft:iron_trapdoor"}} run function midwut:y_functions/crafting_table/destroy/moving_trapdoor
+execute if block ~ ~ ~ minecraft:moving_piston[facing=west] run return run execute positioned ~-1 ~ ~ if block ~ ~ ~ minecraft:moving_piston{blockState:{Name:"minecraft:iron_trapdoor"}} run function midwut:y_functions/crafting_table/destroy/moving_trapdoor
+execute if block ~ ~ ~ minecraft:moving_piston[facing=north] run return run execute positioned ~ ~ ~-1 if block ~ ~ ~ minecraft:moving_piston{blockState:{Name:"minecraft:iron_trapdoor"}} run function midwut:y_functions/crafting_table/destroy/moving_trapdoor
+execute if block ~ ~ ~ minecraft:moving_piston[facing=east] run return run execute positioned ~1 ~ ~ if block ~ ~ ~ minecraft:moving_piston{blockState:{Name:"minecraft:iron_trapdoor"}} run function midwut:y_functions/crafting_table/destroy/moving_trapdoor
+#execute if block ~ ~ ~ minecraft:moving_piston[facing=up] positioned ~ ~1 ~ run function midwut:y_functions/crafting_table/destroy/trapdoor
+#execute if block ~ ~ ~ minecraft:moving_piston[facing=down] positioned ~ ~-1 ~ run function midwut:y_functions/crafting_table/destroy/trapdoor

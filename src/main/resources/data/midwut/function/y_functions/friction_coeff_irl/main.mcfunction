@@ -1,0 +1,14 @@
+execute if block ~ ~ ~ #midwut:friction_coeff_irl/0.02 run return 2
+execute if block ~ ~ ~ #midwut:friction_coeff_irl/0.05 run return 5
+execute if block ~ ~ ~ #midwut:friction_coeff_irl/0.1 run return 10
+execute if block ~ ~ ~ #midwut:friction_coeff_irl/0.2 run return 20
+execute if block ~ ~ ~ #midwut:friction_coeff_irl/0.3 run return 30
+execute if block ~ ~ ~ #midwut:friction_coeff_irl/0.4 run return 40
+execute if block ~ ~ ~ #midwut:friction_coeff_irl/0.5 run return 50
+execute if block ~ ~ ~ #midwut:friction_coeff_irl/0.6 run return 60
+execute if block ~ ~ ~ #midwut:friction_coeff_irl/0.7 run return 70
+execute if block ~ ~ ~ #midwut:friction_coeff_irl/0.75 run return 75
+execute if block ~ ~ ~ #midwut:friction_coeff_irl/0.8 run return 80
+execute if block ~ ~ ~ #midwut:friction_coeff_irl/0.85 run return 85
+execute if block ~ ~ ~ #midwut:friction_coeff_irl/0.9 run return 90
+execute if block ~ ~ ~ #midwut:friction_coeff_irl/1.0 run return 100

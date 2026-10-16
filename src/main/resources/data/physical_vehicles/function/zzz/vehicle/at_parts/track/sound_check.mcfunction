@@ -1,0 +1,2 @@
+execute if score @s phys_veh.sound_timer.track matches 1.. run return run scoreboard players remove @s phys_veh.sound_timer.track 1
+execute positioned as @s run function physical_vehicles:zzz/vehicle/at_parts/track/sound_params

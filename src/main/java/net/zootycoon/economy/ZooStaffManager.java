@@ -29,13 +29,15 @@ public class ZooStaffManager {
         public int builders = 1; // 1 free starter builder for every player
         public int zookeepers = 0;
         public int security = 0;
+        public int cashiers = 0;
 
         public StaffRecord() {}
 
-        public StaffRecord(int b, int z, int s) {
+        public StaffRecord(int b, int z, int s, int c) {
             this.builders = Math.max(1, b);
             this.zookeepers = Math.max(0, z);
             this.security = Math.max(0, s);
+            this.cashiers = Math.max(0, c);
         }
     }
 
@@ -44,7 +46,7 @@ public class ZooStaffManager {
     private MinecraftServer server;
 
     public static synchronized ZooStaffManager get(ServerLevel level) {
-        if (instance == null) {
+        if (instance == null || instance.server != level.getServer()) {
             instance = new ZooStaffManager();
             instance.server = level.getServer();
             instance.loadFromFile();
@@ -53,12 +55,20 @@ public class ZooStaffManager {
     }
 
     public static synchronized ZooStaffManager get(MinecraftServer s) {
-        if (instance == null) {
+        if (instance == null || instance.server != s) {
             instance = new ZooStaffManager();
             instance.server = s;
             instance.loadFromFile();
         }
         return instance;
+    }
+
+    public static synchronized void reset() {
+        if (instance != null) {
+            instance.staffMap.clear();
+            instance.server = null;
+            instance = null;
+        }
     }
 
     private Path getSavePath() {
@@ -84,7 +94,8 @@ public class ZooStaffManager {
                             int b = tag.contains("builders") ? tag.getInt("builders") : 1;
                             int z = tag.getInt("zookeepers");
                             int s = tag.contains("security") ? tag.getInt("security") : (tag.contains("veterinarians") ? tag.getInt("veterinarians") : 0);
-                            staffMap.put(uuid, new StaffRecord(b, z, s));
+                            int c = tag.getInt("cashiers");
+                            staffMap.put(uuid, new StaffRecord(b, z, s, c));
                         } catch (Exception ignored) {}
                     }
                 }
@@ -107,6 +118,7 @@ public class ZooStaffManager {
                 tag.putInt("builders", entry.getValue().builders);
                 tag.putInt("zookeepers", entry.getValue().zookeepers);
                 tag.putInt("security", entry.getValue().security);
+                tag.putInt("cashiers", entry.getValue().cashiers);
                 list.add(tag);
             }
             root.put("staff_records", list);
@@ -132,12 +144,17 @@ public class ZooStaffManager {
         return getRecord(playerUuid).security;
     }
 
+    public int getCashierCount(UUID playerUuid) {
+        return getRecord(playerUuid).cashiers;
+    }
+
     public boolean hireStaff(ServerPlayer player, String type) {
         StaffRecord rec = getRecord(player.getUUID());
         int cost = switch (type.toLowerCase()) {
             case "builder", "kuli" -> 15;
             case "zookeeper" -> 25;
             case "security", "satpam" -> 30;
+            case "cashier", "kasir" -> 20;
             default -> 0;
         };
 
@@ -183,6 +200,19 @@ public class ZooStaffManager {
                     sLevel.playSound(null, sec.blockPosition(), SoundEvents.ARMOR_EQUIP_IRON.value(), SoundSource.NEUTRAL, 1.0f, 1.0f);
                 }
             }
+            case "cashier", "kasir" -> {
+                rec.cashiers++;
+                var cashier = ZooEntities.CASHIER.create(sLevel);
+                if (cashier != null) {
+                    cashier.setPos(player.getX() + 0.5, player.getY(), player.getZ() + 0.5);
+                    sLevel.addFreshEntity(cashier);
+                    sLevel.sendParticles(
+                            ParticleTypes.HAPPY_VILLAGER,
+                            cashier.getX(), cashier.getY() + 1.0, cashier.getZ(), 15, 0.4, 0.5, 0.4, 0.02
+                    );
+                    sLevel.playSound(null, cashier.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0f, 1.0f);
+                }
+            }
         }
 
         saveToFile();
@@ -194,7 +224,7 @@ public class ZooStaffManager {
         StaffRecord rec = getRecord(player.getUUID());
         int activeBuilders = ConstructionManager.getActiveSitesForPlayer(player.getUUID()).size();
         ServerPlayNetworking.send(player, new ZooNetworkPayloads.SyncStaffPayload(
-                rec.builders, activeBuilders, rec.zookeepers, rec.security
+                rec.builders, activeBuilders, rec.zookeepers, rec.security, rec.cashiers
         ));
     }
 }

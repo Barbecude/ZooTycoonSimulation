@@ -1,0 +1,1 @@
+$execute positioned 0.0 0.0 0.0 facing ~$(x) ~$(y) ~$(z) run function physical_vehicles:zzz/vehicle/other/rotate_s

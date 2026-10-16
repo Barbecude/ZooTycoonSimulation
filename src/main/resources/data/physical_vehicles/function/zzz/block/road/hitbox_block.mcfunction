@@ -1,0 +1,1 @@
+$return run execute positioned ~-0.01 ~-0.001 ~-0.01 positioned ~ ~$(height) ~ if entity @s[dx=0.02,dz=0.02]

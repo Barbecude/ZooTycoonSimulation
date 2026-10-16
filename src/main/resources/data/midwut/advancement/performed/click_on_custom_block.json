@@ -1,0 +1,162 @@
+{
+  "criteria": {
+    "flint_mainhand": {
+      "trigger": "minecraft:item_used_on_block",
+      "conditions": {
+        "location": [
+          {
+            "condition": "minecraft:location_check",
+            "predicate": {
+              "block": {
+                "blocks": [
+                  "minecraft:soul_campfire"
+                ],
+                "predicates": {
+                  "container": {
+                    "items": {
+                      "contains": [
+                        {
+                          "predicates": {
+                            "minecraft:custom_data": {
+                              "midwut.custom_block": true
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "player": {
+          "equipment": {
+            "mainhand": {
+              "items": [
+                "minecraft:flint_and_steel"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "flint_offhand": {
+      "trigger": "minecraft:item_used_on_block",
+      "conditions": {
+        "location": [
+          {
+            "condition": "minecraft:location_check",
+            "predicate": {
+              "block": {
+                "blocks": [
+                  "minecraft:soul_campfire"
+                ],
+                "predicates": {
+                  "container": {
+                    "items": {
+                      "contains": [
+                        {
+                          "predicates": {
+                            "minecraft:custom_data": {
+                              "midwut.custom_block": true
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "player": {
+          "equipment": {
+            "offhand": {
+              "items": [
+                "minecraft:flint_and_steel"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "food": {
+      "trigger": "minecraft:item_used_on_block",
+      "conditions": {
+        "location": [
+          {
+            "condition": "minecraft:location_check",
+            "predicate": {
+              "block": {
+                "blocks": [
+                  "minecraft:soul_campfire"
+                ],
+                "predicates": {
+                  "container": {
+                    "items": {
+                      "contains": [
+                        {
+                          "predicates": {
+                            "minecraft:custom_data": {
+                              "midwut.custom_block": true
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "player": [
+          {
+            "condition": "inverted",
+            "term": {
+              "condition": "entity_properties",
+              "entity": "this",
+              "predicate": {
+                "equipment": {
+                  "mainhand": {
+                    "items": [
+                      "minecraft:flint_and_steel"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          {
+            "condition": "inverted",
+            "term": {
+              "condition": "entity_properties",
+              "entity": "this",
+              "predicate": {
+                "equipment": {
+                  "offhand": {
+                    "items": [
+                      "minecraft:flint_and_steel"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "flint_mainhand",
+      "flint_offhand",
+      "food"
+    ]
+  ],
+  "rewards": {
+    "function": "midwut:y_functions/custom_block_fixs/main"
+  }
+}

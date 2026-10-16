@@ -1,0 +1,2 @@
+execute in midwut:main positioned 0.0 0.0 0.0 if loaded ~ ~ ~ as 0000051d-0000-0fb7-0000-001500000014 run function midwut:y_functions/add/constants/sincos_sch
+tellraw @a [{"translate":"chat.type.text","with":[{"translate":"midwut.datapack_name","fallback":"MIDWUT","color": "#8b008b"},{"translate":"midwut.data_compilation_end","fallback":"Compilation is complete, the world is §nunfrozen§r."}]}]

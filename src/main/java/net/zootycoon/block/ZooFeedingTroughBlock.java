@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -38,6 +39,10 @@ public class ZooFeedingTroughBlock extends BaseEntityBlock {
     // Global spatial cache of trough positions for blazing fast, lag-free animal pathfinding!
     public static final Set<BlockPos> KNOWN_TROUGHS = ConcurrentHashMap.newKeySet();
 
+    public static void reset() {
+        KNOWN_TROUGHS.clear();
+    }
+
     public ZooFeedingTroughBlock() {
         this(BlockBehaviour.Properties.of()
                 .strength(2.0f, 3.0f)
@@ -65,9 +70,28 @@ public class ZooFeedingTroughBlock extends BaseEntityBlock {
     }
 
     @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable net.minecraft.world.entity.LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (!level.isClientSide()) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof ZooFeedingTroughBlockEntity trough) {
+                trough.clearContent();
+                trough.setPlacedGameTime(level.getGameTime());
+            }
+        }
+    }
+
+    @Override
     public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean isMoving) {
         super.onPlace(state, level, pos, oldState, isMoving);
         KNOWN_TROUGHS.add(pos.immutable());
+        if (!level.isClientSide() && !state.is(oldState.getBlock())) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof ZooFeedingTroughBlockEntity trough) {
+                trough.clearContent();
+                trough.setPlacedGameTime(level.getGameTime());
+            }
+        }
     }
 
     @Override
@@ -124,28 +148,29 @@ public class ZooFeedingTroughBlock extends BaseEntityBlock {
 
         // 3. Insert Food if holding food and trough does not have water
         if (!stack.isEmpty() && !trough.hasWater()) {
-            boolean isAnimalFood = AnimalDietRegistry.isAnyTroughFood(stack)
-                    || stack.is(Items.WHEAT) || stack.is(Items.CARROT) || stack.is(Items.POTATO)
-                    || stack.is(Items.BEETROOT) || stack.is(Items.APPLE) || stack.is(Items.SWEET_BERRIES)
-                    || stack.is(Items.GLOW_BERRIES) || stack.is(Items.MELON_SLICE) || stack.is(Items.HAY_BLOCK)
-                    || stack.is(Items.BREAD) || stack.is(Items.BAMBOO) || stack.is(Items.WHEAT_SEEDS)
-                    || stack.is(Items.PUMPKIN_SEEDS) || stack.is(Items.MELON_SEEDS) || stack.is(Items.BEETROOT_SEEDS);
+            boolean isAnimalFood = AnimalDietRegistry.isAnyFood(stack) || AnimalDietRegistry.isAnyTroughFood(stack);
 
             if (isAnimalFood) {
-                boolean inserted = trough.insertFood(stack, player.isCreative() ? 0 : 1);
+                int insertCount = player.isShiftKeyDown() ? stack.getCount() : 1;
+                boolean inserted = trough.insertFood(stack, insertCount);
                 if (inserted) {
                     if (!level.isClientSide()) {
                         level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8f, 1.2f);
                     }
-                    return ItemInteractionResult.SUCCESS;
+                    return ItemInteractionResult.sidedSuccess(level.isClientSide());
                 }
             }
         }
 
-        // 4. Empty hand -> take out 1 item
-        if (stack.isEmpty() && !trough.isEmpty()) {
+        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+
+    @Override
+    protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof ZooFeedingTroughBlockEntity trough && !trough.isEmpty() && !trough.hasWater()) {
             if (!level.isClientSide()) {
-                ItemStack removed = trough.extractFood(1);
+                ItemStack removed = trough.extractFood(player.isShiftKeyDown() ? 64 : 1);
                 if (!removed.isEmpty()) {
                     if (!player.getInventory().add(removed)) {
                         player.drop(removed, false);
@@ -153,10 +178,9 @@ public class ZooFeedingTroughBlock extends BaseEntityBlock {
                     level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8f, 1.0f);
                 }
             }
-            return ItemInteractionResult.SUCCESS;
+            return net.minecraft.world.InteractionResult.sidedSuccess(level.isClientSide());
         }
-
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        return net.minecraft.world.InteractionResult.PASS;
     }
 
     @Nullable

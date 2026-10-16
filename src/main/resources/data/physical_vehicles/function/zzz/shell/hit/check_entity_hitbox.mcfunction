@@ -1,0 +1,1 @@
+return run execute positioned ~-0.01 ~-0.01 ~-0.01 as @e[type=#midwut:living/all,tag=!phys_veh.step_ignore,limit=1,dx=0] positioned ~-0.98 ~-0.98 ~-0.98 if entity @s[dx=0]

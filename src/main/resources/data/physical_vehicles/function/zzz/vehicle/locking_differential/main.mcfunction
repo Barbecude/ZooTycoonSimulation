@@ -1,0 +1,6 @@
+scoreboard players set @s phys_veh.transmission_w 0
+execute if entity @s[tag=!phys_veh.locking_center_differential,tag=!phys_veh.locking_inter_wheel_differential] run return run function physical_vehicles:zzz/vehicle/locking_differential/default
+execute if entity @s[tag=phys_veh.tracked_control,tag=phys_veh.have_on_board_clutch_lock] unless score #phys_veh.control.brake main_score matches 0 unless score #wheel_angle main_score matches 0 run tag @s add phys_veh.locking_center_differential
+execute if entity @s[tag=phys_veh.locking_inter_wheel_differential] run function physical_vehicles:zzz/vehicle/locking_differential/inter_wheel_main
+execute if entity @s[tag=phys_veh.locking_center_differential] run function physical_vehicles:zzz/vehicle/locking_differential/center_main
+execute if entity @s[tag=phys_veh.tracked_control,tag=phys_veh.have_on_board_clutch_lock] unless score #phys_veh.control.brake main_score matches 0 unless score #wheel_angle main_score matches 0 run tag @s remove phys_veh.locking_center_differential

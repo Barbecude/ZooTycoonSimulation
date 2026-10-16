@@ -1,0 +1,2 @@
+execute positioned as @e[type=marker,tag=petlya_show.particle] run particle dust{color:[0f,0f,0f],scale:0.3f}
+execute positioned as @e[type=marker,tag=petlya_show.particle2] run particle dust{color:[0f,1f,0f],scale:0.3f}

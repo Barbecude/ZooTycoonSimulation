@@ -1,0 +1,5 @@
+execute if block 2 0 0 #midwut:block_states/thickness[thickness=base] run return run data modify storage midwut:main output_block.block.Properties.thickness set value "base"
+execute if block 2 0 0 #midwut:block_states/thickness[thickness=frustum] run return run data modify storage midwut:main output_block.block.Properties.thickness set value "frustum"
+execute if block 2 0 0 #midwut:block_states/thickness[thickness=middle] run return run data modify storage midwut:main output_block.block.Properties.thickness set value "middle"
+execute if block 2 0 0 #midwut:block_states/thickness[thickness=tip] run return run data modify storage midwut:main output_block.block.Properties.thickness set value "tip"
+execute if block 2 0 0 #midwut:block_states/thickness[thickness=tip_merge] run return run data modify storage midwut:main output_block.block.Properties.thickness set value "tip_merge"

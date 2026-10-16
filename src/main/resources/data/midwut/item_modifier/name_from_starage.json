@@ -1,0 +1,14 @@
+[
+    {
+        "function": "minecraft:set_name",
+        "entity": "this",
+        "name": [
+            {
+                "nbt": "temp[]",
+                "storage": "midwut:main",
+                "interpret": true,
+                "separator": ""
+            }
+        ]
+    }
+]

@@ -1,0 +1,1 @@
+#execute if block ~ ~ ~ minecraft:snow align xyz run return run function physical_vehicles:zzz/block/snow

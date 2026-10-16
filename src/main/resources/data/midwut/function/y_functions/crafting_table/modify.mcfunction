@@ -1,0 +1,1 @@
+$data modify storage midwut:main midwut_crafting_tables[{id:$(id)}] set from storage midwut:main midwut_crafting_table

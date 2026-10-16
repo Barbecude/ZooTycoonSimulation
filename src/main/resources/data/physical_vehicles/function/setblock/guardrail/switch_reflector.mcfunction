@@ -1,0 +1,2 @@
+execute unless data block ~ ~ ~ Items[{components:{"minecraft:custom_data":{phys_veh.guardrail:true}}}].components."minecraft:custom_model_data".flags[2] run data modify block ~ ~ ~ Items[{components:{"minecraft:custom_data":{phys_veh.guardrail:true}}}].components."minecraft:custom_model_data".flags append value false
+$data modify block ~ ~ ~ Items[{components:{"minecraft:custom_data":{phys_veh.guardrail:true}}}].components."minecraft:custom_model_data".flags[0] set value bool($(bool))

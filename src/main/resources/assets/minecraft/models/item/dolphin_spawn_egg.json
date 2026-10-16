@@ -1,0 +1,119 @@
+{
+  "parent": "minecraft:item/template_spawn_egg",
+  "overrides": [
+    {
+      "predicate": {
+        "custom_model_data": 20001
+      },
+      "model": "physical_vehicles:vehicle/buhanka/item"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 20002
+      },
+      "model": "physical_vehicles:vehicle/jeep_cj-5_1964/item"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 20003
+      },
+      "model": "physical_vehicles:vehicle/ecto-1a/item"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 20004
+      },
+      "model": "physical_vehicles:vehicle/hammer_monster/item"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 20005
+      },
+      "model": "physical_vehicles:vehicle/oldsmobile_cutlass_supreme_coupe_1980/item"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 20006
+      },
+      "model": "physical_vehicles:vehicle/tt-66052/item"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 20007
+      },
+      "model": "physical_vehicles:vehicle/vanna/item"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 20008
+      },
+      "model": "physical_vehicles:vehicle/zil-130/item"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 20009
+      },
+      "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/black/item"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 20010
+      },
+      "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/gray-red/item"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 20011
+      },
+      "model": "physical_vehicles:vehicle/zaz-968a/race_01/item"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 20012
+      },
+      "model": "physical_vehicles:vehicle/zaz-968a/race_02/item"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 20013
+      },
+      "model": "physical_vehicles:vehicle/zaz-968a/tint/item"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 20014
+      },
+      "model": "physical_vehicles:vehicle/zaz-968m/futuristic/item"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 20015
+      },
+      "model": "physical_vehicles:vehicle/zaz-968m/race_01/item"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 20016
+      },
+      "model": "physical_vehicles:vehicle/zaz-968m/race_02/item"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 20017
+      },
+      "model": "physical_vehicles:vehicle/zaz-968m/tint/item"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 20018
+      },
+      "model": "physical_vehicles:vehicle/zaz-968t/tint/item"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 20019
+      },
+      "model": "minecraft:item/barrier"
+    }
+  ]
+}

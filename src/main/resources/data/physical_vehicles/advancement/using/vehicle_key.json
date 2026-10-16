@@ -1,0 +1,24 @@
+{
+    "criteria": {
+        "car": {
+            "trigger": "minecraft:using_item",
+            "conditions": {
+                "item": {
+                    "predicates": {
+                        "minecraft:custom_data": {
+                            "phys_veh.car_key": true
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "requirements": [
+        [
+            "car"
+        ]
+    ],
+    "rewards": {
+        "function": "physical_vehicles:zzz/player/use_vehicle_key/main"
+    }
+}

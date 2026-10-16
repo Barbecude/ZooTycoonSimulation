@@ -1,0 +1,3 @@
+execute if block 2 0 0 #midwut:block_states/creaking_heart_state[creaking_heart_state=awake] run return run data modify storage midwut:main output_block.block.Properties.creaking_heart_state set value "awake"
+execute if block 2 0 0 #midwut:block_states/creaking_heart_state[creaking_heart_state=dormant] run return run data modify storage midwut:main output_block.block.Properties.creaking_heart_state set value "dormant"
+execute if block 2 0 0 #midwut:block_states/creaking_heart_state[creaking_heart_state=uprooted] run return run data modify storage midwut:main output_block.block.Properties.creaking_heart_state set value "uprooted"

@@ -1,0 +1,22 @@
+{
+    "parent": "minecraft:block/iron_bars_post",
+    "display": {
+        "fixed": {
+            "rotation": [
+                -90,
+                0,
+                0
+            ],
+            "translation": [
+                13.335,
+                13.335,
+                -2.15
+            ],
+            "scale": [
+                2.6667,
+                2.6667,
+                2.6667
+            ]
+        }
+    }
+}

@@ -1,0 +1,1 @@
+$tag @e[type=#physical_vehicles:refers_to_vehicle/all,tag=physical_vehicle,tag=!phys_veh.selected_part,tag=!phys_veh.collision_point_storage,tag=!phys_veh.main,distance=..80,scores={phys_veh.id.vehicle=$(id)}] add phys_veh.selected_part

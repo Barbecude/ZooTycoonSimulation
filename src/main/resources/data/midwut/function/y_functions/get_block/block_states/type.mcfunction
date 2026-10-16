@@ -1,0 +1,8 @@
+execute if block 2 0 0 #midwut:block_states/type[type=bottom] run return run data modify storage midwut:main output_block.block.Properties.type set value "bottom"
+execute if block 2 0 0 #midwut:block_states/type[type=double] run return run data modify storage midwut:main output_block.block.Properties.type set value "double"
+execute if block 2 0 0 #midwut:block_states/type[type=left] run return run data modify storage midwut:main output_block.block.Properties.type set value "left"
+execute if block 2 0 0 #midwut:block_states/type[type=normal] run return run data modify storage midwut:main output_block.block.Properties.type set value "normal"
+execute if block 2 0 0 #midwut:block_states/type[type=right] run return run data modify storage midwut:main output_block.block.Properties.type set value "right"
+execute if block 2 0 0 #midwut:block_states/type[type=single] run return run data modify storage midwut:main output_block.block.Properties.type set value "single"
+execute if block 2 0 0 #midwut:block_states/type[type=sticky] run return run data modify storage midwut:main output_block.block.Properties.type set value "sticky"
+execute if block 2 0 0 #midwut:block_states/type[type=top] run return run data modify storage midwut:main output_block.block.Properties.type set value "top"

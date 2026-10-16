@@ -1,0 +1,8 @@
+{
+    "values": [
+        "#midwut:block_states/level",
+        "#midwut:block_states/eggs",
+        "#midwut:block_states/hatch",
+        "#midwut:block_states/hydration"
+    ]
+}

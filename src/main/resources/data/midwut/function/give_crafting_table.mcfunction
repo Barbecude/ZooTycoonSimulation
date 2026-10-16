@@ -1,0 +1,1 @@
+function midwut:y_functions/crafting_table/give

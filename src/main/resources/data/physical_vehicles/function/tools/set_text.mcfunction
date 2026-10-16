@@ -1,0 +1,3 @@
+execute unless entity @e[type=minecraft:text_display,tag=phys_veh.main,distance=..10] run return fail
+scoreboard players operation #id_test main_score = @n[type=minecraft:text_display,tag=phys_veh.main,distance=..10] phys_veh.id.vehicle
+$execute as @e[type=text_display,tag=phys_veh.have_text,predicate=physical_vehicles:same_scores/vehicle_id] run data modify entity @s text set value $(text)

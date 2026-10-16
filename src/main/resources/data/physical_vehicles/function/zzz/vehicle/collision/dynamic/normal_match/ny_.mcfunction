@@ -1,0 +1,2 @@
+execute if score #vp.y main_score matches 1.. run return run function physical_vehicles:zzz/vehicle/collision/dynamic/normal_match/ny
+function physical_vehicles:zzz/vehicle/collision/dynamic/normal_match/py

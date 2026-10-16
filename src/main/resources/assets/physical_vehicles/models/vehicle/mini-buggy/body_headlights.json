@@ -1,0 +1,6 @@
+{
+  "parent": "physical_vehicles:vehicle/mini-buggy/body",
+  "textures": {
+    "lamp": "physical_vehicles:vehicle/mini-buggy/redstone_lamp_on"
+  }
+}

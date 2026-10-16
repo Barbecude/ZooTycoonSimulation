@@ -1,0 +1,9 @@
+{
+    "values": [
+        "#midwut:block_states/ominous",
+        "#midwut:block_states/trial_spawner_state",
+        "#midwut:block_states/vault_state",
+        "#midwut:block_states/copper_golem_pose",
+        "#midwut:block_states/side_chain"
+    ]
+}

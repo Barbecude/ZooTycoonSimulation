@@ -1,0 +1,1 @@
+execute summon marker run function midwut:test/beam-plane/marker/pre

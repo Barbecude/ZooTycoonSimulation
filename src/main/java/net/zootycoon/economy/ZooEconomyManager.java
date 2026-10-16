@@ -46,6 +46,11 @@ public class ZooEconomyManager {
         return instance;
     }
 
+    public static synchronized void reset() {
+        instance = null;
+        clientEmeraldBalance = 0;
+    }
+
     private Path getSavePath() {
         return server.getWorldPath(LevelResource.ROOT).resolve("zoo_economy.dat");
     }

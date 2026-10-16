@@ -1,0 +1,45 @@
+{
+    "format_version": "1.21.6",
+    "credit": "Made by Falanta Fantomo and Antoha256M with Blockbench",
+    "textures": {
+        "2": "physical_vehicles:block_item/road_sign/small_number/70",
+        "3": "physical_vehicles:block_item/road_sign/small_arrow/left_arrow",
+        "back": "physical_vehicles:block_item/road_sign/back/double_plate",
+        "particle": "physical_vehicles:block_item/road_sign/-/double_plate",
+        "texture": "physical_vehicles:block_item/road_sign/-/double_plate"
+    },
+    "elements": [
+        {
+            "from": [0, 0, 8],
+            "to": [16, 16, 8],
+            "faces": {
+                "north": {"uv": [0, 0, 16, 16], "texture": "#back", "cullface": "north"},
+                "south": {"uv": [0, 0, 16, 16], "texture": "#texture", "cullface": "south"}
+            }
+        },
+        {
+            "from": [1, 1, 8.1],
+            "to": [15, 7, 8.1],
+            "rotation": {"angle": 0, "axis": "y", "origin": [3, -10.75, 0.125]},
+            "faces": {
+                "south": {"uv": [0, 0, 14, 6], "texture": "#3", "cullface": "south"}
+            }
+        },
+        {
+            "from": [1, 9, 8.1],
+            "to": [15, 15, 8.1],
+            "rotation": {"angle": 0, "axis": "y", "origin": [5.5, -2.25, 0.125]},
+            "faces": {
+                "south": {"uv": [0, 0, 14, 6], "texture": "#2", "cullface": "south"}
+            }
+        }
+    ],
+    "gui_light": "front",
+    "display": {
+        "fixed": {
+            "rotation": [-90, 0, 0],
+            "translation": [13.335, 13.335, -2.15],
+            "scale": [2.6667, 2.6667, 2.6667]
+        }
+    }
+}

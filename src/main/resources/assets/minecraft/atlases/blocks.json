@@ -1,0 +1,20 @@
+{
+  "sources": [
+    {
+      "type": "directory",
+      "source": "block_item",
+      "prefix": "block_item/"
+    },
+    {
+      "type": "directory",
+      "source": "vehicle",
+      "prefix": "vehicle/"
+    },
+    {
+      "type": "directory",
+      "source": "other",
+      "prefix": "other/"
+    }
+  ]
+}
+

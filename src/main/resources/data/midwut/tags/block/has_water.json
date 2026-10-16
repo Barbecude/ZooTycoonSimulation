@@ -1,0 +1,11 @@
+{
+  "values": [
+    "#midwut:block_states/waterlogged",
+    "minecraft:water",
+    "minecraft:water_cauldron",
+    "minecraft:kelp",
+    "minecraft:kelp_plant",
+    "minecraft:seagrass",
+    "minecraft:tall_seagrass"
+  ]
+}

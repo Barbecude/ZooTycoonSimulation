@@ -1,0 +1,6 @@
+{
+    "model": {
+        "type": "minecraft:model",
+        "model": "midwut:block/crafting_table_mirror"
+    }
+}

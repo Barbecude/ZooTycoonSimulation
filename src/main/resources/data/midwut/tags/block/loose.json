@@ -1,0 +1,19 @@
+{
+    "replace": false,
+    "values": [
+        "#minecraft:dirt",
+        "minecraft:soul_sand",
+        "minecraft:powder_snow",
+        "minecraft:soul_soil",
+        "minecraft:clay",
+        "minecraft:snow_block",
+        "minecraft:powder_snow",
+        "minecraft:gravel",
+        "minecraft:dirt_path",
+        "minecraft:farmland",
+        "minecraft:sand",
+        "minecraft:red_sand",
+        "#minecraft:concrete_powder",
+        "#midwut:suspicious"
+    ]
+}

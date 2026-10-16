@@ -1,0 +1,8 @@
+execute if data storage midwut:main {side:"north"} run return run data modify storage midwut:main side set value "south"
+execute if data storage midwut:main {side:"east"} run return run data modify storage midwut:main side set value "west"
+execute if data storage midwut:main {side:"south"} run return run data modify storage midwut:main side set value "north"
+execute if data storage midwut:main {side:"west"} run return run data modify storage midwut:main side set value "east"
+execute if data storage midwut:main {side:"north_east"} run return run data modify storage midwut:main side set value "south_west"
+execute if data storage midwut:main {side:"south_east"} run return run data modify storage midwut:main side set value "north_west"
+execute if data storage midwut:main {side:"south_west"} run return run data modify storage midwut:main side set value "north_east"
+execute if data storage midwut:main {side:"north_west"} run return run data modify storage midwut:main side set value "south_east"

@@ -1,0 +1,1 @@
+$tellraw @s ["",{"text": "⚠ ", "color": "dark_red", "bold": true},{"translate": "phys_veh.non-existent_skin_ID", "with": [{"text":"$(skin)"}]},"!\n",{"text": "⚠ ", "color": "dark_red", "bold": true},{"translate": "phys_veh.all_existing_skin_tags"},":\n",{"storage": "$(storage_id)","nbt": "skins.$(vehicle_id)[].id","separator": ", "}]

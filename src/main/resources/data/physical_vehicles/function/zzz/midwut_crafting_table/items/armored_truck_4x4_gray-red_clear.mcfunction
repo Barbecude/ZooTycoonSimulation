@@ -1,0 +1,1 @@
+return run clear @s *[minecraft:custom_data~{midwut.gui_item:true,physical_vehicles.armored_truck_4x4_gray-red:true}]

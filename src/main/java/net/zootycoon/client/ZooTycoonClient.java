@@ -52,8 +52,10 @@ public class ZooTycoonClient implements ClientModInitializer {
     public static int clientActiveBuilders = 0;
     public static int clientZookeepers = 0;
     public static int clientSecurity = 0;
+    public static int clientCashiers = 0;
     public static int clientEmeraldBalance = 0;
     public static java.util.List<ZooNetworkPayloads.AnimalSyncData> clientAnimals = new java.util.ArrayList<>();
+    public static java.util.List<ZooNetworkPayloads.ZookeeperSyncData> clientZookeeperList = new java.util.ArrayList<>();
     public static final java.util.Map<Integer, ZooNetworkPayloads.AnimalSyncData> clientAnimalMap = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static int clientScopeTicks = 0;
@@ -80,7 +82,7 @@ public class ZooTycoonClient implements ClientModInitializer {
                 return 0xFF000000 | egg.getColor(tintIndex);
             }
             return -1;
-        }, ZooItems.VISITOR_SPAWN_EGG, ZooItems.CASHIER_SPAWN_EGG);
+        }, ZooItems.VISITOR_SPAWN_EGG, ZooItems.CASHIER_SPAWN_EGG, ZooItems.HUNTER_SPAWN_EGG);
 
         // 1. Right-click actions with Stick (minecraft:stick)
         net.fabricmc.fabric.api.event.player.UseItemCallback.EVENT.register((player, level, hand) -> {
@@ -119,6 +121,11 @@ public class ZooTycoonClient implements ClientModInitializer {
 
         net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.register((player, level, hand, hitResult) -> {
             if (level.isClientSide() && player.getItemInHand(hand).is(net.minecraft.world.item.Items.STICK)) {
+                if (inStudio) {
+                    Minecraft.getInstance().setScreen(new StudioControlScreen(studioCategory));
+                    return InteractionResult.SUCCESS;
+                }
+
                 if (PlacementPreviewRenderer.getActiveSchematic() != null) {
                     if (player.isShiftKeyDown()) {
                         PlacementPreviewRenderer.clear();
@@ -155,6 +162,9 @@ public class ZooTycoonClient implements ClientModInitializer {
 
         // 2. Intercept left-click block selection when holding Stick
         AttackBlockCallback.EVENT.register((player, level, hand, pos, direction) -> {
+            if (inStudio) {
+                return InteractionResult.PASS;
+            }
             if (level.isClientSide() && player.getMainHandItem().is(net.minecraft.world.item.Items.STICK)) {
                 ClaimBoundaryRenderer.handleLeftClick(pos);
                 return InteractionResult.SUCCESS;
@@ -188,6 +198,7 @@ public class ZooTycoonClient implements ClientModInitializer {
                 clientActiveBuilders = payload.activeBuilders();
                 clientZookeepers = payload.zookeepers();
                 clientSecurity = payload.security();
+                clientCashiers = payload.cashiers();
             });
         });
 
@@ -211,6 +222,12 @@ public class ZooTycoonClient implements ClientModInitializer {
             });
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.SyncZookeepersPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                clientZookeeperList = new java.util.ArrayList<>(payload.zookeepers());
+            });
+        });
+
         ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.ShowToastPayload.TYPE, (payload, context) -> {
             context.client().execute(() -> {
                 Object[] fmtArgs = payload.args() != null ? payload.args().toArray() : new Object[0];
@@ -229,6 +246,10 @@ public class ZooTycoonClient implements ClientModInitializer {
                     ));
                     ClaimBoundaryRenderer.clearClaimPreview();
                 } else if (inStudio) {
+                    if (payload.name().trim().isEmpty()) {
+                        Minecraft.getInstance().setScreen(new StudioControlScreen(payload.category()));
+                        return;
+                    }
                     ClientPlayNetworking.send(new ZooNetworkPayloads.SaveCustomSchematicPayload(
                             BlockPos.ZERO, BlockPos.ZERO, payload.name(), payload.category(),
                             ZooTranslations.get("zootycoon.studio.custom_desc")
@@ -323,6 +344,32 @@ public class ZooTycoonClient implements ClientModInitializer {
             });
         });
 
+        // Reset client static state when disconnecting from world or joining a new server
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            ClaimBoundaryRenderer.CLIENT_CLAIMS.clear();
+            ClaimBoundaryRenderer.clearClaimPreview();
+            clientAnimals.clear();
+            clientAnimalMap.clear();
+            clientZookeeperList.clear();
+            clientEmeraldBalance = 0;
+            clientBuilders = 1;
+            clientActiveBuilders = 0;
+            clientZookeepers = 0;
+            clientSecurity = 0;
+            clientCashiers = 0;
+            inStudio = false;
+            net.zootycoon.client.render.ZooAnimalHologramRenderer.currentTargetedAnimal = null;
+        });
+
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+            ClaimBoundaryRenderer.CLIENT_CLAIMS.clear();
+            ClaimBoundaryRenderer.clearClaimPreview();
+            clientAnimals.clear();
+            clientAnimalMap.clear();
+            clientZookeeperList.clear();
+            clientEmeraldBalance = 0;
+        });
+
         // 3b. Register Entity Renderer & Model Layer for Humanoid Builder NPC
         EntityModelLayerRegistry.registerModelLayer(
                 net.zootycoon.client.model.ZooBuilderModel.LAYER_LOCATION,
@@ -382,6 +429,11 @@ public class ZooTycoonClient implements ClientModInitializer {
                 net.zootycoon.entity.ZooEntities.TOILET_SEAT,
                 net.zootycoon.client.render.ToiletSeatRenderer::new
         );
+
+        // 3h. Register transparent cutout render layers for blocks (Trash, Feeding Trough, Trash Can)
+        net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap.INSTANCE.putBlock(net.zootycoon.block.ZooBlocks.TRASH, net.minecraft.client.renderer.RenderType.cutout());
+        net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap.INSTANCE.putBlock(net.zootycoon.block.ZooBlocks.TRASH_CAN, net.minecraft.client.renderer.RenderType.cutout());
+        net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap.INSTANCE.putBlock(net.zootycoon.block.ZooBlocks.FEEDING_TROUGH, net.minecraft.client.renderer.RenderType.cutout());
 
         // 3h. Register Block Entity Renderer for Feeding Trough (Dynamic 3D food items)
         net.minecraft.client.renderer.blockentity.BlockEntityRenderers.register(

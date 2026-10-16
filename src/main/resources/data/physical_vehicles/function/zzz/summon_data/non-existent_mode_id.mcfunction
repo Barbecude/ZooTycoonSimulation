@@ -1,0 +1,1 @@
+$tellraw @s ["",{"text": "⚠ ", "color": "dark_red", "bold": true},{"translate": "phys_veh.non-existent_mode_ID", "with": [{"text":"$(mode)"}]},"!\n",{"text": "⚠ ", "color": "dark_red", "bold": true},{"translate": "phys_veh.all_existing_mode_tags"},":\n",{"storage": "$(storage_id)","nbt": "modes.$(vehicle_id)[].id","separator": ", "}]

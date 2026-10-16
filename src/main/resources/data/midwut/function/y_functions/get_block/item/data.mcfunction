@@ -1,0 +1,2 @@
+execute unless data storage midwut:main output_block.item.components."minecraft:container" if data block 2 0 0 Items run function midwut:y_functions/get_block/item/components/container
+data modify storage midwut:main output_block.item.components."minecraft:block_entity_data" set from block 2 0 0

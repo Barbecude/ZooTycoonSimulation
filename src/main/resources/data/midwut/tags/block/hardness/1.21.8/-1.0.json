@@ -1,0 +1,15 @@
+{
+    "values": [
+        "minecraft:moving_piston",
+        "minecraft:nether_portal",
+        "minecraft:end_portal_frame",
+        "minecraft:light",
+        "minecraft:structure_block",
+        "minecraft:jigsaw",
+        "minecraft:test_block",
+        "minecraft:test_instance_block",
+        "#midwut:command_blocks",
+        "#minecraft:blocks_wind_charge_explosions",
+        "#minecraft:invalid_spawn_inside"
+    ]
+}

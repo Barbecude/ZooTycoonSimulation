@@ -1,0 +1,2 @@
+execute unless block ~ ~ ~ minecraft:grindstone[facing=north] unless block ~ ~ ~ minecraft:grindstone[facing=south] run return run function midwut:y_functions/air_at_run_function/grindstone/floor/east-west
+execute unless block ~ ~ ~ minecraft:grindstone[facing=east] unless block ~ ~ ~ minecraft:grindstone[facing=west] run return run function midwut:y_functions/air_at_run_function/grindstone/floor/north-south

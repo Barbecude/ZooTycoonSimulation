@@ -1,0 +1,1 @@
+execute if data entity @s attack run function physical_vehicles:zzz/tools/road_maker/direction_interaction/attack

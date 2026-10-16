@@ -1,0 +1,1 @@
+return run function midwut:y_functions/get_block/properties_converter/check_char with storage midwut:main macros

@@ -1,0 +1,6 @@
+{
+  "parent": "physical_vehicles:vehicle/zaz-968/wheel",
+  "textures": {
+    "fixed": "physical_vehicles:vehicle/zaz-968m/tint/fixed"
+  }
+}

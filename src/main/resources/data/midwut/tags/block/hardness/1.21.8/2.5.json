@@ -1,0 +1,12 @@
+{
+    "values": [
+        "minecraft:crafting_table",
+        "minecraft:loom",
+        "minecraft:barrel",
+        "minecraft:cartography_table",
+        "minecraft:fletching_table",
+        "minecraft:lectern",
+        "minecraft:smithing_table",
+        "#midwut:chest_can_be_double"
+    ]
+}

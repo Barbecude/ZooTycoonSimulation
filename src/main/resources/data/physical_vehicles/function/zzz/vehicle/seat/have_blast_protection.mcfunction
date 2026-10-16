@@ -1,0 +1,1 @@
+return run execute on vehicle if entity @s[tag=phys_veh.have_seat_improvements.blast_protection]

@@ -1,0 +1,2 @@
+execute unless items entity @s container.* *[minecraft:custom_data~{phys_veh.vehicle_controller:true}] unless items entity @s weapon.offhand *[minecraft:custom_data~{phys_veh.vehicle_controller:true}] run return fail
+return 1

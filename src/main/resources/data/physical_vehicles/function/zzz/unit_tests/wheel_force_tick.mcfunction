@@ -1,0 +1,2 @@
+execute positioned as @e[type=minecraft:marker,tag=wheel_force_test2] run particle minecraft:dust{color:[0f,1f,0f],scale:0.1f}
+execute positioned as @e[type=minecraft:marker,tag=!wheel_force_test2,tag=wheel_force_test] run particle minecraft:dust{color:[1f,0f,0f],scale:0.1f}

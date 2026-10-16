@@ -1,0 +1,8 @@
+{
+    "values": [
+        "#midwut:block_states/north",
+        "#midwut:block_states/south",
+        "#midwut:block_states/up",
+        "#midwut:block_states/west"
+    ]
+}

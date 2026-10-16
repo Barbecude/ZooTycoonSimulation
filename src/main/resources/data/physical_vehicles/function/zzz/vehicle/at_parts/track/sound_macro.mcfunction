@@ -1,0 +1,1 @@
+$playsound $(sound_id) neutral @a[distance=..1000] ~ ~ ~ $(volume) $(pitch)

@@ -1,0 +1,2 @@
+tellraw @a [{"translate":"chat.type.text","with":[{"translate":"midwut.datapack_name","fallback":"MIDWUT","color": "#8b008b"},{"translate":"midwut.data_compilation","fallback":"One-time data compilation, the world is §nfrozen§r for a few seconds, please wait."}]}]
+schedule function midwut:y_functions/add/constants/sincos_main_pre 1t

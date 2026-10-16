@@ -1,0 +1,1 @@
+execute as @e[type=minecraft:item,distance=..8] if items entity @s contents *[minecraft:custom_data~{phys_veh.vehicle_controller:true}] run kill

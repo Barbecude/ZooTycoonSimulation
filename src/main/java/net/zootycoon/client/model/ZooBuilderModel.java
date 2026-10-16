@@ -29,19 +29,6 @@ public class ZooBuilderModel extends HumanoidModel<ZooBuilderEntity> {
         PartDefinition bipedHead = partdefinition.addOrReplaceChild("head", CubeListBuilder.create().texOffs(0, 0).addBox(-4.0F, -8.0F, -4.0F, 8.0F, 8.0F, 8.0F, new CubeDeformation(0.0F))
                 .texOffs(32, 0).addBox(-4.0F, -8.0F, -4.0F, 8.0F, 8.0F, 8.0F, new CubeDeformation(0.5F)), PartPose.offset(0.0F, 0.0F, 0.0F));
 
-        PartDefinition SailorHat1 = bipedHead.addOrReplaceChild("SailorHat1", CubeListBuilder.create().texOffs(102, 0).addBox(-4.0F, 1.33F, -5.318F, 8.0F, 0.0F, 10.0F, new CubeDeformation(0.0F))
-                .texOffs(112, 32).addBox(-4.0F, -2.65F, -5.318F, 8.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
-                .texOffs(80, 0).addBox(-4.0F, -0.85F, -4.218F, 8.0F, 2.0F, 8.0F, new CubeDeformation(0.2F))
-                .texOffs(88, 10).addBox(-3.0F, -2.05F, -3.218F, 6.0F, 1.0F, 6.0F, new CubeDeformation(0.0F))
-                .texOffs(106, 44).addBox(-5.0F, -2.9F, 0.0F, 5.0F, 1.0F, 6.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0F, -7.55F, 0.318F, -0.1047F, 0.0F, 0.0F));
-
-        SailorHat1.addOrReplaceChild("feather2_r1", CubeListBuilder.create().texOffs(110, 48).addBox(-1.5F, -6.3F, -2.3F, 0.0F, 7.0F, 9.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-2.6F, -1.7F, 1.0F, -0.2182F, -0.7418F, 0.0F));
-        SailorHat1.addOrReplaceChild("flap_r1", CubeListBuilder.create().texOffs(112, 40).addBox(0.0F, -4.0F, -5.0F, 8.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
-                .texOffs(101, 21).addBox(0.0F, 0.0F, -5.0F, 8.0F, 0.0F, 11.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-0.0942F, 1.35F, -2.2385F, 0.0F, -0.9163F, 0.0F));
-        SailorHat1.addOrReplaceChild("flap_r2", CubeListBuilder.create().texOffs(90, 32).addBox(7.9668F, -4.0F, -5.0F, 0.0F, 4.0F, 11.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-0.0739F, 1.35F, -2.2121F, 0.0F, -0.9163F, 0.0F));
-        SailorHat1.addOrReplaceChild("flap_r3", CubeListBuilder.create().texOffs(112, 36).addBox(-7.0F, -4.0F, -5.0F, 8.0F, 4.0F, 0.0F, new CubeDeformation(0.0F))
-                .texOffs(101, 10).addBox(-7.0F, -0.001F, -5.0F, 8.0F, 0.0F, 11.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-0.483F, 1.35F, -1.4451F, 0.0F, 0.9163F, 0.0F));
-        SailorHat1.addOrReplaceChild("flap_r4", CubeListBuilder.create().texOffs(90, 17).addBox(-7.045F, -4.0F, -5.0F, 0.0F, 4.0F, 11.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-0.455F, 1.35F, -1.4816F, 0.0F, 0.9163F, 0.0F));
 
         bipedHead.addOrReplaceChild("shortBeard", CubeListBuilder.create().texOffs(24, 0).addBox(-3.5F, -24.0F, -4.0F, 7.0F, 3.0F, 1.0F, new CubeDeformation(0.0F))
                 .texOffs(24, 4).addBox(-3.5F, -23.0F, -4.0F, 7.0F, 3.0F, 1.0F, new CubeDeformation(0.5F)), PartPose.offset(0.0F, 24.0F, 0.0F));

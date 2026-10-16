@@ -1,0 +1,15 @@
+{
+  "asset_id": "midwut:red_spy",
+  "author": {
+    "color": "gray",
+    "translate": "painting.midwut.red_spy.author",
+    "fallback": "Antoha256M"
+  },
+  "width": 4,
+  "height": 1,
+  "title": {
+    "color": "#E84E02",
+    "translate": "painting.midwut.red_spy.title",
+    "fallback": "Red Spy"
+  }
+}

@@ -1,0 +1,5 @@
+execute if block 2 0 0 #midwut:block_states/charges[charges=0] run return run data modify storage midwut:main output_block.block.Properties.charges set value "0"
+execute if block 2 0 0 #midwut:block_states/charges[charges=1] run return run data modify storage midwut:main output_block.block.Properties.charges set value "1"
+execute if block 2 0 0 #midwut:block_states/charges[charges=2] run return run data modify storage midwut:main output_block.block.Properties.charges set value "2"
+execute if block 2 0 0 #midwut:block_states/charges[charges=3] run return run data modify storage midwut:main output_block.block.Properties.charges set value "3"
+execute if block 2 0 0 #midwut:block_states/charges[charges=4] run return run data modify storage midwut:main output_block.block.Properties.charges set value "4"

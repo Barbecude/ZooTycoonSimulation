@@ -1,0 +1,2 @@
+execute if entity @s[tag=phys_veh.ignition] run function physical_vehicles:zzz/player/driver/ignition/off_tags
+execute if entity @s[tag=phys_veh.has_key] run function physical_vehicles:zzz/player/driver/ignition/removed_key

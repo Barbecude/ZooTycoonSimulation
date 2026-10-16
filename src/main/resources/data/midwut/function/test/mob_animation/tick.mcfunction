@@ -1,0 +1,1 @@
+execute as @e[tag=model] run function midwut:test/mob_animation/main

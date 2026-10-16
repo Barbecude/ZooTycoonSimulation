@@ -1,0 +1,1 @@
+return run execute as @e[type=minecraft:text_display,tag=phys_veh.main,tag=phys_veh.selected_part,limit=1] if score @s phys_veh.engine_w >= @s phys_veh.engine_min_w

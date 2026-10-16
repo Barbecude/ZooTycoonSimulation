@@ -1,0 +1,3 @@
+execute if block ~ ~ ~ minecraft:air run return run data modify storage midwut:main output_block set value {block:{Name:"minecraft:air"},item:{id:"minecraft:air",count:1}}
+execute if block ~ ~ ~ minecraft:cave_air run return run data modify storage midwut:main output_block set value {block:{Name:"minecraft:cave_air"},item:{id:"minecraft:cave_air",count:1}}
+execute if block ~ ~ ~ minecraft:void_air run return run data modify storage midwut:main output_block set value {block:{Name:"minecraft:void_air"},item:{id:"minecraft:void_air",count:1}}

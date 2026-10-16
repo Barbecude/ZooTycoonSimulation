@@ -1,0 +1,1 @@
+return run execute on vehicle if score @s phys_veh.id.seat = #seat_id main_score

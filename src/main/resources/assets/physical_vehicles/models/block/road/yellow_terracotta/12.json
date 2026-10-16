@@ -1,0 +1,6 @@
+{
+    "parent": "physical_vehicles:block/road/model/12",
+    "textures": {
+        "texture": "minecraft:block/yellow_terracotta"
+    }
+}

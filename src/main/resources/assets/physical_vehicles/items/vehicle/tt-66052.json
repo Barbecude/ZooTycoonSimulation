@@ -1,0 +1,87 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "cases": [
+      {
+        "when": [
+          "body"
+        ],
+        "model": {
+          "type": "minecraft:composite",
+          "models": [
+            {
+              "type": "model",
+              "model": "physical_vehicles:vehicle/tt-66052/body"
+            },
+            {
+              "type": "minecraft:select",
+              "property": "minecraft:custom_model_data",
+              "index": 1,
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "cases": [
+                {
+                  "when": "parking_lights",
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:vehicle/tt-66052/parking_lights"
+                  }
+                },
+                {
+                  "when": "headlights",
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:vehicle/tt-66052/headlights"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "when": [
+          "wheel_front_left"
+        ],
+        "model": {
+          "type": "minecraft:model",
+          "model": "physical_vehicles:vehicle/tt-66052/wheel_front_left"
+        }
+      },
+      {
+        "when": [
+          "wheel_front_right"
+        ],
+        "model": {
+          "type": "minecraft:model",
+          "model": "physical_vehicles:vehicle/tt-66052/wheel_front_right"
+        }
+      },
+      {
+        "when": [
+          "wheel_rear"
+        ],
+        "model": {
+          "type": "minecraft:model",
+          "model": "physical_vehicles:vehicle/tt-66052/wheel_rear"
+        }
+      },
+      {
+        "when": [
+          "steering_wheel"
+        ],
+        "model": {
+          "type": "minecraft:model",
+          "model": "physical_vehicles:vehicle/tt-66052/steering_wheel"
+        }
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "physical_vehicles:vehicle/tt-66052/item"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+execute if block 2 0 0 #midwut:block_states/facing[facing=down] run return run data modify storage midwut:main output_block.block.Properties.facing set value "down"
+execute if block 2 0 0 #midwut:block_states/facing[facing=east] run return run data modify storage midwut:main output_block.block.Properties.facing set value "east"
+execute if block 2 0 0 #midwut:block_states/facing[facing=north] run return run data modify storage midwut:main output_block.block.Properties.facing set value "north"
+execute if block 2 0 0 #midwut:block_states/facing[facing=south] run return run data modify storage midwut:main output_block.block.Properties.facing set value "south"
+execute if block 2 0 0 #midwut:block_states/facing[facing=up] run return run data modify storage midwut:main output_block.block.Properties.facing set value "up"
+execute if block 2 0 0 #midwut:block_states/facing[facing=west] run return run data modify storage midwut:main output_block.block.Properties.facing set value "west"

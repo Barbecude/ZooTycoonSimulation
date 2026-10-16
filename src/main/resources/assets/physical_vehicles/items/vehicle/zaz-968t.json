@@ -1,0 +1,108 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "fallback": {
+      "type": "minecraft:empty"
+    },
+    "cases": [
+      {
+        "when": "tint",
+        "model": {
+          "type": "minecraft:select",
+          "property": "minecraft:custom_model_data",
+          "index": 1,
+          "cases": [
+            {
+              "when": "body",
+              "model": {
+                "type": "composite",
+                "models": [
+                  {
+                    "type": "condition",
+                    "property": "custom_model_data",
+                    "index": 0,
+                    "on_false": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:vehicle/zaz-968t/tint/body",
+                      "tints": [
+                        {
+                          "type": "minecraft:custom_model_data",
+                          "default": 16777215,
+                          "index": 0
+                        }
+                      ]
+                    },
+                    "on_true": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:vehicle/zaz-968t/tint/body",
+                      "tints": [
+                        {
+                          "type": "minecraft:custom_model_data",
+                          "default": 16777215,
+                          "index": 1
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "select",
+                    "property": "custom_model_data",
+                    "index": 2,
+                    "fallback": {
+                      "type": "empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "parking_lights",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:vehicle/zaz-968t/tint/parking_lights"
+                        }
+                      },
+                      {
+                        "when": "headlights",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:vehicle/zaz-968t/tint/headlights"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "when": [
+                "road_wheel"
+              ],
+              "model": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:vehicle/zaz-968t/tint/road_wheel",
+                "tints": [
+                  {
+                    "type": "minecraft:custom_model_data",
+                    "default": 16777215,
+                    "index": 0
+                  }
+                ]
+              }
+            }
+          ],
+          "fallback": {
+            "type": "minecraft:model",
+            "model": "physical_vehicles:vehicle/zaz-968t/tint/item",
+            "tints": [
+              {
+                "type": "minecraft:custom_model_data",
+                "default": 16777215,
+                "index": 0
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,1 @@
+execute if block ~ ~ ~ minecraft:smooth_stone_slab[type=bottom] run setblock ~ ~-1 ~ minecraft:smooth_stone_slab[type=double]

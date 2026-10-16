@@ -1,0 +1,1 @@
+return run execute if score #distance main_score matches 300.. positioned ^ ^ ^-0.3 run function midwut:help/check/air_with_hitbox

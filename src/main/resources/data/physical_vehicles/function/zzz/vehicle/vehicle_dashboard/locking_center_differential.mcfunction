@@ -1,0 +1,3 @@
+data modify storage midwut:main temp set value {type:"minecraft:boolean",key:"phys_veh_locking_center_differential",label:{translate:"phys_veh.vehicle_dashboard.locking_center_differential"},on_true:"1",on_false:"0"}
+execute if entity @s[tag=phys_veh.locking_center_differential] run data modify storage midwut:main temp.initial set value true
+data modify storage midwut:phys_veh vehicle_dashboard prepend from storage midwut:main temp

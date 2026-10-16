@@ -1,0 +1,2 @@
+#execute as @e[tag=midwut.test.i-d] run data merge entity @s {transformation:{translation:[0f,0f,1f]}}
+execute as @e[tag=midwut.test.i-d] run data merge entity @s {transformation:{translation:[0f,0f,1f]}}

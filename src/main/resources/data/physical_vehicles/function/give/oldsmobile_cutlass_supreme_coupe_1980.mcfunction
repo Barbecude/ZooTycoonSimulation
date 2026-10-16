@@ -1,0 +1,1 @@
+loot give @s loot physical_vehicles:give/oldsmobile_cutlass_supreme_coupe_1980

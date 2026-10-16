@@ -1,0 +1,1 @@
+return run scoreboard players remove @s[scores={phys_veh.sound_timer.track=1..}] phys_veh.sound_timer.track 1

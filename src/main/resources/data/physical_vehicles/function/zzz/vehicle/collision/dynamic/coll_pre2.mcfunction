@@ -1,0 +1,1 @@
+$execute if entity @s[distance=..$(second_distance)] run function physical_vehicles:zzz/vehicle/collision/dynamic/coll_box

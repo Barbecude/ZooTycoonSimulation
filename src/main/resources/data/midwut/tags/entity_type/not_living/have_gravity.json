@@ -1,0 +1,29 @@
+{
+    "values": [
+        "minecraft:armor_stand",
+        "minecraft:arrow",
+        "#midwut:not_living/boats",
+        "minecraft:chest_minecart",
+        "minecraft:command_block_minecart",
+        "minecraft:egg",
+        "minecraft:ender_pearl",
+        "minecraft:experience_bottle",
+        "minecraft:experience_orb",
+        "minecraft:falling_block",
+        "minecraft:furnace_minecart",
+        "minecraft:hopper_minecart",
+        "minecraft:item",
+        "minecraft:llama_spit",
+        "minecraft:mannequin",
+        "minecraft:minecart",
+        "minecraft:splash_potion",
+        "minecraft:lingering_potion",
+        "minecraft:snowball",
+        "minecraft:spawner_minecart",
+        "minecraft:spectral_arrow",
+        "minecraft:tnt",
+        "minecraft:tnt_minecart",
+        "minecraft:trident",
+        "minecraft:fishing_bobber"
+    ]
+}

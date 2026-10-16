@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "physical_vehicles:item/tt-66052",
+    "layer1": "physical_vehicles:item/tt-66052"
+  }
+}

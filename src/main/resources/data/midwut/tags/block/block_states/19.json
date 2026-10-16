@@ -1,0 +1,8 @@
+{
+    "values": [
+        "#midwut:block_states/tilt",
+        "#midwut:block_states/cracked",
+        "#midwut:block_states/crafting",
+        "#midwut:block_states/orientation"
+    ]
+}

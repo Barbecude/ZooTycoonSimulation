@@ -1,0 +1,20 @@
+{
+    "values": [
+        "minecraft:furnace",
+        "minecraft:redstone_lamp",
+        "minecraft:smoker",
+        "minecraft:blast_furnace",
+        "minecraft:copper_bulb",
+        "minecraft:exposed_copper_bulb",
+        "minecraft:weathered_copper_bulb",
+        "minecraft:oxidized_copper_bulb",
+        "minecraft:waxed_copper_bulb",
+        "minecraft:waxed_exposed_copper_bulb",
+        "minecraft:waxed_weathered_copper_bulb",
+        "minecraft:waxed_oxidized_copper_bulb",
+        "#midwut:torchs/redstone",
+        "#minecraft:campfires",
+        "#minecraft:redstone_ores",
+        "#midwut:candles"
+    ]
+}

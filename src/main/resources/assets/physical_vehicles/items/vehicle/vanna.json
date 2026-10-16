@@ -1,0 +1,49 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "cases": [
+      {
+        "when": [
+          "body"
+        ],
+        "model": {
+          "type": "minecraft:model",
+          "model": "physical_vehicles:vehicle/vanna/body"
+        }
+      },
+      {
+        "when": [
+          "wheel_front"
+        ],
+        "model": {
+          "type": "minecraft:model",
+          "model": "physical_vehicles:vehicle/vanna/wheel_front"
+        }
+      },
+      {
+        "when": [
+          "wheel_rear"
+        ],
+        "model": {
+          "type": "minecraft:model",
+          "model": "physical_vehicles:vehicle/vanna/wheel_rear"
+        }
+      },
+      {
+        "when": [
+          "steering_wheel"
+        ],
+        "model": {
+          "type": "minecraft:model",
+          "model": "physical_vehicles:vehicle/vanna/steering_wheel"
+        }
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "physical_vehicles:vehicle/vanna/item"
+    }
+  }
+}

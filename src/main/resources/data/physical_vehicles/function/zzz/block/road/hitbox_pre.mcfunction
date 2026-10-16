@@ -1,0 +1,1 @@
+return run function physical_vehicles:zzz/block/road/hitbox_block with storage midwut:main custom_block[0].components."minecraft:custom_data"

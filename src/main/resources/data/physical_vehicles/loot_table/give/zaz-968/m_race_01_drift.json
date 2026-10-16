@@ -1,0 +1,144 @@
+{
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:dolphin_spawn_egg",
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "minecraft:entity_data": {
+                  "data": {
+                    "phys_veh": {
+                      "minecraft:custom_model_data": {
+                        "strings": [
+                          "race_01"
+                        ],
+                        "colors": [
+                          16777215
+                        ]
+                      },
+                      "minecraft:custom_data": {
+                        "config_mode": "drift"
+                      },
+                      "minecraft:custom_name": {
+                        "translate": "phys_veh.zaz-968m",
+                        "fallback": "\u0417\u0410\u0417-968\u041c"
+                      },
+                      "minecraft:lore": [
+                        {
+                          "translate": "phys_veh.model_by",
+                          "italic": false,
+                          "color": "gray",
+                          "with": [
+                            {
+                              "text": "Falanta Fantomo",
+                              "color": "#FEBE04"
+                            }
+                          ]
+                        },
+                        {
+                          "translate": "options.generic_value",
+                          "italic": false,
+                          "color": "gray",
+                          "with": [
+                            {
+                              "translate": "phys_veh.skin",
+                              "fallback": "Skin"
+                            },
+                            {
+                              "translate": "phys_veh.zaz-968m.skin.race_01",
+                              "fallback": "race_01"
+                            }
+                          ]
+                        },
+                        {
+                          "translate": "options.generic_value",
+                          "italic": false,
+                          "color": "gray",
+                          "with": [
+                            {
+                              "translate": "phys_veh.mode",
+                              "fallback": "Mode"
+                            },
+                            {
+                              "translate": "phys_veh.mode.drift",
+                              "fallback": "Drift"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "Tags": [
+                    "phys_veh.spawn",
+                    "phys_veh.zaz-968m"
+                  ],
+                  "id": "minecraft:pig",
+                  "Silent": true,
+                  "NoAI": true,
+                  "Invulnerable": true,
+                  "DeathLootTable": ""
+                },
+                "minecraft:custom_model_data": 20015,
+                "minecraft:custom_data": {
+                  "config_mode": "drift"
+                },
+                "minecraft:lore": [
+                  {
+                    "translate": "phys_veh.model_by",
+                    "italic": false,
+                    "color": "gray",
+                    "with": [
+                      {
+                        "text": "Falanta Fantomo",
+                        "color": "#FEBE04"
+                      }
+                    ]
+                  },
+                  {
+                    "translate": "options.generic_value",
+                    "italic": false,
+                    "color": "gray",
+                    "with": [
+                      {
+                        "translate": "phys_veh.skin",
+                        "fallback": "Skin"
+                      },
+                      {
+                        "translate": "phys_veh.zaz-968m.skin.race_01",
+                        "fallback": "race_01"
+                      }
+                    ]
+                  },
+                  {
+                    "translate": "options.generic_value",
+                    "italic": false,
+                    "color": "gray",
+                    "with": [
+                      {
+                        "translate": "phys_veh.mode",
+                        "fallback": "Mode"
+                      },
+                      {
+                        "translate": "phys_veh.mode.drift",
+                        "fallback": "Drift"
+                      }
+                    ]
+                  }
+                ],
+                "minecraft:custom_name": {
+                  "translate": "phys_veh.zaz-968m",
+                  "fallback": "\u0417\u0410\u0417-968\u041c"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

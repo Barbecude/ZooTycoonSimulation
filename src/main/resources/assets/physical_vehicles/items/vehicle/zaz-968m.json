@@ -1,0 +1,485 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "fallback": {
+      "type": "minecraft:empty"
+    },
+    "cases": [
+      {
+        "when": "tint",
+        "model": {
+          "type": "minecraft:select",
+          "property": "minecraft:custom_model_data",
+          "index": 1,
+          "cases": [
+            {
+              "when": "body",
+              "model": {
+                "type": "composite",
+                "models": [
+                  {
+                    "type": "condition",
+                    "property": "custom_model_data",
+                    "index": 0,
+                    "on_false": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:vehicle/zaz-968m/tint/body",
+                      "tints": [
+                        {
+                          "type": "minecraft:custom_model_data",
+                          "default": 16777215,
+                          "index": 0
+                        }
+                      ]
+                    },
+                    "on_true": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:vehicle/zaz-968m/tint/body",
+                      "tints": [
+                        {
+                          "type": "minecraft:custom_model_data",
+                          "default": 16777215,
+                          "index": 1
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "select",
+                    "property": "custom_model_data",
+                    "index": 2,
+                    "fallback": {
+                      "type": "empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "parking_lights",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:vehicle/zaz-968m/tint/parking_lights"
+                        }
+                      },
+                      {
+                        "when": "headlights",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:vehicle/zaz-968m/tint/headlights"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "when": [
+                "wheel"
+              ],
+              "model": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:vehicle/zaz-968m/tint/wheel",
+                "tints": [
+                  {
+                    "type": "minecraft:custom_model_data",
+                    "default": 16777215,
+                    "index": 0
+                  }
+                ]
+              }
+            },
+            {
+              "when": [
+                "steering_wheel"
+              ],
+              "model": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:vehicle/zaz-968m/tint/steering_wheel",
+                "tints": [
+                  {
+                    "type": "minecraft:custom_model_data",
+                    "default": 16777215,
+                    "index": 0
+                  }
+                ]
+              }
+            }
+          ],
+          "fallback": {
+            "type": "minecraft:model",
+            "model": "physical_vehicles:vehicle/zaz-968m/tint/item",
+            "tints": [
+              {
+                "type": "minecraft:custom_model_data",
+                "default": 16777215,
+                "index": 0
+              }
+            ]
+          }
+        }
+      },
+      {
+        "when": "race_01",
+        "model": {
+          "type": "minecraft:select",
+          "property": "minecraft:custom_model_data",
+          "index": 1,
+          "cases": [
+            {
+              "when": "body",
+              "model": {
+                "type": "composite",
+                "models": [
+                  {
+                    "type": "condition",
+                    "property": "custom_model_data",
+                    "index": 0,
+                    "on_false": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:vehicle/zaz-968m/race_01/body",
+                      "tints": [
+                        {
+                          "type": "minecraft:custom_model_data",
+                          "default": 16777215,
+                          "index": 0
+                        }
+                      ]
+                    },
+                    "on_true": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:vehicle/zaz-968m/race_01/body",
+                      "tints": [
+                        {
+                          "type": "minecraft:custom_model_data",
+                          "default": 16777215,
+                          "index": 1
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "select",
+                    "property": "custom_model_data",
+                    "index": 2,
+                    "fallback": {
+                      "type": "empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "parking_lights",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:vehicle/zaz-968m/race_01/parking_lights"
+                        }
+                      },
+                      {
+                        "when": "headlights",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:vehicle/zaz-968m/race_01/headlights"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "when": [
+                "wheel"
+              ],
+              "model": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:vehicle/zaz-968m/race_01/wheel",
+                "tints": [
+                  {
+                    "type": "minecraft:custom_model_data",
+                    "default": 16777215,
+                    "index": 0
+                  }
+                ]
+              }
+            },
+            {
+              "when": [
+                "steering_wheel"
+              ],
+              "model": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:vehicle/zaz-968m/race_01/steering_wheel",
+                "tints": [
+                  {
+                    "type": "minecraft:custom_model_data",
+                    "default": 16777215,
+                    "index": 0
+                  }
+                ]
+              }
+            }
+          ],
+          "fallback": {
+            "type": "minecraft:model",
+            "model": "physical_vehicles:vehicle/zaz-968m/race_01/item",
+            "tints": [
+              {
+                "type": "minecraft:custom_model_data",
+                "default": 16777215,
+                "index": 0
+              }
+            ]
+          }
+        }
+      },
+      {
+        "when": "race_02",
+        "model": {
+          "type": "minecraft:select",
+          "property": "minecraft:custom_model_data",
+          "index": 1,
+          "cases": [
+            {
+              "when": "body",
+              "model": {
+                "type": "composite",
+                "models": [
+                  {
+                    "type": "condition",
+                    "property": "custom_model_data",
+                    "index": 0,
+                    "on_false": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:vehicle/zaz-968m/race_02/body",
+                      "tints": [
+                        {
+                          "type": "minecraft:custom_model_data",
+                          "default": 16777215,
+                          "index": 0
+                        },
+                        {
+                          "type": "minecraft:custom_model_data",
+                          "default": 5592405,
+                          "index": 1
+                        }
+                      ]
+                    },
+                    "on_true": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:vehicle/zaz-968m/race_02/body",
+                      "tints": [
+                        {
+                          "type": "minecraft:custom_model_data",
+                          "default": 16777215,
+                          "index": 1
+                        },
+                        {
+                          "type": "minecraft:custom_model_data",
+                          "default": 5592405,
+                          "index": 2
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "select",
+                    "property": "custom_model_data",
+                    "index": 2,
+                    "fallback": {
+                      "type": "empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "parking_lights",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:vehicle/zaz-968m/race_02/parking_lights"
+                        }
+                      },
+                      {
+                        "when": "headlights",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:vehicle/zaz-968m/race_02/headlights"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "when": [
+                "wheel"
+              ],
+              "model": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:vehicle/zaz-968m/race_02/wheel",
+                "tints": [
+                  {
+                    "type": "minecraft:custom_model_data",
+                    "default": 16777215,
+                    "index": 0
+                  },
+                  {
+                    "type": "minecraft:custom_model_data",
+                    "default": 5592405,
+                    "index": 1
+                  }
+                ]
+              }
+            },
+            {
+              "when": [
+                "steering_wheel"
+              ],
+              "model": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:vehicle/zaz-968m/race_02/steering_wheel",
+                "tints": [
+                  {
+                    "type": "minecraft:custom_model_data",
+                    "default": 16777215,
+                    "index": 0
+                  },
+                  {
+                    "type": "minecraft:custom_model_data",
+                    "default": 5592405,
+                    "index": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "fallback": {
+            "type": "minecraft:model",
+            "model": "physical_vehicles:vehicle/zaz-968m/race_02/item",
+            "tints": [
+              {
+                "type": "minecraft:custom_model_data",
+                "default": 16777215,
+                "index": 0
+              },
+              {
+                "type": "minecraft:custom_model_data",
+                "default": 5592405,
+                "index": 1
+              }
+            ]
+          }
+        }
+      },
+      {
+        "when": "futuristic",
+        "model": {
+          "type": "minecraft:select",
+          "property": "minecraft:custom_model_data",
+          "index": 1,
+          "cases": [
+            {
+              "when": "body",
+              "model": {
+                "type": "composite",
+                "models": [
+                  {
+                    "type": "condition",
+                    "property": "custom_model_data",
+                    "index": 0,
+                    "on_false": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:vehicle/zaz-968m/futuristic/body",
+                      "tints": [
+                        {
+                          "type": "minecraft:custom_model_data",
+                          "default": 16777215,
+                          "index": 0
+                        }
+                      ]
+                    },
+                    "on_true": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:vehicle/zaz-968m/futuristic/body",
+                      "tints": [
+                        {
+                          "type": "minecraft:custom_model_data",
+                          "default": 16777215,
+                          "index": 1
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "select",
+                    "property": "custom_model_data",
+                    "index": 2,
+                    "fallback": {
+                      "type": "empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "parking_lights",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:vehicle/zaz-968m/futuristic/parking_lights"
+                        }
+                      },
+                      {
+                        "when": "headlights",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:vehicle/zaz-968m/futuristic/headlights"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "when": [
+                "wheel"
+              ],
+              "model": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:vehicle/zaz-968m/futuristic/wheel",
+                "tints": [
+                  {
+                    "type": "minecraft:custom_model_data",
+                    "default": 16777215,
+                    "index": 0
+                  }
+                ]
+              }
+            },
+            {
+              "when": [
+                "steering_wheel"
+              ],
+              "model": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:vehicle/zaz-968m/futuristic/steering_wheel",
+                "tints": [
+                  {
+                    "type": "minecraft:custom_model_data",
+                    "default": 16777215,
+                    "index": 0
+                  }
+                ]
+              }
+            }
+          ],
+          "fallback": {
+            "type": "minecraft:model",
+            "model": "physical_vehicles:vehicle/zaz-968m/futuristic/item",
+            "tints": [
+              {
+                "type": "minecraft:custom_model_data",
+                "default": 16777215,
+                "index": 0
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+{
+    "values": [
+        "#midwut:block_states/sculk_sensor_phase",
+        "#midwut:block_states/can_summon",
+        "#midwut:block_states/shrieking",
+        "#midwut:block_states/thickness"
+    ]
+}

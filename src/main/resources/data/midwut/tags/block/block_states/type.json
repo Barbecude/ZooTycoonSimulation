@@ -1,0 +1,8 @@
+{
+    "values": [
+        "minecraft:piston_head",
+        "minecraft:moving_piston",
+        "#midwut:chest_can_be_double",
+        "#minecraft:slabs"
+    ]
+}

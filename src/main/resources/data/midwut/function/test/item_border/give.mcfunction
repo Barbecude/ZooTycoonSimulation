@@ -1,0 +1,1 @@
+give @s minecraft:acacia_boat[minecraft:tooltip_style="c"]

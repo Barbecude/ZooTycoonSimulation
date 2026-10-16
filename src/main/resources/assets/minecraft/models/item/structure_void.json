@@ -1,0 +1,362 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "minecraft:item/structure_void"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "custom_model_data": 10001
+      },
+      "model": "physical_vehicles:vehicle/buhanka/body"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10002
+      },
+      "model": "physical_vehicles:vehicle/buhanka/steering_wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10003
+      },
+      "model": "physical_vehicles:vehicle/buhanka/wheel_left"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10004
+      },
+      "model": "physical_vehicles:vehicle/buhanka/wheel_right"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10005
+      },
+      "model": "physical_vehicles:vehicle/ecto-1a/body"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10006
+      },
+      "model": "physical_vehicles:vehicle/ecto-1a/wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10007
+      },
+      "model": "physical_vehicles:vehicle/hammer_monster/body"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10008
+      },
+      "model": "physical_vehicles:vehicle/hammer_monster/steering_wheel_off"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10009
+      },
+      "model": "physical_vehicles:vehicle/hammer_monster/wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10010
+      },
+      "model": "physical_vehicles:vehicle/jeep_cj-5_1964/body"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10011
+      },
+      "model": "physical_vehicles:vehicle/jeep_cj-5_1964/steering_wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10012
+      },
+      "model": "physical_vehicles:vehicle/jeep_cj-5_1964/wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10013
+      },
+      "model": "physical_vehicles:vehicle/oldsmobile_cutlass_supreme_coupe_1980/body"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10014
+      },
+      "model": "physical_vehicles:vehicle/oldsmobile_cutlass_supreme_coupe_1980/steering_wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10015
+      },
+      "model": "physical_vehicles:vehicle/oldsmobile_cutlass_supreme_coupe_1980/wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10016
+      },
+      "model": "physical_vehicles:vehicle/tt-66052/body"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10017
+      },
+      "model": "physical_vehicles:vehicle/tt-66052/steering_wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10018
+      },
+      "model": "physical_vehicles:vehicle/tt-66052/wheel_front_left"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10019
+      },
+      "model": "physical_vehicles:vehicle/tt-66052/wheel_front_right"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10020
+      },
+      "model": "physical_vehicles:vehicle/tt-66052/wheel_rear"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10021
+      },
+      "model": "physical_vehicles:vehicle/vanna/body"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10022
+      },
+      "model": "physical_vehicles:vehicle/vanna/steering_wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10023
+      },
+      "model": "physical_vehicles:vehicle/vanna/wheel_front"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10024
+      },
+      "model": "physical_vehicles:vehicle/vanna/wheel_rear"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10025
+      },
+      "model": "physical_vehicles:vehicle/zil-130/body"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10026
+      },
+      "model": "physical_vehicles:vehicle/zil-130/steering_wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10027
+      },
+      "model": "physical_vehicles:vehicle/zil-130/wheel_front"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10028
+      },
+      "model": "physical_vehicles:vehicle/zil-130/wheel_rear"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10029
+      },
+      "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/black/body"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10030
+      },
+      "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/black/steering_wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10031
+      },
+      "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/black/wheel_left"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10032
+      },
+      "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/black/wheel_right"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10033
+      },
+      "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/gray-red/body"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10034
+      },
+      "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/gray-red/steering_wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10035
+      },
+      "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/gray-red/wheel_left"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10036
+      },
+      "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/gray-red/wheel_right"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10037
+      },
+      "model": "physical_vehicles:vehicle/zaz-968a/race_01/body"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10038
+      },
+      "model": "physical_vehicles:vehicle/zaz-968a/race_01/steering_wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10039
+      },
+      "model": "physical_vehicles:vehicle/zaz-968a/race_01/wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10040
+      },
+      "model": "physical_vehicles:vehicle/zaz-968a/race_02/body"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10041
+      },
+      "model": "physical_vehicles:vehicle/zaz-968a/race_02/steering_wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10042
+      },
+      "model": "physical_vehicles:vehicle/zaz-968a/race_02/wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10043
+      },
+      "model": "physical_vehicles:vehicle/zaz-968a/tint/body"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10044
+      },
+      "model": "physical_vehicles:vehicle/zaz-968a/tint/steering_wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10045
+      },
+      "model": "physical_vehicles:vehicle/zaz-968a/tint/wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10046
+      },
+      "model": "physical_vehicles:vehicle/zaz-968m/futuristic/body"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10047
+      },
+      "model": "physical_vehicles:vehicle/zaz-968m/futuristic/steering_wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10048
+      },
+      "model": "physical_vehicles:vehicle/zaz-968m/futuristic/wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10049
+      },
+      "model": "physical_vehicles:vehicle/zaz-968m/race_01/body"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10050
+      },
+      "model": "physical_vehicles:vehicle/zaz-968m/race_01/steering_wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10051
+      },
+      "model": "physical_vehicles:vehicle/zaz-968m/race_01/wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10052
+      },
+      "model": "physical_vehicles:vehicle/zaz-968m/race_02/body"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10053
+      },
+      "model": "physical_vehicles:vehicle/zaz-968m/race_02/steering_wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10054
+      },
+      "model": "physical_vehicles:vehicle/zaz-968m/race_02/wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10055
+      },
+      "model": "physical_vehicles:vehicle/zaz-968m/tint/body"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10056
+      },
+      "model": "physical_vehicles:vehicle/zaz-968m/tint/steering_wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10057
+      },
+      "model": "physical_vehicles:vehicle/zaz-968m/tint/wheel"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10058
+      },
+      "model": "physical_vehicles:vehicle/zaz-968t/tint/body"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10059
+      },
+      "model": "physical_vehicles:vehicle/zaz-968t/tint/road_wheel"
+    }
+  ]
+}

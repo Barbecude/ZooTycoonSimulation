@@ -1,0 +1,1 @@
+summon minecraft:block_display ~ ~ ~ {block_state:{Name:"minecraft:glass"},Tags:["midwut.ghost_block.crafting_table","midwut.ghost_block.setup"],transformation:{translation:[-0.49f,0.01f,-0.49f],scale:[0.98f,0.98f,0.98f],left_rotation:[0f,0f,0f,1f],right_rotation:[0f,0f,0f,1f]},Glowing:true,glow_color_override:16711680}

@@ -1,0 +1,1 @@
+execute if block ~ ~ ~ minecraft:brick_slab[type=bottom] if block ~ ~-1 ~ minecraft:brick_slab[type=double] run function physical_vehicles:setblock/road/material {material:"bricks",pixel:4,colors:[]}

@@ -1,0 +1,4 @@
+execute if block 2 0 0 minecraft:wall_torch run return run data modify storage midwut:main output_block.block.Name set value "minecraft:wall_torch"
+execute if block 2 0 0 minecraft:redstone_wall_torch run return run data modify storage midwut:main output_block.block.Name set value "minecraft:redstone_wall_torch"
+execute if block 2 0 0 minecraft:soul_wall_torch run return run data modify storage midwut:main output_block.block.Name set value "minecraft:soul_wall_torch"
+execute if block 2 0 0 minecraft:copper_wall_torch run return run data modify storage midwut:main output_block.block.Name set value "minecraft:copper_wall_torch"

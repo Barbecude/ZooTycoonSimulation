@@ -82,6 +82,32 @@ public class ZooWorldIndicatorRenderer {
                 continue;
             }
 
+            // 1c. Visitor mood emoji: cleanly billboarded to camera at natural height just above head
+            if (entity instanceof net.zootycoon.entity.ZooVisitorEntity visitor) {
+                var mood = visitor.getMood();
+                if (mood != null && mood != net.zootycoon.entity.ZooVisitorEntity.VisitorMood.NEUTRAL) {
+                    ResourceLocation tex = switch (mood) {
+                        case TOILET -> ZooTycoonMod.id("textures/gui/moods/mood_toilet.png");
+                        case AMAZED -> ZooTycoonMod.id("textures/gui/moods/mood_amazed.png");
+                        case ADORED -> ZooTycoonMod.id("textures/gui/moods/mood_adored.png");
+                        case HUNGRY -> ZooTycoonMod.id("textures/gui/moods/mood_hungry.png");
+                        case THIRSTY -> ZooTycoonMod.id("textures/gui/moods/mood_thirsty.png");
+                        default -> null;
+                    };
+                    if (tex != null) {
+                        double renderY = (pos.y + visitor.getBbHeight() + 0.65D + bob) - camPos.y;
+                        renderBillboard(
+                                buffer, poseStack, RenderType.entityCutout(tex),
+                                dx, renderY, dz,
+                                0.20f, 0.20f,
+                                camRot,
+                                255, 255, 255, 255
+                        );
+                    }
+                }
+                continue;
+            }
+
             // 2. Animal indicator: hunger bar with down arrow if hunger <= 50
             if (entity instanceof LivingEntity living && !(entity instanceof Player)) {
                 ZooNetworkPayloads.AnimalSyncData syncData = ZooTycoonClient.getAnimalData(entity.getId());

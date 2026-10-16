@@ -1,0 +1,1 @@
+$function physical_vehicles:zzz/vehicle/at_parts/cannon/reload_sounds/sound with entity @s data.phys_veh.cannon.reload_sounds[{time:$(time)}]

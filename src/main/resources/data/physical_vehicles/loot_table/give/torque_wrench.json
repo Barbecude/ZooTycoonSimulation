@@ -1,0 +1,45 @@
+{
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:poisonous_potato",
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "minecraft:food": {
+                  "can_always_eat": true,
+                  "nutrition": 0,
+                  "saturation": 0
+                },
+                "minecraft:custom_data": {
+                  "phys_veh.torque_wrench": true
+                },
+                "minecraft:lore": [
+                  {
+                    "translate": "phys_veh.torque_wrench.lore",
+                    "italic": false,
+                    "color": "gray"
+                  },
+                  {
+                    "translate": "phys_veh.torque_wrench.lore2",
+                    "italic": false,
+                    "color": "gray"
+                  }
+                ],
+                "minecraft:custom_model_data": 30003,
+                "minecraft:custom_name": {
+                  "translate": "phys_veh.torque_wrench",
+                  "fallback": "Torque Wrench"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+    "values": [
+        "#midwut:block_states/instrument",
+        "#midwut:block_states/note",
+        "#midwut:block_states/powered",
+        "#midwut:block_states/occupied"
+    ]
+}

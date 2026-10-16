@@ -1,0 +1,166 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "fallback": {
+      "type": "minecraft:empty"
+    },
+    "cases": [
+      {
+        "when": "black",
+        "model": {
+          "type": "minecraft:select",
+          "property": "minecraft:custom_model_data",
+          "index": 1,
+          "cases": [
+            {
+              "when": "body",
+              "model": {
+                "type": "composite",
+                "models": [
+                  {
+                    "type": "model",
+                    "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/black/body"
+                  },
+                  {
+                    "type": "select",
+                    "property": "custom_model_data",
+                    "index": 2,
+                    "fallback": {
+                      "type": "empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "parking_lights",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/black/parking_lights"
+                        }
+                      },
+                      {
+                        "when": "headlights",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/black/headlights"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "when": [
+                "wheel_left"
+              ],
+              "model": {
+                "type": "model",
+                "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/black/wheel_left"
+              }
+            },
+            {
+              "when": [
+                "wheel_right"
+              ],
+              "model": {
+                "type": "model",
+                "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/black/wheel_right"
+              }
+            },
+            {
+              "when": [
+                "steering_wheel"
+              ],
+              "model": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/black/steering_wheel"
+              }
+            }
+          ],
+          "fallback": {
+            "type": "minecraft:model",
+            "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/black/item"
+          }
+        }
+      },
+      {
+        "when": "gray-red",
+        "model": {
+          "type": "minecraft:select",
+          "property": "minecraft:custom_model_data",
+          "index": 1,
+          "cases": [
+            {
+              "when": "body",
+              "model": {
+                "type": "composite",
+                "models": [
+                  {
+                    "type": "model",
+                    "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/gray-red/body"
+                  },
+                  {
+                    "type": "select",
+                    "property": "custom_model_data",
+                    "index": 2,
+                    "fallback": {
+                      "type": "empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "parking_lights",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/gray-red/parking_lights"
+                        }
+                      },
+                      {
+                        "when": "headlights",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/gray-red/headlights"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "when": [
+                "wheel_left"
+              ],
+              "model": {
+                "type": "model",
+                "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/gray-red/wheel_left"
+              }
+            },
+            {
+              "when": [
+                "wheel_right"
+              ],
+              "model": {
+                "type": "model",
+                "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/gray-red/wheel_right"
+              }
+            },
+            {
+              "when": [
+                "steering_wheel"
+              ],
+              "model": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/gray-red/steering_wheel"
+              }
+            }
+          ],
+          "fallback": {
+            "type": "minecraft:model",
+            "model": "physical_vehicles:vehicle/armored_truck_4x4/skins/gray-red/item"
+          }
+        }
+      }
+    ]
+  }
+}

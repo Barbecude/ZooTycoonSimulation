@@ -67,6 +67,7 @@ public class SchematicCatalogTab {
     }
 
     public void init(MainManagementScreen screen) {
+        ZooSchematicRegistry.loadCustomSchematics();
         this.schematics = ZooSchematicRegistry.getByCategory(category);
         if (selectedSchematic != null && !schematics.contains(selectedSchematic)) {
             selectedSchematic = null;

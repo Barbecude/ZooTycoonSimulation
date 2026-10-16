@@ -1,0 +1,8 @@
+{
+    "values": [
+        "#midwut:block_states/conditional",
+        "#midwut:block_states/mode",
+        "#midwut:block_states/inverted",
+        "#midwut:block_states/enabled"
+    ]
+}

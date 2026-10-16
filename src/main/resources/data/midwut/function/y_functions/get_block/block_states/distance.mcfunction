@@ -1,0 +1,8 @@
+execute if block 2 0 0 #midwut:block_states/distance[distance=0] run return run data modify storage midwut:main output_block.block.Properties.distance set value "0"
+execute if block 2 0 0 #midwut:block_states/distance[distance=1] run return run data modify storage midwut:main output_block.block.Properties.distance set value "1"
+execute if block 2 0 0 #midwut:block_states/distance[distance=2] run return run data modify storage midwut:main output_block.block.Properties.distance set value "2"
+execute if block 2 0 0 #midwut:block_states/distance[distance=3] run return run data modify storage midwut:main output_block.block.Properties.distance set value "3"
+execute if block 2 0 0 #midwut:block_states/distance[distance=4] run return run data modify storage midwut:main output_block.block.Properties.distance set value "4"
+execute if block 2 0 0 #midwut:block_states/distance[distance=5] run return run data modify storage midwut:main output_block.block.Properties.distance set value "5"
+execute if block 2 0 0 #midwut:block_states/distance[distance=6] run return run data modify storage midwut:main output_block.block.Properties.distance set value "6"
+execute if block 2 0 0 #midwut:block_states/distance[distance=7] run return run data modify storage midwut:main output_block.block.Properties.distance set value "7"

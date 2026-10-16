@@ -1,0 +1,1 @@
+execute if score #nnam_guns.-51 main_score matches 1 positioned ~ -51 ~ run function midwut:test/deaths/-51

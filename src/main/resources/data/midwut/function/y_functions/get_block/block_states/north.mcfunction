@@ -1,0 +1,7 @@
+execute if block 2 0 0 #midwut:block_states/north[north=false] run return run data modify storage midwut:main output_block.block.Properties.north set value "false"
+execute if block 2 0 0 #midwut:block_states/north[north=low] run return run data modify storage midwut:main output_block.block.Properties.north set value "low"
+execute if block 2 0 0 #midwut:block_states/north[north=none] run return run data modify storage midwut:main output_block.block.Properties.north set value "none"
+execute if block 2 0 0 #midwut:block_states/north[north=side] run return run data modify storage midwut:main output_block.block.Properties.north set value "side"
+execute if block 2 0 0 #midwut:block_states/north[north=tall] run return run data modify storage midwut:main output_block.block.Properties.north set value "tall"
+execute if block 2 0 0 #midwut:block_states/north[north=true] run return run data modify storage midwut:main output_block.block.Properties.north set value "true"
+execute if block 2 0 0 #midwut:block_states/north[north=up] run return run data modify storage midwut:main output_block.block.Properties.north set value "up"

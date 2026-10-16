@@ -1,0 +1,8 @@
+{
+    "values": [
+        "#midwut:block_states/attachment",
+        "#midwut:block_states/signal_fire",
+        "#midwut:block_states/honey_level",
+        "#midwut:block_states/candles"
+    ]
+}

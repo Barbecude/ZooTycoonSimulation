@@ -1,0 +1,1 @@
+$item replace entity @s horse.$(Slot) with minecraft:air

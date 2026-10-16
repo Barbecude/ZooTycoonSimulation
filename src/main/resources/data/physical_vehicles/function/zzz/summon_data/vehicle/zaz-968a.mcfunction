@@ -1,0 +1,10 @@
+execute if entity @s[type=minecraft:player] run return fail
+execute if data entity @s data.phys_veh{"minecraft:custom_model_data":{strings:["tint"]},"minecraft:custom_data":{config_mode:"stock"}} run return run function physical_vehicles:summon/zaz-968/a_tint_stock
+execute if data entity @s data.phys_veh{"minecraft:custom_model_data":{strings:["tint"]},"minecraft:custom_data":{config_mode:"race"}} run return run function physical_vehicles:summon/zaz-968/a_tint_race
+execute if data entity @s data.phys_veh{"minecraft:custom_model_data":{strings:["tint"]},"minecraft:custom_data":{config_mode:"drift"}} run return run function physical_vehicles:summon/zaz-968/a_tint_drift
+execute if data entity @s data.phys_veh{"minecraft:custom_model_data":{strings:["race_01"]},"minecraft:custom_data":{config_mode:"stock"}} run return run function physical_vehicles:summon/zaz-968/a_race_01_stock
+execute if data entity @s data.phys_veh{"minecraft:custom_model_data":{strings:["race_01"]},"minecraft:custom_data":{config_mode:"race"}} run return run function physical_vehicles:summon/zaz-968/a_race_01_race
+execute if data entity @s data.phys_veh{"minecraft:custom_model_data":{strings:["race_01"]},"minecraft:custom_data":{config_mode:"drift"}} run return run function physical_vehicles:summon/zaz-968/a_race_01_drift
+execute if data entity @s data.phys_veh{"minecraft:custom_model_data":{strings:["race_02"]},"minecraft:custom_data":{config_mode:"stock"}} run return run function physical_vehicles:summon/zaz-968/a_race_02_stock
+execute if data entity @s data.phys_veh{"minecraft:custom_model_data":{strings:["race_02"]},"minecraft:custom_data":{config_mode:"race"}} run return run function physical_vehicles:summon/zaz-968/a_race_02_race
+execute if data entity @s data.phys_veh{"minecraft:custom_model_data":{strings:["race_02"]},"minecraft:custom_data":{config_mode:"drift"}} run return run function physical_vehicles:summon/zaz-968/a_race_02_drift

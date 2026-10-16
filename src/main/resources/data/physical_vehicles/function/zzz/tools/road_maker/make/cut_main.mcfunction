@@ -1,0 +1,3 @@
+execute unless function physical_vehicles:zzz/tools/road_maker/make/cut0 run return run data modify storage midwut:main macros.material set from storage midwut:main output_block.block.Name
+data modify storage midwut:main macros.temp set string storage midwut:main output_block.block.Name 0 10
+execute unless data storage midwut:main macros{temp:"minecraft:"} run data modify storage midwut:main macros.material set from storage midwut:main output_block.block.Name

@@ -1,0 +1,6 @@
+{
+  "parent": "physical_vehicles:other/light/vanilladi/light",
+  "textures": {
+    "layer0": "physical_vehicles:other/light/light1"
+  }
+}

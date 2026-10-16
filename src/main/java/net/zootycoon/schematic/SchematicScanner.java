@@ -86,7 +86,7 @@ public class SchematicScanner {
             StructureTemplate.StructureBlockInfo rotated = new StructureTemplate.StructureBlockInfo(rotPos, rotState, raw.nbt());
             blocks.add(rotated);
 
-            Item item = state.getBlock().asItem();
+            Item item = getRequiredItemForState(state);
             if (item != Items.AIR) {
                 materialCounts.put(item, materialCounts.getOrDefault(item, 0) + 1);
             }
@@ -99,5 +99,21 @@ public class SchematicScanner {
         );
 
         return new ScanResult(materialCounts, blocks, blocks.size());
+    }
+
+    public static boolean isGrassOrPlantNeed(BlockState state) {
+        if (state == null || state.isAir()) return false;
+        if (state.is(Blocks.GRASS_BLOCK)) return true;
+        if (state.is(Blocks.SHORT_GRASS) || state.is(Blocks.TALL_GRASS)) return true;
+        if (state.is(Blocks.FERN) || state.is(Blocks.LARGE_FERN)) return true;
+        if (state.is(net.minecraft.tags.BlockTags.FLOWERS)) return true;
+        return false;
+    }
+
+    public static Item getRequiredItemForState(BlockState state) {
+        if (isGrassOrPlantNeed(state)) {
+            return Items.BONE_MEAL;
+        }
+        return state.getBlock().asItem();
     }
 }

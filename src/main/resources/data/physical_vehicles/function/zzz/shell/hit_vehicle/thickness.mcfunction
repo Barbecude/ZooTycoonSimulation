@@ -1,0 +1,6 @@
+execute if score #n.x main_score matches -1000 run return run execute store result score #thickness main_score run data get storage midwut:main boxes[-1].thickness[0] 10
+execute if score #n.y main_score matches -1000 run return run execute store result score #thickness main_score run data get storage midwut:main boxes[-1].thickness[1] 10
+execute if score #n.z main_score matches -1000 run return run execute store result score #thickness main_score run data get storage midwut:main boxes[-1].thickness[2] 10
+execute if score #n.x main_score matches 1000 run return run execute store result score #thickness main_score run data get storage midwut:main boxes[-1].thickness[3] 10
+execute if score #n.y main_score matches 1000 run return run execute store result score #thickness main_score run data get storage midwut:main boxes[-1].thickness[4] 10
+execute if score #n.z main_score matches 1000 run return run execute store result score #thickness main_score run data get storage midwut:main boxes[-1].thickness[5] 10

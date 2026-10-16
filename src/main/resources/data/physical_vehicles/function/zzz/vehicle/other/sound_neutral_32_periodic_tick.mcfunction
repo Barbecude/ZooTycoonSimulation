@@ -1,0 +1,2 @@
+$scoreboard players add #theshold main_score $(theshold)
+$execute if score #theshold main_score <= @s phys_veh.track_repair_time if predicate {condition:"minecraft:entity_properties",entity:"this",predicate:{periodic_tick:$(periodic_tick)}} run playsound $(sound_id) neutral @a[distance=..32] ~ ~ ~ $(volume) $(pitch)

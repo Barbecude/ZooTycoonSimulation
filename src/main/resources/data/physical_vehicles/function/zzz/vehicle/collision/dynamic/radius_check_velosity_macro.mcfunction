@@ -1,0 +1,1 @@
+$execute positioned ~$(vx) ~$(vy) ~$(vz) as @e[type=minecraft:text_display,tag=phys_veh.main,tag=!phys_veh.selected_part,distance=..64] run function physical_vehicles:zzz/vehicle/collision/dynamic/radius_check

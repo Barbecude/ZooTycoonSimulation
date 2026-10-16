@@ -1,0 +1,1 @@
+$execute if entity @s[distance=..$(distance)] run function physical_vehicles:zzz/vehicle/collision/dynamic/data_veh

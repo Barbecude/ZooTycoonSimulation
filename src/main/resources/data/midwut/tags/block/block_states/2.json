@@ -1,0 +1,8 @@
+{
+    "values": [
+        "#midwut:block_states/distance",
+        "#midwut:block_states/persistent",
+        "#midwut:block_states/facing",
+        "#midwut:block_states/triggered"
+    ]
+}

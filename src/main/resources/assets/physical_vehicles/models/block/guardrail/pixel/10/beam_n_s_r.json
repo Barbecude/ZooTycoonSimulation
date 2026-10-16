@@ -1,0 +1,12 @@
+{
+    "credit": "by Antoha256M",
+    "parent": "physical_vehicles:block/guardrail/model/beam_n_s_r",
+    "display": {
+        "fixed": {
+            "rotation": [-90, 0, 0],
+            "translation": [13.335, 13.335, -28.8166],
+            "scale": [2.6667, 2.6667, 2.6667]
+        }
+    },
+    "gui_light": "front"
+}

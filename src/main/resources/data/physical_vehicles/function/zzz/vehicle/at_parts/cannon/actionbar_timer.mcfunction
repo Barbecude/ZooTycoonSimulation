@@ -1,0 +1,16 @@
+scoreboard players operation #t2 main_score = @s phys_veh.normalize_timer
+scoreboard players operation #t2 main_score *= #5 const
+scoreboard players operation #t1 main_score = #t2 main_score
+scoreboard players operation #t1 main_score /= #10 const
+scoreboard players operation #t0 main_score = #t1 main_score
+scoreboard players operation #t0 main_score /= #10 const
+scoreboard players operation #t1 main_score %= #10 const
+scoreboard players operation #t2 main_score %= #10 const
+scoreboard players operation #c2 main_score = @s phys_veh.charge_time
+scoreboard players operation #c2 main_score *= #5 const
+scoreboard players operation #c1 main_score = #c2 main_score
+scoreboard players operation #c1 main_score /= #10 const
+scoreboard players operation #c0 main_score = #c1 main_score
+scoreboard players operation #c0 main_score /= #10 const
+scoreboard players operation #c1 main_score %= #10 const
+scoreboard players operation #c2 main_score %= #10 const

@@ -1,0 +1,28 @@
+{
+	"credit": "Made with Blockbench",
+	"texture_size": [128, 128],
+	"textures": {
+		"0": "physical_vehicles:vehicle/vanna",
+		"particle": "physical_vehicles:vehicle/vanna"
+	},
+	"elements": [
+		{
+			"from": [6.5, 4.5, 4.5],
+			"to": [9.5, 11.5, 11.5],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 8, 8]},
+			"faces": {
+				"north": {"uv": [1.5, 8.75, 1.875, 9.625], "texture": "#0"},
+				"east": {"uv": [7.5, 6.625, 8.375, 7.5], "texture": "#0"},
+				"south": {"uv": [1.875, 8.75, 2.25, 9.625], "texture": "#0"},
+				"west": {"uv": [7.5, 7.5, 8.375, 8.375], "texture": "#0"},
+				"up": {"uv": [2.625, 9.625, 2.25, 8.75], "texture": "#0"},
+				"down": {"uv": [3, 8.75, 2.625, 9.625], "texture": "#0"}
+			}
+		}
+	],
+	"display": {
+		"head": {
+			"translation": [0, 5.75, 0]
+		}
+	}
+}

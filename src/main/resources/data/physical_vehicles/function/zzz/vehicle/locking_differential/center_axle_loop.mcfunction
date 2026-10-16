@@ -1,0 +1,3 @@
+execute if entity @e[type=minecraft:item_display,limit=1,tag=phys_veh.wheel,tag=phys_veh.selected_part,scores={phys_veh.id.wheel_axle=0..},predicate=physical_vehicles:same_scores/wheel_axle_id,x=0] run function physical_vehicles:zzz/vehicle/locking_differential/center_axle_wheels
+scoreboard players add #wheel_axle_id main_score 1
+execute if entity @e[type=minecraft:item_display,limit=1,tag=phys_veh.wheel,tag=phys_veh.selected_part,scores={phys_veh.id.wheel_axle=0..},predicate=physical_vehicles:same_scores/wheel_axle_id_min,x=0] run function physical_vehicles:zzz/vehicle/locking_differential/center_axle_loop

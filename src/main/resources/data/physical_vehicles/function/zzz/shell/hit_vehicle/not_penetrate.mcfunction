@@ -1,0 +1,1 @@
+execute unless score #phys_veh.shell_impulse_disabled main_score matches 1 run function physical_vehicles:zzz/shell/hit_vehicle/veh_impulse

@@ -1,0 +1,11 @@
+
+execute if block 2 0 0 minecraft:oak_wall_sign run return run data modify storage midwut:main output_block.block.Name set value "minecraft:oak_wall_sign"
+execute if block 2 0 0 minecraft:spruce_wall_sign run return run data modify storage midwut:main output_block.block.Name set value "minecraft:spruce_wall_sign"
+execute if block 2 0 0 minecraft:birch_wall_sign run return run data modify storage midwut:main output_block.block.Name set value "minecraft:birch_wall_sign"
+execute if block 2 0 0 minecraft:acacia_wall_sign run return run data modify storage midwut:main output_block.block.Name set value "minecraft:acacia_wall_sign"
+execute if block 2 0 0 minecraft:jungle_wall_sign run return run data modify storage midwut:main output_block.block.Name set value "minecraft:jungle_wall_sign"
+execute if block 2 0 0 minecraft:dark_oak_wall_sign run return run data modify storage midwut:main output_block.block.Name set value "minecraft:dark_oak_wall_sign"
+execute if block 2 0 0 minecraft:mangrove_wall_sign run return run data modify storage midwut:main output_block.block.Name set value "minecraft:mangrove_wall_sign"
+execute if block 2 0 0 minecraft:bamboo_wall_sign run return run data modify storage midwut:main output_block.block.Name set value "minecraft:bamboo_wall_sign"
+execute if block 2 0 0 minecraft:crimson_wall_sign run return run data modify storage midwut:main output_block.block.Name set value "minecraft:crimson_wall_sign"
+execute if block 2 0 0 minecraft:warped_wall_sign run return run data modify storage midwut:main output_block.block.Name set value "minecraft:warped_wall_sign"

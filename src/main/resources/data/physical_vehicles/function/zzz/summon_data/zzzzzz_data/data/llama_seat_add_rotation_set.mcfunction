@@ -1,0 +1,1 @@
+$data modify entity @s data.phys_veh.rotation_direction set value "^$(x) ^$(y) ^$(z)"

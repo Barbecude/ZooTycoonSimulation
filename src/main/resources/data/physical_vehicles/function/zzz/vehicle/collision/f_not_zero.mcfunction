@@ -1,0 +1,1 @@
+return run execute if score #fr.x main_score matches 0 if score #fr.y main_score matches 0 if score #fr.z main_score matches 0

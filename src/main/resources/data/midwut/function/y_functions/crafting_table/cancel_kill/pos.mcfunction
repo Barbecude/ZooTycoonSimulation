@@ -1,0 +1,1 @@
+$execute in $(dimension) positioned $(x) $(y) $(z) if loaded ~ ~ ~ unless entity @e[type=minecraft:marker,tag=midwut.crafting_table,scores={midwut.crafting_table.id=$(id)},distance=..1,limit=1] summon marker run function midwut:y_functions/crafting_table/cancel_kill/main

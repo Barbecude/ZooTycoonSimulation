@@ -1,0 +1,2 @@
+execute as @e[type=minecraft:block_display,tag=midwut.ghost_block.crafting_table] run function midwut:y_functions/crafting_table/ghost_blocks/main
+execute if entity @e[type=minecraft:block_display,tag=midwut.ghost_block.crafting_table,limit=1] run schedule function midwut:y_functions/crafting_table/ghost_blocks/tick 8t replace

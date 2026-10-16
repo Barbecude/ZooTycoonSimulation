@@ -1,0 +1,26 @@
+{
+    "values": [
+        "minecraft:gravel",
+        "minecraft:suspicious_gravel",
+        "minecraft:podzol",
+        "minecraft:deepslate_gold_ore",
+        "minecraft:deepslate_iron_ore",
+        "minecraft:deepslate_coal_ore",
+        "minecraft:muddy_mangrove_roots",
+        "minecraft:deepslate_lapis_ore",
+        "minecraft:mossy_cobblestone",
+        "minecraft:deepslate_diamond_ore",
+        "minecraft:farmland",
+        "minecraft:deepslate_redstone_ore",
+        "minecraft:netherrack",
+        "minecraft:mossy_stone_bricks",
+        "minecraft:packed_mud",
+        "minecraft:mud_bricks",
+        "minecraft:infested_mossy_stone_bricks",
+        "minecraft:mud_brick_stairs",
+        "minecraft:mycelium",
+        "minecraft:nether_bricks",
+        "minecraft:nether_brick_fence",
+        "minecraft:nether_brick_stairs"
+    ]
+}

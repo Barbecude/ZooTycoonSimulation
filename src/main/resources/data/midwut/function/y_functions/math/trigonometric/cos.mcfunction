@@ -1,0 +1,1 @@
+$return run scoreboard players operation #OUT:cos main_score = #OUT:cos:$(in) const

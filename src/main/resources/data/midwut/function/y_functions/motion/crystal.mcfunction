@@ -1,0 +1,2 @@
+$execute if score #Vec.Length main_score matches 1.. anchored eyes positioned ^ ^ ^$(full_d) run function midwut:y_functions/motion/crystal_loop
+$execute anchored eyes positioned ^ ^ ^$(d) summon end_crystal run damage @s 0

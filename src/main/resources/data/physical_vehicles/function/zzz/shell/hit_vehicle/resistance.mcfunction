@@ -1,0 +1,6 @@
+execute if score #n.x main_score matches -1000 run return run execute store result score #resistance main_score run data get storage midwut:main boxes[-1].resistance[0] 100
+execute if score #n.y main_score matches -1000 run return run execute store result score #resistance main_score run data get storage midwut:main boxes[-1].resistance[1] 100
+execute if score #n.z main_score matches -1000 run return run execute store result score #resistance main_score run data get storage midwut:main boxes[-1].resistance[2] 100
+execute if score #n.x main_score matches 1000 run return run execute store result score #resistance main_score run data get storage midwut:main boxes[-1].resistance[3] 100
+execute if score #n.y main_score matches 1000 run return run execute store result score #resistance main_score run data get storage midwut:main boxes[-1].resistance[4] 100
+execute if score #n.z main_score matches 1000 run return run execute store result score #resistance main_score run data get storage midwut:main boxes[-1].resistance[5] 100

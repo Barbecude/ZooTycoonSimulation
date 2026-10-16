@@ -25,9 +25,9 @@ public class StaffRecruitmentTab {
     public void init(MainManagementScreen screen) {
         ClientPlayNetworking.send(new ZooNetworkPayloads.RequestStaffSyncPayload());
 
-        int totalWidth = Math.min(screen.width - 40, 720);
-        int cardGap = 14;
-        int cardWidth = (totalWidth - (cardGap * 2)) / 3;
+        int totalWidth = Math.min(screen.width - 30, 840);
+        int cardGap = 10;
+        int cardWidth = (totalWidth - (cardGap * 3)) / 4;
         int cardHeight = Math.min(screen.height - 100, 240);
         int startX = (screen.width - totalWidth) / 2;
         int startY = 60;
@@ -41,13 +41,18 @@ public class StaffRecruitmentTab {
         }).asEmerald());
 
         // Button 2: Rekrut Zookeeper
-        screen.addWidgetPublic(new ZooButton(startX + cardWidth + cardGap + 12, btnY, cardWidth - 24, btnHeight, ZooTranslations.component("zootycoon.ui.staff.btn_hire_zookeeper"), b -> {
+        screen.addWidgetPublic(new ZooButton(startX + (cardWidth + cardGap) + 12, btnY, cardWidth - 24, btnHeight, ZooTranslations.component("zootycoon.ui.staff.btn_hire_zookeeper"), b -> {
             ClientPlayNetworking.send(new ZooNetworkPayloads.HireStaffPayload("zookeeper"));
         }).asEmerald());
 
         // Button 3: Rekrut Security
         screen.addWidgetPublic(new ZooButton(startX + (cardWidth + cardGap) * 2 + 12, btnY, cardWidth - 24, btnHeight, ZooTranslations.component("zootycoon.ui.staff.btn_hire_security"), b -> {
             ClientPlayNetworking.send(new ZooNetworkPayloads.HireStaffPayload("security"));
+        }).asEmerald());
+
+        // Button 4: Rekrut Kasir
+        screen.addWidgetPublic(new ZooButton(startX + (cardWidth + cardGap) * 3 + 12, btnY, cardWidth - 24, btnHeight, ZooTranslations.component("zootycoon.ui.staff.btn_hire_cashier"), b -> {
+            ClientPlayNetworking.send(new ZooNetworkPayloads.HireStaffPayload("cashier"));
         }).asEmerald());
     }
 
@@ -58,9 +63,9 @@ public class StaffRecruitmentTab {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         Minecraft mc = Minecraft.getInstance();
 
-        int totalWidth = Math.min(parent.width - 40, 720);
-        int cardGap = 14;
-        int cardWidth = (totalWidth - (cardGap * 2)) / 3;
+        int totalWidth = Math.min(parent.width - 30, 840);
+        int cardGap = 10;
+        int cardWidth = (totalWidth - (cardGap * 3)) / 4;
         int cardHeight = Math.min(parent.height - 100, 240);
         int startX = (parent.width - totalWidth) / 2;
         int startY = 60;
@@ -107,6 +112,21 @@ public class StaffRecruitmentTab {
                         ZooTranslations.get("zootycoon.ui.staff.security.stat1", ZooTycoonClient.clientSecurity),
                         ZooTranslations.get("zootycoon.ui.staff.security.stat2"),
                         ZooTranslations.get("zootycoon.ui.staff.security.stat3")
+                )
+        );
+
+        // Card 4: Kasir (Cashier)
+        renderStaffCard(
+                graphics, mc,
+                startX + (cardWidth + cardGap) * 3, startY, cardWidth, cardHeight,
+                mouseX, mouseY,
+                ZooTycoonMod.id("textures/gui/staff/cashier_large.png"),
+                ZooTranslations.get("zootycoon.ui.staff.cashier.title"),
+                20,
+                List.of(
+                        ZooTranslations.get("zootycoon.ui.staff.cashier.stat1", ZooTycoonClient.clientCashiers),
+                        ZooTranslations.get("zootycoon.ui.staff.cashier.stat2"),
+                        ZooTranslations.get("zootycoon.ui.staff.cashier.stat3")
                 )
         );
     }

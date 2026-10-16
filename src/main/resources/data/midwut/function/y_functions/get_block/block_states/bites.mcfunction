@@ -1,0 +1,7 @@
+execute if block 2 0 0 #midwut:block_states/bites[bites=0] run return run data modify storage midwut:main output_block.block.Properties.bites set value "0"
+execute if block 2 0 0 #midwut:block_states/bites[bites=1] run return run data modify storage midwut:main output_block.block.Properties.bites set value "1"
+execute if block 2 0 0 #midwut:block_states/bites[bites=2] run return run data modify storage midwut:main output_block.block.Properties.bites set value "2"
+execute if block 2 0 0 #midwut:block_states/bites[bites=3] run return run data modify storage midwut:main output_block.block.Properties.bites set value "3"
+execute if block 2 0 0 #midwut:block_states/bites[bites=4] run return run data modify storage midwut:main output_block.block.Properties.bites set value "4"
+execute if block 2 0 0 #midwut:block_states/bites[bites=5] run return run data modify storage midwut:main output_block.block.Properties.bites set value "5"
+execute if block 2 0 0 #midwut:block_states/bites[bites=6] run return run data modify storage midwut:main output_block.block.Properties.bites set value "6"

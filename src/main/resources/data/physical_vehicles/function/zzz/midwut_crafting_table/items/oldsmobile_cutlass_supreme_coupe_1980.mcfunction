@@ -1,0 +1,1 @@
+return run clear @s *[minecraft:custom_data~{midwut.gui_item:true,physical_vehicles.oldsmobile_cutlass_supreme_coupe_1980:true}]

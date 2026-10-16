@@ -1,0 +1,1 @@
+return run execute if score @s phys_veh.add_velocity.x matches 0 if score @s phys_veh.add_velocity.y matches 0 if score @s phys_veh.add_velocity.z matches 0

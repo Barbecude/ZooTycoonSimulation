@@ -1,0 +1,2 @@
+execute in midwut:main positioned 0.0 0.0 0.0 if loaded ~ ~ ~ run return run function midwut:y_functions/add/constants/sincos_pre
+schedule function midwut:y_functions/add/constants/sincos_sch_schedule 5t replace

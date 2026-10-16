@@ -1,0 +1,1 @@
+$data modify storage midwut:main temp[0].translate set value "$(temp)$(frame)"

@@ -1,0 +1,1 @@
+execute if entity @e[type=#physical_vehicles:refers_to_vehicle/wheel,tag=phys_veh.wheel,limit=1,distance=..2] run function physical_vehicles:zzz/item/torque_wrench/repair_main

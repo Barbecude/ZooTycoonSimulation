@@ -1,0 +1,2 @@
+scoreboard players operation @e[type=minecraft:item_display,tag=phys_veh.wheel.driving,tag=phys_veh.selected_part,scores={phys_veh.id.wheel_axle=0..},predicate=physical_vehicles:same_scores/wheel_axle_id,x=0] phys_veh.spin.x = #w main_score
+scoreboard players set @e[type=minecraft:item_display,tag=phys_veh.track,tag=phys_veh.selected_part,scores={phys_veh.id.wheel_axle=0..},predicate=physical_vehicles:same_scores/wheel_axle_id,x=0] phys_veh.spin.x 0

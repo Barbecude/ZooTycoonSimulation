@@ -1,0 +1,8 @@
+{
+    "condition": "minecraft:location_check",
+    "predicate": {
+        "block": {
+            "blocks": "#midwut:all/1.21.11"
+        }
+    }
+}

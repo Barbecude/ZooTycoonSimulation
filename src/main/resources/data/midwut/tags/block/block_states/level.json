@@ -1,0 +1,10 @@
+{
+    "values": [
+        "minecraft:water",
+        "minecraft:water_cauldron",
+        "minecraft:powder_snow_cauldron",
+        "minecraft:light",
+        "minecraft:composter",
+        "#minecraft:strider_warm_blocks"
+    ]
+}

@@ -1,0 +1,7 @@
+{
+    "parent": "physical_vehicles:block/road/model_top/3",
+    "textures": {
+        "top": "minecraft:block/sandstone_top",
+        "side": "minecraft:block/sandstone"
+    }
+}

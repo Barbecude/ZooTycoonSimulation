@@ -1,0 +1,3 @@
+execute if data storage midwut:main Data2.data.phys_veh.improvements.immunity run tag @s add phys_veh.have_seat_improvements.immunity
+execute if data storage midwut:main Data2.data.phys_veh.improvements.blast_protection run tag @s add phys_veh.have_seat_improvements.blast_protection
+execute if data storage midwut:main Data2.data.phys_veh.improvements.passenger_scale run tag @s add phys_veh.have_seat_improvements.passenger_scale

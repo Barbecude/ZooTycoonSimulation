@@ -1,0 +1,20 @@
+{
+    "values": [
+        "minecraft:mangrove_propagule",
+        "minecraft:fire",
+        "minecraft:cactus",
+        "minecraft:sugar_cane",
+        "minecraft:nether_wart",
+        "minecraft:cocoa",
+        "minecraft:chorus_flower",
+        "minecraft:pitcher_crop",
+        "minecraft:frosted_ice",
+        "minecraft:kelp",
+        "minecraft:bamboo",
+        "minecraft:sweet_berry_bush",
+        "minecraft:weeping_vines",
+        "minecraft:twisting_vines",
+        "minecraft:cave_vines",
+        "#midwut:run/crops"
+    ]
+}

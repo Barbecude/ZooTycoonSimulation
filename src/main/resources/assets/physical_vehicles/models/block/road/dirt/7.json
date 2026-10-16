@@ -1,0 +1,6 @@
+{
+    "parent": "physical_vehicles:block/road/model/7",
+    "textures": {
+        "texture": "minecraft:block/dirt"
+    }
+}

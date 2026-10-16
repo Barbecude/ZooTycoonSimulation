@@ -1,0 +1,2 @@
+function physical_vehicles:zzz/player/driver/ignition/ignition
+execute if entity @s[tag=phys_veh.ignition] run tag @e[type=minecraft:text_display,tag=phys_veh.main,tag=phys_veh.selected_part,limit=1,x=0] add phys_veh.ignition

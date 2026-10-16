@@ -1,0 +1,2 @@
+execute unless block 2 0 0 #midwut:dont_have_drop unless block 2 0 0 #minecraft:doors[half="upper"] run return run function midwut:y_functions/get_block/blockstate/set0
+function midwut:y_functions/get_block/blockstate/other

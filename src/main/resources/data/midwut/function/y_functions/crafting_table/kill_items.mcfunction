@@ -1,0 +1,1 @@
+return run execute as @e[type=minecraft:item,distance=..8] if items entity @s contents *[minecraft:custom_data~{kill:true}] run kill

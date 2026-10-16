@@ -1,0 +1,8 @@
+{
+    "values": [
+        "#midwut:block_states/open",
+        "#midwut:block_states/attached",
+        "#midwut:block_states/face",
+        "#midwut:block_states/delay"
+    ]
+}

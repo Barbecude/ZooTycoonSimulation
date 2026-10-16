@@ -1,0 +1,92 @@
+{
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:dolphin_spawn_egg",
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "minecraft:entity_data": {
+                  "data": {
+                    "phys_veh": {
+                      "minecraft:custom_name": {
+                        "translate": "phys_veh.buhanka",
+                        "fallback": "Buhanka"
+                      },
+                      "minecraft:lore": [
+                        {
+                          "translate": "phys_veh.model_by",
+                          "italic": false,
+                          "color": "gray",
+                          "with": [
+                            {
+                              "text": "DrowsyFirefox",
+                              "color": "#FDD3B1"
+                            }
+                          ]
+                        },
+                        {
+                          "translate": "phys_veh.creator-s_note",
+                          "italic": false,
+                          "color": "gray",
+                          "with": [
+                            {
+                              "text": "\u0421\u0430\u0441\u0430\u0439, \u0447\u0451 \u0441 \u0431\u0430\u043b\u043a\u043e\u043d\u043e\u043c?",
+                              "color": "white"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "Tags": [
+                    "phys_veh.spawn",
+                    "phys_veh.buhanka"
+                  ],
+                  "id": "minecraft:pig",
+                  "Silent": true,
+                  "NoAI": true,
+                  "Invulnerable": true,
+                  "DeathLootTable": ""
+                },
+                "minecraft:lore": [
+                  {
+                    "translate": "phys_veh.model_by",
+                    "italic": false,
+                    "color": "gray",
+                    "with": [
+                      {
+                        "text": "DrowsyFirefox",
+                        "color": "#FDD3B1"
+                      }
+                    ]
+                  },
+                  {
+                    "translate": "phys_veh.creator-s_note",
+                    "italic": false,
+                    "color": "gray",
+                    "with": [
+                      {
+                        "text": "\u0421\u0430\u0441\u0430\u0439, \u0447\u0451 \u0441 \u0431\u0430\u043b\u043a\u043e\u043d\u043e\u043c?",
+                        "color": "white"
+                      }
+                    ]
+                  }
+                ],
+                "minecraft:custom_model_data": 20001,
+                "minecraft:custom_name": {
+                  "translate": "phys_veh.buhanka",
+                  "fallback": "Buhanka"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

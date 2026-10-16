@@ -1,0 +1,7 @@
+{
+  "parent": "physical_vehicles:vehicle/zaz-968/body",
+  "textures": {
+    "fixed": "physical_vehicles:vehicle/zaz-968a/race_01/fixed",
+    "tint": "physical_vehicles:vehicle/zaz-968a/race_01/tint"
+  }
+}

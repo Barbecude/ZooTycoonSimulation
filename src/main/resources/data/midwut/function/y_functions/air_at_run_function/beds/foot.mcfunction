@@ -1,0 +1,5 @@
+execute unless block ~ ~ ~ #minecraft:beds[facing=north] unless block ~ ~ ~ #minecraft:beds[facing=west] positioned ~0.8125 ~-0.0001 ~ if entity @s[dx=0] positioned ~-0.8125 ~-0.75 ~-0.8125 if entity @s[dx=0] run return 0
+execute unless block ~ ~ ~ #minecraft:beds[facing=south] unless block ~ ~ ~ #minecraft:beds[facing=west] positioned ~0.8125 ~-0.0001 ~0.8125 if entity @s[dx=0] positioned ~-0.8125 ~-0.75 ~-0.8125 if entity @s[dx=0] run return 0
+execute unless block ~ ~ ~ #minecraft:beds[facing=north] unless block ~ ~ ~ #minecraft:beds[facing=east] positioned ~ ~-0.0001 ~ if entity @s[dx=0] positioned ~-0.8125 ~-0.75 ~-0.8125 if entity @s[dx=0] run return 0
+execute unless block ~ ~ ~ #minecraft:beds[facing=south] unless block ~ ~ ~ #minecraft:beds[facing=east] positioned ~ ~-0.0001 ~0.8125 if entity @s[dx=0] positioned ~-0.8125 ~-0.75 ~-0.8125 if entity @s[dx=0] run return 0
+return 1

@@ -1,0 +1,10 @@
+{
+    "values": [
+        "minecraft:ladder",
+        "minecraft:cactus",
+        "minecraft:netherrack",
+        "minecraft:chorus_plant",
+        "minecraft:chorus_flower",
+        "#minecraft:nylium"
+    ]
+}

@@ -5,6 +5,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -24,6 +25,36 @@ import java.util.List;
 public class ZooAnimalHologramRenderer {
 
     public static LivingEntity currentTargetedAnimal = null;
+    private static long inspectExpireTime = 0L;
+
+    public static void setInspectedAnimal(LivingEntity animal) {
+        currentTargetedAnimal = animal;
+        inspectExpireTime = System.currentTimeMillis() + 10000L; // 10s view time on click
+    }
+
+    public static void triggerScanRaycast() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
+        performRaycast(mc);
+    }
+
+    private static void performRaycast(Minecraft mc) {
+        Vec3 eye = mc.player.getEyePosition();
+        Vec3 look = mc.player.getViewVector(1.0f);
+        Vec3 reach = eye.add(look.scale(36.0));
+        AABB searchBox = mc.player.getBoundingBox().expandTowards(look.scale(36.0)).inflate(4.0);
+
+        EntityHitResult hit = ProjectileUtil.getEntityHitResult(
+                mc.player, eye, reach, searchBox,
+                e -> e instanceof LivingEntity && e.isAlive() && !e.equals(mc.player) && net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate((LivingEntity) e),
+                36.0 * 36.0
+        );
+
+        if (hit != null && hit.getEntity() instanceof LivingEntity living) {
+            currentTargetedAnimal = living;
+            inspectExpireTime = System.currentTimeMillis() + 8000L;
+        }
+    }
 
     public static void render(WorldRenderContext context) {
         Minecraft mc = Minecraft.getInstance();
@@ -31,27 +62,27 @@ public class ZooAnimalHologramRenderer {
 
         boolean holdingMagnifier = mc.player.getMainHandItem().is(ZooItems.MAGNIFYING_GLASS)
                 || mc.player.getOffhandItem().is(ZooItems.MAGNIFYING_GLASS);
+        boolean usingItem = mc.player.isUsingItem() && (
+                mc.player.getUseItem().is(ZooItems.MAGNIFYING_GLASS)
+                || holdingMagnifier
+        );
+        boolean recentlyInspected = currentTargetedAnimal != null && System.currentTimeMillis() < inspectExpireTime;
 
-        if (!holdingMagnifier) {
+        if (!holdingMagnifier && !usingItem && !recentlyInspected) {
             currentTargetedAnimal = null;
             return;
         }
 
-        // Raycast up to 20 blocks
-        Vec3 eye = mc.player.getEyePosition();
-        Vec3 look = mc.player.getViewVector(1.0f);
-        Vec3 reach = eye.add(look.scale(20.0));
-        AABB searchBox = mc.player.getBoundingBox().expandTowards(look.scale(20.0)).inflate(2.0);
+        // When actively holding or using magnifying glass, update raycast target
+        if (holdingMagnifier || usingItem) {
+            performRaycast(mc);
+        }
 
-        EntityHitResult hit = ProjectileUtil.getEntityHitResult(
-                mc.player, eye, reach, searchBox,
-                e -> e instanceof LivingEntity && e.isAlive() && !e.equals(mc.player),
-                0.25
-        );
+        if (currentTargetedAnimal == null) {
+            return;
+        }
 
-        if (hit != null && hit.getEntity() instanceof LivingEntity living) {
-            currentTargetedAnimal = living;
-        } else {
+        if (!currentTargetedAnimal.isAlive() || mc.player.distanceToSqr(currentTargetedAnimal) > 48.0 * 48.0) {
             currentTargetedAnimal = null;
             return;
         }
@@ -81,14 +112,28 @@ public class ZooAnimalHologramRenderer {
         ZooNetworkPayloads.AnimalSyncData sync = ZooTycoonClient.getAnimalData(entity.getId());
         int hunger = sync != null ? sync.hunger() : 80;
         int thirst = sync != null ? sync.thirst() : 80;
+        int cleanliness = sync != null ? sync.cleanliness() : 100;
 
         var env = SereneSeasonsCompat.evaluateEnvironment(entity);
 
         List<Component> lines = new ArrayList<>();
-        lines.add(Component.literal("§e§l🔍 " + entity.getDisplayName().getString()));
+        // Title (Clean, NO BOLD)
+        lines.add(Component.literal("§e🔍 " + entity.getDisplayName().getString()));
         lines.add(Component.literal("§cHealth: " + getHealthBar(hp, maxHp) + " §f(" + hp + "/" + maxHp + ")"));
-        lines.add(Component.literal("§6Hunger: " + getBar(hunger, 100, "█", "░") + " §f" + hunger + "%"));
+
+        // Colored hunger percentage (Red when <= 25%, Yellow when <= 60%, Green when > 60%)
+        String hungerCol = hunger <= 25 ? "§c" : (hunger <= 60 ? "§e" : "§a");
+        lines.add(Component.literal("§6Hunger: " + getBar(hunger, 100, "█", "░") + " " + hungerCol + hunger + "%"));
+
+        // Cleanliness bar with status & warning
+        String cleanCol = cleanliness <= 10 ? "§c" : (cleanliness <= 25 ? "§e" : "§a");
+        String cleanStatus = cleanliness <= 10 ? "§c (Beracun!)" : (cleanliness <= 25 ? "§e (Kotor)" : "§a (Bersih)");
+        lines.add(Component.literal("§dKebersihan: " + getBar(cleanliness, 100, "✨", "·") + " " + cleanCol + cleanliness + "%" + cleanStatus));
+
+        // Thirst
         lines.add(Component.literal("§bThirst: " + getBar(thirst, 100, "💧", "·") + " §f" + thirst + "%"));
+
+        // Serene Seasons Climate
         lines.add(Component.literal("§aIklim: §f" + env.tempCategory() + " §7| §b" + env.seasonName()));
         lines.add(Component.literal(env.comfortable() ? "§2✔ " + env.notes() : "§c⚠ " + env.notes()));
 
@@ -98,12 +143,10 @@ public class ZooAnimalHologramRenderer {
         for (Component c : lines) {
             maxWidth = Math.max(maxWidth, font.width(c));
         }
-        int halfW = (maxWidth / 2) + 6;
 
         Matrix4f matrix = poseStack.last().pose();
-        var buffer = context.consumers();
+        MultiBufferSource buffer = context.consumers();
 
-        // Draw slate background
         if (buffer != null) {
             float bgAlpha = 0.75f;
             int bgCol = (int) (bgAlpha * 255) << 24 | 0x0E131F;
@@ -125,6 +168,11 @@ public class ZooAnimalHologramRenderer {
                         bgCol,
                         15728880
                 );
+            }
+
+            // Flush text batch so it is immediately drawn to screen!
+            if (buffer instanceof MultiBufferSource.BufferSource bs) {
+                bs.endBatch();
             }
         }
 
@@ -151,4 +199,3 @@ public class ZooAnimalHologramRenderer {
         return sb.toString();
     }
 }
-

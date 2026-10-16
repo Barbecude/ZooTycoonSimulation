@@ -1,0 +1,8 @@
+{
+    "values": [
+        "#midwut:block_states/locked",
+        "#midwut:block_states/down",
+        "#midwut:block_states/in_wall",
+        "#midwut:block_states/has_bottle_0"
+    ]
+}

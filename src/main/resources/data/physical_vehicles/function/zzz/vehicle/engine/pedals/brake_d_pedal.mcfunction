@@ -1,0 +1,2 @@
+execute if score #wheel_angle main_score matches -1 run return run execute if score @s phys_veh.control.brake_d matches ..99 run scoreboard players operation @s phys_veh.control.brake_d += #pedal_deltatime main_score
+execute if score @s phys_veh.control.brake_d matches 1.. run scoreboard players operation @s phys_veh.control.brake_d -= #pedal_deltatime main_score

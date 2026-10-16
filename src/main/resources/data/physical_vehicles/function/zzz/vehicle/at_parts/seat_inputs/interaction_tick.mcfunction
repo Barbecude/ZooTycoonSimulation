@@ -1,0 +1,2 @@
+execute if function physical_vehicles:zzz/vehicle/other/has_attacker run function physical_vehicles:zzz/vehicle/at_parts/seat_inputs/interaction_attack
+execute if function physical_vehicles:zzz/vehicle/other/has_target run function physical_vehicles:zzz/vehicle/at_parts/seat_inputs/interaction_use

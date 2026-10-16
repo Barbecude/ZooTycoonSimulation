@@ -1,0 +1,25 @@
+{
+    "criteria": {
+        "0": {
+            "trigger": "minecraft:using_item",
+            "conditions": {
+                "item": {
+                    "predicates": {
+                        "minecraft:custom_data": {
+                            "phys_veh.vehicle_controller": true
+                        }
+                    }
+                },
+                "player": [
+                    {
+                        "condition": "minecraft:reference",
+                        "name": "physical_vehicles:player/driver"
+                    }
+                ]
+            }
+        }
+    },
+    "rewards": {
+        "function": "physical_vehicles:zzz/player/driver/vehicle_horn"
+    }
+}

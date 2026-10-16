@@ -1,0 +1,2 @@
+execute positioned over motion_blocking positioned ~-0.0001 ~-0.0001 ~-0.0001 store result score #check.sky main_score run return run execute if entity @s[dy=2000]
+execute in midwut:main run tp @s 0.0 0.0 0.0

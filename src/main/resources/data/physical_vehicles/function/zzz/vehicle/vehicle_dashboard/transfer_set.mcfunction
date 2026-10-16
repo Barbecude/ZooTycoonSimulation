@@ -1,0 +1,2 @@
+$execute store result score @s phys_veh.current_transfer run data get entity @s data.phys_veh.transmission.transfers[$(phys_veh_transfer)].value 10
+$scoreboard players set @s phys_veh.current_transfer_index $(phys_veh_transfer)

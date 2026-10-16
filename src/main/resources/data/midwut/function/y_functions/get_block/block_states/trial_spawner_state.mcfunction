@@ -1,0 +1,6 @@
+execute if block 2 0 0 #midwut:block_states/trial_spawner_state[trial_spawner_state=active] run return run data modify storage midwut:main output_block.block.Properties.trial_spawner_state set value "active"
+execute if block 2 0 0 #midwut:block_states/trial_spawner_state[trial_spawner_state=cooldown] run return run data modify storage midwut:main output_block.block.Properties.trial_spawner_state set value "cooldown"
+execute if block 2 0 0 #midwut:block_states/trial_spawner_state[trial_spawner_state=ejecting_reward] run return run data modify storage midwut:main output_block.block.Properties.trial_spawner_state set value "ejecting_reward"
+execute if block 2 0 0 #midwut:block_states/trial_spawner_state[trial_spawner_state=inactive] run return run data modify storage midwut:main output_block.block.Properties.trial_spawner_state set value "inactive"
+execute if block 2 0 0 #midwut:block_states/trial_spawner_state[trial_spawner_state=waiting_for_players] run return run data modify storage midwut:main output_block.block.Properties.trial_spawner_state set value "waiting_for_players"
+execute if block 2 0 0 #midwut:block_states/trial_spawner_state[trial_spawner_state=waiting_for_reward_ejection] run return run data modify storage midwut:main output_block.block.Properties.trial_spawner_state set value "waiting_for_reward_ejection"

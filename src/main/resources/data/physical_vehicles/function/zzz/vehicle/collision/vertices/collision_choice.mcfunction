@@ -1,0 +1,2 @@
+execute unless function physical_vehicles:zzz/vehicle/collision/vertices/check_0 run return run function physical_vehicles:zzz/vehicle/collision/vertices/coll
+execute if entity @s[tag=phys_veh.dynamic_collision_check] run function physical_vehicles:zzz/vehicle/collision/dynamic/coll_offset with storage midwut:main macros

@@ -1,0 +1,18 @@
+{
+    "replace": false,
+    "values": [
+        "minecraft:lever",
+        "#minecraft:pressure_plates",
+        "#midwut:torchs/redstone",
+        "minecraft:tripwire_hook",
+        "minecraft:tripwire",
+        "minecraft:repeater",
+        "minecraft:comparator",
+        "minecraft:redstone_wire",
+        "#minecraft:buttons",
+        "#midwut:pistons",
+        "minecraft:sculk_sensor",
+        "minecraft:calibrated_sculk_sensor",
+        "minecraft:daylight_detector"
+    ]
+}

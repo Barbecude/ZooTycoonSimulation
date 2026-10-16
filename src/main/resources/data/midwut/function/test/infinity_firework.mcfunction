@@ -1,0 +1,1 @@
+give @s minecraft:firework_rocket[minecraft:fireworks={flight_duration:2147483647}]

@@ -1,0 +1,1 @@
+$execute positioned 0.0 0.0 0.0 facing ~$(vx) ~$(vy) ~$(vz) facing ^-1 ^ ^ rotated ~ ~$(angle) facing ^ ^ ^1 positioned ~$(x) ~$(y) ~$(z) run function physical_vehicles:zzz/tools/road_maker/plotting/summon_marker_line

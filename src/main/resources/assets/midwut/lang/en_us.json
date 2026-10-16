@@ -1,0 +1,20 @@
+﻿{
+  "midwut.datapack_name": "MIDWUT",
+  "item.midwut.crafting_table": "MIDWUT Crafting Station",
+  "item.midwut.previous_tab": "Previous Tab",
+  "item.midwut.previous_page": "Previous Page",
+  "item.midwut.next_page": "Next Page",
+  "midwut.craft.need": "Necessary Ingridients:",
+  "midwut.craft.no_need": "No resources are required.",
+  "midwut.data_compilation": "One-time data compilation, the world is §nfrozen§r for a few seconds, please wait.",
+  "midwut.data_compilation_end": "Compilation is complete, the world is §nunfrozen§r.",
+  
+  "midwut.list.1": "%2$s%1$s",
+  "midwut.list.2": "%2$s%1$s%3$s",
+  "midwut.list.3": "%2$s%1$s%3$s%1$s%4$s",
+  "midwut.list.4": "%2$s%1$s%3$s%1$s%4$s%1$s%5$s",
+  "midwut.list.5": "%2$s%1$s%3$s%1$s%4$s%1$s%5$s%1$s%6$s",
+  "midwut.list.6": "%2$s%1$s%3$s%1$s%4$s%1$s%5$s%1$s%6$s%1$s%7$s",
+  "midwut.list.7": "%2$s%1$s%3$s%1$s%4$s%1$s%5$s%1$s%6$s%1$s%7$s%1$s%8$s",
+  "midwut.list.8": "%2$s%1$s%3$s%1$s%4$s%1$s%5$s%1$s%6$s%1$s%7$s%1$s%8$s%1$s%9$s"
+}

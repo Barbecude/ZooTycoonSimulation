@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(MouseHandler.class)
 public class MouseHandlerMixin {
 
-    @Inject(method = "onScroll", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "onScroll", at = @At("HEAD"), cancellable = true, require = 0)
     private void onMouseScroll(long window, double horizontal, double vertical, CallbackInfo ci) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen != null || mc.player == null) return;

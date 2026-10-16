@@ -1,0 +1,3489 @@
+{
+  "model": {
+    "type": "minecraft:range_dispatch",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "scale": 1.0,
+    "fallback": {
+      "type": "minecraft:empty"
+    },
+    "entries": [
+      {
+        "threshold": 0,
+        "model": {
+          "type": "minecraft:composite",
+          "models": [
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 0,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 0,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/0/beam_r_n"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/0/beam_r_e"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/0/beam_r_s"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/0/beam_r_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:composite",
+                "models": [
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 0,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/0/beam_n_n_l"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/0/beam_n_e_l"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/0/beam_n_s_l"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/0/beam_n_w_l"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 1,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/0/beam_n_n_r"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/0/beam_n_e_r"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/0/beam_n_s_r"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/0/beam_n_w_r"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 1,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 2,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/0/post_nw"
+                    }
+                  },
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/0/post_n"
+                    }
+                  },
+                  {
+                    "when": "north_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/0/post_ne"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/0/post_e"
+                    }
+                  },
+                  {
+                    "when": "south_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/0/post_se"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/0/post_s"
+                    }
+                  },
+                  {
+                    "when": "south_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/0/post_sw"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/0/post_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 2,
+              "on_true": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:block/guardrail/pixel/0/iron_bars"
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 1,
+        "model": {
+          "type": "minecraft:composite",
+          "models": [
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 0,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 0,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/1/beam_r_n"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/1/beam_r_e"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/1/beam_r_s"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/1/beam_r_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:composite",
+                "models": [
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 0,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/1/beam_n_n_l"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/1/beam_n_e_l"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/1/beam_n_s_l"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/1/beam_n_w_l"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 1,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/1/beam_n_n_r"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/1/beam_n_e_r"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/1/beam_n_s_r"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/1/beam_n_w_r"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 1,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 2,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/1/post_nw"
+                    }
+                  },
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/1/post_n"
+                    }
+                  },
+                  {
+                    "when": "north_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/1/post_ne"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/1/post_e"
+                    }
+                  },
+                  {
+                    "when": "south_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/1/post_se"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/1/post_s"
+                    }
+                  },
+                  {
+                    "when": "south_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/1/post_sw"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/1/post_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 2,
+              "on_true": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:block/guardrail/pixel/1/iron_bars"
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 2,
+        "model": {
+          "type": "minecraft:composite",
+          "models": [
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 0,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 0,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/2/beam_r_n"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/2/beam_r_e"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/2/beam_r_s"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/2/beam_r_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:composite",
+                "models": [
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 0,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/2/beam_n_n_l"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/2/beam_n_e_l"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/2/beam_n_s_l"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/2/beam_n_w_l"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 1,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/2/beam_n_n_r"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/2/beam_n_e_r"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/2/beam_n_s_r"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/2/beam_n_w_r"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 1,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 2,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/2/post_nw"
+                    }
+                  },
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/2/post_n"
+                    }
+                  },
+                  {
+                    "when": "north_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/2/post_ne"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/2/post_e"
+                    }
+                  },
+                  {
+                    "when": "south_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/2/post_se"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/2/post_s"
+                    }
+                  },
+                  {
+                    "when": "south_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/2/post_sw"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/2/post_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 3,
+        "model": {
+          "type": "minecraft:composite",
+          "models": [
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 0,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 0,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/3/beam_r_n"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/3/beam_r_e"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/3/beam_r_s"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/3/beam_r_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:composite",
+                "models": [
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 0,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/3/beam_n_n_l"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/3/beam_n_e_l"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/3/beam_n_s_l"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/3/beam_n_w_l"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 1,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/3/beam_n_n_r"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/3/beam_n_e_r"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/3/beam_n_s_r"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/3/beam_n_w_r"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 1,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 2,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/3/post_nw"
+                    }
+                  },
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/3/post_n"
+                    }
+                  },
+                  {
+                    "when": "north_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/3/post_ne"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/3/post_e"
+                    }
+                  },
+                  {
+                    "when": "south_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/3/post_se"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/3/post_s"
+                    }
+                  },
+                  {
+                    "when": "south_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/3/post_sw"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/3/post_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 2,
+              "on_true": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:block/guardrail/pixel/3/iron_bars"
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 4,
+        "model": {
+          "type": "minecraft:composite",
+          "models": [
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 0,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 0,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/4/beam_r_n"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/4/beam_r_e"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/4/beam_r_s"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/4/beam_r_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:composite",
+                "models": [
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 0,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/4/beam_n_n_l"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/4/beam_n_e_l"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/4/beam_n_s_l"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/4/beam_n_w_l"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 1,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/4/beam_n_n_r"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/4/beam_n_e_r"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/4/beam_n_s_r"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/4/beam_n_w_r"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 1,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 2,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/4/post_nw"
+                    }
+                  },
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/4/post_n"
+                    }
+                  },
+                  {
+                    "when": "north_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/4/post_ne"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/4/post_e"
+                    }
+                  },
+                  {
+                    "when": "south_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/4/post_se"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/4/post_s"
+                    }
+                  },
+                  {
+                    "when": "south_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/4/post_sw"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/4/post_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 2,
+              "on_true": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:block/guardrail/pixel/4/iron_bars"
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 5,
+        "model": {
+          "type": "minecraft:composite",
+          "models": [
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 0,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 0,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/5/beam_r_n"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/5/beam_r_e"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/5/beam_r_s"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/5/beam_r_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:composite",
+                "models": [
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 0,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/5/beam_n_n_l"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/5/beam_n_e_l"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/5/beam_n_s_l"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/5/beam_n_w_l"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 1,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/5/beam_n_n_r"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/5/beam_n_e_r"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/5/beam_n_s_r"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/5/beam_n_w_r"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 1,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 2,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/5/post_nw"
+                    }
+                  },
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/5/post_n"
+                    }
+                  },
+                  {
+                    "when": "north_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/5/post_ne"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/5/post_e"
+                    }
+                  },
+                  {
+                    "when": "south_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/5/post_se"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/5/post_s"
+                    }
+                  },
+                  {
+                    "when": "south_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/5/post_sw"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/5/post_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 2,
+              "on_true": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:block/guardrail/pixel/5/iron_bars"
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 6,
+        "model": {
+          "type": "minecraft:composite",
+          "models": [
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 0,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 0,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/6/beam_r_n"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/6/beam_r_e"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/6/beam_r_s"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/6/beam_r_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:composite",
+                "models": [
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 0,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/6/beam_n_n_l"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/6/beam_n_e_l"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/6/beam_n_s_l"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/6/beam_n_w_l"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 1,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/6/beam_n_n_r"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/6/beam_n_e_r"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/6/beam_n_s_r"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/6/beam_n_w_r"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 1,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 2,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/6/post_nw"
+                    }
+                  },
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/6/post_n"
+                    }
+                  },
+                  {
+                    "when": "north_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/6/post_ne"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/6/post_e"
+                    }
+                  },
+                  {
+                    "when": "south_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/6/post_se"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/6/post_s"
+                    }
+                  },
+                  {
+                    "when": "south_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/6/post_sw"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/6/post_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 2,
+              "on_true": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:block/guardrail/pixel/6/iron_bars"
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 7,
+        "model": {
+          "type": "minecraft:composite",
+          "models": [
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 0,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 0,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/7/beam_r_n"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/7/beam_r_e"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/7/beam_r_s"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/7/beam_r_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:composite",
+                "models": [
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 0,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/7/beam_n_n_l"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/7/beam_n_e_l"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/7/beam_n_s_l"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/7/beam_n_w_l"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 1,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/7/beam_n_n_r"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/7/beam_n_e_r"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/7/beam_n_s_r"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/7/beam_n_w_r"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 1,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 2,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/7/post_nw"
+                    }
+                  },
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/7/post_n"
+                    }
+                  },
+                  {
+                    "when": "north_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/7/post_ne"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/7/post_e"
+                    }
+                  },
+                  {
+                    "when": "south_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/7/post_se"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/7/post_s"
+                    }
+                  },
+                  {
+                    "when": "south_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/7/post_sw"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/7/post_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 2,
+              "on_true": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:block/guardrail/pixel/7/iron_bars"
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 8,
+        "model": {
+          "type": "minecraft:composite",
+          "models": [
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 0,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 0,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/8/beam_r_n"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/8/beam_r_e"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/8/beam_r_s"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/8/beam_r_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:composite",
+                "models": [
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 0,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/8/beam_n_n_l"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/8/beam_n_e_l"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/8/beam_n_s_l"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/8/beam_n_w_l"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 1,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/8/beam_n_n_r"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/8/beam_n_e_r"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/8/beam_n_s_r"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/8/beam_n_w_r"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 1,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 2,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/8/post_nw"
+                    }
+                  },
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/8/post_n"
+                    }
+                  },
+                  {
+                    "when": "north_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/8/post_ne"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/8/post_e"
+                    }
+                  },
+                  {
+                    "when": "south_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/8/post_se"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/8/post_s"
+                    }
+                  },
+                  {
+                    "when": "south_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/8/post_sw"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/8/post_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 2,
+              "on_true": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:block/guardrail/pixel/8/iron_bars"
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 9,
+        "model": {
+          "type": "minecraft:composite",
+          "models": [
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 0,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 0,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/9/beam_r_n"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/9/beam_r_e"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/9/beam_r_s"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/9/beam_r_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:composite",
+                "models": [
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 0,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/9/beam_n_n_l"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/9/beam_n_e_l"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/9/beam_n_s_l"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/9/beam_n_w_l"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 1,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/9/beam_n_n_r"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/9/beam_n_e_r"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/9/beam_n_s_r"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/9/beam_n_w_r"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 1,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 2,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/9/post_nw"
+                    }
+                  },
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/9/post_n"
+                    }
+                  },
+                  {
+                    "when": "north_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/9/post_ne"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/9/post_e"
+                    }
+                  },
+                  {
+                    "when": "south_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/9/post_se"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/9/post_s"
+                    }
+                  },
+                  {
+                    "when": "south_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/9/post_sw"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/9/post_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 2,
+              "on_true": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:block/guardrail/pixel/9/iron_bars"
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 10,
+        "model": {
+          "type": "minecraft:composite",
+          "models": [
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 0,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 0,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/10/beam_r_n"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/10/beam_r_e"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/10/beam_r_s"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/10/beam_r_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:composite",
+                "models": [
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 0,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/10/beam_n_n_l"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/10/beam_n_e_l"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/10/beam_n_s_l"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/10/beam_n_w_l"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 1,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/10/beam_n_n_r"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/10/beam_n_e_r"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/10/beam_n_s_r"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/10/beam_n_w_r"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 1,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 2,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/10/post_nw"
+                    }
+                  },
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/10/post_n"
+                    }
+                  },
+                  {
+                    "when": "north_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/10/post_ne"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/10/post_e"
+                    }
+                  },
+                  {
+                    "when": "south_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/10/post_se"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/10/post_s"
+                    }
+                  },
+                  {
+                    "when": "south_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/10/post_sw"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/10/post_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 2,
+              "on_true": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:block/guardrail/pixel/10/iron_bars"
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 11,
+        "model": {
+          "type": "minecraft:composite",
+          "models": [
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 0,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 0,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/11/beam_r_n"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/11/beam_r_e"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/11/beam_r_s"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/11/beam_r_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:composite",
+                "models": [
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 0,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/11/beam_n_n_l"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/11/beam_n_e_l"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/11/beam_n_s_l"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/11/beam_n_w_l"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 1,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/11/beam_n_n_r"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/11/beam_n_e_r"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/11/beam_n_s_r"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/11/beam_n_w_r"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 1,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 2,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/11/post_nw"
+                    }
+                  },
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/11/post_n"
+                    }
+                  },
+                  {
+                    "when": "north_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/11/post_ne"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/11/post_e"
+                    }
+                  },
+                  {
+                    "when": "south_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/11/post_se"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/11/post_s"
+                    }
+                  },
+                  {
+                    "when": "south_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/11/post_sw"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/11/post_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 2,
+              "on_true": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:block/guardrail/pixel/11/iron_bars"
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 12,
+        "model": {
+          "type": "minecraft:composite",
+          "models": [
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 0,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 0,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/12/beam_r_n"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/12/beam_r_e"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/12/beam_r_s"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/12/beam_r_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:composite",
+                "models": [
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 0,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/12/beam_n_n_l"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/12/beam_n_e_l"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/12/beam_n_s_l"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/12/beam_n_w_l"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 1,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/12/beam_n_n_r"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/12/beam_n_e_r"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/12/beam_n_s_r"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/12/beam_n_w_r"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 1,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 2,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/12/post_nw"
+                    }
+                  },
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/12/post_n"
+                    }
+                  },
+                  {
+                    "when": "north_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/12/post_ne"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/12/post_e"
+                    }
+                  },
+                  {
+                    "when": "south_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/12/post_se"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/12/post_s"
+                    }
+                  },
+                  {
+                    "when": "south_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/12/post_sw"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/12/post_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 2,
+              "on_true": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:block/guardrail/pixel/12/iron_bars"
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 13,
+        "model": {
+          "type": "minecraft:composite",
+          "models": [
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 0,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 0,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/13/beam_r_n"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/13/beam_r_e"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/13/beam_r_s"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/13/beam_r_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:composite",
+                "models": [
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 0,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/13/beam_n_n_l"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/13/beam_n_e_l"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/13/beam_n_s_l"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/13/beam_n_w_l"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 1,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/13/beam_n_n_r"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/13/beam_n_e_r"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/13/beam_n_s_r"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/13/beam_n_w_r"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 1,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 2,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/13/post_nw"
+                    }
+                  },
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/13/post_n"
+                    }
+                  },
+                  {
+                    "when": "north_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/13/post_ne"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/13/post_e"
+                    }
+                  },
+                  {
+                    "when": "south_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/13/post_se"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/13/post_s"
+                    }
+                  },
+                  {
+                    "when": "south_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/13/post_sw"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/13/post_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 2,
+              "on_true": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:block/guardrail/pixel/13/iron_bars"
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 14,
+        "model": {
+          "type": "minecraft:composite",
+          "models": [
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 0,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 0,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/14/beam_r_n"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/14/beam_r_e"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/14/beam_r_s"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/14/beam_r_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:composite",
+                "models": [
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 0,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/14/beam_n_n_l"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/14/beam_n_e_l"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/14/beam_n_s_l"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/14/beam_n_w_l"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 1,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/14/beam_n_n_r"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/14/beam_n_e_r"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/14/beam_n_s_r"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/14/beam_n_w_r"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 1,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 2,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/14/post_nw"
+                    }
+                  },
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/14/post_n"
+                    }
+                  },
+                  {
+                    "when": "north_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/14/post_ne"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/14/post_e"
+                    }
+                  },
+                  {
+                    "when": "south_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/14/post_se"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/14/post_s"
+                    }
+                  },
+                  {
+                    "when": "south_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/14/post_sw"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/14/post_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 2,
+              "on_true": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:block/guardrail/pixel/14/iron_bars"
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "threshold": 15,
+        "model": {
+          "type": "minecraft:composite",
+          "models": [
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 0,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 0,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/15/beam_r_n"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/15/beam_r_e"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/15/beam_r_s"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/15/beam_r_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:composite",
+                "models": [
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 0,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/15/beam_n_n_l"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/15/beam_n_e_l"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/15/beam_n_s_l"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/15/beam_n_w_l"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "minecraft:select",
+                    "property": "minecraft:custom_model_data",
+                    "index": 1,
+                    "fallback": {
+                      "type": "minecraft:empty"
+                    },
+                    "cases": [
+                      {
+                        "when": "north",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/15/beam_n_n_r"
+                        }
+                      },
+                      {
+                        "when": "east",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/15/beam_n_e_r"
+                        }
+                      },
+                      {
+                        "when": "south",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/15/beam_n_s_r"
+                        }
+                      },
+                      {
+                        "when": "west",
+                        "model": {
+                          "type": "minecraft:model",
+                          "model": "physical_vehicles:block/guardrail/pixel/15/beam_n_w_r"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 1,
+              "on_true": {
+                "type": "minecraft:select",
+                "property": "minecraft:custom_model_data",
+                "index": 2,
+                "fallback": {
+                  "type": "minecraft:empty"
+                },
+                "cases": [
+                  {
+                    "when": "north_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/15/post_nw"
+                    }
+                  },
+                  {
+                    "when": "north",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/15/post_n"
+                    }
+                  },
+                  {
+                    "when": "north_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/15/post_ne"
+                    }
+                  },
+                  {
+                    "when": "east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/15/post_e"
+                    }
+                  },
+                  {
+                    "when": "south_east",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/15/post_se"
+                    }
+                  },
+                  {
+                    "when": "south",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/15/post_s"
+                    }
+                  },
+                  {
+                    "when": "south_west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/15/post_sw"
+                    }
+                  },
+                  {
+                    "when": "west",
+                    "model": {
+                      "type": "minecraft:model",
+                      "model": "physical_vehicles:block/guardrail/pixel/15/post_w"
+                    }
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "property": "minecraft:custom_model_data",
+              "index": 2,
+              "on_true": {
+                "type": "minecraft:model",
+                "model": "physical_vehicles:block/guardrail/pixel/15/iron_bars"
+              },
+              "on_false": {
+                "type": "minecraft:empty"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

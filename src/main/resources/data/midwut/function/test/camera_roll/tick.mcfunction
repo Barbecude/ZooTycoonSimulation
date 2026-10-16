@@ -1,0 +1,1 @@
+execute as @a[tag=custom_effect.nausea] at @s run function midwut:test/camera_roll/tick_nausea

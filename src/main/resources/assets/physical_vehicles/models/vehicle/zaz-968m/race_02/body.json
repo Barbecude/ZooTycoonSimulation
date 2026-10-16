@@ -1,0 +1,8 @@
+{
+  "parent": "physical_vehicles:vehicle/zaz-968/body_double_tint",
+  "textures": {
+    "fixed": "physical_vehicles:vehicle/zaz-968m/race_02/fixed",
+    "tint_01": "physical_vehicles:vehicle/zaz-968m/race_02/tint_01",
+    "tint_02": "physical_vehicles:vehicle/zaz-968m/race_02/tint_02"
+  }
+}

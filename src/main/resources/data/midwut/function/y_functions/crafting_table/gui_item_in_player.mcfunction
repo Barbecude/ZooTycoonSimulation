@@ -1,0 +1,2 @@
+execute unless items entity @s container.* *[minecraft:custom_data~{midwut.gui_item:true}] unless items entity @s player.cursor *[minecraft:custom_data~{midwut.gui_item:true}] unless items entity @s weapon.offhand *[minecraft:custom_data~{midwut.gui_item:true}] run return fail
+return 1

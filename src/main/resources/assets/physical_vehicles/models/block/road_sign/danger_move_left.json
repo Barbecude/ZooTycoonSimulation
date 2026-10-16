@@ -1,0 +1,26 @@
+{
+    "credit": "Made by Falanta Fantomo and Antoha256M with Blockbench",
+    "textures": {
+        "back": "physical_vehicles:block_item/road_sign/back/square",
+        "particle": "physical_vehicles:block_item/road_sign/danger_move_left",
+        "texture": "physical_vehicles:block_item/road_sign/danger_move_left"
+    },
+    "elements": [
+        {
+            "from": [0, 0, 8],
+            "to": [16, 16, 8],
+            "faces": {
+                "south": {"uv": [0, 0, 16, 16], "texture": "#texture", "cullface": "south"},
+                "north": {"uv": [0, 0, 16, 16], "texture": "#back", "cullface": "north"}
+            }
+        }
+    ],
+    "display": {
+        "fixed": {
+            "rotation": [-90, 0, 0],
+            "translation": [13.335, 13.335, -2.15],
+            "scale": [2.6667, 2.6667, 2.6667]
+        }
+    },
+    "gui_light": "front"
+}

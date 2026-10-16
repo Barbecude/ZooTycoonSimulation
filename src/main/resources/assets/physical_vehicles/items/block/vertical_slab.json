@@ -1,0 +1,26 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "fallback": {
+      "type": "minecraft:empty"
+    },
+    "cases": [
+      {
+        "when": "stone_brick_slab",
+        "model": {
+          "type": "minecraft:model",
+          "model": "physical_vehicles:block/vertical_slab/stone_brick_slab"
+        }
+      },
+      {
+        "when": "deepslate_tile_slab",
+        "model": {
+          "type": "minecraft:model",
+          "model": "physical_vehicles:block/vertical_slab/deepslate_tile_slab"
+        }
+      }
+    ]
+  }
+}

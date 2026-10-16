@@ -1,0 +1,1 @@
+$return run scoreboard players operation #OUT:sin main_score = #OUT:sin:$(in) const

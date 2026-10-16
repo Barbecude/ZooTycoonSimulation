@@ -1,0 +1,14 @@
+{
+    "replace": false,
+    "values": [
+        "#minecraft:cauldrons",
+        "minecraft:jukebox",
+        "minecraft:bell",
+        "minecraft:note_block",
+        "minecraft:tnt",
+        "#midwut:working_blocks",
+        "#midwut:bee-s_house",
+        "#minecraft:copper_golem_statues",
+        "#midwut:shelfs"
+    ]
+}

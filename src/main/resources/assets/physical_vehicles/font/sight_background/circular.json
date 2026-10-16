@@ -1,0 +1,18 @@
+{
+    "providers": [
+        {
+            "type": "bitmap",
+            "file": "physical_vehicles:gui/sight_background/circular.png",
+            "ascent": 117,
+            "height": 120,
+            "chars": ["01","45"]
+        },
+        {
+            "type": "bitmap",
+            "file": "physical_vehicles:gui/sight_background/circular.png",
+            "ascent": -3,
+            "height": 120,
+            "chars": ["67","23"]
+        }
+    ]
+}

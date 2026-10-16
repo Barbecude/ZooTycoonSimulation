@@ -1,0 +1,1 @@
+return run execute if score @s phys_veh.add_spin.x matches 0 if score @s phys_veh.add_spin.y matches 0 if score @s phys_veh.add_spin.z matches 0

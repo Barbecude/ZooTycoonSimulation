@@ -1,0 +1,55 @@
+{
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:poisonous_potato",
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "minecraft:food": {
+                  "can_always_eat": true,
+                  "nutrition": 0,
+                  "saturation": 0
+                },
+                "minecraft:equippable": {
+                  "slot": "body",
+                  "can_be_sheared": false,
+                  "equip_on_interact": false,
+                  "swappable": false,
+                  "dispensable": false,
+                  "allowed_entities": [
+                    "minecraft:llama"
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "phys_veh.car_key": true
+                },
+                "minecraft:lore": [
+                  {
+                    "translate": "phys_veh.car_key.lore",
+                    "italic": false,
+                    "color": "gray"
+                  },
+                  {
+                    "translate": "phys_veh.car_key.lore2",
+                    "italic": false,
+                    "color": "gray"
+                  }
+                ],
+                "minecraft:custom_model_data": 30001,
+                "minecraft:custom_name": {
+                  "translate": "phys_veh.car_key",
+                  "fallback": "Car key"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

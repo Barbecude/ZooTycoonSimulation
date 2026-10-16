@@ -1,0 +1,1 @@
+$execute positioned ^ ^-$(radius) ^ positioned ^ ^0.313 ^ run function physical_vehicles:zzz/vehicle/at_parts/wheel/smoke/4/loop

@@ -1,0 +1,2 @@
+data modify storage midwut:main macros.value set value "{full_pedal_seconds:$(full_pedal_seconds),gear_changing_cooldown:$(gear_changing_cooldown)}"
+function physical_vehicles:zzz/player/triggers/vehicle_dashboard/dialog with storage midwut:main macros

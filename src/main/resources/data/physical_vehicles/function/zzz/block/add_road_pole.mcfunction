@@ -1,0 +1,1 @@
+data modify block ~ ~ ~ Items[0].components."minecraft:custom_model_data".flags set value [true]

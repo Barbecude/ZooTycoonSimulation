@@ -1,0 +1,1 @@
+return run scoreboard players remove #Vec.Length main_score 1

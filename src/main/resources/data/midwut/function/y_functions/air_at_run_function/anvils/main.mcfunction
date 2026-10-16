@@ -1,0 +1,2 @@
+execute unless block ~ ~ ~ minecraft:anvil[facing=north] unless block ~ ~ ~ minecraft:anvil[facing=south] run return run function midwut:y_functions/air_at_run_function/anvils/east-west
+execute unless block ~ ~ ~ minecraft:anvil[facing=east] unless block ~ ~ ~ minecraft:anvil[facing=west] run return run function midwut:y_functions/air_at_run_function/anvils/north-south

@@ -1,0 +1,1 @@
+$damage @s $(damage) physical_vehicles:shell by @e[type=minecraft:text_display,tag=phys_veh.main,limit=1,predicate=physical_vehicles:same_scores/vehicle_id]

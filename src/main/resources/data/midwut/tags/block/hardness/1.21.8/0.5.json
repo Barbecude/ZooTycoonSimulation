@@ -1,0 +1,25 @@
+{
+    "values": [
+        "minecraft:podzol",
+        "minecraft:lever",
+        "minecraft:cake",
+        "minecraft:brewing_stand",
+        "minecraft:hay_block",
+        "minecraft:packed_ice",
+        "minecraft:frosted_ice",
+        "minecraft:magma_block",
+        "minecraft:dried_kelp_block",
+        "minecraft:turtle_egg",
+        "minecraft:sniffer_egg",
+        "minecraft:target",
+        "minecraft:mud",
+        "#minecraft:candle_cakes",
+        "#minecraft:concrete_powder",
+        "#minecraft:convertable_to_mud",
+        "#minecraft:polar_bears_spawnable_on_alternate",
+        "#minecraft:smelts_to_glass",
+        "#minecraft:soul_fire_base_blocks",
+        "#minecraft:buttons",
+        "#minecraft:pressure_plates"
+    ]
+}

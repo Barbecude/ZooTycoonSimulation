@@ -1,0 +1,47 @@
+{
+    "criteria": {
+        "user_settings": {
+            "trigger": "minecraft:tick",
+            "conditions": {
+                "player": [
+                    {
+                        "condition": "minecraft:inverted",
+                        "term": {
+                            "condition": "minecraft:entity_scores",
+                            "entity": "this",
+                            "scores": {
+                                "phys_veh.user_settings": -2147483648
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "vehicle_dashboard": {
+            "trigger": "minecraft:tick",
+            "conditions": {
+                "player": [
+                    {
+                        "condition": "minecraft:inverted",
+                        "term": {
+                            "condition": "minecraft:entity_scores",
+                            "entity": "this",
+                            "scores": {
+                                "phys_veh.vehicle_dashboard": -2147483648
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    "requirements": [
+        [
+            "user_settings",
+            "vehicle_dashboard"
+        ]
+    ],
+    "rewards": {
+        "function": "physical_vehicles:zzz/player/triggers/adv"
+    }
+}

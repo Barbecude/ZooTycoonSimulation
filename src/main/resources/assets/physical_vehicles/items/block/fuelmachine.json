@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "model",
+    "model": "physical_vehicles:block/fuelmachine"
+  }
+}

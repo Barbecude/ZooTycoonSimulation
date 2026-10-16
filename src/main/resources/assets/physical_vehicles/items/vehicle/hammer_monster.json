@@ -1,0 +1,83 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "cases": [
+      {
+        "when": [
+          "body"
+        ],
+        "model": {
+          "type": "minecraft:composite",
+          "models": [
+            {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:vehicle/hammer_monster/body",
+              "tints": [
+                {
+                  "type": "minecraft:custom_model_data",
+                  "default": 16777215,
+                  "index": 0
+                }
+              ]
+            },
+            {
+              "type": "minecraft:select",
+              "property": "custom_model_data",
+              "index": 1,
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "cases": [
+                {
+                  "when": "parking_lights",
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:vehicle/hammer_monster/parking_lights"
+                  }
+                },
+                {
+                  "when": "headlights",
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:vehicle/hammer_monster/headlights"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "when": [
+          "steering_wheel_off"
+        ],
+        "model": {
+          "type": "minecraft:model",
+          "model": "physical_vehicles:vehicle/hammer_monster/steering_wheel_off"
+        }
+      },
+      {
+        "when": [
+          "wheel"
+        ],
+        "model": {
+          "type": "minecraft:model",
+          "model": "physical_vehicles:vehicle/hammer_monster/wheel"
+        }
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "physical_vehicles:vehicle/hammer_monster/item",
+      "tints": [
+        {
+          "type": "minecraft:custom_model_data",
+          "default": 16777215,
+          "index": 0
+        }
+      ]
+    }
+  }
+}

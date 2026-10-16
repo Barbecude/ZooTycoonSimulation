@@ -1,0 +1,27 @@
+{
+    "other.car_key_insert_into_ignition": {"category": "ambient","sounds": [{"name": "physical_vehicles:other/car_key_insert_into_ignition","attenuation_distance": 8}]},
+    "other.car_key_remove_from_ignition": {"category": "ambient","sounds": [{"name": "physical_vehicles:other/car_key_remove_from_ignition","attenuation_distance": 8}]},
+    "other.switching_gear.start": {"category": "ambient","sounds": [{"name": "physical_vehicles:other/switching_gear_start","attenuation_distance": 8}]},
+    "other.switching_gear.finish": {"category": "ambient","sounds": [{"name": "physical_vehicles:other/switching_gear_finish","attenuation_distance": 8}]},
+    "other.crash": {"category": "ambient","sounds": [{"name": "physical_vehicles:other/crash1"},{"name": "physical_vehicles:other/crash2"}]},
+    "other.ignition_start": {"category": "ambient","sounds": [{"name": "physical_vehicles:other/ignition_start"}]},
+    "other.ignition_starting": {"category": "ambient","sounds": [{"name": "physical_vehicles:other/ignition_starting"}]},
+    "other.engine.0": {"category": "ambient","sounds": [{"name": "physical_vehicles:other/engine_0"}]},
+    "other.engine.1": {"category": "ambient","sounds": [{"name": "physical_vehicles:other/engine_1"}]},
+    "other.engine.2": {"category": "ambient","sounds": [{"name": "physical_vehicles:other/engine_2"}]},
+    "other.tires.1": {"category": "ambient","sounds": [{"name": "physical_vehicles:other/tires_1"}]},
+    "other.tires.2": {"category": "ambient","sounds": [{"name": "physical_vehicles:other/tires_2"}]},
+    "other.tires.3": {"category": "ambient","sounds": [{"name": "physical_vehicles:other/tires_3"}]},
+    "other.tires.4": {"category": "ambient","sounds": [{"name": "physical_vehicles:other/tires_4"}]},
+    "other.horn.1": {"category": "ambient","sounds": [{"name": "physical_vehicles:other/horn_1"}]},
+    "other.horn.2": {"category": "ambient","sounds": [{"name": "physical_vehicles:other/horn_2"}]},
+    "other.handbrake_tightened": {"category": "ambient","sounds": [{"name": "physical_vehicles:other/handbrake_tightened","attenuation_distance": 8}]},
+    "other.handbrake_removed": {"category": "ambient","sounds": [{"name": "physical_vehicles:other/handbrake_removed","attenuation_distance": 8}]},
+    "other.handbrake_truck_tightened": {"category": "ambient","sounds": [{"name": "physical_vehicles:other/handbrake_truck_tightened","attenuation_distance": 8}]},
+    "other.handbrake_truck_removed": {"category": "ambient","sounds": [{"name": "physical_vehicles:other/handbrake_truck_removed","attenuation_distance": 8}]},
+
+
+    "vehicle.zaz-968m.engine": {"category": "ambient","sounds": [{"name": "physical_vehicles:vehicle/zaz-968m/engine"}]},
+    "vehicle.zaz-968m.ignition_start": {"category": "ambient","sounds": [{"name": "physical_vehicles:vehicle/zaz-968m/ignition_start"}]},
+    "vehicle.zaz-968m.ignition_starting": {"category": "ambient","sounds": [{"name": "physical_vehicles:vehicle/zaz-968m/ignition_starting"}]}
+}

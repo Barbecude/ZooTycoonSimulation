@@ -1,0 +1,3132 @@
+{
+  "model": {
+    "type": "composite",
+    "models": [
+      {
+        "type": "minecraft:select",
+        "property": "minecraft:custom_model_data",
+        "index": 0,
+        "fallback": {
+          "type": "minecraft:empty"
+        },
+        "cases": [
+          {
+            "when": [
+              "black_concrete_powder"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/black_concrete_powder/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/black_concrete_powder/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/black_concrete_powder/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/black_concrete_powder/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/black_concrete_powder/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/black_concrete_powder/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/black_concrete_powder/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/black_concrete_powder/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/black_concrete_powder/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/black_concrete_powder/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/black_concrete_powder/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/black_concrete_powder/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/black_concrete_powder/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/black_concrete_powder/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/black_concrete_powder/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "light_gray_concrete_powder"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/light_gray_concrete_powder/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/light_gray_concrete_powder/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/light_gray_concrete_powder/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/light_gray_concrete_powder/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/light_gray_concrete_powder/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/light_gray_concrete_powder/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/light_gray_concrete_powder/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/light_gray_concrete_powder/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/light_gray_concrete_powder/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/light_gray_concrete_powder/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/light_gray_concrete_powder/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/light_gray_concrete_powder/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/light_gray_concrete_powder/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/light_gray_concrete_powder/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/light_gray_concrete_powder/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "gray_concrete_powder"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete_powder/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete_powder/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete_powder/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete_powder/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete_powder/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete_powder/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete_powder/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete_powder/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete_powder/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete_powder/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete_powder/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete_powder/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete_powder/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete_powder/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete_powder/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "red_concrete_powder"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/red_concrete_powder/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/red_concrete_powder/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/red_concrete_powder/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/red_concrete_powder/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/red_concrete_powder/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/red_concrete_powder/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/red_concrete_powder/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/red_concrete_powder/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/red_concrete_powder/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/red_concrete_powder/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/red_concrete_powder/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/red_concrete_powder/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/red_concrete_powder/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/red_concrete_powder/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/red_concrete_powder/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "white_concrete_powder"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete_powder/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete_powder/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete_powder/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete_powder/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete_powder/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete_powder/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete_powder/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete_powder/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete_powder/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete_powder/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete_powder/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete_powder/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete_powder/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete_powder/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete_powder/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "yellow_concrete_powder"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete_powder/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete_powder/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete_powder/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete_powder/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete_powder/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete_powder/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete_powder/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete_powder/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete_powder/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete_powder/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete_powder/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete_powder/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete_powder/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete_powder/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete_powder/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "yellow_concrete"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_concrete/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "white_concrete"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_concrete/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "gray_concrete"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gray_concrete/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "iron_trapdoor"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/iron_trapdoor/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/iron_trapdoor/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/iron_trapdoor/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/iron_trapdoor/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/iron_trapdoor/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/iron_trapdoor/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/iron_trapdoor/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/iron_trapdoor/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/iron_trapdoor/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/iron_trapdoor/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/iron_trapdoor/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/iron_trapdoor/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/iron_trapdoor/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/iron_trapdoor/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/iron_trapdoor/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "grass_block"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/grass_block/1",
+                    "tints": [
+                      {
+                        "type": "minecraft:custom_model_data",
+                        "default": 4574,
+                        "index": 0
+                      }
+                    ]
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/grass_block/2",
+                    "tints": [
+                      {
+                        "type": "minecraft:custom_model_data",
+                        "default": 4574,
+                        "index": 0
+                      }
+                    ]
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/grass_block/3",
+                    "tints": [
+                      {
+                        "type": "minecraft:custom_model_data",
+                        "default": 4574,
+                        "index": 0
+                      }
+                    ]
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/grass_block/4",
+                    "tints": [
+                      {
+                        "type": "minecraft:custom_model_data",
+                        "default": 4574,
+                        "index": 0
+                      }
+                    ]
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/grass_block/5",
+                    "tints": [
+                      {
+                        "type": "minecraft:custom_model_data",
+                        "default": 4574,
+                        "index": 0
+                      }
+                    ]
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/grass_block/6",
+                    "tints": [
+                      {
+                        "type": "minecraft:custom_model_data",
+                        "default": 4574,
+                        "index": 0
+                      }
+                    ]
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/grass_block/7",
+                    "tints": [
+                      {
+                        "type": "minecraft:custom_model_data",
+                        "default": 4574,
+                        "index": 0
+                      }
+                    ]
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/grass_block/8",
+                    "tints": [
+                      {
+                        "type": "minecraft:custom_model_data",
+                        "default": 4574,
+                        "index": 0
+                      }
+                    ]
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/grass_block/9",
+                    "tints": [
+                      {
+                        "type": "minecraft:custom_model_data",
+                        "default": 4574,
+                        "index": 0
+                      }
+                    ]
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/grass_block/10",
+                    "tints": [
+                      {
+                        "type": "minecraft:custom_model_data",
+                        "default": 4574,
+                        "index": 0
+                      }
+                    ]
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/grass_block/11",
+                    "tints": [
+                      {
+                        "type": "minecraft:custom_model_data",
+                        "default": 4574,
+                        "index": 0
+                      }
+                    ]
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/grass_block/12",
+                    "tints": [
+                      {
+                        "type": "minecraft:custom_model_data",
+                        "default": 4574,
+                        "index": 0
+                      }
+                    ]
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/grass_block/13",
+                    "tints": [
+                      {
+                        "type": "minecraft:custom_model_data",
+                        "default": 4574,
+                        "index": 0
+                      }
+                    ]
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/grass_block/14",
+                    "tints": [
+                      {
+                        "type": "minecraft:custom_model_data",
+                        "default": 4574,
+                        "index": 0
+                      }
+                    ]
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/grass_block/15",
+                    "tints": [
+                      {
+                        "type": "minecraft:custom_model_data",
+                        "default": 4574,
+                        "index": 0
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "coarse_dirt"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/coarse_dirt/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/coarse_dirt/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/coarse_dirt/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/coarse_dirt/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/coarse_dirt/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/coarse_dirt/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/coarse_dirt/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/coarse_dirt/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/coarse_dirt/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/coarse_dirt/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/coarse_dirt/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/coarse_dirt/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/coarse_dirt/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/coarse_dirt/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/coarse_dirt/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "dirt"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/dirt/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/dirt/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/dirt/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/dirt/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/dirt/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/dirt/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/dirt/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/dirt/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/dirt/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/dirt/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/dirt/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/dirt/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/dirt/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/dirt/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/dirt/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "gravel"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gravel/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gravel/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gravel/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gravel/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gravel/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gravel/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gravel/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gravel/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gravel/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gravel/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gravel/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gravel/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gravel/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gravel/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/gravel/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "smooth_stone"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/smooth_stone/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/smooth_stone/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/smooth_stone/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/smooth_stone/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/smooth_stone/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/smooth_stone/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/smooth_stone/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/smooth_stone/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/smooth_stone/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/smooth_stone/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/smooth_stone/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/smooth_stone/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/smooth_stone/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/smooth_stone/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/smooth_stone/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "sandstone"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/sandstone/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/sandstone/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/sandstone/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/sandstone/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/sandstone/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/sandstone/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/sandstone/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/sandstone/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/sandstone/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/sandstone/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/sandstone/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/sandstone/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/sandstone/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/sandstone/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/sandstone/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "bricks"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/bricks/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/bricks/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/bricks/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/bricks/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/bricks/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/bricks/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/bricks/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/bricks/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/bricks/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/bricks/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/bricks/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/bricks/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/bricks/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/bricks/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/bricks/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "cobblestone"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cobblestone/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cobblestone/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cobblestone/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cobblestone/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cobblestone/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cobblestone/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cobblestone/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cobblestone/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cobblestone/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cobblestone/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cobblestone/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cobblestone/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cobblestone/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cobblestone/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cobblestone/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "andesite"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/andesite/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/andesite/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/andesite/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/andesite/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/andesite/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/andesite/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/andesite/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/andesite/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/andesite/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/andesite/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/andesite/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/andesite/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/andesite/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/andesite/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/andesite/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "stone"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/stone/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/stone/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/stone/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/stone/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/stone/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/stone/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/stone/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/stone/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/stone/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/stone/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/stone/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/stone/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/stone/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/stone/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/stone/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "blackstone"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/blackstone/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/blackstone/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/blackstone/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/blackstone/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/blackstone/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/blackstone/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/blackstone/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/blackstone/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/blackstone/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/blackstone/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/blackstone/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/blackstone/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/blackstone/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/blackstone/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/blackstone/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "cyan_terracotta"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cyan_terracotta/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cyan_terracotta/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cyan_terracotta/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cyan_terracotta/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cyan_terracotta/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cyan_terracotta/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cyan_terracotta/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cyan_terracotta/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cyan_terracotta/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cyan_terracotta/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cyan_terracotta/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cyan_terracotta/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cyan_terracotta/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cyan_terracotta/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/cyan_terracotta/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "yellow_terracotta"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_terracotta/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_terracotta/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_terracotta/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_terracotta/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_terracotta/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_terracotta/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_terracotta/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_terracotta/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_terracotta/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_terracotta/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_terracotta/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_terracotta/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_terracotta/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_terracotta/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/yellow_terracotta/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "white_terracotta"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_terracotta/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_terracotta/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_terracotta/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_terracotta/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_terracotta/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_terracotta/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_terracotta/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_terracotta/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_terracotta/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_terracotta/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_terracotta/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_terracotta/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_terracotta/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_terracotta/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/white_terracotta/15"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "when": [
+              "purple_terracotta"
+            ],
+            "model": {
+              "type": "minecraft:range_dispatch",
+              "property": "custom_model_data",
+              "fallback": {
+                "type": "minecraft:empty"
+              },
+              "entries": [
+                {
+                  "threshold": 1,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/purple_terracotta/1"
+                  }
+                },
+                {
+                  "threshold": 2,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/purple_terracotta/2"
+                  }
+                },
+                {
+                  "threshold": 3,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/purple_terracotta/3"
+                  }
+                },
+                {
+                  "threshold": 4,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/purple_terracotta/4"
+                  }
+                },
+                {
+                  "threshold": 5,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/purple_terracotta/5"
+                  }
+                },
+                {
+                  "threshold": 6,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/purple_terracotta/6"
+                  }
+                },
+                {
+                  "threshold": 7,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/purple_terracotta/7"
+                  }
+                },
+                {
+                  "threshold": 8,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/purple_terracotta/8"
+                  }
+                },
+                {
+                  "threshold": 9,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/purple_terracotta/9"
+                  }
+                },
+                {
+                  "threshold": 10,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/purple_terracotta/10"
+                  }
+                },
+                {
+                  "threshold": 11,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/purple_terracotta/11"
+                  }
+                },
+                {
+                  "threshold": 12,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/purple_terracotta/12"
+                  }
+                },
+                {
+                  "threshold": 13,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/purple_terracotta/13"
+                  }
+                },
+                {
+                  "threshold": 14,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/purple_terracotta/14"
+                  }
+                },
+                {
+                  "threshold": 15,
+                  "model": {
+                    "type": "minecraft:model",
+                    "model": "physical_vehicles:block/road/purple_terracotta/15"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "type": "select",
+        "property": "custom_model_data",
+        "index": 1,
+        "fallback": {
+          "type": "empty"
+        },
+        "cases": [
+          {
+            "when": "iron_bars",
+            "model": {
+              "type": "composite",
+              "models": [
+                {
+                  "type": "select",
+                  "property": "custom_model_data",
+                  "index": 2,
+                  "fallback": {
+                    "type": "empty"
+                  },
+                  "cases": [
+                    {
+                      "when": "iron_bars_post",
+                      "model": {
+                        "type": "model",
+                        "model": "physical_vehicles:block/iron_bars/iron_bars_post"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

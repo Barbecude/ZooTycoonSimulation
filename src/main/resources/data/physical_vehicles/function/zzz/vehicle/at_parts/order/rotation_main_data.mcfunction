@@ -1,0 +1,10 @@
+data modify storage midwut:main left_rotation set from storage midwut:main Data.data.transformation.main_rotation
+scoreboard players operation @s phys_veh.m00_3 = #m00_3 main_score
+scoreboard players operation @s phys_veh.m01_3 = #m01_3 main_score
+scoreboard players operation @s phys_veh.m02_3 = #m02_3 main_score
+scoreboard players operation @s phys_veh.m10_3 = #m10_3 main_score
+scoreboard players operation @s phys_veh.m11_3 = #m11_3 main_score
+scoreboard players operation @s phys_veh.m12_3 = #m12_3 main_score
+scoreboard players operation @s phys_veh.m20_3 = #m20_3 main_score
+scoreboard players operation @s phys_veh.m21_3 = #m21_3 main_score
+scoreboard players operation @s phys_veh.m22_3 = #m22_3 main_score

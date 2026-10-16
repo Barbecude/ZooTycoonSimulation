@@ -1,0 +1,3 @@
+execute if block 2 0 0 #midwut:block_states/sculk_sensor_phase[sculk_sensor_phase=active] run return run data modify storage midwut:main output_block.block.Properties.sculk_sensor_phase set value "active"
+execute if block 2 0 0 #midwut:block_states/sculk_sensor_phase[sculk_sensor_phase=cooldown] run return run data modify storage midwut:main output_block.block.Properties.sculk_sensor_phase set value "cooldown"
+execute if block 2 0 0 #midwut:block_states/sculk_sensor_phase[sculk_sensor_phase=inactive] run return run data modify storage midwut:main output_block.block.Properties.sculk_sensor_phase set value "inactive"

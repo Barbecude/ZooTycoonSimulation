@@ -1,0 +1,1 @@
+$data modify storage midwut:main blockstates set value '[$(blockstates)]'

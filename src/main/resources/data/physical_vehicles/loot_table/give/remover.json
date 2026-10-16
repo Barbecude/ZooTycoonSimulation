@@ -1,0 +1,49 @@
+{
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:dolphin_spawn_egg",
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "minecraft:entity_data": {
+                  "Tags": [
+                    "phys_veh.spawn",
+                    "phys_veh.remover"
+                  ],
+                  "id": "minecraft:pig",
+                  "Silent": true,
+                  "NoAI": true,
+                  "Invulnerable": true,
+                  "DeathLootTable": ""
+                },
+                "minecraft:rarity": "uncommon",
+                "minecraft:lore": [
+                  {
+                    "translate": "phys_veh.remover.lore",
+                    "italic": false,
+                    "color": "gray"
+                  },
+                  {
+                    "translate": "phys_veh.remover.lore2",
+                    "italic": false,
+                    "color": "gray"
+                  }
+                ],
+                "minecraft:custom_model_data": 20019,
+                "minecraft:custom_name": {
+                  "translate": "phys_veh.remover",
+                  "fallback": "Vehicles Remover"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

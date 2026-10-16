@@ -1,0 +1,275 @@
+{
+  "model": {
+    "type": "minecraft:composite",
+    "models": [
+      {
+        "type": "minecraft:select",
+        "property": "minecraft:custom_model_data",
+        "index": 0,
+        "cases": [
+          {
+            "when": "circle_blue_left",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/circle_blue_left"
+            }
+          },
+          {
+            "when": "circle_blue_right",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/circle_blue_right"
+            }
+          },
+          {
+            "when": "crosswalk",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/crosswalk"
+            }
+          },
+          {
+            "when": "curved_road_left",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/curved_road_left"
+            }
+          },
+          {
+            "when": "curved_road_right",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/curved_road_right"
+            }
+          },
+          {
+            "when": "danger",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/danger"
+            }
+          },
+          {
+            "when": "danger_move_left",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/danger_move_left"
+            }
+          },
+          {
+            "when": "danger_move_right",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/danger_move_right"
+            }
+          },
+          {
+            "when": "danger_rolling_stones",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/danger_rolling_stones"
+            }
+          },
+          {
+            "when": "dead_end_forward",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/dead_end_forward"
+            }
+          },
+          {
+            "when": "dead_end_left",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/dead_end_left"
+            }
+          },
+          {
+            "when": "forward",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/forward"
+            }
+          },
+          {
+            "when": "give_way",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/give_way"
+            }
+          },
+          {
+            "when": "main_road",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/main_road"
+            }
+          },
+          {
+            "when": "no_entry",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/no_entry"
+            }
+          },
+          {
+            "when": "no_forward",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/no_forward"
+            }
+          },
+          {
+            "when": "no_movement_1",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/no_movement_1"
+            }
+          },
+          {
+            "when": "no_movement_2",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/no_movement_2"
+            }
+          },
+          {
+            "when": "no_stop",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/no_stop"
+            }
+          },
+          {
+            "when": "parking",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/parking"
+            }
+          },
+          {
+            "when": "speed_limit_40",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/speed_limit_40"
+            }
+          },
+          {
+            "when": "speed_limit_50",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/speed_limit_50"
+            }
+          },
+          {
+            "when": "speed_limit_60",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/speed_limit_60"
+            }
+          },
+          {
+            "when": "speed_limit_70",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/speed_limit_70"
+            }
+          },
+          {
+            "when": "speed_limit_80",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/speed_limit_80"
+            }
+          },
+          {
+            "when": "speed_limit_90",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/speed_limit_90"
+            }
+          },
+          {
+            "when": "stop",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/stop"
+            }
+          },
+          {
+            "when": "triangle_red_left",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/triangle_red_left"
+            }
+          },
+          {
+            "when": "triangle_red_right",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/triangle_red_right"
+            }
+          },
+          {
+            "when": "u_turn_left",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/u_turn_left"
+            }
+          },
+          {
+            "when": "u_turn_right",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/u_turn_right"
+            }
+          },
+          {
+            "when": "winding_road",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/winding_road"
+            }
+          },
+          {
+            "when": "pedestrian_zone",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/pedestrian_zone"
+            }
+          },
+          {
+            "when": "end_of_pedestrian_zone",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/end_of_pedestrian_zone"
+            }
+          },
+          {
+            "when": "left_arrow_70",
+            "model": {
+              "type": "minecraft:model",
+              "model": "physical_vehicles:block/road_sign/left_arrow_70"
+            }
+          }
+        ],
+        "fallback": {
+          "type": "minecraft:model",
+          "model": "physical_vehicles:block/road_sign/road_pole"
+        }
+      },
+      {
+        "type": "minecraft:condition",
+        "property": "minecraft:custom_model_data",
+        "index": 0,
+        "on_false": {
+          "type": "minecraft:empty"
+        },
+        "on_true": {
+          "type": "minecraft:model",
+          "model": "physical_vehicles:block/road_sign/road_pole"
+        }
+      }
+    ]
+  }
+}

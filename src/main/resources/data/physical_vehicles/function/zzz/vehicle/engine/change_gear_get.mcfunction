@@ -1,0 +1,1 @@
+$execute store result score @s phys_veh.current_gear run data get storage midwut:main Data.data.phys_veh.gears[$(gear_index)] 10

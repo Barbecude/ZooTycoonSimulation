@@ -1,0 +1,60 @@
+# En
+## scoreboard players get #random_min main_score — Minimum number
+## scoreboard players get #random_max main_score — Maximum number
+## scoreboard players get #random main_score — Output number (Random)
+# Ru
+## scoreboard players get #random_min main_score — Минимальное число
+## scoreboard players get #random_max main_score — Максимальное число
+## scoreboard players get #random main_score — Выходное число (Рандом)
+
+scoreboard players add #random_max main_score 1
+loot replace block 0 0 0 container.0 loot midwut:random_range
+{
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:command_block",
+          "functions": [
+            {
+              "function": "set_attributes",
+              "modifiers": [
+                {
+                  "attribute": "generic.attack_damage",
+                  "name": "random",
+                  "slot": "mainhand",
+                  "amount": {
+                    "min": {
+                      "type": "score",
+                      "target": {
+                        "type": "fixed",
+                        "name": "#random_min"
+                      },
+                      "score": "main_score"
+                    },
+                    "max": {
+                      "type": "score",
+                      "target": {
+                        "type": "fixed",
+                        "name": "#random_max"
+                      },
+                      "score": "main_score"
+                    }
+                  },
+                  "operation": "addition"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+execute store result score #random main_score run data get block 0 0 0 Items[0].tag.AttributeModifiers[0].Amount
+scoreboard players remove #random_max main_score 1
+
+

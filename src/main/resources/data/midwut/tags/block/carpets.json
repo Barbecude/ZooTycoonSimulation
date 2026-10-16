@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:pale_moss_carpet",
+    "minecraft:moss_carpet",
+    "#minecraft:wool_carpets"
+  ]
+}

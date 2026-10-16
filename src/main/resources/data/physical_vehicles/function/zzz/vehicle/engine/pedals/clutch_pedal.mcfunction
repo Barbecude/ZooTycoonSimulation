@@ -1,0 +1,2 @@
+execute unless score #clutch_pedal main_score matches 0 run return run execute if score @s phys_veh.control.clutch matches ..99 run scoreboard players operation @s phys_veh.control.clutch += #pedal_deltatime main_score
+execute if score @s phys_veh.control.clutch matches 1.. run scoreboard players operation @s phys_veh.control.clutch -= #pedal_deltatime main_score

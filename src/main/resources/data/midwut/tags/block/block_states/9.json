@@ -1,0 +1,8 @@
+{
+    "values": [
+        "#midwut:block_states/power",
+        "#midwut:block_states/lit",
+        "#midwut:block_states/rotation",
+        "#midwut:block_states/hinge"
+    ]
+}

@@ -1,0 +1,1 @@
+return run execute if score #wx.c main_score matches 0 if score #wy.c main_score matches 0 if score #wz.c main_score matches 0

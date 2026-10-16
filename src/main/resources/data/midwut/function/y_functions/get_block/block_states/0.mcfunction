@@ -1,0 +1,11 @@
+execute if block 2 0 0 #midwut:block_states/snowy run return run function midwut:y_functions/get_block/block_states/snowy
+execute if block 2 0 0 #midwut:block_states/dusted run return run function midwut:y_functions/get_block/block_states/dusted
+execute if block 2 0 0 #midwut:block_states/unstable run return run function midwut:y_functions/get_block/block_states/unstable
+execute if block 2 0 0 #midwut:block_states/moisture run return run function midwut:y_functions/get_block/block_states/moisture
+execute if block 2 0 0 #midwut:block_states/layers run return run function midwut:y_functions/get_block/block_states/layers
+execute if block 2 0 0 #midwut:block_states/has_record run return run function midwut:y_functions/get_block/block_states/has_record
+execute if block 2 0 0 #midwut:block_states/bites run return run function midwut:y_functions/get_block/block_states/bites
+execute if block 2 0 0 #midwut:block_states/drag run return run function midwut:y_functions/get_block/block_states/drag
+execute if block 2 0 0 #midwut:block_states/charges run return run function midwut:y_functions/get_block/block_states/charges
+execute if block 2 0 0 #midwut:block_states/bloom run return run function midwut:y_functions/get_block/block_states/bloom
+execute if block 2 0 0 #midwut:block_states/tip run return run function midwut:y_functions/get_block/block_states/tip

@@ -1,0 +1,1 @@
+return run data modify storage midwut:main macros.material set string storage midwut:main output_block.block.Name 10

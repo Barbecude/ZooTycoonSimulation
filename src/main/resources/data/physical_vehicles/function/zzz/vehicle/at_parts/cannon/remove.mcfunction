@@ -1,0 +1,1 @@
+$item modify entity @e[type=#physical_vehicles:storage,limit=1,tag=phys_veh.selected_part,predicate=physical_vehicles:same_scores/object_id] horse.$(Slot) midwut:reomve_1_count

@@ -1,0 +1,7 @@
+{
+    "credit": "Made with Blockbench by Antoha256M",
+    "parent": "physical_vehicles:block/vertical_slab/slab",
+    "textures": {
+        "texture": "minecraft:block/stone_bricks"
+    }
+}

@@ -1,0 +1,1 @@
+return run execute if score #distance main_score matches 1000.. if block ~ ~ ~ #midwut:run positioned ^ ^ ^-1 run function midwut:help/check/air_with_hitbox

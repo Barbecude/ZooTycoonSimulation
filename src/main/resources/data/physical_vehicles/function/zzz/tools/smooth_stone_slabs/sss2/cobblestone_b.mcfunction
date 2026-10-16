@@ -1,0 +1,1 @@
+execute if block ~ ~ ~ minecraft:cobblestone_slab[type=bottom] if block ~ ~-1 ~ minecraft:cobblestone_slab[type=double] run function physical_vehicles:setblock/road/material {pixel:4,material:"cobblestone",colors:[]}

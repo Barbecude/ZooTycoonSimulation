@@ -1,0 +1,3 @@
+data modify storage midwut:main custom_block set from block ~ ~ ~ Items
+execute if data storage midwut:main custom_block[{components:{"minecraft:custom_data":{midwut.custom_block:true}}}] unless data storage midwut:main custom_block[{components:{"minecraft:custom_data":{midwut.custom_block.vanilla_hitbox:true}}}] run return run function #midwut:custom_block_instead_soul_campfire
+return run execute align xyz positioned ~-0.01 ~0.4374 ~-0.01 if entity @s[dx=0.02,dz=0.02]

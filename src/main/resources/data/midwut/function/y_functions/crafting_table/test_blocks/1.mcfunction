@@ -1,0 +1,4 @@
+execute unless block ~ ~ ~1 minecraft:soul_campfire[facing=north,lit=false,signal_fire=false] positioned ~ ~ ~1 unless predicate {condition:"minecraft:location_check",predicate:{block:{predicates:{"minecraft:container":{items:{contains:[{predicates:{"minecraft:custom_data":{midwut.custom_block:true}}}]}}}}}} run return run function midwut:y_functions/crafting_table/test_blocks/fail/1
+execute positioned ~ ~ ~1 if predicate {condition:"minecraft:location_check",predicate:{block:{predicates:{"minecraft:container":{items:{size:{min:2}}}}}}} run function midwut:y_functions/crafting_table/test_blocks/test_item_trapdoor/drops
+execute positioned ~ ~1.5 ~ unless block ~ ~ ~ minecraft:iron_trapdoor[facing=south,open=true] run return run function midwut:y_functions/crafting_table/test_blocks/test_item_trapdoor/1
+return 1

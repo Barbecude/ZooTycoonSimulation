@@ -21,7 +21,7 @@ import java.util.Optional;
 public abstract class EasyNpcDialogScreen extends Screen {
 
     protected final int panelWidth = 380;
-    protected final int panelHeight = 236;
+    protected int panelHeight = 236;
 
     protected int startX;
     protected int startY;
@@ -41,9 +41,21 @@ public abstract class EasyNpcDialogScreen extends Screen {
         this.dialogStartTime = System.currentTimeMillis();
     }
 
+    protected int getContentHeight() {
+        return 0;
+    }
+
+    protected int calculatePanelHeight() {
+        int bubbleH = getSpeechBubbleHeight();
+        int contentH = getContentHeight();
+        int needed = 38 + bubbleH + (contentH > 0 ? 8 + contentH : 0) + 12 + 32;
+        return Math.clamp(needed, 180, Math.max(180, this.height - 20));
+    }
+
     @Override
     protected void init() {
         super.init();
+        this.panelHeight = calculatePanelHeight();
         this.startX = (this.width - panelWidth) / 2;
         this.startY = (this.height - panelHeight) / 2;
         initDialogWidgets();
@@ -72,12 +84,12 @@ public abstract class EasyNpcDialogScreen extends Screen {
         int previewX = startX + 6;
         int previewY = startY + 8;
         int previewW = 114;
-        int previewH = 190;
+        int previewH = panelHeight - 46;
 
         if (previewEntity != null) {
             try {
                 float bbH = Math.max(0.6f, previewEntity.getBbHeight());
-                int scale = (int) Math.clamp(142.0f / bbH, 50, 105);
+                int scale = (int) Math.clamp((previewH * 0.72f) / bbH, 45, 105);
                 InventoryScreen.renderEntityInInventoryFollowsMouse(
                         graphics,
                         previewX, previewY, previewX + previewW, previewY + previewH,
@@ -159,6 +171,11 @@ public abstract class EasyNpcDialogScreen extends Screen {
     }
 
     protected int getSpeechBubbleHeight() {
+        int bubbleW = panelWidth - 114 - 8 - 12 - 12;
+        if (this.font != null && dialogMessage != null) {
+            int lines = Math.max(1, this.font.split(dialogMessage, bubbleW - 16).size());
+            return Math.max(48, 16 + lines * 11);
+        }
         return 118;
     }
 

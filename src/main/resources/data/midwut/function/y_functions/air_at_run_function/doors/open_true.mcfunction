@@ -1,0 +1,2 @@
+execute if block ~ ~ ~ #minecraft:doors[hinge=left] run return run function midwut:y_functions/air_at_run_function/doors/hinge_left
+return run function midwut:y_functions/air_at_run_function/doors/hinge_right

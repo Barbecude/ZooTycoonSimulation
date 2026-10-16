@@ -1,0 +1,14 @@
+{
+    "values": [
+        "minecraft:sponge",
+        "minecraft:wet_sponge",
+        "minecraft:farmland",
+        "minecraft:composter",
+        "minecraft:beehive",
+        "minecraft:honeycomb_block",
+        "#minecraft:animals_spawnable_on",
+        "#minecraft:axolotls_spawnable_on",
+        "#minecraft:mooshrooms_spawnable_on",
+        "#minecraft:trail_ruins_replaceable"
+    ]
+}

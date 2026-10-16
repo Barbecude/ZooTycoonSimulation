@@ -1,0 +1,1 @@
+execute as @e[type=#physical_vehicles:refers_to_vehicle/all,tag=physical_vehicle,tag=!phys_veh.main,tag=phys_veh.selected_part,distance=..80] positioned as @s run function physical_vehicles:zzz/vehicle/at_parts/main

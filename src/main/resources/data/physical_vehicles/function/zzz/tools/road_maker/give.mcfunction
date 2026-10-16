@@ -1,0 +1,1 @@
+give @s minecraft:dolphin_spawn_egg[minecraft:custom_data={physical_vehicles.road_maker:true},minecraft:entity_data={id:"minecraft:item_display",Rotation:[0f,0f],Tags:["phys_veh.road_maker.spawn","phys_veh.road_maker","phys_veh.road_maker.main"]}]

@@ -1,0 +1,18 @@
+{
+    "replace": false,
+    "values": [
+        "#minecraft:wool",
+        "#minecraft:terracotta",
+        "#minecraft:concrete_powder",
+        "minecraft:soul_campfire",
+
+        "minecraft:blackstone",
+        "minecraft:blackstone_slab",
+        "minecraft:stone",
+        "minecraft:stone_slab",
+        "minecraft:andesite",
+        "minecraft:andesite_slab",
+        "minecraft:diorite",
+        "minecraft:diorite_slab"
+    ]
+}

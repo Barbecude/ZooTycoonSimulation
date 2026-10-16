@@ -1,0 +1,1 @@
+return run scoreboard players remove #raycast main_score 1

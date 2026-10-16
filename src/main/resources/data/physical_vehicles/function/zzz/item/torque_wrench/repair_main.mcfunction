@@ -1,0 +1,3 @@
+scoreboard players operation #id_test main_score = @e[type=#physical_vehicles:refers_to_vehicle/wheel,tag=phys_veh.wheel,limit=1,distance=..2] phys_veh.id.vehicle
+scoreboard players operation #wheel_axle_id main_score = @e[type=#physical_vehicles:refers_to_vehicle/wheel,tag=phys_veh.wheel,limit=1,distance=..2] phys_veh.id.wheel_axle
+execute positioned as @e[type=#physical_vehicles:refers_to_vehicle/wheel,tag=phys_veh.wheel,limit=1,distance=..2] as @e[type=#physical_vehicles:refers_to_vehicle/track,tag=phys_veh.track,tag=phys_veh.track_broken,predicate=physical_vehicles:same_scores/wheel_axle_id,predicate=physical_vehicles:same_scores/vehicle_id,limit=1,x=0] run function physical_vehicles:zzz/item/torque_wrench/repair_tick

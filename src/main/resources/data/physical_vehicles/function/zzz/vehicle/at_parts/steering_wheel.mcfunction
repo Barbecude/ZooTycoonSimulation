@@ -1,0 +1,1 @@
+data modify entity @s transformation.right_rotation set from storage midwut:main Data.data.transformation.steering_wheel_rotation

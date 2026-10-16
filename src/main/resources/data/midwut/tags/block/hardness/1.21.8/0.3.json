@@ -1,0 +1,14 @@
+{
+    "values": [
+        "minecraft:glowstone",
+        "minecraft:redstone_lamp",
+        "minecraft:sea_lantern",
+        "minecraft:bee_nest",
+        "minecraft:tinted_glass",
+        "minecraft:ochre_froglight",
+        "minecraft:verdant_froglight",
+        "minecraft:pearlescent_froglight",
+        "#midwut:glass/default",
+        "#midwut:glass/all_stained"
+    ]
+}

@@ -1,0 +1,2 @@
+execute if score #vf main_score matches 1.. run return run function physical_vehicles:zzz/vehicle/at_parts/wheel/smoke/4/particle
+execute facing ^ ^ ^-1 run function physical_vehicles:zzz/vehicle/at_parts/wheel/smoke/4/particle

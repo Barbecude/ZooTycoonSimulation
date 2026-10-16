@@ -1,0 +1,2 @@
+tag @s remove phys_veh.is_aiming
+execute as @e[type=minecraft:text_display,tag=phys_veh.seat,tag=phys_veh.selected_part,limit=1,predicate=physical_vehicles:same_scores/object_id] run function physical_vehicles:zzz/vehicle/at_parts/aiming/disable_pos

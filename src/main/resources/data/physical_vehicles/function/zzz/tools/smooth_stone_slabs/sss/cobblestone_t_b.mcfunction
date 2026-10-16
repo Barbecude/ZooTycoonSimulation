@@ -1,0 +1,1 @@
+execute if block ~ ~-1 ~ minecraft:cobblestone_slab[type=top] run setblock ~ ~-1 ~ minecraft:cobblestone_slab[type=double]

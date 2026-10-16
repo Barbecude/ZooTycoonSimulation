@@ -1,0 +1,1 @@
+return run execute if score #phys_veh.adding_angle.y main_score matches 0 if score #phys_veh.adding_angle.x main_score matches 0

@@ -1,0 +1,1 @@
+$execute facing $(rotation_direction) run function physical_vehicles:zzz/vehicle/other/rotate_s

@@ -1,0 +1,11 @@
+{
+    "function": "minecraft:set_enchantments",
+    "add": false,
+    "enchantments": {
+        "minecraft:blast_protection": {
+            "type": "minecraft:storage",
+            "storage": "midwut:main",
+            "path": "SeatData.improvements.blast_protection"
+        }
+    }
+}

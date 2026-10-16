@@ -1,0 +1,7 @@
+{
+  "values": [
+    "minecraft:tinted_glass",
+    "minecraft:glass",
+    "#midwut:glass/stained_blocks"
+  ]
+}

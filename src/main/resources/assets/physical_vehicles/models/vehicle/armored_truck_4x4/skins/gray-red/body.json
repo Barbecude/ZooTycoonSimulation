@@ -1,0 +1,6 @@
+{
+  "parent": "physical_vehicles:vehicle/armored_truck_4x4/body",
+  "textures": {
+    "skin": "physical_vehicles:vehicle/armored_truck_4x4/gray-red"
+  }
+}

@@ -1,0 +1,20 @@
+{
+    "format_version": "1.21.6",
+    "credit": "Made with Blockbench by Antoha256M",
+    "texture_size": [64, 64],
+    "textures": {
+        "0": "physical_vehicles:block_item/guardrail",
+        "particle": "physical_vehicles:block_item/guardrail"
+    },
+    "elements": [
+        {
+            "from": [8, 0, 8],
+            "to": [8, 14, 10],
+            "rotation": {"angle": 0, "axis": "y", "origin": [8, 0, 8]},
+            "faces": {
+                "east": {"uv": [4.5, 3.5, 4, 7], "texture": "#0"},
+                "west": {"uv": [4, 3.5, 4.5, 7], "texture": "#0"}
+            }
+        }
+    ]
+}

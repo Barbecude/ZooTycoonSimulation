@@ -265,8 +265,14 @@ public class ClaimBoundaryRenderer {
             double minZ = box.minZ() - camPos.z;
             double maxZ = box.maxZ() + 1.0 - camPos.z;
 
-            // Single clean subtle ground-level perimeter
-            renderHorizontalPerimeter(poseStack, lineConsumer, minX, maxX, pY + 0.05, minZ, maxZ, r, g, b, 0.45f);
+            // Ground-level perimeter
+            renderHorizontalPerimeter(poseStack, lineConsumer, minX, maxX, pY + 0.05, minZ, maxZ, r, g, b, 0.75f);
+
+            // Tall towering vertical corner lines up into the sky
+            renderVerticalPillars(poseStack, lineConsumer, minX, maxX, pY - 2.0, pY + 96.0, minZ, maxZ, r, g, b, 0.65f);
+
+            // Elevated sky perimeter ring
+            renderHorizontalPerimeter(poseStack, lineConsumer, minX, maxX, pY + 96.0, minZ, maxZ, r, g, b, 0.45f);
         }
 
         // 3. Render Active Selection
@@ -278,8 +284,9 @@ public class ClaimBoundaryRenderer {
             double bMinZ = pos1.getZ() - camPos.z;
             double bMaxZ = pos1.getZ() + 1.0 - camPos.z;
 
-            // Clean 1x1 block marker around Corner 1
+            // Clean 1x1 block marker around Corner 1 with vertical beacon
             LevelRenderer.renderLineBox(poseStack, lineConsumer, bMinX, bMinY, bMinZ, bMaxX, bMaxY, bMaxZ, 0.0f, 1.0f, 0.4f, 1.0f);
+            renderVerticalPillars(poseStack, lineConsumer, bMinX, bMaxX, bMinY, bMinY + 64.0, bMinZ, bMaxZ, 0.0f, 1.0f, 0.4f, 0.75f);
         } else if (hasActiveBox) {
             float r = conflictOther ? 1.0f : 0.0f;
             float g = conflictOther ? 0.1f : 1.0f;
@@ -305,11 +312,14 @@ public class ClaimBoundaryRenderer {
             double c2Z = (pos2.getZ() + claimOffsetZ) - camPos.z;
             LevelRenderer.renderLineBox(poseStack, lineConsumer, c2X, c2Y, c2Z, c2X + 1.0, c2Y + 1.0, c2Z + 1.0, 0.0f, 1.0f, 0.5f, 1.0f);
 
-            // Single clean ground perimeter ring (NO double lines!)
+            // Ground perimeter ring
             renderHorizontalPerimeter(poseStack, lineConsumer, minX, maxX, pY + 0.05, minZ, maxZ, r, g, b, a);
 
-            // Corner vertical pillars for depth
-            renderVerticalPillars(poseStack, lineConsumer, minX, maxX, pY - 2.0, pY + 4.0, minZ, maxZ, r, g, b, a * 0.7f);
+            // Tall towering vertical pillars up into the sky
+            renderVerticalPillars(poseStack, lineConsumer, minX, maxX, pY - 2.0, pY + 96.0, minZ, maxZ, r, g, b, a * 0.85f);
+
+            // Elevated sky perimeter ring
+            renderHorizontalPerimeter(poseStack, lineConsumer, minX, maxX, pY + 96.0, minZ, maxZ, r, g, b, a * 0.6f);
         }
     }
 

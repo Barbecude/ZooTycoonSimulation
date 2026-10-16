@@ -15,6 +15,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.minecraft.world.phys.AABB;
 import net.zootycoon.ZooTycoonMod;
+import net.zootycoon.network.ZooNetworkPayloads;
 import net.zootycoon.schematic.ZooSchematic;
 import net.zootycoon.schematic.ZooSchematicRegistry;
 
@@ -40,15 +41,17 @@ public class SchematicCaptureService {
 
         if (pos1.equals(BlockPos.ZERO) && pos2.equals(BlockPos.ZERO)) {
             int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE;
-            int minY = 101, maxY = 101;
+            int minY = Integer.MAX_VALUE, maxY = Integer.MIN_VALUE;
             int minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE;
             boolean foundAny = false;
 
-            int radius = 64;
+            int radius = StudioDimensionManager.PLOT_RADIUS;
+            int floorY = center.getY();
+
             for (int dx = -radius; dx <= radius; dx++) {
                 for (int dz = -radius; dz <= radius; dz++) {
-                    for (int dy = 1; dy <= 80; dy++) {
-                        BlockPos checkPos = new BlockPos(center.getX() + dx, 100 + dy, center.getZ() + dz);
+                    for (int dy = 1; dy <= StudioDimensionManager.MAX_BUILD_HEIGHT; dy++) {
+                        BlockPos checkPos = new BlockPos(center.getX() + dx, floorY + dy, center.getZ() + dz);
                         if (!level.getBlockState(checkPos).isAir()) {
                             foundAny = true;
                             minX = Math.min(minX, checkPos.getX());
@@ -63,13 +66,22 @@ public class SchematicCaptureService {
             }
 
             if (!foundAny) {
-                min = new BlockPos(center.getX() - 8, 100, center.getZ() - 8);
-                max = new BlockPos(center.getX() + 8, 108, center.getZ() + 8);
-            } else {
-                // Include +2 Y headroom so entities/NPCs standing on top of blocks are captured
-                min = new BlockPos(minX, minY, minZ);
-                max = new BlockPos(maxX, maxY + 2, maxZ);
+                ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.warning", "zootycoon.studio.save_empty", 2);
+                return false;
             }
+
+            // Include +1 Y headroom so entities/NPCs standing on top of blocks are captured
+            List<Entity> ents = level.getEntitiesOfClass(
+                    Entity.class,
+                    new AABB(minX, minY, minZ, maxX + 1, maxY + 3, maxZ + 1),
+                    e -> !(e instanceof Player)
+            );
+            for (Entity e : ents) {
+                maxY = Math.max(maxY, (int) Math.ceil(e.getBoundingBox().maxY));
+            }
+
+            min = new BlockPos(minX, minY, minZ);
+            max = new BlockPos(maxX, maxY + 1, maxZ);
         } else {
             int minX = Math.min(pos1.getX(), pos2.getX());
             int minY = Math.min(pos1.getY(), pos2.getY());
@@ -202,11 +214,16 @@ public class SchematicCaptureService {
                     true, ZooTycoonMod.id(safeId)
             );
             ZooSchematicRegistry.register(customSchem);
+            ZooSchematicRegistry.loadCustomSchematics();
+
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.studio.save_success", 1, schematicName, category);
+            level.playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.PLAYER_LEVELUP, net.minecraft.sounds.SoundSource.PLAYERS, 1.0f, 1.0f);
 
             ZooTycoonMod.LOGGER.info("Captured and saved custom schematic: {} (Size: {}x{}x{})", schematicName, size.getX(), size.getY(), size.getZ());
             return true;
         } catch (Exception e) {
             ZooTycoonMod.LOGGER.error("Failed to capture schematic", e);
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.error", "zootycoon.studio.save_empty", 3);
             return false;
         }
     }

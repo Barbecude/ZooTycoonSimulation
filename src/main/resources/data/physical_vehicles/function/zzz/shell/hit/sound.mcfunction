@@ -1,0 +1,1 @@
+$playsound $(sound_id) block @a[distance=..64] ~ ~ ~ $(volume) $(pitch)

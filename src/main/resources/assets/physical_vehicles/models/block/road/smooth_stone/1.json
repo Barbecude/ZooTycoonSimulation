@@ -1,0 +1,6 @@
+{
+    "parent": "physical_vehicles:block/road/model/1",
+    "textures": {
+        "texture": "minecraft:block/smooth_stone"
+    }
+}

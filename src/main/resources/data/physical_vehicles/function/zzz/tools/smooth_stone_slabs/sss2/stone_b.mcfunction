@@ -1,0 +1,1 @@
+execute if block ~ ~ ~ minecraft:smooth_stone_slab[type=bottom] if block ~ ~-1 ~ minecraft:smooth_stone_slab[type=double] run function physical_vehicles:setblock/road/smooth_stone {pixel:4}

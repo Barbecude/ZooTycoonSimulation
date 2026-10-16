@@ -7,6 +7,8 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -59,6 +61,18 @@ public class ZooItems {
             ZooEntities.CASHIER,
             0x8B4513,
             0xD4AF37,
+            new Item.Properties()
+    );
+
+    public static final ResourceKey<Item> HUNTER_SPAWN_EGG_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("hunter_spawn_egg")
+    );
+
+    public static final Item HUNTER_SPAWN_EGG = new SpawnEggItem(
+            ZooEntities.HUNTER,
+            0x2C3E50,
+            0xC0392B,
             new Item.Properties()
     );
 
@@ -128,6 +142,105 @@ public class ZooItems {
         return list;
     }
 
+    public static List<ItemStack> createPhysicalVehiclesItems() {
+        List<ItemStack> list = new ArrayList<>();
+        // 1. Jeep CJ-5 1964
+        list.add(makeVehicleSpawnEgg("phys_veh.jeep_cj-5_1964", "Jeep CJ-5 1964", 20002, "phys_veh.jeep_cj-5_1964"));
+        // 2. Buhanka
+        list.add(makeVehicleSpawnEgg("phys_veh.buhanka", "Buhanka", 20001, "phys_veh.buhanka"));
+        // 3. Ecto-1A
+        list.add(makeVehicleSpawnEgg("phys_veh.ecto-1a", "Ecto-1A", 20003, "phys_veh.ecto-1a"));
+        // 4. Hammer Monster Truck
+        list.add(makeVehicleSpawnEgg("phys_veh.hammer_monster", "Hammer Monster Truck", 20004, "phys_veh.hammer_monster"));
+        // 5. Oldsmobile Cutlass Supreme Coupe (1980)
+        list.add(makeVehicleSpawnEgg("phys_veh.oldsmobile_cutlass_supreme_coupe_1980", "Oldsmobile Cutlass Supreme Coupe (1980)", 20005, "phys_veh.oldsmobile_cutlass_supreme_coupe_1980"));
+        // 6. NEFAZ-66052 Tanker Truck
+        list.add(makeVehicleSpawnEgg("phys_veh.tt-66052", "NEFAZ-66052 Tanker Truck", 20006, "phys_veh.tt-66052"));
+        // 7. Vanna
+        list.add(makeVehicleSpawnEgg("phys_veh.vanna", "Vanna", 20007, "phys_veh.vanna"));
+        // 8. ZIL-130
+        list.add(makeVehicleSpawnEgg("phys_veh.zil-130", "ZIL-130", 20008, "phys_veh.zil-130"));
+        // 9. Armored Truck 4x4 (Black)
+        list.add(makeVehicleSpawnEgg("phys_veh.armored_truck_4x4", "Armored Truck 4x4 (Black)", 20009, "phys_veh.armored_truck_4x4", "black"));
+        // 10. Armored Truck 4x4 (Gray-Red)
+        list.add(makeVehicleSpawnEgg("phys_veh.armored_truck_4x4", "Armored Truck 4x4 (Gray-Red)", 20010, "phys_veh.armored_truck_4x4", "gray-red"));
+        // 11. ZAZ-968A (Race 01)
+        list.add(makeVehicleSpawnEgg("phys_veh.zaz-968a", "ZAZ-968A (Race 01)", 20011, "phys_veh.zaz-968a", "race_01", "stock"));
+        // 12. ZAZ-968A (Race 02)
+        list.add(makeVehicleSpawnEgg("phys_veh.zaz-968a", "ZAZ-968A (Race 02)", 20012, "phys_veh.zaz-968a", "race_02", "stock"));
+        // 13. ZAZ-968A (Classic Tint)
+        list.add(makeVehicleSpawnEgg("phys_veh.zaz-968a", "ZAZ-968A (Classic)", 20013, "phys_veh.zaz-968a", "tint", "stock"));
+        // 14. ZAZ-968M (Futuristic)
+        list.add(makeVehicleSpawnEgg("phys_veh.zaz-968m", "ZAZ-968M (Futuristic)", 20014, "phys_veh.zaz-968m", "futuristic", "stock"));
+        // 15. ZAZ-968M (Race 01)
+        list.add(makeVehicleSpawnEgg("phys_veh.zaz-968m", "ZAZ-968M (Race 01)", 20015, "phys_veh.zaz-968m", "race_01", "stock"));
+        // 16. ZAZ-968M (Race 02)
+        list.add(makeVehicleSpawnEgg("phys_veh.zaz-968m", "ZAZ-968M (Race 02)", 20016, "phys_veh.zaz-968m", "race_02", "stock"));
+        // 17. ZAZ-968M (Classic Tint)
+        list.add(makeVehicleSpawnEgg("phys_veh.zaz-968m", "ZAZ-968M (Classic)", 20017, "phys_veh.zaz-968m", "tint", "stock"));
+        // 18. ZAZ-968T (Caterpillar Tracks)
+        list.add(makeVehicleSpawnEgg("phys_veh.zaz-968t", "ZAZ-968T (Tracks)", 20018, "phys_veh.zaz-968m", "tint", "tracks"));
+        // 19. Vehicles Remover
+        list.add(makeVehicleSpawnEgg("phys_veh.remover", "Vehicles Remover", 20019, "phys_veh.remover"));
+        // 20. Car Key
+        list.add(makeVehicleTool("phys_veh.car_key", "Car Key", 30001, "phys_veh.car_key"));
+        // 21. Toolbox
+        list.add(makeVehicleTool("phys_veh.toolbox", "Toolbox", 30002, "phys_veh.toolbox"));
+        // 22. Torque Wrench
+        list.add(makeVehicleTool("phys_veh.torque_wrench", "Torque Wrench", 30003, "phys_veh.torque_wrench"));
+
+        return list;
+    }
+
+    private static ItemStack makeVehicleSpawnEgg(String translateKey, String fallbackName, int customModelData, String vehicleTag, String... configModes) {
+        ItemStack stack = new ItemStack(Items.DOLPHIN_SPAWN_EGG);
+        stack.set(DataComponents.CUSTOM_NAME, Component.translatableWithFallback(translateKey, fallbackName).withStyle(s -> s.withItalic(false)));
+        stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(customModelData));
+
+        CompoundTag entityTag = new CompoundTag();
+        entityTag.putString("id", "minecraft:pig");
+        entityTag.putBoolean("Silent", true);
+        entityTag.putBoolean("NoAI", true);
+        entityTag.putBoolean("Invulnerable", true);
+        entityTag.putString("DeathLootTable", "");
+
+        ListTag tags = new ListTag();
+        tags.add(StringTag.valueOf("phys_veh.spawn"));
+        tags.add(StringTag.valueOf(vehicleTag));
+        entityTag.put("Tags", tags);
+
+        CompoundTag dataTag = new CompoundTag();
+        CompoundTag physVehTag = new CompoundTag();
+        if (configModes.length > 0) {
+            CompoundTag cmdTag = new CompoundTag();
+            ListTag stringsTag = new ListTag();
+            stringsTag.add(StringTag.valueOf(configModes[0]));
+            cmdTag.put("strings", stringsTag);
+            physVehTag.put("minecraft:custom_model_data", cmdTag);
+        }
+        if (configModes.length > 1) {
+            CompoundTag customDataTag = new CompoundTag();
+            customDataTag.putString("config_mode", configModes[1]);
+            physVehTag.put("minecraft:custom_data", customDataTag);
+        }
+        dataTag.put("phys_veh", physVehTag);
+        entityTag.put("data", dataTag);
+
+        stack.set(DataComponents.ENTITY_DATA, CustomData.of(entityTag));
+        return stack;
+    }
+
+    private static ItemStack makeVehicleTool(String translateKey, String fallbackName, int customModelData, String customDataFlag) {
+        ItemStack stack = new ItemStack(Items.POISONOUS_POTATO);
+        stack.set(DataComponents.CUSTOM_NAME, Component.translatableWithFallback(translateKey, fallbackName).withStyle(s -> s.withItalic(false)));
+        stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(customModelData));
+        stack.set(DataComponents.FOOD, new FoodProperties(0, 0.0f, true, 2147483648.0f, Optional.empty(), List.of()));
+        CompoundTag tag = new CompoundTag();
+        tag.putBoolean(customDataFlag, true);
+        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        return stack;
+    }
+
     private static ItemStack makeJbtTool(Item baseItem, String translateKey, String fallbackName, int customModelData, int maxDamage, String... customDataFlags) {
         ItemStack stack = new ItemStack(baseItem);
         stack.set(DataComponents.CUSTOM_NAME, Component.translatableWithFallback(translateKey, fallbackName).withStyle(s -> s.withItalic(false)));
@@ -159,10 +272,15 @@ public class ZooItems {
         return stack;
     }
 
+    public static ItemStack createHardhat() {
+        return makeHardhat("jbt:hardhat", "Hardhat", 102205, 2.0);
+    }
+
     public static void register() {
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, CREATIVE_TAB_KEY, CREATIVE_TAB);
         Registry.register(BuiltInRegistries.ITEM, VISITOR_SPAWN_EGG_KEY, VISITOR_SPAWN_EGG);
         Registry.register(BuiltInRegistries.ITEM, CASHIER_SPAWN_EGG_KEY, CASHIER_SPAWN_EGG);
+        Registry.register(BuiltInRegistries.ITEM, HUNTER_SPAWN_EGG_KEY, HUNTER_SPAWN_EGG);
         Registry.register(BuiltInRegistries.ITEM, MAGNIFYING_GLASS_KEY, MAGNIFYING_GLASS);
         Registry.register(BuiltInRegistries.ITEM, BROOM_KEY, BROOM);
 
@@ -176,14 +294,21 @@ public class ZooItems {
             entries.accept(net.zootycoon.block.ZooBlocks.CONSTRUCTION_TAPE_ITEM);
             entries.accept(VISITOR_SPAWN_EGG);
             entries.accept(CASHIER_SPAWN_EGG);
+            entries.accept(HUNTER_SPAWN_EGG);
             for (ItemStack jbtStack : createJakesBuildToolsItems()) {
                 entries.accept(jbtStack);
+            }
+            for (ItemStack pvStack : createPhysicalVehiclesItems()) {
+                entries.accept(pvStack);
             }
         });
 
         ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(entries -> {
             for (ItemStack jbtStack : createJakesBuildToolsItems()) {
                 entries.accept(jbtStack);
+            }
+            for (ItemStack pvStack : createPhysicalVehiclesItems()) {
+                entries.accept(pvStack);
             }
         });
     }

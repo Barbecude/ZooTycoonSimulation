@@ -1,0 +1,2 @@
+execute if block ~ ~ ~ #minecraft:lanterns[hanging=false] run return run function midwut:y_functions/air_at_run_function/lanterns/hanging_false
+execute if block ~ ~ ~ #minecraft:lanterns[hanging=true] positioned ~ ~0.0625 ~ run return run function midwut:y_functions/air_at_run_function/lanterns/hanging_false

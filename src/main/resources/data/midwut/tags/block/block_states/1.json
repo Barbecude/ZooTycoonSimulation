@@ -1,0 +1,8 @@
+{
+    "values": [
+        "#midwut:block_states/age",
+        "#midwut:block_states/hanging",
+        "#midwut:block_states/stage",
+        "#midwut:block_states/waterlogged"
+    ]
+}

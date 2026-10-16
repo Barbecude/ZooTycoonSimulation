@@ -1,0 +1,5 @@
+execute if data storage midwut:main custom_block[{components:{"minecraft:custom_data":{phys_veh.road:true}}}] run return run function physical_vehicles:zzz/block/road/hitbox
+execute if data storage midwut:main custom_block[{components:{"minecraft:custom_data":{phys_veh.vertical_slab:true}}}] run return run function physical_vehicles:zzz/block/vertical_slab
+execute if data storage midwut:main custom_block[{components:{"minecraft:custom_data":{phys_veh.guardrail:true}}}] run return run function physical_vehicles:zzz/block/guardrail/hitbox with storage midwut:main custom_block[0].components."minecraft:custom_data"
+#execute if block ~ ~ ~ soul_campfire{Items:[{components:{"minecraft:custom_data":{phys_veh.road:true}}}]} align xyz run return run function physical_vehicles:zzz/block/road/hitbox with block ~ ~ ~ Items[0].components."minecraft:custom_data"
+#execute if block ~ ~ ~ soul_campfire{Items:[{components:{"minecraft:custom_data":{phys_veh.vertical_slab:true}}}]} align xyz run return run function physical_vehicles:zzz/block/vertical_slab

@@ -1,0 +1,19 @@
+#execute if data storage midwut:main custom_block[{components:{"minecraft:custom_data":{height:0.0625d}}}] run return run execute positioned ~-0.01 ~-0.001 ~-0.01 positioned ~ ~0.0625 ~ if entity @s[dx=0.02,dz=0.02]
+#execute if data storage midwut:main custom_block[{components:{"minecraft:custom_data":{height:0.1250d}}}] run return run execute positioned ~-0.01 ~-0.001 ~-0.01 positioned ~ ~0.1250 ~ if entity @s[dx=0.02,dz=0.02]
+#execute if data storage midwut:main custom_block[{components:{"minecraft:custom_data":{height:0.1875d}}}] run return run execute positioned ~-0.01 ~-0.001 ~-0.01 positioned ~ ~0.1875 ~ if entity @s[dx=0.02,dz=0.02]
+#execute if data storage midwut:main custom_block[{components:{"minecraft:custom_data":{height:0.2500d}}}] run return run execute positioned ~-0.01 ~-0.001 ~-0.01 positioned ~ ~0.2500 ~ if entity @s[dx=0.02,dz=0.02]
+#execute if data storage midwut:main custom_block[{components:{"minecraft:custom_data":{height:0.3125d}}}] run return run execute positioned ~-0.01 ~-0.001 ~-0.01 positioned ~ ~0.3125 ~ if entity @s[dx=0.02,dz=0.02]
+#execute if data storage midwut:main custom_block[{components:{"minecraft:custom_data":{height:0.3750d}}}] run return run execute positioned ~-0.01 ~-0.001 ~-0.01 positioned ~ ~0.3750 ~ if entity @s[dx=0.02,dz=0.02]
+#execute if data storage midwut:main custom_block[{components:{"minecraft:custom_data":{height:0.4375d}}}] run return run execute positioned ~-0.01 ~-0.001 ~-0.01 positioned ~ ~0.4375 ~ if entity @s[dx=0.02,dz=0.02]
+#execute if data storage midwut:main custom_block[{components:{"minecraft:custom_data":{height:0.5000d}}}] run return run execute positioned ~-0.01 ~-0.001 ~-0.01 positioned ~ ~0.5000 ~ if entity @s[dx=0.02,dz=0.02]
+#execute if data storage midwut:main custom_block[{components:{"minecraft:custom_data":{height:0.5625d}}}] run return run execute positioned ~-0.01 ~-0.001 ~-0.01 positioned ~ ~0.5625 ~ if entity @s[dx=0.02,dz=0.02]
+#execute if data storage midwut:main custom_block[{components:{"minecraft:custom_data":{height:0.6250d}}}] run return run execute positioned ~-0.01 ~-0.001 ~-0.01 positioned ~ ~0.6250 ~ if entity @s[dx=0.02,dz=0.02]
+#execute if data storage midwut:main custom_block[{components:{"minecraft:custom_data":{height:0.6875d}}}] run return run execute positioned ~-0.01 ~-0.001 ~-0.01 positioned ~ ~0.6875 ~ if entity @s[dx=0.02,dz=0.02]
+#execute if data storage midwut:main custom_block[{components:{"minecraft:custom_data":{height:0.7500d}}}] run return run execute positioned ~-0.01 ~-0.001 ~-0.01 positioned ~ ~0.7500 ~ if entity @s[dx=0.02,dz=0.02]
+#execute if data storage midwut:main custom_block[{components:{"minecraft:custom_data":{height:0.8125d}}}] run return run execute positioned ~-0.01 ~-0.001 ~-0.01 positioned ~ ~0.8125 ~ if entity @s[dx=0.02,dz=0.02]
+#execute if data storage midwut:main custom_block[{components:{"minecraft:custom_data":{height:0.8750d}}}] run return run execute positioned ~-0.01 ~-0.001 ~-0.01 positioned ~ ~0.8750 ~ if entity @s[dx=0.02,dz=0.02]
+#execute if data storage midwut:main custom_block[{components:{"minecraft:custom_data":{height:0.9375d}}}] run return run execute positioned ~-0.01 ~-0.001 ~-0.01 positioned ~ ~0.9375 ~ if entity @s[dx=0.02,dz=0.02]
+
+execute if data storage midwut:main custom_block[{components:{"minecraft:custom_data":{phys_veh.guardrail:true}}}] run return run execute if function physical_vehicles:zzz/block/road/hitbox_pre run function physical_vehicles:zzz/block/guardrail/hitbox with storage midwut:main custom_block[0].components."minecraft:custom_data"
+
+return run function physical_vehicles:zzz/block/road/hitbox_block with storage midwut:main custom_block[0].components."minecraft:custom_data"

@@ -1,0 +1,3 @@
+execute as @e[type=#physical_vehicles:refers_to_vehicle/all,tag=phys_veh.selected_part,tag=phys_veh.custom_order,predicate=physical_vehicles:same_scores/order_id,x=0] run function physical_vehicles:zzz/vehicle/at_parts/order/main
+scoreboard players add #order_id main_score 1
+execute if entity @e[type=#physical_vehicles:refers_to_vehicle/all,tag=phys_veh.selected_part,tag=phys_veh.custom_order,predicate=physical_vehicles:same_scores/order_id_min,limit=1,x=0] run function physical_vehicles:zzz/vehicle/at_parts/order/loop

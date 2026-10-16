@@ -1,0 +1,2 @@
+execute if items entity @s container.* *[minecraft:custom_data~{phys_veh:{type:"shell"}}] run return run function physical_vehicles:zzz/shell/hit_modules/shells/storage
+execute if items entity @s horse.* *[minecraft:custom_data~{phys_veh:{type:"shell"}}] run return run function physical_vehicles:zzz/shell/hit_modules/shells/storage

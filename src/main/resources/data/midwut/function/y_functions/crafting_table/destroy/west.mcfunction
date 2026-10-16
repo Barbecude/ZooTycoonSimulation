@@ -1,0 +1,2 @@
+execute if block ~ ~ ~1 minecraft:soul_campfire[waterlogged=false] run return run setblock ~ ~ ~1 minecraft:air
+execute if block ~ ~ ~1 minecraft:soul_campfire[waterlogged=true] run setblock ~ ~ ~1 minecraft:water
