@@ -114,9 +114,21 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
         @Override
         public boolean canUse() {
+            if (this.zookeeper.hasActiveAssignedAnimal()) {
+                return false;
+            }
             if (this.zookeeper.ownerUuid == null) return super.canUse();
             return super.canUse();
         }
+    }
+
+    public boolean hasActiveAssignedAnimal() {
+        if (this.assignedAnimalUuid == null) return false;
+        if (this.level() instanceof ServerLevel sLevel) {
+            Entity ent = sLevel.getEntity(this.assignedAnimalUuid);
+            return ent instanceof LivingEntity living && living.isAlive();
+        }
+        return false;
     }
 
     @Override
@@ -201,77 +213,8 @@ public class ZooZookeeperEntity extends PathfinderMob {
         }
 
         // ========================================================
-        // 1. PRIORITY 1: Check Feeding Troughs for ASSIGNED ANIMAL
-        // CRITICAL: Zookeeper ONLY refills feeding trough if he has an assigned animal!
-        // Never refill when he has no assigned animal!
-        // ========================================================
-        if (assignedAnimal != null) {
-            var diet = AnimalDietRegistry.getDiet(assignedAnimal);
-            Item targetFoodItem = Items.WHEAT;
-            if (diet != null && !diet.acceptedFoods.isEmpty()) {
-                targetFoodItem = diet.acceptedFoods.get(0);
-            } else if (assignedAnimal instanceof net.minecraft.world.entity.animal.Animal a) {
-                if (a.isFood(new ItemStack(Items.CARROT))) targetFoodItem = Items.CARROT;
-                else if (a.isFood(new ItemStack(Items.WHEAT_SEEDS))) targetFoodItem = Items.WHEAT_SEEDS;
-                else if (a.isFood(new ItemStack(Items.BAMBOO))) targetFoodItem = Items.BAMBOO;
-                else if (a.isFood(new ItemStack(Items.APPLE))) targetFoodItem = Items.APPLE;
-            }
-
-            BlockPos needRefillTrough = null;
-            double minTroughDistSq = Double.MAX_VALUE;
-
-            for (BlockPos troughPos : ZooFeedingTroughBlock.KNOWN_TROUGHS) {
-                if (ownerUuid != null && !claimManager.isClaimedBy(troughPos, ownerUuid)) continue;
-                double distSq = myPos.distSqr(troughPos);
-                if (distSq > 32 * 32) continue;
-
-                BlockEntity be = sLevel.getBlockEntity(troughPos);
-                if (be instanceof ZooFeedingTroughBlockEntity troughBe) {
-                    if (troughBe.hasWater()) continue;
-                    ItemStack foodInTrough = troughBe.getFoodStack();
-                    boolean matchingFood = foodInTrough.is(targetFoodItem) && foodInTrough.getCount() < 24;
-                    boolean emptyForMyAnimal = foodInTrough.isEmpty()
-                            && !troughBe.isPlacementCooldown(sLevel.getGameTime())
-                            && assignedAnimal.blockPosition().distSqr(troughPos) <= 16 * 16;
-
-                    if (matchingFood || emptyForMyAnimal) {
-                        if (distSq < minTroughDistSq) {
-                            minTroughDistSq = distSq;
-                            needRefillTrough = troughPos;
-                        }
-                    }
-                }
-            }
-
-            if (needRefillTrough != null) {
-                currentDutyState = "REFILL";
-                this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(targetFoodItem));
-
-                double distSq = this.distanceToSqr(needRefillTrough.getX() + 0.5, needRefillTrough.getY(), needRefillTrough.getZ() + 0.5);
-                if (distSq > 2.5 * 2.5) {
-                    this.getNavigation().moveTo(needRefillTrough.getX() + 0.5, needRefillTrough.getY(), needRefillTrough.getZ() + 0.5, 1.2);
-                } else {
-                    // Refill the trough with the assigned animal's food!
-                    BlockEntity be = sLevel.getBlockEntity(needRefillTrough);
-                    if (be instanceof ZooFeedingTroughBlockEntity troughBe) {
-                        troughBe.insertFood(new ItemStack(targetFoodItem, 8), 8);
-                        sLevel.playSound(null, needRefillTrough, SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.9f, 1.2f);
-                        sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, needRefillTrough.getX() + 0.5, needRefillTrough.getY() + 0.8, needRefillTrough.getZ() + 0.5, 6, 0.2, 0.2, 0.2, 0.02);
-                        actionCooldown = 60; // 3 seconds cooldown between refills
-                    }
-                }
-                return;
-            }
-        }
-
-        // If not refilling a trough, clear food from hand if held
-        if ("REFILL".equals(currentDutyState)) {
-            currentDutyState = "IDLE";
-            this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
-        }
-
-        // ========================================================
-        // 2. PRIORITY 2: Check Visitor Litter (TrashBlock) & Sweep
+        // 1. PRIORITY 1: Check Visitor Litter (TrashBlock) & Sweep
+        // As requested: clean trash first, then return to following animal
         // ========================================================
         BlockPos nearestTrash = null;
         double minTrashDistSq = Double.MAX_VALUE;
@@ -314,8 +257,108 @@ public class ZooZookeeperEntity extends PathfinderMob {
             return;
         }
 
+        // Cleaned or no trash: remove broom
+        if (this.getMainHandItem().is(ZooItems.BROOM)) {
+            this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+        }
+        this.entityData.set(SWEEPING, false);
+
         // ========================================================
-        // 3. PRIORITY 3: All Good, Patrol
+        // 2. PRIORITY 2: Check Feeding Trough if assigned animal is hungry (<= 25% hunger)
+        // ========================================================
+        if (assignedAnimal != null) {
+            int animalHunger = ZooAnimalHungerManager.getHunger(assignedAnimal);
+            if (animalHunger <= 25) {
+                var diet = AnimalDietRegistry.getDiet(assignedAnimal);
+                Item targetFoodItem = Items.WHEAT;
+                if (diet != null && !diet.acceptedFoods.isEmpty()) {
+                    targetFoodItem = diet.acceptedFoods.get(0);
+                } else if (assignedAnimal instanceof net.minecraft.world.entity.animal.Animal a) {
+                    if (a.isFood(new ItemStack(Items.CARROT))) targetFoodItem = Items.CARROT;
+                    else if (a.isFood(new ItemStack(Items.WHEAT_SEEDS))) targetFoodItem = Items.WHEAT_SEEDS;
+                    else if (a.isFood(new ItemStack(Items.BAMBOO))) targetFoodItem = Items.BAMBOO;
+                    else if (a.isFood(new ItemStack(Items.APPLE))) targetFoodItem = Items.APPLE;
+                }
+
+                BlockPos needRefillTrough = null;
+                double minTroughDistSq = Double.MAX_VALUE;
+
+                for (BlockPos troughPos : ZooFeedingTroughBlock.KNOWN_TROUGHS) {
+                    if (ownerUuid != null && !claimManager.isClaimedBy(troughPos, ownerUuid)) continue;
+                    double distSq = myPos.distSqr(troughPos);
+                    if (distSq > 32 * 32) continue;
+
+                    BlockEntity be = sLevel.getBlockEntity(troughPos);
+                    if (be instanceof ZooFeedingTroughBlockEntity troughBe) {
+                        if (troughBe.hasWater()) continue;
+                        ItemStack foodInTrough = troughBe.getFoodStack();
+                        boolean matchingFood = foodInTrough.is(targetFoodItem) && foodInTrough.getCount() < 24;
+                        boolean emptyForMyAnimal = foodInTrough.isEmpty()
+                                && !troughBe.isPlacementCooldown(sLevel.getGameTime())
+                                && assignedAnimal.blockPosition().distSqr(troughPos) <= 24 * 24;
+
+                        if (matchingFood || emptyForMyAnimal) {
+                            if (distSq < minTroughDistSq) {
+                                minTroughDistSq = distSq;
+                                needRefillTrough = troughPos;
+                            }
+                        }
+                    }
+                }
+
+                if (needRefillTrough != null) {
+                    currentDutyState = "REFILL";
+                    this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(targetFoodItem));
+
+                    double distSq = this.distanceToSqr(needRefillTrough.getX() + 0.5, needRefillTrough.getY(), needRefillTrough.getZ() + 0.5);
+                    if (distSq > 2.5 * 2.5) {
+                        this.getNavigation().moveTo(needRefillTrough.getX() + 0.5, needRefillTrough.getY(), needRefillTrough.getZ() + 0.5, 1.2);
+                    } else {
+                        // Refill the trough with the assigned animal's food!
+                        BlockEntity be = sLevel.getBlockEntity(needRefillTrough);
+                        if (be instanceof ZooFeedingTroughBlockEntity troughBe) {
+                            troughBe.insertFood(new ItemStack(targetFoodItem, 8), 8);
+                            sLevel.playSound(null, needRefillTrough, SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.9f, 1.2f);
+                            sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, needRefillTrough.getX() + 0.5, needRefillTrough.getY() + 0.8, needRefillTrough.getZ() + 0.5, 6, 0.2, 0.2, 0.2, 0.02);
+                            actionCooldown = 60; // 3 seconds cooldown between refills
+                        }
+                    }
+                    return;
+                }
+            }
+        }
+
+        // If not refilling a trough, clear food from hand if held
+        if ("REFILL".equals(currentDutyState)) {
+            currentDutyState = "IDLE";
+            this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+        }
+
+        // ========================================================
+        // 3. PRIORITY 3: Follow Assigned Animal (Natural 5-block distance)
+        // When animal is full (> 25% hunger), zookeeper follows its animal
+        // ========================================================
+        if (assignedAnimal != null) {
+            currentDutyState = "FOLLOW_ANIMAL";
+            if (!this.getMainHandItem().isEmpty() && !this.getMainHandItem().is(ZooItems.BROOM)) {
+                this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+            }
+
+            this.getLookControl().setLookAt(assignedAnimal, 30.0F, 30.0F);
+
+            double distSq = this.distanceToSqr(assignedAnimal);
+            // Natural 5-block following distance:
+            // Move closer if further than 6 blocks, stop when at or within 5 blocks
+            if (distSq > 6.0 * 6.0) {
+                this.getNavigation().moveTo(assignedAnimal, 1.05D);
+            } else if (distSq <= 5.0 * 5.0) {
+                this.getNavigation().stop();
+            }
+            return;
+        }
+
+        // ========================================================
+        // 4. PRIORITY 4: No assigned animal, idle patrol
         // ========================================================
         currentDutyState = "IDLE";
         this.entityData.set(SWEEPING, false);

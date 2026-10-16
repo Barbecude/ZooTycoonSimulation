@@ -66,6 +66,7 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.claim.ZooClaimManager.reset();
             net.zootycoon.economy.ZooStaffManager.reset();
             net.zootycoon.economy.ZooEconomyManager.reset();
+            net.zootycoon.economy.ZooRatingManager.reset();
             net.zootycoon.construction.ConstructionManager.reset();
             net.zootycoon.block.ZooFeedingTroughBlock.reset();
             net.zootycoon.hunter.ZooHunterManager.reset();
@@ -76,6 +77,7 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.claim.ZooClaimManager.reset();
             net.zootycoon.economy.ZooStaffManager.reset();
             net.zootycoon.economy.ZooEconomyManager.reset();
+            net.zootycoon.economy.ZooRatingManager.reset();
             net.zootycoon.construction.ConstructionManager.reset();
             net.zootycoon.block.ZooFeedingTroughBlock.reset();
             net.zootycoon.hunter.ZooHunterManager.reset();
@@ -245,10 +247,11 @@ public class ZooTycoonMod implements ModInitializer {
                 LOGGER.info("Gave starter pack to player {}", player.getName().getString());
             }
 
-            // Sync claims, staff and emerald wallet balance to player
+            // Sync claims, staff, emerald wallet balance and zoo rating to player
             ZooClaimManager.get((net.minecraft.server.level.ServerLevel) player.level()).syncToPlayer(player);
             net.zootycoon.economy.ZooStaffManager.get((net.minecraft.server.level.ServerLevel) player.level()).syncToPlayer(player);
             net.zootycoon.economy.ZooEconomyManager.get(server).syncToPlayer(player);
+            net.zootycoon.economy.ZooRatingManager.get(server).syncToPlayer(player);
 
             // Unlock Jake's Build Tools recipes if present
             try {

@@ -643,6 +643,29 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // 18b. Guide Visitor Payload (C2S)
+    public record GuideVisitorPayload(int entityId, boolean follow) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<GuideVisitorPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("guide_visitor"));
+        public static final StreamCodec<FriendlyByteBuf, GuideVisitorPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeInt(payload.entityId);
+                    buf.writeBoolean(payload.follow);
+                },
+                buf -> new GuideVisitorPayload(buf.readInt(), buf.readBoolean())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 18c. Sync Rating Payload (S2C)
+    public record SyncRatingPayload(int rating) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<SyncRatingPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("sync_rating"));
+        public static final StreamCodec<FriendlyByteBuf, SyncRatingPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> buf.writeInt(payload.rating),
+                buf -> new SyncRatingPayload(buf.readInt())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     // 19. Interact Security Payload (C2S)
     public record InteractSecurityPayload(int entityId) implements CustomPacketPayload {
         public static final CustomPacketPayload.Type<InteractSecurityPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("interact_security"));
@@ -753,6 +776,7 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playC2S().register(RequestAnimalSyncPayload.TYPE, RequestAnimalSyncPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SupplyZookeeperFoodPayload.TYPE, SupplyZookeeperFoodPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(GreetVisitorPayload.TYPE, GreetVisitorPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(GuideVisitorPayload.TYPE, GuideVisitorPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(InteractSecurityPayload.TYPE, InteractSecurityPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SetCashierRolePayload.TYPE, SetCashierRolePayload.CODEC);
         PayloadTypeRegistry.playC2S().register(AssignZookeeperPayload.TYPE, AssignZookeeperPayload.CODEC);
@@ -768,6 +792,7 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playS2C().register(SyncAnimalsPayload.TYPE, SyncAnimalsPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncZookeepersPayload.TYPE, SyncZookeepersPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncEmeraldBalancePayload.TYPE, SyncEmeraldBalancePayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(SyncRatingPayload.TYPE, SyncRatingPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(ShowToastPayload.TYPE, ShowToastPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(RequestClientSelectionSavePayload.TYPE, RequestClientSelectionSavePayload.CODEC);
 
@@ -1065,6 +1090,31 @@ public class ZooNetworkPayloads {
                     level.playSound(null, visitor.blockPosition(), net.minecraft.sounds.SoundEvents.VILLAGER_YES, net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 1.0F);
                     level.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, visitor.getX(), visitor.getY() + 1.2D, visitor.getZ(), 5, 0.25, 0.25, 0.25, 0.05);
                     sendToast(player, "zootycoon.toast.title.info", "zootycoon.visitor.greeted", 1);
+                }
+            });
+        });
+
+        // Handler: Guide Visitor ("Ikuti Saya" / "Belum Ada")
+        ServerPlayNetworking.registerGlobalReceiver(GuideVisitorPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            net.minecraft.server.level.ServerLevel level = (net.minecraft.server.level.ServerLevel) player.level();
+            context.server().execute(() -> {
+                net.minecraft.world.entity.Entity ent = level.getEntity(payload.entityId());
+                if (ent instanceof net.zootycoon.entity.ZooVisitorEntity visitor && visitor.isAlive()) {
+                    if (payload.follow()) {
+                        // "Ikuti Saya" -> visitor starts following player
+                        visitor.startFollowingPlayer(player);
+                        level.playSound(null, visitor.blockPosition(), net.minecraft.sounds.SoundEvents.VILLAGER_YES, net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 1.1F);
+                        level.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, visitor.getX(), visitor.getY() + 1.2D, visitor.getZ(), 5, 0.25, 0.25, 0.25, 0.05);
+                        sendToast(player, "zootycoon.toast.title.visitor", "zootycoon.dialog.visitor.guiding_toast", 1);
+                    } else {
+                        // "Belum Ada" -> visitor disappointed, rating decreases
+                        visitor.stopFollowingPlayer();
+                        level.playSound(null, visitor.blockPosition(), net.minecraft.sounds.SoundEvents.VILLAGER_NO, net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 0.9F);
+                        level.sendParticles(net.minecraft.core.particles.ParticleTypes.ANGRY_VILLAGER, visitor.getX(), visitor.getY() + 1.2D, visitor.getZ(), 5, 0.25, 0.25, 0.25, 0.02);
+                        int newRating = net.zootycoon.economy.ZooRatingManager.get(level.getServer()).deductRating(player.getUUID(), 2, player);
+                        sendToast(player, "zootycoon.toast.title.rating_down", "zootycoon.toast.rating.not_available", 2, newRating);
+                    }
                 }
             });
         });

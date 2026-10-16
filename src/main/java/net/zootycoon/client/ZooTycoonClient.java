@@ -54,6 +54,7 @@ public class ZooTycoonClient implements ClientModInitializer {
     public static int clientSecurity = 0;
     public static int clientCashiers = 0;
     public static int clientEmeraldBalance = 0;
+    public static int clientZooRating = 50;
     public static java.util.List<ZooNetworkPayloads.AnimalSyncData> clientAnimals = new java.util.ArrayList<>();
     public static java.util.List<ZooNetworkPayloads.ZookeeperSyncData> clientZookeeperList = new java.util.ArrayList<>();
     public static final java.util.Map<Integer, ZooNetworkPayloads.AnimalSyncData> clientAnimalMap = new java.util.concurrent.ConcurrentHashMap<>();
@@ -344,10 +345,17 @@ public class ZooTycoonClient implements ClientModInitializer {
             });
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.SyncRatingPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                clientZooRating = payload.rating();
+            });
+        });
+
         // Reset client static state when disconnecting from world or joining a new server
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             ClaimBoundaryRenderer.CLIENT_CLAIMS.clear();
             ClaimBoundaryRenderer.clearClaimPreview();
+            clientZooRating = 50;
             clientAnimals.clear();
             clientAnimalMap.clear();
             clientZookeeperList.clear();

@@ -94,32 +94,47 @@ public class VisitorDialogScreen extends EasyNpcDialogScreen {
         Component actionText;
         Component closeText;
 
-        if ("TOILET".equalsIgnoreCase(moodName)) {
-            actionText = ZooTranslations.component("zootycoon.dialog.visitor.btn.toilet");
-            closeText = ZooTranslations.component("zootycoon.dialog.visitor.btn.toilet_close");
-        } else if ("HUNGRY".equalsIgnoreCase(moodName)) {
-            actionText = ZooTranslations.component("zootycoon.dialog.visitor.btn.hungry");
-            closeText = ZooTranslations.component("zootycoon.dialog.visitor.btn.hungry_close");
-        } else if ("THIRSTY".equalsIgnoreCase(moodName)) {
-            actionText = ZooTranslations.component("zootycoon.dialog.visitor.btn.thirsty");
-            closeText = ZooTranslations.component("zootycoon.dialog.visitor.btn.thirsty_close");
+        boolean isNeedState = "TOILET".equalsIgnoreCase(moodName)
+                || "HUNGRY".equalsIgnoreCase(moodName)
+                || "THIRSTY".equalsIgnoreCase(moodName)
+                || needsToilet
+                || hunger >= 50
+                || thirst >= 50;
+
+        if (isNeedState) {
+            actionText = ZooTranslations.component("zootycoon.dialog.visitor.btn.follow_me");
+            closeText = ZooTranslations.component("zootycoon.dialog.visitor.btn.not_available");
+
+            // Button 1: "Ikuti Saya" -> guide visitor to facility
+            var followBtn = new ZooButton(startX + 12, btnY, btnW, 22, actionText, b -> {
+                ClientPlayNetworking.send(new ZooNetworkPayloads.GuideVisitorPayload(this.entityId, true));
+                this.onClose();
+            }).asPrimary();
+            addRenderableWidget(followBtn);
+
+            // Button 2: "Belum Ada" -> visitor disappointed, rating down
+            var notAvailBtn = new ZooButton(startX + 12 + btnW + 8, btnY, btnW, 22, closeText, b -> {
+                ClientPlayNetworking.send(new ZooNetworkPayloads.GuideVisitorPayload(this.entityId, false));
+                this.onClose();
+            }).asPrimary();
+            addRenderableWidget(notAvailBtn);
         } else {
             actionText = ZooTranslations.component("zootycoon.dialog.visitor.btn.greet");
             closeText = ZooTranslations.component("zootycoon.dialog.visitor.btn.bye");
+
+            // Button 1: Contextual greeting or advice
+            var greetBtn = new ZooButton(startX + 12, btnY, btnW, 22, actionText, b -> {
+                ClientPlayNetworking.send(new ZooNetworkPayloads.GreetVisitorPayload(this.entityId));
+                this.onClose();
+            }).asPrimary();
+            addRenderableWidget(greetBtn);
+
+            // Button 2: Friendly close
+            var closeBtn = new ZooButton(startX + 12 + btnW + 8, btnY, btnW, 22, closeText, b -> {
+                this.onClose();
+            }).asPrimary();
+            addRenderableWidget(closeBtn);
         }
-
-        // Button 1: Contextual greeting or advice
-        var greetBtn = new ZooButton(startX + 12, btnY, btnW, 22, actionText, b -> {
-            ClientPlayNetworking.send(new ZooNetworkPayloads.GreetVisitorPayload(this.entityId));
-            this.onClose();
-        }).asPrimary();
-        addRenderableWidget(greetBtn);
-
-        // Button 2: Friendly close
-        var closeBtn = new ZooButton(startX + 12 + btnW + 8, btnY, btnW, 22, closeText, b -> {
-            this.onClose();
-        }).asPrimary();
-        addRenderableWidget(closeBtn);
     }
 
     @Override

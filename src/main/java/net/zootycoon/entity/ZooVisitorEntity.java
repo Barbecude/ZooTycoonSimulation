@@ -34,6 +34,7 @@ import net.zootycoon.block.ToiletBlockEntity;
 
 import java.util.EnumSet;
 import java.util.List;
+import java.util.UUID;
 
 public class ZooVisitorEntity extends PathfinderMob {
 
@@ -100,6 +101,7 @@ public class ZooVisitorEntity extends PathfinderMob {
                     SPRINT_MODIFIER_ID, 0.40D, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
 
     private BlockPos gatePos = null;
+    private UUID guidingPlayerUuid = null;
     private int stayTime = 0;
     private int toiletTimer = 0;
     private int watchingAnimalId = -1;
@@ -140,6 +142,7 @@ public class ZooVisitorEntity extends PathfinderMob {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
+        this.goalSelector.addGoal(1, new FollowGuidePlayerGoal(this));
         this.goalSelector.addGoal(1, new LeaveZooGoal(this));
         this.goalSelector.addGoal(2, new FindToiletGoal(this));
         this.goalSelector.addGoal(2, new FindTrashCanGoal(this));
@@ -442,6 +445,9 @@ public class ZooVisitorEntity extends PathfinderMob {
         tag.putBoolean("HasTrash", hasTrash());
         tag.putBoolean("NeedsToilet", needsToilet());
         tag.putInt("SitCooldown", sitCooldown);
+        if (guidingPlayerUuid != null) {
+            tag.putString("GuidingPlayerUuid", guidingPlayerUuid.toString());
+        }
     }
 
     @Override
@@ -463,11 +469,177 @@ public class ZooVisitorEntity extends PathfinderMob {
         setHasTrash(tag.getBoolean("HasTrash"));
         setNeedsToilet(tag.getBoolean("NeedsToilet"));
         sitCooldown = tag.getInt("SitCooldown");
+        if (tag.contains("GuidingPlayerUuid")) {
+            try {
+                guidingPlayerUuid = UUID.fromString(tag.getString("GuidingPlayerUuid"));
+            } catch (Exception ignored) {}
+        }
+    }
+
+    public void startFollowingPlayer(Player player) {
+        if (player == null) return;
+        if (this.isPassenger()) {
+            this.stopRiding();
+        }
+        this.guidingPlayerUuid = player.getUUID();
+        this.getNavigation().stop();
+    }
+
+    public void stopFollowingPlayer() {
+        this.guidingPlayerUuid = null;
+        this.getNavigation().stop();
+    }
+
+    public Player getGuidingPlayer() {
+        if (guidingPlayerUuid == null) return null;
+        if (this.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+            return sl.getPlayerByUUID(guidingPlayerUuid);
+        }
+        return null;
     }
 
     // =========================================================================
     // GOALS
     // =========================================================================
+
+    /**
+     * Goal for following the guiding player when guided to a facility (Toilet, Food, or Drink).
+     */
+    public static class FollowGuidePlayerGoal extends Goal {
+        private final ZooVisitorEntity visitor;
+        private int pathingCooldown = 0;
+
+        public FollowGuidePlayerGoal(ZooVisitorEntity visitor) {
+            this.visitor = visitor;
+            this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+        }
+
+        @Override
+        public boolean canUse() {
+            Player player = visitor.getGuidingPlayer();
+            if (player == null || !player.isAlive()) {
+                if (visitor.guidingPlayerUuid != null) {
+                    visitor.stopFollowingPlayer();
+                }
+                return false;
+            }
+            if (visitor.distanceToSqr(player) > 36.0 * 36.0) {
+                visitor.stopFollowingPlayer();
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return canUse();
+        }
+
+        @Override
+        public void start() {
+            this.pathingCooldown = 0;
+            visitor.getNavigation().stop();
+        }
+
+        @Override
+        public void stop() {
+            visitor.getNavigation().stop();
+        }
+
+        @Override
+        public void tick() {
+            Player player = visitor.getGuidingPlayer();
+            if (player == null) return;
+
+            visitor.getLookControl().setLookAt(player, 30.0F, 30.0F);
+
+            double distSq = visitor.distanceToSqr(player);
+            if (distSq > 3.5 * 3.5) {
+                if (pathingCooldown > 0) {
+                    pathingCooldown--;
+                }
+                if (pathingCooldown <= 0 || visitor.getNavigation().isDone()) {
+                    visitor.getNavigation().moveTo(player, 1.25D);
+                    pathingCooldown = 15;
+                }
+            } else {
+                visitor.getNavigation().stop();
+            }
+
+            if (checkFacilityReached()) {
+                fulfillGuideFacility(player);
+            }
+        }
+
+        private boolean checkFacilityReached() {
+            BlockPos vPos = visitor.blockPosition();
+
+            // 1. Toilet facility check
+            if (visitor.needsToilet() || visitor.getMood() == VisitorMood.TOILET) {
+                for (BlockPos p : BlockPos.betweenClosed(vPos.offset(-5, -2, -5), vPos.offset(5, 2, 5))) {
+                    if (visitor.level().getBlockState(p).is(net.zootycoon.block.ZooBlocks.TOILET)) {
+                        return true;
+                    }
+                }
+            }
+
+            // 2. Hunger facility check
+            if (visitor.getHunger() >= 50 || visitor.getMood() == VisitorMood.HUNGRY) {
+                List<ZooCashierEntity> cashiers = visitor.level().getEntitiesOfClass(
+                        ZooCashierEntity.class,
+                        visitor.getBoundingBox().inflate(6.0D, 3.0D, 6.0D),
+                        c -> c.isAlive() && ("ICE_CREAM".equals(c.getCashierRole()) || "UNASSIGNED".equals(c.getCashierRole()))
+                );
+                if (!cashiers.isEmpty()) return true;
+            }
+
+            // 3. Thirst facility check
+            if (visitor.getThirst() >= 50 || visitor.getMood() == VisitorMood.THIRSTY) {
+                List<ZooCashierEntity> cashiers = visitor.level().getEntitiesOfClass(
+                        ZooCashierEntity.class,
+                        visitor.getBoundingBox().inflate(6.0D, 3.0D, 6.0D),
+                        c -> c.isAlive() && ("ICE_CREAM".equals(c.getCashierRole()) || "UNASSIGNED".equals(c.getCashierRole()))
+                );
+                if (!cashiers.isEmpty()) return true;
+            }
+
+            return false;
+        }
+
+        private void fulfillGuideFacility(Player player) {
+            visitor.stopFollowingPlayer();
+            visitor.getNavigation().stop();
+
+            if (visitor.level() instanceof net.minecraft.server.level.ServerLevel sLevel) {
+                if (visitor.needsToilet()) {
+                    visitor.setNeedsToilet(false);
+                    visitor.toiletTimer = 0;
+                }
+                if (visitor.getHunger() >= 50 || visitor.getMood() == VisitorMood.HUNGRY) {
+                    visitor.setHunger(0);
+                    visitor.setItemInHand(InteractionHand.OFF_HAND, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COOKIE));
+                    visitor.eatTimer = 40;
+                    sLevel.playSound(null, visitor.blockPosition(), SoundEvents.GENERIC_EAT, net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 1.0F);
+                }
+                if (visitor.getThirst() >= 50 || visitor.getMood() == VisitorMood.THIRSTY) {
+                    visitor.setThirst(0);
+                    visitor.setItemInHand(InteractionHand.OFF_HAND, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.POTION));
+                    visitor.eatTimer = 40;
+                    sLevel.playSound(null, visitor.blockPosition(), SoundEvents.GENERIC_DRINK, net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 1.0F);
+                }
+                visitor.updateMood();
+
+                sLevel.playSound(null, visitor.blockPosition(), SoundEvents.PLAYER_LEVELUP, net.minecraft.sounds.SoundSource.NEUTRAL, 0.8F, 1.2F);
+                sLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, visitor.getX(), visitor.getY() + 1.2D, visitor.getZ(), 8, 0.3, 0.3, 0.3, 0.05);
+                sLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.HEART, visitor.getX(), visitor.getY() + 1.4D, visitor.getZ(), 4, 0.25, 0.25, 0.25, 0.02);
+
+                if (player instanceof ServerPlayer sPlayer && sLevel.getServer() != null) {
+                    int newRating = net.zootycoon.economy.ZooRatingManager.get(sLevel.getServer()).addRating(player.getUUID(), 2, sPlayer);
+                    net.zootycoon.network.ZooNetworkPayloads.sendToast(sPlayer, "zootycoon.toast.title.rating_up", "zootycoon.toast.rating.guide_success", 1, newRating);
+                }
+            }
+        }
+    }
 
     /**
      * Goal for watching animals in the zoo.
