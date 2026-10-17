@@ -342,12 +342,14 @@ public class ZooTycoonClient implements ClientModInitializer {
                         && existing.getEntityId() == payload.entityId()
                         && existing.getCurrentRole().equalsIgnoreCase(payload.currentRole())) {
                     existing.updateStockItems(payload.stockItems());
+                    existing.updateZooOpenState(payload.isZooOpen());
                 } else {
                     mc.setScreen(new net.zootycoon.client.ui.CashierDialogScreen(
                             payload.entityId(),
                             payload.currentRole(),
                             payload.cashierName(),
-                            payload.stockItems()
+                            payload.stockItems(),
+                            payload.isZooOpen()
                     ));
                 }
             });

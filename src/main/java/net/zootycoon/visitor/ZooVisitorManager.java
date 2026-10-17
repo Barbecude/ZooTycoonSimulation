@@ -77,6 +77,11 @@ public class ZooVisitorManager {
             List<ZooClaim> claims = claimManager.getPlayerClaims(player.getUUID());
             if (claims.isEmpty()) continue;
 
+            // Visitors ONLY visit if the zoo is officially OPEN
+            if (!claimManager.isZooOpen(player.getUUID())) {
+                continue;
+            }
+
             // Calculate bounding box covering player's zoo claims
             int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE;
             int minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE;

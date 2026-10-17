@@ -597,11 +597,21 @@ public class ZooCashierEntity extends PathfinderMob {
     }
 
     public void sendScreenToPlayer(ServerPlayer sp) {
+        boolean open = false;
+        if (this.level() instanceof ServerLevel sLevel) {
+            ZooClaimManager claimManager = ZooClaimManager.get(sLevel);
+            var targetClaim = claimManager.getClaimAt(this.blockPosition());
+            UUID ownerUuid = (targetClaim.isPresent() && targetClaim.get().getOwnerUuid() != null)
+                    ? targetClaim.get().getOwnerUuid()
+                    : sp.getUUID();
+            open = claimManager.isZooOpen(ownerUuid);
+        }
         ServerPlayNetworking.send(sp, new ZooNetworkPayloads.OpenCashierScreenPayload(
                 this.getId(),
                 this.getCashierRole(),
                 this.getName().getString(),
-                this.getStockItemsList()
+                this.getStockItemsList(),
+                open
         ));
     }
 

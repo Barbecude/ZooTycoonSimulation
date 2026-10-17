@@ -20,6 +20,8 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
     private final int entityId;
     private final String currentRole;
     private final List<ItemStack> stockItems = new ArrayList<>(ZooCashierEntity.STOCK_SLOTS);
+    private boolean isZooOpen;
+    private ZooButton toggleZooBtn;
 
     // Layout coordinates for the 5 cashier stock slots and 36 player inventory slots
     private int stockStartX;
@@ -39,17 +41,22 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
     private double dragOriginX = 0;
     private double dragOriginY = 0;
 
-    public CashierDialogScreen(int entityId, String currentRole, String cashierName, List<ItemStack> initialStock) {
+    public CashierDialogScreen(int entityId, String currentRole, String cashierName, List<ItemStack> initialStock, boolean isZooOpen) {
         super(
                 Component.literal(cashierName.isEmpty() ? ZooTranslations.get("zootycoon.dialog.cashier.default_name") : cashierName),
                 Component.literal(cashierName.isEmpty() ? ZooTranslations.get("zootycoon.dialog.cashier.title") : cashierName),
                 ZooTranslations.component("zootycoon.dialog.cashier.role"),
-                buildSpeechComponent(currentRole, initialStock),
+                buildSpeechComponent(currentRole, initialStock, isZooOpen),
                 resolveCashierEntity(entityId)
         );
         this.entityId = entityId;
         this.currentRole = currentRole != null ? currentRole : "UNASSIGNED";
+        this.isZooOpen = isZooOpen;
         updateStockItems(initialStock);
+    }
+
+    public CashierDialogScreen(int entityId, String currentRole, String cashierName, List<ItemStack> initialStock) {
+        this(entityId, currentRole, cashierName, initialStock, false);
     }
 
     public int getEntityId() {
@@ -58,6 +65,26 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
 
     public String getCurrentRole() {
         return this.currentRole;
+    }
+
+    public void updateZooOpenState(boolean isZooOpen) {
+        this.isZooOpen = isZooOpen;
+        if (this.toggleZooBtn != null) {
+            this.toggleZooBtn.setMessage(getToggleZooComponent());
+            if (this.isZooOpen) {
+                this.toggleZooBtn.asDanger();
+            } else {
+                this.toggleZooBtn.asPrimary();
+            }
+        }
+        this.dialogMessage = buildSpeechComponent(this.currentRole, this.stockItems, this.isZooOpen);
+        this.dialogStartTime = System.currentTimeMillis();
+    }
+
+    private Component getToggleZooComponent() {
+        return this.isZooOpen
+                ? ZooTranslations.component("zootycoon.dialog.cashier.btn.close_zoo")
+                : ZooTranslations.component("zootycoon.dialog.cashier.btn.open_zoo");
     }
 
     public void updateStockItems(List<ItemStack> newStock) {
@@ -69,7 +96,7 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
                 this.stockItems.add(ItemStack.EMPTY);
             }
         }
-        this.dialogMessage = buildSpeechComponent(this.currentRole, this.stockItems);
+        this.dialogMessage = buildSpeechComponent(this.currentRole, this.stockItems, this.isZooOpen);
     }
 
     private boolean isStockRole() {
@@ -90,12 +117,14 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
         return false;
     }
 
-    private static Component buildSpeechComponent(String role, List<ItemStack> stock) {
+    private static Component buildSpeechComponent(String role, List<ItemStack> stock, boolean isZooOpen) {
         if (role == null || "UNASSIGNED".equalsIgnoreCase(role)) {
             return ZooTranslations.component("zootycoon.dialog.cashier.speech");
         }
         if ("TICKET".equalsIgnoreCase(role)) {
-            return ZooTranslations.component("zootycoon.dialog.cashier.speech.ticket_active");
+            return isZooOpen
+                    ? ZooTranslations.component("zootycoon.dialog.cashier.speech.ticket_open")
+                    : ZooTranslations.component("zootycoon.dialog.cashier.speech.ticket_closed");
         }
         boolean stocked = hasAnyStock(stock);
         if ("BURGER".equalsIgnoreCase(role)) {
@@ -143,6 +172,14 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
         }).setCustomIcon(ROTATE_ICON, 12, 12, 16, 16).asPrimary();
         addRenderableWidget(rotateBtn);
 
+        // Small close button ('x') at the top right next to rotate button
+        int closeIconSize = 16;
+        int closeIconX = rotBtnX - closeIconSize - 4;
+        var closeIconBtn = new ZooButton(closeIconX, rotBtnY, closeIconSize, closeIconSize, Component.literal("x"), b -> {
+            this.onClose();
+        }).asSecondary();
+        addRenderableWidget(closeIconBtn);
+
         if (isUnassigned()) {
             int colW = (rightW - 6) / 2;
             int btnH = 22;
@@ -172,8 +209,31 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
                 this.onClose();
             }).asPrimary();
             addRenderableWidget(closeBtn);
+        } else if ("TICKET".equalsIgnoreCase(currentRole)) {
+            // Role is TICKET: toggle open/close zoo button replaces "Selesai" button
+            int btnH = 20;
+            int closeY = startY + panelHeight - btnH - 8;
+            this.toggleZooBtn = new ZooButton(rightX, closeY, rightW, btnH,
+                    getToggleZooComponent(), b -> {
+                this.isZooOpen = !this.isZooOpen;
+                this.toggleZooBtn.setMessage(getToggleZooComponent());
+                if (this.isZooOpen) {
+                    this.toggleZooBtn.asDanger();
+                } else {
+                    this.toggleZooBtn.asPrimary();
+                }
+                this.dialogMessage = buildSpeechComponent(this.currentRole, this.stockItems, this.isZooOpen);
+                this.dialogStartTime = System.currentTimeMillis();
+                ClientPlayNetworking.send(new ZooNetworkPayloads.ToggleZooOpenPayload(this.entityId));
+            });
+            if (this.isZooOpen) {
+                this.toggleZooBtn.asDanger();
+            } else {
+                this.toggleZooBtn.asPrimary();
+            }
+            addRenderableWidget(this.toggleZooBtn);
         } else {
-            // Role is permanently assigned: single Close button at bottom
+            // Role is permanently assigned (BURGER / DRINK): single Close button at bottom
             int btnH = 20;
             int closeY = startY + panelHeight - btnH - 8;
             var closeBtn = new ZooButton(rightX, closeY, rightW, btnH,

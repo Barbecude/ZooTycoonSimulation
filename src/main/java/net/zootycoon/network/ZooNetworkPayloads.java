@@ -677,13 +677,14 @@ public class ZooNetworkPayloads {
     }
 
     // 20. Open Cashier Screen Payload (S2C)
-    public record OpenCashierScreenPayload(int entityId, String currentRole, String cashierName, List<ItemStack> stockItems) implements CustomPacketPayload {
+    public record OpenCashierScreenPayload(int entityId, String currentRole, String cashierName, List<ItemStack> stockItems, boolean isZooOpen) implements CustomPacketPayload {
         public static final CustomPacketPayload.Type<OpenCashierScreenPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("open_cashier_screen"));
         public static final StreamCodec<FriendlyByteBuf, OpenCashierScreenPayload> CODEC = CustomPacketPayload.codec(
                 (payload, buf) -> {
                     buf.writeInt(payload.entityId);
                     buf.writeUtf(payload.currentRole != null ? payload.currentRole : "UNASSIGNED");
                     buf.writeUtf(payload.cashierName != null ? payload.cashierName : "");
+                    buf.writeBoolean(payload.isZooOpen);
                     List<ItemStack> items = payload.stockItems != null ? payload.stockItems : List.of();
                     buf.writeInt(items.size());
                     for (ItemStack st : items) {
@@ -701,6 +702,7 @@ public class ZooNetworkPayloads {
                     int entityId = buf.readInt();
                     String role = buf.readUtf();
                     String name = buf.readUtf();
+                    boolean isZooOpen = buf.readBoolean();
                     int size = buf.readInt();
                     List<ItemStack> items = new ArrayList<>(size);
                     for (int i = 0; i < size; i++) {
@@ -717,7 +719,7 @@ public class ZooNetworkPayloads {
                             }
                         }
                     }
-                    return new OpenCashierScreenPayload(entityId, role, name, items);
+                    return new OpenCashierScreenPayload(entityId, role, name, items, isZooOpen);
                 }
         );
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
@@ -760,6 +762,16 @@ public class ZooNetworkPayloads {
         public static final StreamCodec<FriendlyByteBuf, RotateCashierPayload> CODEC = CustomPacketPayload.codec(
                 (payload, buf) -> buf.writeInt(payload.entityId),
                 buf -> new RotateCashierPayload(buf.readInt())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 21d. Toggle Zoo Open/Close Payload (C2S)
+    public record ToggleZooOpenPayload(int entityId) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<ToggleZooOpenPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("toggle_zoo_open"));
+        public static final StreamCodec<FriendlyByteBuf, ToggleZooOpenPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> buf.writeInt(payload.entityId),
+                buf -> new ToggleZooOpenPayload(buf.readInt())
         );
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
@@ -1006,6 +1018,7 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playC2S().register(SetCashierRolePayload.TYPE, SetCashierRolePayload.CODEC);
         PayloadTypeRegistry.playC2S().register(CashierSlotClickPayload.TYPE, CashierSlotClickPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RotateCashierPayload.TYPE, RotateCashierPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(ToggleZooOpenPayload.TYPE, ToggleZooOpenPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(AssignZookeeperPayload.TYPE, AssignZookeeperPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SelectFeedingTroughAnimalPayload.TYPE, SelectFeedingTroughAnimalPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ClearFeedingTroughAnimalPayload.TYPE, ClearFeedingTroughAnimalPayload.CODEC);
@@ -1393,6 +1406,37 @@ public class ZooNetworkPayloads {
                 if (ent instanceof net.zootycoon.entity.ZooCashierEntity cashier && cashier.isAlive()) {
                     cashier.rotateClockwise();
                     level.playSound(null, cashier.blockPosition(), net.minecraft.sounds.SoundEvents.ITEM_FRAME_ROTATE_ITEM, net.minecraft.sounds.SoundSource.NEUTRAL, 0.9F, 1.1F);
+                }
+            });
+        });
+
+        // Handler: Toggle Zoo Open/Close from GUI
+        ServerPlayNetworking.registerGlobalReceiver(ToggleZooOpenPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            net.minecraft.server.level.ServerLevel level = (net.minecraft.server.level.ServerLevel) player.level();
+            context.server().execute(() -> {
+                net.minecraft.world.entity.Entity ent = level.getEntity(payload.entityId());
+                ZooClaimManager claimManager = ZooClaimManager.get(level);
+                UUID ownerUuid = player.getUUID();
+                if (ent instanceof net.zootycoon.entity.ZooCashierEntity cashier) {
+                    var claim = claimManager.getClaimAt(cashier.blockPosition());
+                    if (claim.isPresent() && claim.get().getOwnerUuid() != null) {
+                        ownerUuid = claim.get().getOwnerUuid();
+                    }
+                }
+
+                boolean newState = !claimManager.isZooOpen(ownerUuid);
+                claimManager.setZooOpen(ownerUuid, newState);
+
+                if (newState) {
+                    ZooClaimManager.grantGrandOpeningAdvancement(player);
+                    player.playNotifySound(net.minecraft.sounds.SoundEvents.NOTE_BLOCK_CHIME.value(), net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 1.2F);
+                } else {
+                    player.playNotifySound(net.minecraft.sounds.SoundEvents.NOTE_BLOCK_BASS.value(), net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 0.8F);
+                }
+
+                if (ent instanceof net.zootycoon.entity.ZooCashierEntity cashier) {
+                    cashier.sendScreenToPlayer(player);
                 }
             });
         });

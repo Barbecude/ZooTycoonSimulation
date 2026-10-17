@@ -11,6 +11,7 @@ import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -39,6 +40,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ZooClaimManager {
     private static ZooClaimManager instance;
     private final Map<UUID, ZooClaim> claims = new ConcurrentHashMap<>();
+    private final Set<UUID> openZoos = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private MinecraftServer server;
 
     public ZooClaimManager() {
@@ -56,6 +58,7 @@ public class ZooClaimManager {
     public static synchronized void reset() {
         if (instance != null) {
             instance.claims.clear();
+            instance.openZoos.clear();
             instance.server = null;
             instance = null;
         }
@@ -78,6 +81,13 @@ public class ZooClaimManager {
                 ZooClaim claim = ZooClaim.fromNbt(list.getCompound(i));
                 claims.put(claim.getClaimId(), claim);
             }
+            if (tag.contains("open_zoos", Tag.TAG_LIST)) {
+                ListTag openList = tag.getList("open_zoos", Tag.TAG_COMPOUND);
+                openZoos.clear();
+                for (int i = 0; i < openList.size(); i++) {
+                    openZoos.add(openList.getCompound(i).getUUID("player"));
+                }
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -93,9 +103,51 @@ public class ZooClaimManager {
                 list.add(claim.toNbt());
             }
             tag.put("claims", list);
+
+            ListTag openList = new ListTag();
+            for (UUID id : openZoos) {
+                CompoundTag ct = new CompoundTag();
+                ct.putUUID("player", id);
+                openList.add(ct);
+            }
+            tag.put("open_zoos", openList);
+
             NbtIo.writeCompressed(tag, path);
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    public boolean isZooOpen(UUID playerUuid) {
+        if (playerUuid == null) return false;
+        return openZoos.contains(playerUuid);
+    }
+
+    public void setZooOpen(UUID playerUuid, boolean open) {
+        if (playerUuid == null) return;
+        if (open) {
+            openZoos.add(playerUuid);
+        } else {
+            openZoos.remove(playerUuid);
+        }
+        saveToFile();
+    }
+
+    public static void grantGrandOpeningAdvancement(ServerPlayer player) {
+        if (player == null || player.server == null) return;
+        try {
+            ResourceLocation id = ResourceLocation.fromNamespaceAndPath("zootycoon", "grand_opening");
+            net.minecraft.advancements.AdvancementHolder holder = player.server.getAdvancements().get(id);
+            if (holder != null) {
+                net.minecraft.advancements.AdvancementProgress progress = player.getAdvancements().getOrStartProgress(holder);
+                if (!progress.isDone()) {
+                    for (String criterion : progress.getRemainingCriteria()) {
+                        player.getAdvancements().award(holder, criterion);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            net.zootycoon.ZooTycoonMod.LOGGER.error("Failed to grant Grand Opening advancement to player " + player.getName().getString(), e);
         }
     }
 
