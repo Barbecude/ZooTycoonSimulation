@@ -97,8 +97,11 @@ public class ZooWorldIndicatorRenderer {
                 continue;
             }
 
-            // 1c. Visitor mood emoji: cleanly billboarded to camera at natural height just above head
+            // 1c. Visitor mood icon: cleanly billboarded to camera at natural height just above head (hidden when leaving)
             if (entity instanceof net.zootycoon.entity.ZooVisitorEntity visitor) {
+                if (visitor.isLeaving() || visitor.isTimeToLeave()) {
+                    continue;
+                }
                 var mood = visitor.getMood();
                 if (mood != null && mood != net.zootycoon.entity.ZooVisitorEntity.VisitorMood.NEUTRAL) {
                     ResourceLocation tex = switch (mood) {

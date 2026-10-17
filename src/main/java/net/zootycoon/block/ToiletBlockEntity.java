@@ -22,9 +22,17 @@ import net.zootycoon.entity.ZooVisitorEntity;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ToiletBlockEntity extends BlockEntity {
+    public static final Set<BlockPos> KNOWN_TOILETS = ConcurrentHashMap.newKeySet();
+
+    public static void reset() {
+        KNOWN_TOILETS.clear();
+    }
+
     private UUID occupiedBy = null;
     private int seatEntityId = -1;
     private int doorCloseTicks = 0;
@@ -33,27 +41,39 @@ public class ToiletBlockEntity extends BlockEntity {
     // Visitor occupant state
     private UUID visitorOccupant = null;
     private final List<UUID> visitorQueue = new ArrayList<>();
+    private int releaseCooldownTicks = 0;
     private static final int VISITOR_USE_DURATION = 80;
 
     public ToiletBlockEntity(BlockPos pos, BlockState state) {
         super(ZooBlocks.TOILET_BLOCK_ENTITY, pos, state);
     }
 
+    @Override
+    public void setRemoved() {
+        KNOWN_TOILETS.remove(this.worldPosition);
+        super.setRemoved();
+    }
+
     public boolean isOccupied() {
-        return occupiedBy != null || visitorOccupant != null;
+        return occupiedBy != null || visitorOccupant != null || releaseCooldownTicks > 0;
     }
 
     public boolean requestVisitorUse(UUID visitorUUID) {
-        if (isOccupied()) {
-            if (!visitorQueue.contains(visitorUUID) && !visitorUUID.equals(visitorOccupant)) {
-                visitorQueue.add(visitorUUID);
-                setChanged();
-            }
-            return false;
+        if (visitorUUID == null) return false;
+        if (visitorUUID.equals(visitorOccupant)) {
+            return true;
         }
-        visitorOccupant = visitorUUID;
-        setChanged();
-        return true;
+        if (!isOccupied() && (visitorQueue.isEmpty() || visitorQueue.get(0).equals(visitorUUID))) {
+            visitorQueue.remove(visitorUUID);
+            visitorOccupant = visitorUUID;
+            setChanged();
+            return true;
+        }
+        if (!visitorQueue.contains(visitorUUID)) {
+            visitorQueue.add(visitorUUID);
+            setChanged();
+        }
+        return false;
     }
 
     public boolean isVisitorOccupant(UUID uuid) {
@@ -61,11 +81,29 @@ public class ToiletBlockEntity extends BlockEntity {
     }
 
     public boolean isInVisitorQueue(UUID uuid) {
-        return visitorQueue.contains(uuid);
+        return uuid != null && visitorQueue.contains(uuid);
+    }
+
+    public int getVisitorQueueIndex(UUID uuid) {
+        if (uuid == null) return -1;
+        return visitorQueue.indexOf(uuid);
+    }
+
+    public Direction getFacingDirection() {
+        if (this.getBlockState().hasProperty(ToiletBlock.FACING)) {
+            return this.getBlockState().getValue(ToiletBlock.FACING);
+        }
+        return Direction.NORTH;
+    }
+
+    public BlockPos getQueueSlotPos(int queueIndex) {
+        Direction facing = getFacingDirection();
+        int dist = 2 + Math.max(0, queueIndex);
+        return worldPosition.relative(facing, dist);
     }
 
     public int getQueueSize() {
-        return queue.size() + visitorQueue.size();
+        return queue.size() + visitorQueue.size() + (visitorOccupant != null ? 1 : 0);
     }
 
     public void flush(ServerLevel sl) {
@@ -81,7 +119,7 @@ public class ToiletBlockEntity extends BlockEntity {
         ToiletSeatEntity seat = new ToiletSeatEntity(ZooEntities.TOILET_SEAT, sl);
         seat.setSeatBlockPos(worldPosition);
         seat.setPos(seatPos.x, seatPos.y, seatPos.z);
-        seat.setYRot(visitor.getYRot());
+        seat.setYRot(getFacingDirection().toYRot());
         sl.addFreshEntity(seat);
 
         this.seatEntityId = seat.getId();
@@ -101,8 +139,9 @@ public class ToiletBlockEntity extends BlockEntity {
                 }
             }
             this.seatEntityId = -1;
+            this.releaseCooldownTicks = 15;
             openNearbyDoors();
-            doorCloseTicks = 20;
+            doorCloseTicks = 25;
             setChanged();
         }
         visitorQueue.remove(uuid);
@@ -176,6 +215,12 @@ public class ToiletBlockEntity extends BlockEntity {
     public static void serverTick(Level level, BlockPos pos, BlockState state, ToiletBlockEntity be) {
         if (!(level instanceof ServerLevel sl)) return;
 
+        KNOWN_TOILETS.add(pos.immutable());
+
+        if (be.releaseCooldownTicks > 0) {
+            be.releaseCooldownTicks--;
+        }
+
         if (be.occupiedBy != null) {
             ServerPlayer occupant = sl.getServer().getPlayerList().getPlayer(be.occupiedBy);
             ToiletSeatEntity seat = be.seatEntityId >= 0 ? (sl.getEntity(be.seatEntityId) instanceof ToiletSeatEntity s ? s : null) : null;
@@ -220,17 +265,35 @@ public class ToiletBlockEntity extends BlockEntity {
             }
         }
 
-        // Validate visitor occupant
-        if (be.visitorOccupant != null) {
-            boolean alive = !sl.getEntitiesOfClass(ZooVisitorEntity.class,
-                    new net.minecraft.world.phys.AABB(pos).inflate(10.0D),
-                    v -> v.getUUID().equals(be.visitorOccupant)).isEmpty();
-            if (!alive) {
-                be.visitorOccupant = null;
-                be.openNearbyDoors();
-                be.doorCloseTicks = 20;
+        // Prune invalid or departed visitors from visitorQueue
+        if (!be.visitorQueue.isEmpty()) {
+            Iterator<UUID> vIt = be.visitorQueue.iterator();
+            while (vIt.hasNext()) {
+                UUID vId = vIt.next();
+                if (sl.getEntity(vId) instanceof ZooVisitorEntity v && v.isAlive() && v.needsToilet() && !v.isTimeToLeave()) {
+                    continue;
+                }
+                vIt.remove();
                 be.setChanged();
             }
+        }
+
+        // Validate visitor occupant
+        if (be.visitorOccupant != null) {
+            boolean valid = sl.getEntity(be.visitorOccupant) instanceof ZooVisitorEntity v
+                    && v.isAlive()
+                    && v.needsToilet()
+                    && !v.isTimeToLeave()
+                    && v.distanceToSqr(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5) <= 64.0 * 64.0;
+            if (!valid) {
+                be.releaseVisitorOccupant(be.visitorOccupant);
+            }
+        }
+
+        // Promote next queued visitor when toilet is free and release cooldown is over
+        if (!be.isOccupied() && !be.visitorQueue.isEmpty()) {
+            be.visitorOccupant = be.visitorQueue.remove(0);
+            be.setChanged();
         }
     }
 

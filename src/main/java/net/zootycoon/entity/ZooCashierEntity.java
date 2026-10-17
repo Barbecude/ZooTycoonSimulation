@@ -2,6 +2,7 @@ package net.zootycoon.entity;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -28,20 +29,20 @@ import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
-import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
-import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import net.zootycoon.claim.ZooClaim;
 import net.zootycoon.claim.ZooClaimManager;
 import net.zootycoon.economy.ZooEconomyManager;
 import net.zootycoon.network.ZooNetworkPayloads;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -56,7 +57,11 @@ public class ZooCashierEntity extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> OUT_OF_STOCK =
             SynchedEntityData.defineId(ZooCashierEntity.class, EntityDataSerializers.BOOLEAN);
 
+    private static final EntityDataAccessor<Integer> FACING_DIR =
+            SynchedEntityData.defineId(ZooCashierEntity.class, EntityDataSerializers.INT);
+
     private final SimpleContainer stockInventory = new SimpleContainer(STOCK_SLOTS);
+    private final List<UUID> customerQueue = new ArrayList<>();
     private int serveCooldown = 0;
 
     public ZooCashierEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
@@ -75,6 +80,72 @@ public class ZooCashierEntity extends PathfinderMob {
         super.defineSynchedData(builder);
         builder.define(CASHIER_ROLE, "UNASSIGNED");
         builder.define(OUT_OF_STOCK, false);
+        builder.define(FACING_DIR, Direction.SOUTH.get2DDataValue());
+    }
+
+    public Direction getFacingDirection() {
+        return Direction.from2DDataValue(Math.floorMod(this.entityData.get(FACING_DIR), 4));
+    }
+
+    public void setFacingDirection(Direction dir) {
+        if (dir == null || dir.getAxis().isVertical()) {
+            dir = Direction.SOUTH;
+        }
+        this.entityData.set(FACING_DIR, dir.get2DDataValue());
+        float yaw = dir.toYRot();
+        this.setYRot(yaw);
+        this.yRotO = yaw;
+        this.yBodyRot = yaw;
+        this.yBodyRotO = yaw;
+        this.yHeadRot = yaw;
+        this.yHeadRotO = yaw;
+    }
+
+    public void rotateClockwise() {
+        setFacingDirection(getFacingDirection().getClockWise());
+    }
+
+    public int enqueueOrGetIndex(UUID visitorUuid) {
+        if (visitorUuid == null) return -1;
+        int idx = customerQueue.indexOf(visitorUuid);
+        if (idx == -1) {
+            customerQueue.add(visitorUuid);
+            idx = customerQueue.size() - 1;
+        }
+        return idx;
+    }
+
+    public void removeFromQueue(UUID visitorUuid) {
+        if (visitorUuid != null) {
+            customerQueue.remove(visitorUuid);
+        }
+    }
+
+    public int getQueueSize() {
+        return customerQueue.size();
+    }
+
+    /**
+     * Queue index 0 is 2 blocks in front of the cashier's face.
+     * Queue index k (k >= 1) is 2 + k blocks in front of the cashier's face (1 block behind visitor k - 1).
+     */
+    public BlockPos getQueueSlotPos(int queueIndex) {
+        Direction facing = getFacingDirection();
+        int dist = 2 + Math.max(0, queueIndex);
+        BlockPos raw = this.blockPosition().relative(facing, dist);
+        for (int dy : new int[]{0, -1, 1, -2, 2}) {
+            BlockPos p = raw.offset(0, dy, 0);
+            if (!this.level().getBlockState(p.below()).isAir()
+                    && this.level().getBlockState(p).getCollisionShape(this.level(), p).isEmpty()) {
+                return p;
+            }
+        }
+        return raw;
+    }
+
+    public Vec3 getQueueSlotVec(int queueIndex) {
+        BlockPos p = getQueueSlotPos(queueIndex);
+        return new Vec3(p.getX() + 0.5D, p.getY(), p.getZ() + 0.5D);
     }
 
     public String getCashierRole() {
@@ -245,21 +316,30 @@ public class ZooCashierEntity extends PathfinderMob {
         return 2;
     }
 
+    /**
+     * Randomly selects a non-empty valid slot among the 5 stock slots so visitors purchase varied items.
+     */
     public ItemStack consumeOneStockItem() {
         String role = getCashierRole();
+        List<Integer> validSlots = new ArrayList<>(STOCK_SLOTS);
         for (int i = 0; i < STOCK_SLOTS; i++) {
             ItemStack stack = this.stockInventory.getItem(i);
             if (!stack.isEmpty() && isValidItemForRole(role, stack)) {
-                ItemStack taken = stack.split(1);
-                if (stack.isEmpty()) {
-                    this.stockInventory.setItem(i, ItemStack.EMPTY);
-                }
-                updateStockStatus();
-                return taken;
+                validSlots.add(i);
             }
         }
+        if (validSlots.isEmpty()) {
+            updateStockStatus();
+            return ItemStack.EMPTY;
+        }
+        int chosenSlot = validSlots.get(this.random.nextInt(validSlots.size()));
+        ItemStack stack = this.stockInventory.getItem(chosenSlot);
+        ItemStack taken = stack.split(1);
+        if (stack.isEmpty()) {
+            this.stockInventory.setItem(chosenSlot, ItemStack.EMPTY);
+        }
         updateStockStatus();
-        return ItemStack.EMPTY;
+        return taken;
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -272,9 +352,88 @@ public class ZooCashierEntity extends PathfinderMob {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new LookAtPlayerGoal(this, ZooVisitorEntity.class, 8.0F));
-        this.goalSelector.addGoal(2, new LookAtPlayerGoal(this, Player.class, 8.0F));
-        this.goalSelector.addGoal(3, new RandomLookAroundGoal(this));
+    }
+
+    @Override
+    public void aiStep() {
+        super.aiStep();
+        float yaw = getFacingDirection().toYRot();
+        this.setYRot(yaw);
+        this.yRotO = yaw;
+        this.yBodyRot = yaw;
+        this.yBodyRotO = yaw;
+        this.yHeadRot = yaw;
+        this.yHeadRotO = yaw;
+        this.setXRot(0.0F);
+    }
+
+    private boolean isVisitorEligibleForRole(ZooVisitorEntity v, String role) {
+        if (v == null || !v.isAlive() || v.isTimeToLeave() || v.isConsuming()) {
+            return false;
+        }
+        return switch (role) {
+            case "TICKET" -> !v.getTags().contains("ticket_purchased");
+            case "BURGER" -> v.getHunger() >= 35 || v.getMood() == ZooVisitorEntity.VisitorMood.HUNGRY
+                    || (v.getGuidedPlayerUuid() != null && v.getHunger() >= 15);
+            case "DRINK" -> v.getThirst() >= 25 || v.getMood() == ZooVisitorEntity.VisitorMood.THIRSTY
+                    || (v.getGuidedPlayerUuid() != null && v.getThirst() >= 15);
+            case "SOUVENIR" -> v.getTags().contains("ticket_purchased")
+                    && v.getItemBySlot(EquipmentSlot.HEAD).isEmpty()
+                    && !v.needsToilet();
+            default -> false;
+        };
+    }
+
+    private boolean isCustomerReadyAtFront(ZooVisitorEntity customer) {
+        if (customer == null) return false;
+        Vec3 slot0 = getQueueSlotVec(0);
+        double distToSlot0Sq = customer.distanceToSqr(slot0.x, slot0.y, slot0.z);
+        double distToCashierSq = customer.distanceToSqr(this);
+        return distToSlot0Sq <= 3.24D || distToCashierSq <= 12.25D;
+    }
+
+    private ZooVisitorEntity resolveNextReadyCustomer(ServerLevel sLevel, String role) {
+        // 1. Prune invalid entries from customerQueue
+        Iterator<UUID> it = customerQueue.iterator();
+        while (it.hasNext()) {
+            UUID id = it.next();
+            if (!(sLevel.getEntity(id) instanceof ZooVisitorEntity v)
+                    || !isVisitorEligibleForRole(v, role)
+                    || v.distanceToSqr(this) > 32.0D * 32.0D) {
+                it.remove();
+            }
+        }
+
+        // 2. Enqueue any nearby eligible visitors within 8 blocks who are not yet in queue
+        List<ZooVisitorEntity> nearby = sLevel.getEntitiesOfClass(
+                ZooVisitorEntity.class,
+                this.getBoundingBox().inflate(8.0D, 3.0D, 8.0D),
+                v -> isVisitorEligibleForRole(v, role)
+        );
+        for (ZooVisitorEntity v : nearby) {
+            enqueueOrGetIndex(v.getUUID());
+        }
+
+        if (customerQueue.isEmpty()) {
+            return null;
+        }
+
+        // 3. Check if index 0 is ready at the front
+        UUID firstId = customerQueue.get(0);
+        if (sLevel.getEntity(firstId) instanceof ZooVisitorEntity front && isCustomerReadyAtFront(front)) {
+            return front;
+        }
+
+        // 4. Fallback: if someone in the queue is already standing at the 2-block mark while index 0 is still far away (> 6 blocks), serve the ready visitor so the line never jams
+        if (sLevel.getEntity(firstId) instanceof ZooVisitorEntity front && front.distanceToSqr(this) > 36.0D) {
+            for (UUID id : customerQueue) {
+                if (sLevel.getEntity(id) instanceof ZooVisitorEntity v && isCustomerReadyAtFront(v)) {
+                    return v;
+                }
+            }
+        }
+
+        return null;
     }
 
     @Override
@@ -287,24 +446,28 @@ public class ZooCashierEntity extends PathfinderMob {
             updateStockStatus();
         }
 
-        // Serve nearby visitors based on assigned role
-        if (this.tickCount % 30 == 0 && serveCooldown <= 0 && this.level() instanceof ServerLevel sLevel) {
+        if (this.level() instanceof ServerLevel sLevel && this.tickCount % 10 == 0) {
+            String role = getCashierRole();
+            if (isRoleAssigned()) {
+                // Keep queue clean every 10 ticks
+                customerQueue.removeIf(id -> !(sLevel.getEntity(id) instanceof ZooVisitorEntity v)
+                        || !isVisitorEligibleForRole(v, role)
+                        || v.distanceToSqr(this) > 32.0D * 32.0D);
+            }
+        }
+
+        // Serve queued visitors based on assigned role
+        if (this.tickCount % 15 == 0 && serveCooldown <= 0 && this.level() instanceof ServerLevel sLevel) {
             String role = getCashierRole();
 
             if ("BURGER".equals(role)) {
                 if (isOutOfStock()) return;
-
-                List<ZooVisitorEntity> visitors = sLevel.getEntitiesOfClass(
-                        ZooVisitorEntity.class,
-                        this.getBoundingBox().inflate(6.0D, 3.0D, 6.0D),
-                        v -> v.isAlive() && !v.isConsuming() && (v.getHunger() >= 35 || v.getMood() == ZooVisitorEntity.VisitorMood.HUNGRY || (v.getGuidedPlayerUuid() != null && v.getHunger() >= 15))
-                );
-                if (!visitors.isEmpty()) {
-                    ZooVisitorEntity customer = visitors.get(0);
+                ZooVisitorEntity customer = resolveNextReadyCustomer(sLevel, role);
+                if (customer != null) {
                     ItemStack soldBurger = consumeOneStockItem();
                     if (!soldBurger.isEmpty()) {
+                        removeFromQueue(customer.getUUID());
                         int price = getItemPrice(role, soldBurger);
-                        this.getLookControl().setLookAt(customer, 30.0F, 30.0F);
                         customer.setHunger(0);
                         customer.startConsuming(soldBurger, false);
                         customer.updateMood();
@@ -314,23 +477,17 @@ public class ZooCashierEntity extends PathfinderMob {
                         if (customer.getGuidedPlayerUuid() != null) {
                             customer.completeGuideReward(sLevel, "BURGER");
                         }
-                        serveCooldown = 60;
+                        serveCooldown = 35;
                     }
                 }
             } else if ("DRINK".equals(role)) {
                 if (isOutOfStock()) return;
-
-                List<ZooVisitorEntity> visitors = sLevel.getEntitiesOfClass(
-                        ZooVisitorEntity.class,
-                        this.getBoundingBox().inflate(6.0D, 3.0D, 6.0D),
-                        v -> v.isAlive() && !v.isConsuming() && (v.getThirst() >= 25 || v.getMood() == ZooVisitorEntity.VisitorMood.THIRSTY || (v.getGuidedPlayerUuid() != null && v.getThirst() >= 15))
-                );
-                if (!visitors.isEmpty()) {
-                    ZooVisitorEntity customer = visitors.get(0);
+                ZooVisitorEntity customer = resolveNextReadyCustomer(sLevel, role);
+                if (customer != null) {
                     ItemStack soldDrink = consumeOneStockItem();
                     if (!soldDrink.isEmpty()) {
+                        removeFromQueue(customer.getUUID());
                         int price = getItemPrice(role, soldDrink);
-                        this.getLookControl().setLookAt(customer, 30.0F, 30.0F);
                         customer.setThirst(0);
                         customer.startConsuming(soldDrink, true);
                         customer.updateMood();
@@ -340,59 +497,37 @@ public class ZooCashierEntity extends PathfinderMob {
                         if (customer.getGuidedPlayerUuid() != null) {
                             customer.completeGuideReward(sLevel, "DRINK");
                         }
-                        serveCooldown = 60;
+                        serveCooldown = 35;
                     }
                 }
             } else if ("SOUVENIR".equals(role)) {
                 if (isOutOfStock()) return;
-
-                List<ZooVisitorEntity> visitors = sLevel.getEntitiesOfClass(
-                        ZooVisitorEntity.class,
-                        this.getBoundingBox().inflate(6.0D, 3.0D, 6.0D),
-                        v -> v.isAlive() && v.getItemBySlot(EquipmentSlot.HEAD).isEmpty() && !v.needsToilet()
-                );
-                if (!visitors.isEmpty()) {
-                    ZooVisitorEntity customer = visitors.get(0);
+                ZooVisitorEntity customer = resolveNextReadyCustomer(sLevel, role);
+                if (customer != null) {
                     ItemStack soldPlushie = consumeOneStockItem();
                     if (!soldPlushie.isEmpty()) {
+                        removeFromQueue(customer.getUUID());
                         int price = getItemPrice(role, soldPlushie);
-                        this.getLookControl().setLookAt(customer, 30.0F, 30.0F);
                         customer.setItemSlot(EquipmentSlot.HEAD, soldPlushie.copyWithCount(1));
                         customer.setDropChance(EquipmentSlot.HEAD, 0.0F);
                         customer.setMood(ZooVisitorEntity.VisitorMood.ADORED);
                         creditOwner(sLevel, price);
                         sLevel.playSound(null, this.blockPosition(), SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.NEUTRAL, 0.8F, 1.4F);
                         sLevel.sendParticles(ParticleTypes.HEART, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 5, 0.25, 0.25, 0.25, 0.02);
-                        serveCooldown = 100;
-                    }
-                } else if (this.tickCount % 150 == 0) {
-                    // Summon a random wandering visitor without a plushie hat to visit the souvenir shop
-                    List<ZooVisitorEntity> wanderers = sLevel.getEntitiesOfClass(
-                            ZooVisitorEntity.class,
-                            this.getBoundingBox().inflate(20.0D, 4.0D, 20.0D),
-                            v -> v.isAlive() && v.getItemBySlot(EquipmentSlot.HEAD).isEmpty() && !v.needsToilet() && v.getGuidedPlayerUuid() == null && v.getHunger() < 50 && v.getThirst() < 50
-                    );
-                    if (!wanderers.isEmpty()) {
-                        ZooVisitorEntity wanderer = wanderers.get(this.random.nextInt(wanderers.size()));
-                        wanderer.getNavigation().moveTo(this, 1.0D);
+                        serveCooldown = 50;
                     }
                 }
             } else if ("TICKET".equals(role)) {
-                List<ZooVisitorEntity> visitors = sLevel.getEntitiesOfClass(
-                        ZooVisitorEntity.class,
-                        this.getBoundingBox().inflate(6.0D, 3.0D, 6.0D),
-                        v -> v.isAlive() && !v.getTags().contains("ticket_purchased")
-                );
-                if (!visitors.isEmpty()) {
-                    ZooVisitorEntity customer = visitors.get(0);
-                    this.getLookControl().setLookAt(customer, 30.0F, 30.0F);
+                ZooVisitorEntity customer = resolveNextReadyCustomer(sLevel, role);
+                if (customer != null) {
+                    removeFromQueue(customer.getUUID());
                     customer.addTag("ticket_purchased");
                     customer.updateMood();
                     creditOwner(sLevel, getItemPrice("TICKET", ItemStack.EMPTY));
                     sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.8F, 1.1F);
                     sLevel.playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.7F, 1.2F);
                     sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
-                    serveCooldown = 40;
+                    serveCooldown = 25;
                 }
             }
         }
@@ -436,6 +571,11 @@ public class ZooCashierEntity extends PathfinderMob {
     @Override
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         if (!this.level().isClientSide() && hand == InteractionHand.MAIN_HAND && player instanceof ServerPlayer sp) {
+            if (player.isShiftKeyDown()) {
+                rotateClockwise();
+                this.level().playSound(null, this.blockPosition(), SoundEvents.ITEM_FRAME_ROTATE_ITEM, SoundSource.NEUTRAL, 0.9F, 1.1F);
+                return InteractionResult.SUCCESS;
+            }
             updateStockStatus();
             sendScreenToPlayer(sp);
             return InteractionResult.SUCCESS;
@@ -453,6 +593,7 @@ public class ZooCashierEntity extends PathfinderMob {
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putString("CashierRole", getCashierRole());
+        tag.putInt("FacingDir", this.entityData.get(FACING_DIR));
         ListTag itemsTag = new ListTag();
         for (int i = 0; i < STOCK_SLOTS; i++) {
             ItemStack stack = this.stockInventory.getItem(i);
@@ -478,6 +619,9 @@ public class ZooCashierEntity extends PathfinderMob {
                     this.stockInventory.setItem(slot, ItemStack.parseOptional(this.registryAccess(), slotTag));
                 }
             }
+        }
+        if (tag.contains("FacingDir")) {
+            setFacingDirection(Direction.from2DDataValue(tag.getInt("FacingDir")));
         }
         if (tag.contains("CashierRole")) {
             setCashierRole(tag.getString("CashierRole"));

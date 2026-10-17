@@ -129,10 +129,25 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
         return null;
     }
 
+    private static final net.minecraft.resources.ResourceLocation ROTATE_ICON =
+            net.zootycoon.ZooTycoonMod.id("textures/gui/icons/rotate.png");
+
     @Override
     protected void initDialogWidgets() {
         int rightX = startX + 114 + 14;
         int rightW = panelWidth - (rightX - startX) - 12;
+
+        // Small icon-only rotate button at the top-right corner of the dialog container (both before and after job assignment)
+        int rotBtnSize = 16;
+        int rotBtnX = startX + panelWidth - rotBtnSize - 10;
+        int rotBtnY = startY + 10;
+        var rotateBtn = new ZooButton(rotBtnX, rotBtnY, rotBtnSize, rotBtnSize, Component.empty(), b -> {
+            ClientPlayNetworking.send(new ZooNetworkPayloads.RotateCashierPayload(this.entityId));
+            if (this.previewEntity instanceof ZooCashierEntity cashier) {
+                cashier.rotateClockwise();
+            }
+        }).setCustomIcon(ROTATE_ICON, 12, 12, 16, 16).asPrimary();
+        addRenderableWidget(rotateBtn);
 
         if (isUnassigned()) {
             int colW = (rightW - 6) / 2;

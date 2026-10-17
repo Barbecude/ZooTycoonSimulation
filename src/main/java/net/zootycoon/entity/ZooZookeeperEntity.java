@@ -117,8 +117,34 @@ public class ZooZookeeperEntity extends PathfinderMob {
             if (this.zookeeper.hasActiveAssignedAnimal()) {
                 return false;
             }
-            if (this.zookeeper.ownerUuid == null) return super.canUse();
             return super.canUse();
+        }
+
+        @Override
+        protected net.minecraft.world.phys.Vec3 getPosition() {
+            net.minecraft.world.phys.Vec3 pos = super.getPosition();
+            if (pos != null && this.zookeeper.level() instanceof ServerLevel sLevel) {
+                ZooClaimManager cm = ZooClaimManager.get(sLevel);
+                BlockPos bp = BlockPos.containing(pos.x, pos.y, pos.z);
+                boolean inside = (this.zookeeper.ownerUuid != null)
+                        ? cm.isClaimedBy(bp, this.zookeeper.ownerUuid)
+                        : cm.isInsideAnyClaim(bp);
+                if (!inside) {
+                    ZooClaim claim = this.zookeeper.findClosestClaim(cm);
+                    if (claim != null) {
+                        var box = claim.getBox();
+                        int minX = Math.min(box.minX() + 2, box.maxX());
+                        int maxX = Math.max(box.maxX() - 2, minX);
+                        int minZ = Math.min(box.minZ() + 2, box.maxZ());
+                        int maxZ = Math.max(box.maxZ() - 2, minZ);
+                        int tx = Math.clamp((int) Math.floor(pos.x), minX, maxX);
+                        int tz = Math.clamp((int) Math.floor(pos.z), minZ, maxZ);
+                        int ty = sLevel.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, tx, tz);
+                        return new net.minecraft.world.phys.Vec3(tx + 0.5D, ty, tz + 0.5D);
+                    }
+                }
+            }
+            return pos;
         }
     }
 
@@ -131,6 +157,29 @@ public class ZooZookeeperEntity extends PathfinderMob {
         return false;
     }
 
+    public ZooClaim findClosestClaim(ZooClaimManager claimManager) {
+        java.util.Collection<ZooClaim> claims = (ownerUuid != null)
+                ? claimManager.getPlayerClaims(ownerUuid)
+                : claimManager.getAllClaims();
+        if (claims.isEmpty() && ownerUuid != null) {
+            claims = claimManager.getAllClaims();
+        }
+        ZooClaim closest = null;
+        double minDistanceSq = Double.MAX_VALUE;
+        BlockPos currentPos = this.blockPosition();
+        for (ZooClaim claim : claims) {
+            var box = claim.getBox();
+            int cx = (box.minX() + box.maxX()) / 2;
+            int cz = (box.minZ() + box.maxZ()) / 2;
+            double d = currentPos.distSqr(new net.minecraft.core.Vec3i(cx, currentPos.getY(), cz));
+            if (d < minDistanceSq) {
+                minDistanceSq = d;
+                closest = claim;
+            }
+        }
+        return closest;
+    }
+
     @Override
     public void tick() {
         super.tick();
@@ -139,16 +188,30 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
         if (actionCooldown > 0) actionCooldown--;
 
-        // Restrict to owner's claimed land
-        if (ownerUuid != null) {
-            ZooClaimManager claimManager = ZooClaimManager.get(sLevel);
-            BlockPos currentPos = this.blockPosition();
+        ZooClaimManager claimManager = ZooClaimManager.get(sLevel);
+        if (ownerUuid == null && this.tickCount % 20 == 0) {
+            ZooClaim nearest = findClosestClaim(claimManager);
+            if (nearest != null) {
+                ownerUuid = nearest.getOwnerUuid();
+            }
+        }
 
-            if (!claimManager.isClaimedBy(currentPos, ownerUuid)) {
+        // Restrict strictly to claimed zoo area
+        BlockPos currentPos = this.blockPosition();
+        boolean inside = (ownerUuid != null)
+                ? claimManager.isClaimedBy(currentPos, ownerUuid)
+                : claimManager.isInsideAnyClaim(currentPos);
+        if (!inside) {
+            if (this.tickCount % 10 == 0) {
                 returnToClaimedLand(sLevel, claimManager);
-            } else if (this.getNavigation().isInProgress()) {
-                BlockPos targetPos = this.getNavigation().getTargetPos();
-                if (targetPos != null && !claimManager.isClaimedBy(targetPos, ownerUuid)) {
+            }
+        } else if (this.getNavigation().isInProgress()) {
+            BlockPos targetPos = this.getNavigation().getTargetPos();
+            if (targetPos != null) {
+                boolean targetInside = (ownerUuid != null)
+                        ? claimManager.isClaimedBy(targetPos, ownerUuid)
+                        : claimManager.isInsideAnyClaim(targetPos);
+                if (!targetInside) {
                     this.getNavigation().stop();
                 }
             }
@@ -161,29 +224,17 @@ public class ZooZookeeperEntity extends PathfinderMob {
     }
 
     private void returnToClaimedLand(ServerLevel sLevel, ZooClaimManager claimManager) {
-        List<ZooClaim> playerClaims = claimManager.getPlayerClaims(ownerUuid);
-        if (playerClaims.isEmpty()) return;
-
-        ZooClaim closestClaim = null;
-        double minDistanceSq = Double.MAX_VALUE;
-        BlockPos currentPos = this.blockPosition();
-
-        for (ZooClaim claim : playerClaims) {
-            var box = claim.getBox();
-            int cx = (box.minX() + box.maxX()) / 2;
-            int cz = (box.minZ() + box.maxZ()) / 2;
-            double d = currentPos.distSqr(new net.minecraft.core.Vec3i(cx, currentPos.getY(), cz));
-            if (d < minDistanceSq) {
-                minDistanceSq = d;
-                closestClaim = claim;
-            }
-        }
-
+        ZooClaim closestClaim = findClosestClaim(claimManager);
         if (closestClaim == null) return;
 
         var box = closestClaim.getBox();
-        int targetX = Math.clamp(currentPos.getX(), box.minX() + 1, box.maxX() - 1);
-        int targetZ = Math.clamp(currentPos.getZ(), box.minZ() + 1, box.maxZ() - 1);
+        BlockPos currentPos = this.blockPosition();
+        int minX = Math.min(box.minX() + 2, box.maxX());
+        int maxX = Math.max(box.maxX() - 2, minX);
+        int minZ = Math.min(box.minZ() + 2, box.maxZ());
+        int maxZ = Math.max(box.maxZ() - 2, minZ);
+        int targetX = Math.clamp(currentPos.getX(), minX, maxX);
+        int targetZ = Math.clamp(currentPos.getZ(), minZ, maxZ);
         int targetY = sLevel.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, targetX, targetZ);
         BlockPos safePos = new BlockPos(targetX, targetY, targetZ);
 

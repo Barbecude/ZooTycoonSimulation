@@ -68,8 +68,11 @@ public class ZooVisitorEntity extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> IS_DRINKING =
             SynchedEntityData.defineId(ZooVisitorEntity.class, EntityDataSerializers.BOOLEAN);
 
+    private static final EntityDataAccessor<Boolean> IS_LEAVING =
+            SynchedEntityData.defineId(ZooVisitorEntity.class, EntityDataSerializers.BOOLEAN);
+
     public static final int MAX_VARIANTS = 23;
-    private static final int MAX_STAY = 2400; // 2 minutes (2400 ticks)
+    private static final int MAX_STAY = 9600; // 8 minutes (9600 ticks)
 
     public enum VisitorMood {
         NEUTRAL("zootycoon.visitor.mood.neutral", 0xFFFFFF),
@@ -112,6 +115,8 @@ public class ZooVisitorEntity extends PathfinderMob {
     private int guideTimeout = 0;
     private int stayTime = 0;
     private int toiletTimer = 0;
+    private boolean hasUsedToilet = false;
+    private boolean wantsSouvenir = false;
     private int watchingAnimalId = -1;
     // 0 = small/baby, 1 = normal, 2 = big
     private int watchingAnimalSize = -1;
@@ -137,16 +142,17 @@ public class ZooVisitorEntity extends PathfinderMob {
         builder.define(THIRST, 0);
         builder.define(MOOD, VisitorMood.NEUTRAL.ordinal());
         builder.define(HAS_TRASH, false);
-        builder.define(NEEDS_TOILET, Math.random() < 0.08); // 8% arrive already needing restroom
+        builder.define(NEEDS_TOILET, Math.random() < 0.02); // 2% arrive already needing restroom
         builder.define(IS_CONSUMING, false);
         builder.define(IS_DRINKING, false);
+        builder.define(IS_LEAVING, false);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
         return PathfinderMob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 20.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.28D)
-                .add(Attributes.FOLLOW_RANGE, 32.0D);
+                .add(Attributes.FOLLOW_RANGE, 64.0D);
     }
 
     @Override
@@ -156,11 +162,12 @@ public class ZooVisitorEntity extends PathfinderMob {
         this.goalSelector.addGoal(1, new LeaveZooGoal(this));
         this.goalSelector.addGoal(1, new BuyTicketAtEntranceGoal(this));
         this.goalSelector.addGoal(2, new FindToiletGoal(this));
+        this.goalSelector.addGoal(2, new QueueAtCashierGoal(this));
         this.goalSelector.addGoal(2, new FindTrashCanGoal(this));
         this.goalSelector.addGoal(3, new OpenDoorGoal(this, true));
         this.goalSelector.addGoal(4, new FindSeatGoal(this));
         this.goalSelector.addGoal(5, new WatchAnimalsGoal(this));
-        this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 0.7D));
+        this.goalSelector.addGoal(6, new VisitorZooStrollGoal(this, 0.7D));
         this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 6.0F));
         this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
     }
@@ -240,11 +247,34 @@ public class ZooVisitorEntity extends PathfinderMob {
     }
 
     public boolean needsToilet() {
-        return this.entityData.get(NEEDS_TOILET);
+        return !hasUsedToilet && this.entityData.get(NEEDS_TOILET);
     }
 
     public void setNeedsToilet(boolean needsToilet) {
+        if (needsToilet && this.hasUsedToilet) {
+            this.entityData.set(NEEDS_TOILET, false);
+            return;
+        }
         this.entityData.set(NEEDS_TOILET, needsToilet);
+    }
+
+    public boolean hasUsedToilet() {
+        return this.hasUsedToilet;
+    }
+
+    public void markToiletUsed() {
+        this.hasUsedToilet = true;
+        this.toiletTimer = 0;
+        this.entityData.set(NEEDS_TOILET, false);
+        updateMood();
+    }
+
+    public boolean wantsSouvenir() {
+        return wantsSouvenir && this.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).isEmpty();
+    }
+
+    public void setWantsSouvenir(boolean wants) {
+        this.wantsSouvenir = wants;
     }
 
     public void setGatePos(BlockPos pos) {
@@ -259,11 +289,112 @@ public class ZooVisitorEntity extends PathfinderMob {
         return stayTime > MAX_STAY;
     }
 
+    public boolean isLeaving() {
+        return this.entityData.get(IS_LEAVING);
+    }
+
+    public net.zootycoon.claim.ZooClaim findActiveZooClaim() {
+        if (!(this.level() instanceof net.minecraft.server.level.ServerLevel sLevel)) {
+            return null;
+        }
+        BlockPos pos = this.blockPosition();
+        net.zootycoon.claim.ZooClaim nearest = null;
+        double bestDist = Double.MAX_VALUE;
+        for (net.zootycoon.claim.ZooClaim claim : net.zootycoon.claim.ZooClaimManager.get(sLevel).getAllClaims()) {
+            if (claim.contains(pos.getX(), pos.getZ())) {
+                return claim;
+            }
+            var box = claim.getBox();
+            int cx = Math.clamp(pos.getX(), box.minX(), box.maxX());
+            int cz = Math.clamp(pos.getZ(), box.minZ(), box.maxZ());
+            double d = (pos.getX() - cx) * (pos.getX() - cx) + (pos.getZ() - cz) * (pos.getZ() - cz);
+            if (d < bestDist) {
+                bestDist = d;
+                nearest = claim;
+            }
+        }
+        return nearest;
+    }
+
+    public net.minecraft.world.phys.AABB getFullZooSearchBox() {
+        if (!(this.level() instanceof net.minecraft.server.level.ServerLevel sLevel)) {
+            return this.getBoundingBox().inflate(64.0D, 16.0D, 64.0D);
+        }
+        net.zootycoon.claim.ZooClaim active = findActiveZooClaim();
+        if (active == null) {
+            return this.getBoundingBox().inflate(64.0D, 16.0D, 64.0D);
+        }
+        int minX = this.blockPosition().getX() - 16;
+        int maxX = this.blockPosition().getX() + 16;
+        int minZ = this.blockPosition().getZ() - 16;
+        int maxZ = this.blockPosition().getZ() + 16;
+        UUID owner = active.getOwnerUuid();
+        for (net.zootycoon.claim.ZooClaim c : net.zootycoon.claim.ZooClaimManager.get(sLevel).getAllClaims()) {
+            if (owner == null || owner.equals(c.getOwnerUuid())) {
+                var b = c.getBox();
+                minX = Math.min(minX, b.minX() - 16);
+                maxX = Math.max(maxX, b.maxX() + 16);
+                minZ = Math.min(minZ, b.minZ() - 16);
+                maxZ = Math.max(maxZ, b.maxZ() + 16);
+            }
+        }
+        return new net.minecraft.world.phys.AABB(
+                minX, this.level().getMinBuildHeight(), minZ,
+                maxX + 1, this.level().getMaxBuildHeight(), maxZ + 1
+        );
+    }
+
+    public void moveTowardLongRange(BlockPos target, double speed) {
+        if (target == null) return;
+        double dx = (target.getX() + 0.5D) - this.getX();
+        double dz = (target.getZ() + 0.5D) - this.getZ();
+        double horizDistSq = dx * dx + dz * dz;
+        if (horizDistSq <= 22.0D * 22.0D) {
+            this.getNavigation().moveTo(target.getX() + 0.5D, target.getY(), target.getZ() + 0.5D, speed);
+            return;
+        }
+        double dist = Math.sqrt(horizDistSq);
+        double step = 18.0D;
+        int wpX = net.minecraft.util.Mth.floor(this.getX() + (dx / dist) * step);
+        int wpZ = net.minecraft.util.Mth.floor(this.getZ() + (dz / dist) * step);
+        int wpY = target.getY();
+        if (this.level() instanceof net.minecraft.server.level.ServerLevel sLevel) {
+            int surfY = sLevel.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, wpX, wpZ);
+            if (Math.abs(surfY - this.blockPosition().getY()) <= 8) {
+                wpY = surfY;
+            } else {
+                wpY = this.blockPosition().getY();
+            }
+        }
+        this.getNavigation().moveTo(wpX + 0.5D, wpY, wpZ + 0.5D, speed);
+    }
+
+    public void walkIntoZooInterior() {
+        if (!(this.level() instanceof net.minecraft.server.level.ServerLevel sLevel)) return;
+        net.zootycoon.claim.ZooClaim claim = findActiveZooClaim();
+        if (claim == null) return;
+        var box = claim.getBox();
+        BlockPos cur = this.blockPosition();
+        int marginX = Math.min(4, Math.max(1, (box.maxX() - box.minX()) / 4));
+        int marginZ = Math.min(4, Math.max(1, (box.maxZ() - box.minZ()) / 4));
+        int tx = Math.clamp(cur.getX(), box.minX() + marginX, box.maxX() - marginX);
+        int tz = Math.clamp(cur.getZ(), box.minZ() + marginZ, box.maxZ() - marginZ);
+        int ty = sLevel.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, tx, tz);
+        if (Math.abs(ty - cur.getY()) > 8) {
+            ty = cur.getY();
+        }
+        moveTowardLongRange(new BlockPos(tx, ty, tz), 1.05D);
+    }
+
     /**
      * Authoritative mood updater based on priority:
-     * TOILET > HUNGRY (>=50) > THIRSTY (>=50) > Animal Watching (AMAZED / ADORED / HAPPY) > NEUTRAL
+     * Leaving (NEUTRAL) > TOILET > HUNGRY (>=50) > THIRSTY (>=50) > Animal Watching (AMAZED / ADORED / HAPPY) > NEUTRAL
      */
     public void updateMood() {
+        if (isTimeToLeave() || isLeaving()) {
+            setMood(VisitorMood.NEUTRAL);
+            return;
+        }
         if (needsToilet()) {
             setMood(VisitorMood.TOILET);
             return;
@@ -294,31 +425,48 @@ public class ZooVisitorEntity extends PathfinderMob {
         super.aiStep();
         if (!this.level().isClientSide()) {
             stayTime++;
+            boolean leavingNow = isTimeToLeave();
+            if (this.entityData.get(IS_LEAVING) != leavingNow) {
+                this.entityData.set(IS_LEAVING, leavingNow);
+            }
+
+            // Enforce strict zoo claim boundary for ticketed visitors who are not leaving
+            if (!leavingNow && this.getTags().contains("ticket_purchased") && this.tickCount % 25 == 0) {
+                if (this.level() instanceof net.minecraft.server.level.ServerLevel sLevel) {
+                    if (!net.zootycoon.claim.ZooClaimManager.get(sLevel).isInsideAnyClaim(this.blockPosition())) {
+                        walkIntoZooInterior();
+                    }
+                }
+            }
 
             // Every 10 seconds (200 ticks): hunger and thirst build up
-            if (this.tickCount % 200 == 0) {
+            if (this.tickCount % 200 == 0 && !leavingNow) {
                 setHunger(getHunger() + 7);
                 setThirst(getThirst() + 10);
             }
 
-            // Every 10 seconds (200 ticks): check chance to need toilet
-            if (this.tickCount % 200 == 0 && !needsToilet()) {
-                float toiletChance = 0.07F;
-                if (isChildVisitor()) {
-                    toiletChance += 0.04F; // Children have smaller bladders
-                }
-                if (getThirst() >= 40 || getHunger() >= 40) {
-                    toiletChance += 0.05F; // Slightly higher chance when thirsty / hungry
-                }
-                if (this.random.nextFloat() < toiletChance) {
+            // Every 20 seconds (400 ticks): 3% chance to need toilet (max 1 toilet quota per visitor)
+            if (this.tickCount % 400 == 0 && !needsToilet() && !hasUsedToilet && !leavingNow) {
+                if (this.random.nextFloat() < 0.03F) {
                     setNeedsToilet(true);
                 }
             }
 
-            // Toilet timer check: if toilet need isn't met for 60s (1200 ticks), visitor leaves
+            // Every 15 seconds (300 ticks): chance to want a souvenir plushie if not wearing one
+            if (this.tickCount % 300 == 0 && !leavingNow && this.getTags().contains("ticket_purchased")) {
+                if (this.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).isEmpty() && !wantsSouvenir) {
+                    if (this.random.nextFloat() < 0.22F) {
+                        this.wantsSouvenir = true;
+                    }
+                } else if (!this.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).isEmpty()) {
+                    this.wantsSouvenir = false;
+                }
+            }
+
+            // Toilet timer check: if toilet need isn't met for 90s (1800 ticks), visitor leaves
             if (needsToilet()) {
                 toiletTimer++;
-                if (toiletTimer > 1200) {
+                if (toiletTimer > 1800) {
                     forceLeave();
                 }
             } else {
@@ -326,7 +474,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             }
 
             // Occasional trash generation
-            if (this.random.nextFloat() < 0.0003F && !hasTrash()) {
+            if (this.random.nextFloat() < 0.0003F && !hasTrash() && !leavingNow) {
                 setHasTrash(true);
             }
 
@@ -441,9 +589,12 @@ public class ZooVisitorEntity extends PathfinderMob {
     }
 
     public void forceLeave() {
+        this.stayTime = MAX_STAY + 1;
+        this.entityData.set(IS_LEAVING, true);
+        this.setMood(VisitorMood.NEUTRAL);
         if (gatePos != null) {
             this.getNavigation().stop();
-            this.getNavigation().moveTo(gatePos.getX() + 0.5, gatePos.getY(), gatePos.getZ() + 0.5, 1.2D);
+            moveTowardLongRange(gatePos, 1.2D);
             if (this.distanceToSqr(gatePos.getX() + 0.5, gatePos.getY(), gatePos.getZ() + 0.5) < 9.0D) {
                 this.discard();
             }
@@ -489,6 +640,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         tag.putInt("Thirst", getThirst());
         tag.putInt("Mood", getMood().ordinal());
         tag.putBoolean("HasTrash", hasTrash());
+        tag.putBoolean("HasUsedToilet", hasUsedToilet);
         tag.putBoolean("NeedsToilet", needsToilet());
         tag.putInt("SitCooldown", sitCooldown);
         if (guidingPlayerUuid != null) {
@@ -510,12 +662,14 @@ public class ZooVisitorEntity extends PathfinderMob {
             );
         }
         stayTime = tag.getInt("StayTime");
+        this.entityData.set(IS_LEAVING, isTimeToLeave());
         setVariant(tag.getInt("Variant"));
         setChildVisitor(tag.getBoolean("IsChild"));
         setHunger(tag.getInt("Hunger"));
         setThirst(tag.getInt("Thirst"));
         setMood(VisitorMood.fromOrdinal(tag.contains("Mood") ? tag.getInt("Mood") : VisitorMood.NEUTRAL.ordinal()));
         setHasTrash(tag.getBoolean("HasTrash"));
+        hasUsedToilet = tag.getBoolean("HasUsedToilet");
         setNeedsToilet(tag.getBoolean("NeedsToilet"));
         sitCooldown = tag.getInt("SitCooldown");
         if (tag.contains("GuidingPlayerUuid")) {
@@ -613,7 +767,8 @@ public class ZooVisitorEntity extends PathfinderMob {
     // =========================================================================
 
     /**
-     * Goal for newly spawned visitors outside the zoo to walk into the Ticket Booth first.
+     * Goal for newly spawned visitors outside the zoo to queue at the Ticket Booth first,
+     * then immediately walk inside the claimed zoo area once their ticket is purchased.
      */
     public static class BuyTicketAtEntranceGoal extends Goal {
         private final ZooVisitorEntity visitor;
@@ -635,22 +790,22 @@ public class ZooVisitorEntity extends PathfinderMob {
             }
             List<ZooCashierEntity> ticketCashiers = visitor.level().getEntitiesOfClass(
                     ZooCashierEntity.class,
-                    visitor.getBoundingBox().inflate(28.0D, 8.0D, 28.0D),
+                    visitor.getFullZooSearchBox(),
                     c -> c.isAlive() && "TICKET".equalsIgnoreCase(c.getCashierRole())
             );
             if (ticketCashiers.isEmpty()) {
                 return false;
             }
-            ZooCashierEntity nearest = null;
-            double bestDist = Double.MAX_VALUE;
+            ZooCashierEntity best = null;
+            double bestScore = Double.MAX_VALUE;
             for (ZooCashierEntity c : ticketCashiers) {
-                double d = visitor.distanceToSqr(c);
-                if (d < bestDist) {
-                    bestDist = d;
-                    nearest = c;
+                double score = Math.sqrt(visitor.distanceToSqr(c)) + c.getQueueSize() * 6.0D;
+                if (score < bestScore) {
+                    bestScore = score;
+                    best = c;
                 }
             }
-            this.targetTicketCashier = nearest;
+            this.targetTicketCashier = best;
             return this.targetTicketCashier != null;
         }
 
@@ -670,17 +825,162 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         @Override
         public void stop() {
+            if (this.targetTicketCashier != null) {
+                this.targetTicketCashier.removeFromQueue(visitor.getUUID());
+            }
             this.targetTicketCashier = null;
+            if (visitor.getTags().contains("ticket_purchased") && !visitor.isTimeToLeave()) {
+                visitor.walkIntoZooInterior();
+            }
         }
 
         @Override
         public void tick() {
             if (targetTicketCashier == null) return;
             visitor.getLookControl().setLookAt(targetTicketCashier, 30.0F, 30.0F);
+
+            double distToCashierSq = visitor.distanceToSqr(targetTicketCashier);
+            BlockPos targetSlot;
+            if (distToCashierSq <= 14.0D * 14.0D) {
+                int qIdx = targetTicketCashier.enqueueOrGetIndex(visitor.getUUID());
+                targetSlot = targetTicketCashier.getQueueSlotPos(qIdx);
+            } else {
+                targetSlot = targetTicketCashier.getQueueSlotPos(targetTicketCashier.getQueueSize());
+            }
+
+            double distToSlotSq = visitor.distanceToSqr(targetSlot.getX() + 0.5D, targetSlot.getY(), targetSlot.getZ() + 0.5D);
+            if (distToSlotSq <= 0.65D) {
+                visitor.getNavigation().stop();
+                return;
+            }
+
             if (repathTimer > 0) repathTimer--;
             if (repathTimer <= 0 || visitor.getNavigation().isDone()) {
-                visitor.getNavigation().moveTo(targetTicketCashier, 1.05D);
-                repathTimer = 20;
+                visitor.moveTowardLongRange(targetSlot, 1.0D);
+                repathTimer = 15;
+            }
+        }
+    }
+
+    /**
+     * Goal for visitors inside the zoo to find and queue at Burger, Drink, or Souvenir cashiers
+     * anywhere across the claimed zoo area, lining up neatly in front of the cashier's face.
+     */
+    public static class QueueAtCashierGoal extends Goal {
+        private final ZooVisitorEntity visitor;
+        private ZooCashierEntity targetCashier;
+        private String targetRole;
+        private int repathTimer = 0;
+
+        public QueueAtCashierGoal(ZooVisitorEntity visitor) {
+            this.visitor = visitor;
+            this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+        }
+
+        private String determineDesiredRole() {
+            if (visitor.isTimeToLeave() || visitor.isConsuming() || visitor.needsToilet()) {
+                return null;
+            }
+            if (!visitor.getTags().contains("ticket_purchased") || visitor.guidingPlayerUuid != null) {
+                return null;
+            }
+            if (visitor.getHunger() >= 35 || visitor.getMood() == VisitorMood.HUNGRY) {
+                return "BURGER";
+            }
+            if (visitor.getThirst() >= 25 || visitor.getMood() == VisitorMood.THIRSTY) {
+                return "DRINK";
+            }
+            if (visitor.wantsSouvenir()) {
+                return "SOUVENIR";
+            }
+            return null;
+        }
+
+        @Override
+        public boolean canUse() {
+            String role = determineDesiredRole();
+            if (role == null) return false;
+
+            List<ZooCashierEntity> cashiers = visitor.level().getEntitiesOfClass(
+                    ZooCashierEntity.class,
+                    visitor.getFullZooSearchBox(),
+                    c -> c.isAlive() && role.equalsIgnoreCase(c.getCashierRole()) && !c.isOutOfStock()
+            );
+            if (cashiers.isEmpty()) {
+                return false;
+            }
+
+            ZooCashierEntity best = null;
+            double bestScore = Double.MAX_VALUE;
+            for (ZooCashierEntity c : cashiers) {
+                double score = Math.sqrt(visitor.distanceToSqr(c)) + c.getQueueSize() * 10.0D;
+                if (score < bestScore) {
+                    bestScore = score;
+                    best = c;
+                }
+            }
+            if (best != null) {
+                this.targetCashier = best;
+                this.targetRole = role;
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            if (targetCashier == null || !targetCashier.isAlive() || targetCashier.isOutOfStock()) {
+                return false;
+            }
+            String desired = determineDesiredRole();
+            if (desired == null || !desired.equalsIgnoreCase(targetRole)) {
+                return false;
+            }
+            return targetRole.equalsIgnoreCase(targetCashier.getCashierRole());
+        }
+
+        @Override
+        public void start() {
+            this.repathTimer = 0;
+        }
+
+        @Override
+        public void stop() {
+            if (this.targetCashier != null) {
+                this.targetCashier.removeFromQueue(visitor.getUUID());
+            }
+            if ("SOUVENIR".equalsIgnoreCase(this.targetRole)
+                    && !visitor.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).isEmpty()) {
+                visitor.setWantsSouvenir(false);
+            }
+            this.targetCashier = null;
+            this.targetRole = null;
+        }
+
+        @Override
+        public void tick() {
+            if (targetCashier == null) return;
+            visitor.getLookControl().setLookAt(targetCashier, 30.0F, 30.0F);
+
+            double distToCashierSq = visitor.distanceToSqr(targetCashier);
+            BlockPos targetSlot;
+            if (distToCashierSq <= 12.0D * 12.0D) {
+                int qIdx = targetCashier.enqueueOrGetIndex(visitor.getUUID());
+                targetSlot = targetCashier.getQueueSlotPos(qIdx);
+            } else {
+                targetSlot = targetCashier.getQueueSlotPos(targetCashier.getQueueSize());
+            }
+
+            double distToSlotSq = visitor.distanceToSqr(targetSlot.getX() + 0.5D, targetSlot.getY(), targetSlot.getZ() + 0.5D);
+            if (distToSlotSq <= 0.65D) {
+                visitor.getNavigation().stop();
+                return;
+            }
+
+            if (repathTimer > 0) repathTimer--;
+            if (repathTimer <= 0 || visitor.getNavigation().isDone()) {
+                visitor.moveTowardLongRange(targetSlot, 1.0D);
+                repathTimer = 15;
             }
         }
     }
@@ -777,9 +1077,11 @@ public class ZooVisitorEntity extends PathfinderMob {
                         c -> c.isAlive() && "BURGER".equals(c.getCashierRole())
                 );
                 if (!burgerCashiers.isEmpty()) {
-                    // Stop following player and approach the burger cashier
+                    // Stop following player and queue at the burger cashier
                     visitor.guidingPlayerUuid = null;
-                    visitor.getNavigation().moveTo(burgerCashiers.get(0), 1.0D);
+                    ZooCashierEntity c = burgerCashiers.get(0);
+                    int qIdx = c.enqueueOrGetIndex(visitor.getUUID());
+                    visitor.moveTowardLongRange(c.getQueueSlotPos(qIdx), 1.0D);
                     return true;
                 }
             }
@@ -792,9 +1094,11 @@ public class ZooVisitorEntity extends PathfinderMob {
                         c -> c.isAlive() && ("DRINK".equals(c.getCashierRole()) || "ICE_CREAM".equals(c.getCashierRole()))
                 );
                 if (!drinkCashiers.isEmpty()) {
-                    // Stop following player and approach the drink cashier
+                    // Stop following player and queue at the drink cashier
                     visitor.guidingPlayerUuid = null;
-                    visitor.getNavigation().moveTo(drinkCashiers.get(0), 1.0D);
+                    ZooCashierEntity c = drinkCashiers.get(0);
+                    int qIdx = c.enqueueOrGetIndex(visitor.getUUID());
+                    visitor.moveTowardLongRange(c.getQueueSlotPos(qIdx), 1.0D);
                     return true;
                 }
             }
@@ -821,12 +1125,13 @@ public class ZooVisitorEntity extends PathfinderMob {
         @Override
         public boolean canUse() {
             if (visitor.isTimeToLeave()) return false;
+            if (!visitor.getTags().contains("ticket_purchased")) return false;
             if (visitor.tickCount % 40 != 0) return false;
 
-            // Search for nearby animals within 24 blocks (ONLY registered zoo animals!)
+            // Search for registered zoo animals across the zoo
             List<Animal> nearbyAnimals = visitor.level().getEntitiesOfClass(
                     Animal.class,
-                    visitor.getBoundingBox().inflate(24.0D),
+                    visitor.getBoundingBox().inflate(36.0D),
                     a -> a.isAlive() && ZooAnimalHungerManager.isTagged(a)
             );
 
@@ -885,7 +1190,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             if (watchPos != null) {
                 double dist = visitor.distanceToSqr(watchPos.getX() + 0.5, watchPos.getY(), watchPos.getZ() + 0.5);
                 if (dist > 4.0D || visitor.getNavigation().isDone()) {
-                    visitor.getNavigation().moveTo(watchPos.getX() + 0.5, watchPos.getY(), watchPos.getZ() + 0.5, 1.0D);
+                    visitor.moveTowardLongRange(watchPos, 1.0D);
                 }
             }
 
@@ -899,7 +1204,7 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         @Override
         public boolean canContinueToUse() {
-            return watchTimer > 0 && targetAnimal != null && targetAnimal.isAlive();
+            return watchTimer > 0 && targetAnimal != null && targetAnimal.isAlive() && !visitor.isTimeToLeave();
         }
 
         private int determineAnimalSize(Animal animal) {
@@ -940,9 +1245,10 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         @Override
         public void start() {
+            visitor.setMood(VisitorMood.NEUTRAL);
             BlockPos gate = visitor.getGatePos();
             if (gate != null) {
-                visitor.getNavigation().moveTo(gate.getX() + 0.5, gate.getY(), gate.getZ() + 0.5, 1.0D);
+                visitor.moveTowardLongRange(gate, 1.05D);
             }
         }
 
@@ -952,7 +1258,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             if (gate == null) return;
 
             if (visitor.getNavigation().isDone() || visitor.tickCount % 20 == 0) {
-                visitor.getNavigation().moveTo(gate.getX() + 0.5, gate.getY(), gate.getZ() + 0.5, 1.0D);
+                visitor.moveTowardLongRange(gate, 1.05D);
             }
 
             if (visitor.distanceToSqr(gate.getX() + 0.5, gate.getY(), gate.getZ() + 0.5) < 9.0D) {
@@ -977,7 +1283,7 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         @Override
         public boolean canUse() {
-            if (!visitor.hasTrash()) return false;
+            if (!visitor.hasTrash() || visitor.isTimeToLeave()) return false;
 
             BlockPos p = visitor.blockPosition();
             for (BlockPos pos : BlockPos.betweenClosed(p.offset(-16, -3, -16), p.offset(16, 3, 16))) {
@@ -1052,88 +1358,125 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         @Override
         public boolean canContinueToUse() {
+            if (visitor.isTimeToLeave()) return false;
             if (targetPos == null && visitor.hasTrash()) return true;
             return targetPos != null && visitor.hasTrash() && visitor.level().getBlockState(targetPos).is(net.zootycoon.block.ZooBlocks.TRASH_CAN);
         }
     }
 
     /**
-     * Goal for finding a toilet, queuing if occupied, using the toilet, and flushing.
+     * Goal for finding a toilet across the entire zoo, preferring unoccupied toilets,
+     * queuing in a straight line in front of the toilet if all toilets are occupied,
+     * mounting immediately when occupant, and walking away after dismounting so doorways never jam.
      */
     public static class FindToiletGoal extends Goal {
         private final ZooVisitorEntity visitor;
         private BlockPos targetPos;
         private BlockPos doorPos;
         private Stage stage;
-        private int timer;
         private int usingTicks;
         private int queueTicks;
         private int repathCooldown;
 
         private enum Stage {
-            TO_DOOR,
-            TO_TARGET,
+            APPROACHING,
             USING,
             QUEUING
         }
 
         public FindToiletGoal(ZooVisitorEntity visitor) {
             this.visitor = visitor;
-            this.setFlags(EnumSet.of(Flag.MOVE));
+            this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+        }
+
+        private List<BlockPos> collectAllZooToilets() {
+            List<BlockPos> list = new java.util.ArrayList<>();
+            for (BlockPos known : ToiletBlockEntity.KNOWN_TOILETS) {
+                if (visitor.level().getBlockState(known).is(net.zootycoon.block.ZooBlocks.TOILET)) {
+                    list.add(known);
+                }
+            }
+            if (list.isEmpty()) {
+                BlockPos p = visitor.blockPosition();
+                for (BlockPos pos : BlockPos.betweenClosed(p.offset(-32, -4, -32), p.offset(32, 4, 32))) {
+                    if (visitor.level().getBlockState(pos).is(net.zootycoon.block.ZooBlocks.TOILET)) {
+                        BlockPos imm = pos.immutable();
+                        ToiletBlockEntity.KNOWN_TOILETS.add(imm);
+                        list.add(imm);
+                    }
+                }
+            }
+            return list;
+        }
+
+        private BlockPos findBestToilet() {
+            List<BlockPos> toilets = collectAllZooToilets();
+            if (toilets.isEmpty()) return null;
+
+            UUID myId = visitor.getUUID();
+            BlockPos bestFreePos = null;
+            double bestFreeDistSq = Double.MAX_VALUE;
+
+            BlockPos bestQueuedPos = null;
+            double bestQueuedScore = Double.MAX_VALUE;
+
+            for (BlockPos pos : toilets) {
+                if (!(visitor.level().getBlockEntity(pos) instanceof ToiletBlockEntity toilet)) {
+                    continue;
+                }
+                if (toilet.isVisitorOccupant(myId)) {
+                    return pos;
+                }
+                double distSq = visitor.distanceToSqr(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D);
+                if (!toilet.isOccupied() && toilet.getQueueSize() == 0) {
+                    if (distSq < bestFreeDistSq) {
+                        bestFreeDistSq = distSq;
+                        bestFreePos = pos;
+                    }
+                } else {
+                    int qSize = toilet.getQueueSize();
+                    if (toilet.isInVisitorQueue(myId)) {
+                        qSize = Math.max(0, toilet.getVisitorQueueIndex(myId));
+                    }
+                    double score = qSize * 20.0D + Math.sqrt(distSq);
+                    if (score < bestQueuedScore) {
+                        bestQueuedScore = score;
+                        bestQueuedPos = pos;
+                    }
+                }
+            }
+
+            return bestFreePos != null ? bestFreePos : bestQueuedPos;
         }
 
         @Override
         public boolean canUse() {
-            if (!visitor.needsToilet()) return false;
+            if (!visitor.needsToilet() || visitor.isTimeToLeave()) return false;
+            if (visitor.guidingPlayerUuid != null) return false;
 
-            BlockPos p = visitor.blockPosition();
-            BlockPos bestPos = null;
-            int bestQueue = Integer.MAX_VALUE;
-
-            for (BlockPos pos : BlockPos.betweenClosed(p.offset(-48, -6, -48), p.offset(48, 6, 48))) {
-                if (!visitor.level().getBlockState(pos).is(net.zootycoon.block.ZooBlocks.TOILET)) continue;
-                int queueLen = 0;
-                if (visitor.level().getBlockEntity(pos) instanceof ToiletBlockEntity toilet) {
-                    if (toilet.isVisitorOccupant(visitor.getUUID()) || toilet.isInVisitorQueue(visitor.getUUID())) {
-                        this.targetPos = pos.immutable();
-                        this.doorPos = findNearestDoorNear(this.targetPos, 5);
-                        this.stage = this.doorPos != null ? Stage.TO_DOOR : Stage.TO_TARGET;
-                        return true;
-                    }
-                    queueLen = toilet.getQueueSize();
-                }
-                if (queueLen < bestQueue) {
-                    bestQueue = queueLen;
-                    bestPos = pos.immutable();
-                }
-            }
-
+            BlockPos bestPos = findBestToilet();
             if (bestPos != null) {
                 this.targetPos = bestPos;
-                this.doorPos = findNearestDoorNear(this.targetPos, 5);
-                this.stage = this.doorPos != null ? Stage.TO_DOOR : Stage.TO_TARGET;
+                this.doorPos = findNearestDoorNear(this.targetPos, 4);
+                this.stage = Stage.APPROACHING;
                 return true;
             }
-
             return false;
         }
 
         @Override
         public void start() {
-            timer = 0;
             usingTicks = 0;
             queueTicks = 0;
             repathCooldown = 0;
-            if (stage == Stage.TO_DOOR && doorPos != null) {
-                moveTo(doorPos);
-            } else if (targetPos != null) {
-                moveTo(targetPos);
+            if (targetPos != null) {
+                repathIfNeeded(targetPos);
             }
         }
 
         @Override
         public void stop() {
-            if ((stage == Stage.QUEUING || stage == Stage.USING) && targetPos != null && !visitor.level().isClientSide()) {
+            if (targetPos != null && !visitor.level().isClientSide()) {
                 if (visitor.level().getBlockEntity(targetPos) instanceof ToiletBlockEntity toilet) {
                     toilet.releaseVisitorOccupant(visitor.getUUID());
                 }
@@ -1153,17 +1496,11 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         @Override
         public void tick() {
-            if (targetPos == null) return;
+            if (targetPos == null || visitor.level().isClientSide()) return;
 
-            if (stage == Stage.TO_DOOR && doorPos != null) {
-                if (visitor.distanceToSqr(doorPos.getX() + 0.5, doorPos.getY(), doorPos.getZ() + 0.5) < 4.0D) {
-                    openDoorAt(doorPos);
-                    stage = Stage.TO_TARGET;
-                    moveTo(targetPos);
-                    timer = 0;
-                } else {
-                    repathIfNeeded(doorPos);
-                }
+            if (!(visitor.level().getBlockEntity(targetPos) instanceof ToiletBlockEntity toilet)) {
+                targetPos = null;
+                stage = null;
                 return;
             }
 
@@ -1173,114 +1510,114 @@ public class ZooVisitorEntity extends PathfinderMob {
                     usingTicks--;
                 }
                 if (usingTicks <= 0) {
+                    net.minecraft.core.Direction facing = toilet.getFacingDirection();
+                    BlockPos finishedToiletPos = targetPos;
+
                     if (visitor.isPassenger()) {
                         visitor.stopRiding();
                     }
                     visitor.setPose(net.minecraft.world.entity.Pose.STANDING);
-                    visitor.toiletTimer = 0;
-                    visitor.setNeedsToilet(false);
+                    visitor.markToiletUsed();
 
-                    if (targetPos != null && visitor.level() instanceof net.minecraft.server.level.ServerLevel sl) {
-                        if (sl.getBlockEntity(targetPos) instanceof ToiletBlockEntity toilet) {
-                            toilet.flush(sl);
-                            toilet.releaseVisitorOccupant(visitor.getUUID());
-                        }
+                    if (visitor.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                        toilet.flush(sl);
+                        toilet.releaseVisitorOccupant(visitor.getUUID());
                         if (visitor.guidedPlayerUuid != null) {
                             visitor.completeGuideReward(sl, "TOILET");
                         }
                     }
 
-                    visitor.updateMood();
+                    // Step out of the toilet block and walk 4 blocks away to the side so queued visitors are never blocked
+                    BlockPos stepOut = finishedToiletPos.relative(facing, 1);
+                    if (visitor.level().getBlockState(stepOut).getCollisionShape(visitor.level(), stepOut).isEmpty()) {
+                        visitor.setPos(stepOut.getX() + 0.5D, stepOut.getY(), stepOut.getZ() + 0.5D);
+                    }
+                    BlockPos walkAway = finishedToiletPos.relative(facing, 4).relative(facing.getClockWise(), 1);
+                    visitor.moveTowardLongRange(walkAway, 1.15D);
+
                     targetPos = null;
                     stage = null;
                 }
                 return;
             }
 
-            if (stage == Stage.QUEUING) {
-                if (visitor.level().isClientSide()) return;
-                if (!(visitor.level().getBlockEntity(targetPos) instanceof ToiletBlockEntity toilet)) {
-                    targetPos = null; stage = null; return;
-                }
-
-                if (toilet.isVisitorOccupant(visitor.getUUID())) {
-                    if (doorPos != null) openDoorAt(doorPos);
-                    double distSq = visitor.distanceToSqr(targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5);
-                    if (distSq > 3.0D) {
+            // Periodically check if another toilet in the zoo is completely free while we are waiting in a queue
+            if (visitor.tickCount % 20 == 0 && !toilet.isVisitorOccupant(visitor.getUUID()) && toilet.isOccupied()) {
+                BlockPos better = findBestToilet();
+                if (better != null && !better.equals(targetPos)) {
+                    if (visitor.level().getBlockEntity(better) instanceof ToiletBlockEntity betterToilet && !betterToilet.isOccupied()) {
+                        toilet.releaseVisitorOccupant(visitor.getUUID());
+                        targetPos = better;
+                        doorPos = findNearestDoorNear(targetPos, 4);
+                        stage = Stage.APPROACHING;
                         repathIfNeeded(targetPos);
-                    } else {
-                        visitor.getNavigation().stop();
-                        stage = Stage.USING;
-                        usingTicks = 80;
-                        if (visitor.level() instanceof net.minecraft.server.level.ServerLevel sl) {
-                            toilet.seatVisitor(sl, visitor);
-                        }
+                        return;
                     }
-                    return;
+                }
+            }
+
+            double distToToiletSq = visitor.distanceToSqr(targetPos.getX() + 0.5D, targetPos.getY(), targetPos.getZ() + 0.5D);
+
+            // Once within 10 blocks of the toilet, register occupancy or queue spot immediately
+            if (distToToiletSq <= 10.0D * 10.0D) {
+                if (!toilet.isVisitorOccupant(visitor.getUUID()) && !toilet.isInVisitorQueue(visitor.getUUID())) {
+                    toilet.requestVisitorUse(visitor.getUUID());
+                }
+            }
+
+            // Case 1: This visitor is the active occupant allowed to enter and sit on the toilet
+            if (toilet.isVisitorOccupant(visitor.getUUID())) {
+                stage = Stage.APPROACHING;
+                if (doorPos != null && visitor.distanceToSqr(doorPos.getX() + 0.5D, doorPos.getY(), doorPos.getZ() + 0.5D) < 6.25D) {
+                    openDoorAt(doorPos);
+                }
+                if (distToToiletSq <= 6.25D) {
+                    visitor.getNavigation().stop();
+                    stage = Stage.USING;
+                    usingTicks = 80;
+                    if (visitor.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                        toilet.seatVisitor(sl, visitor);
+                    }
+                } else {
+                    repathIfNeeded(targetPos);
+                }
+                return;
+            }
+
+            // Case 2: Toilet is occupied, so line up neatly at 2 + queueIndex blocks in front of the toilet
+            if (toilet.isInVisitorQueue(visitor.getUUID())) {
+                stage = Stage.QUEUING;
+                queueTicks++;
+                int qIdx = Math.max(0, toilet.getVisitorQueueIndex(visitor.getUUID()));
+                BlockPos queueSlot = toilet.getQueueSlotPos(qIdx);
+                visitor.getLookControl().setLookAt(targetPos.getX() + 0.5D, targetPos.getY() + 0.8D, targetPos.getZ() + 0.5D);
+
+                double distToSlotSq = visitor.distanceToSqr(queueSlot.getX() + 0.5D, queueSlot.getY(), queueSlot.getZ() + 0.5D);
+                if (distToSlotSq <= 0.75D) {
+                    visitor.getNavigation().stop();
+                } else {
+                    repathIfNeeded(queueSlot);
                 }
 
-                queueTicks++;
-                repathIfNeeded(targetPos);
-                if (queueTicks > 200) { // 10s timeout
+                if (queueTicks > 900) { // 45s safety timeout
                     toilet.releaseVisitorOccupant(visitor.getUUID());
-                    visitor.toiletTimer = 0;
-                    visitor.setNeedsToilet(false);
                     targetPos = null;
                     stage = null;
                 }
                 return;
             }
 
-            // Moving toward target toilet
-            if (visitor.distanceToSqr(targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5) < 5.0D) {
-                if (doorPos != null) openDoorAt(doorPos);
-                visitor.getNavigation().stop();
-                timer++;
-                if (timer > 15) {
-                    if (visitor.level().isClientSide()) return;
-                    if (visitor.level().getBlockEntity(targetPos) instanceof ToiletBlockEntity toilet) {
-                        if (doorPos != null) openDoorAt(doorPos);
-                        if (toilet.isVisitorOccupant(visitor.getUUID())) {
-                            stage = Stage.USING;
-                            usingTicks = 80;
-                            if (visitor.level() instanceof net.minecraft.server.level.ServerLevel sl) {
-                                toilet.seatVisitor(sl, visitor);
-                            }
-                            return;
-                        }
-
-                        boolean granted = toilet.requestVisitorUse(visitor.getUUID());
-                        if (granted) {
-                            stage = Stage.USING;
-                            usingTicks = 80;
-                            if (visitor.level() instanceof net.minecraft.server.level.ServerLevel sl) {
-                                toilet.seatVisitor(sl, visitor);
-                            }
-                        } else {
-                            stage = Stage.QUEUING;
-                            queueTicks = 0;
-                            repathIfNeeded(targetPos);
-                        }
-                    } else {
-                        targetPos = null;
-                        stage = null;
-                    }
-                }
-            } else {
-                repathIfNeeded(targetPos);
-            }
+            // Case 3: Still > 10 blocks away, approaching the toilet area across the zoo
+            BlockPos approachTarget = toilet.getQueueSlotPos(toilet.getQueueSize());
+            repathIfNeeded(approachTarget);
         }
 
         @Override
         public boolean canContinueToUse() {
-            if (stage == Stage.QUEUING && targetPos != null) return true;
+            if (visitor.isTimeToLeave()) return false;
             if (stage == Stage.USING && targetPos != null) return true;
+            if (!visitor.needsToilet()) return false;
             return targetPos != null && visitor.level().getBlockState(targetPos).is(net.zootycoon.block.ZooBlocks.TOILET);
-        }
-
-        private void moveTo(BlockPos pos) {
-            if (pos == null) return;
-            visitor.getNavigation().moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 1.0D);
         }
 
         private void repathIfNeeded(BlockPos pos) {
@@ -1290,8 +1627,8 @@ public class ZooVisitorEntity extends PathfinderMob {
                 return;
             }
             if (visitor.getNavigation().isDone() || visitor.tickCount % 20 == 0) {
-                moveTo(pos);
-                repathCooldown = 10;
+                visitor.moveTowardLongRange(pos, 1.0D);
+                repathCooldown = 12;
             }
         }
 
@@ -1330,6 +1667,54 @@ public class ZooVisitorEntity extends PathfinderMob {
     }
 
     /**
+     * Stroll goal that keeps ticketed visitors strictly inside the claimed zoo boundaries.
+     */
+    public static class VisitorZooStrollGoal extends WaterAvoidingRandomStrollGoal {
+        private final ZooVisitorEntity visitor;
+
+        public VisitorZooStrollGoal(ZooVisitorEntity visitor, double speedModifier) {
+            super(visitor, speedModifier);
+            this.visitor = visitor;
+        }
+
+        @Override
+        public boolean canUse() {
+            if (visitor.isTimeToLeave() || !visitor.getTags().contains("ticket_purchased")) {
+                return false;
+            }
+            return super.canUse();
+        }
+
+        @Override
+        protected Vec3 getPosition() {
+            Vec3 candidate = super.getPosition();
+            if (!(visitor.level() instanceof net.minecraft.server.level.ServerLevel sLevel)) {
+                return candidate;
+            }
+            net.zootycoon.claim.ZooClaimManager cm = net.zootycoon.claim.ZooClaimManager.get(sLevel);
+            if (candidate != null && cm.isInsideAnyClaim(BlockPos.containing(candidate))) {
+                return candidate;
+            }
+            net.zootycoon.claim.ZooClaim claim = visitor.findActiveZooClaim();
+            if (claim != null) {
+                var box = claim.getBox();
+                int marginX = Math.min(3, Math.max(1, (box.maxX() - box.minX()) / 4));
+                int marginZ = Math.min(3, Math.max(1, (box.maxZ() - box.minZ()) / 4));
+                int rx = candidate != null ? net.minecraft.util.Mth.floor(candidate.x) : visitor.blockPosition().getX();
+                int rz = candidate != null ? net.minecraft.util.Mth.floor(candidate.z) : visitor.blockPosition().getZ();
+                int tx = Math.clamp(rx, box.minX() + marginX, box.maxX() - marginX);
+                int tz = Math.clamp(rz, box.minZ() + marginZ, box.maxZ() - marginZ);
+                int ty = sLevel.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, tx, tz);
+                if (Math.abs(ty - visitor.blockPosition().getY()) > 8) {
+                    ty = visitor.blockPosition().getY();
+                }
+                return new Vec3(tx + 0.5D, ty, tz + 0.5D);
+            }
+            return candidate;
+        }
+    }
+
+    /**
      * Goal for finding nearby seatable objects (chairs, benches, sofas, stools from any furniture mod)
      * and sitting down to relax for a while.
      */
@@ -1348,6 +1733,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         @Override
         public boolean canUse() {
             if (visitor.isTimeToLeave()) return false;
+            if (!visitor.getTags().contains("ticket_purchased")) return false;
             if (visitor.needsToilet()) return false;
             if (visitor.hasTrash()) return false;
             if (visitor.isPassenger()) return false;

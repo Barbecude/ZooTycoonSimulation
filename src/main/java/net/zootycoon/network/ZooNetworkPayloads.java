@@ -754,6 +754,16 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // 21c. Rotate Cashier Payload (C2S)
+    public record RotateCashierPayload(int entityId) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<RotateCashierPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("rotate_cashier"));
+        public static final StreamCodec<FriendlyByteBuf, RotateCashierPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> buf.writeInt(payload.entityId),
+                buf -> new RotateCashierPayload(buf.readInt())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     // 20. Show Toast Notification Payload (S2C)
     public record ShowToastPayload(String titleKey, String msgKey, List<String> args, int toastType) implements CustomPacketPayload {
         public static final CustomPacketPayload.Type<ShowToastPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("show_toast"));
@@ -831,6 +841,7 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playC2S().register(InteractSecurityPayload.TYPE, InteractSecurityPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SetCashierRolePayload.TYPE, SetCashierRolePayload.CODEC);
         PayloadTypeRegistry.playC2S().register(CashierSlotClickPayload.TYPE, CashierSlotClickPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(RotateCashierPayload.TYPE, RotateCashierPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(AssignZookeeperPayload.TYPE, AssignZookeeperPayload.CODEC);
 
         PayloadTypeRegistry.playS2C().register(SyncClaimsPayload.TYPE, SyncClaimsPayload.CODEC);
@@ -1198,6 +1209,19 @@ public class ZooNetworkPayloads {
                     } else {
                         sendToast(player, "zootycoon.toast.title.warning", "zootycoon.cashier.role_locked", 2);
                     }
+                }
+            });
+        });
+
+        // Handler: Rotate Cashier from GUI
+        ServerPlayNetworking.registerGlobalReceiver(RotateCashierPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            net.minecraft.server.level.ServerLevel level = (net.minecraft.server.level.ServerLevel) player.level();
+            context.server().execute(() -> {
+                net.minecraft.world.entity.Entity ent = level.getEntity(payload.entityId());
+                if (ent instanceof net.zootycoon.entity.ZooCashierEntity cashier && cashier.isAlive()) {
+                    cashier.rotateClockwise();
+                    level.playSound(null, cashier.blockPosition(), net.minecraft.sounds.SoundEvents.ITEM_FRAME_ROTATE_ITEM, net.minecraft.sounds.SoundSource.NEUTRAL, 0.9F, 1.1F);
                 }
             });
         });

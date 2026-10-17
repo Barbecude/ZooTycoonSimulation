@@ -205,6 +205,7 @@ public class ZooStaffManager {
                 var cashier = ZooEntities.CASHIER.create(sLevel);
                 if (cashier != null) {
                     cashier.setPos(player.getX() + 0.5, player.getY(), player.getZ() + 0.5);
+                    cashier.setFacingDirection(player.getDirection().getOpposite());
                     sLevel.addFreshEntity(cashier);
                     sLevel.sendParticles(
                             ParticleTypes.HAPPY_VILLAGER,

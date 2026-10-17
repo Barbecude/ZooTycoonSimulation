@@ -66,7 +66,7 @@ public class ZooSecurityEntity extends PathfinderMob {
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new MeleeAttackGoal(this, 1.3D, false));
-        this.goalSelector.addGoal(2, new WaterAvoidingRandomStrollGoal(this, 0.6D));
+        this.goalSelector.addGoal(2, new SecurityClaimStrollGoal(this, 0.6D));
         this.goalSelector.addGoal(3, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
 
@@ -76,15 +76,131 @@ public class ZooSecurityEntity extends PathfinderMob {
         this.targetSelector.addGoal(2, new HurtByTargetGoal(this));
     }
 
+    public static class SecurityClaimStrollGoal extends WaterAvoidingRandomStrollGoal {
+        private final ZooSecurityEntity security;
+
+        public SecurityClaimStrollGoal(ZooSecurityEntity mob, double speedModifier) {
+            super(mob, speedModifier);
+            this.security = mob;
+        }
+
+        @Override
+        protected net.minecraft.world.phys.Vec3 getPosition() {
+            net.minecraft.world.phys.Vec3 pos = super.getPosition();
+            if (pos != null && this.security.level() instanceof net.minecraft.server.level.ServerLevel sLevel) {
+                net.zootycoon.claim.ZooClaimManager cm = net.zootycoon.claim.ZooClaimManager.get(sLevel);
+                net.minecraft.core.BlockPos bp = net.minecraft.core.BlockPos.containing(pos.x, pos.y, pos.z);
+                boolean inside = (this.security.ownerUuid != null)
+                        ? cm.isClaimedBy(bp, this.security.ownerUuid)
+                        : cm.isInsideAnyClaim(bp);
+                if (!inside) {
+                    net.zootycoon.claim.ZooClaim claim = this.security.findClosestClaim(cm);
+                    if (claim != null) {
+                        var box = claim.getBox();
+                        int minX = Math.min(box.minX() + 2, box.maxX());
+                        int maxX = Math.max(box.maxX() - 2, minX);
+                        int minZ = Math.min(box.minZ() + 2, box.maxZ());
+                        int maxZ = Math.max(box.maxZ() - 2, minZ);
+                        int tx = Math.clamp((int) Math.floor(pos.x), minX, maxX);
+                        int tz = Math.clamp((int) Math.floor(pos.z), minZ, maxZ);
+                        int ty = sLevel.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, tx, tz);
+                        return new net.minecraft.world.phys.Vec3(tx + 0.5D, ty, tz + 0.5D);
+                    }
+                }
+            }
+            return pos;
+        }
+    }
+
+    public net.zootycoon.claim.ZooClaim findClosestClaim(net.zootycoon.claim.ZooClaimManager claimManager) {
+        java.util.Collection<net.zootycoon.claim.ZooClaim> claims = (ownerUuid != null)
+                ? claimManager.getPlayerClaims(ownerUuid)
+                : claimManager.getAllClaims();
+        if (claims.isEmpty() && ownerUuid != null) {
+            claims = claimManager.getAllClaims();
+        }
+        net.zootycoon.claim.ZooClaim closest = null;
+        double minDistSq = Double.MAX_VALUE;
+        net.minecraft.core.BlockPos currentPos = this.blockPosition();
+        for (net.zootycoon.claim.ZooClaim claim : claims) {
+            var box = claim.getBox();
+            int cx = (box.minX() + box.maxX()) / 2;
+            int cz = (box.minZ() + box.maxZ()) / 2;
+            double d = currentPos.distSqr(new net.minecraft.core.Vec3i(cx, currentPos.getY(), cz));
+            if (d < minDistSq) {
+                minDistSq = d;
+                closest = claim;
+            }
+        }
+        return closest;
+    }
+
+    private void returnToClaimedLand(net.minecraft.server.level.ServerLevel sLevel, net.zootycoon.claim.ZooClaimManager claimManager) {
+        net.zootycoon.claim.ZooClaim closestClaim = findClosestClaim(claimManager);
+        if (closestClaim == null) return;
+
+        var box = closestClaim.getBox();
+        net.minecraft.core.BlockPos currentPos = this.blockPosition();
+        int minX = Math.min(box.minX() + 2, box.maxX());
+        int maxX = Math.max(box.maxX() - 2, minX);
+        int minZ = Math.min(box.minZ() + 2, box.maxZ());
+        int maxZ = Math.max(box.maxZ() - 2, minZ);
+        int targetX = Math.clamp(currentPos.getX(), minX, maxX);
+        int targetZ = Math.clamp(currentPos.getZ(), minZ, maxZ);
+        int targetY = sLevel.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, targetX, targetZ);
+        net.minecraft.core.BlockPos safePos = new net.minecraft.core.BlockPos(targetX, targetY, targetZ);
+
+        double distToSafe = this.distanceToSqr(safePos.getX() + 0.5, safePos.getY(), safePos.getZ() + 0.5);
+        if (distToSafe > 16.0 * 16.0) {
+            this.teleportTo(safePos.getX() + 0.5, safePos.getY(), safePos.getZ() + 0.5);
+            this.getNavigation().stop();
+        } else {
+            this.getNavigation().moveTo(safePos.getX() + 0.5, safePos.getY(), safePos.getZ() + 0.5, 1.15);
+        }
+    }
+
     @Override
     public void tick() {
         super.tick();
-        if (!level().isClientSide() && tickCount % 20 == 0) {
-            String name = getSecurityName();
-            if (getTarget() instanceof ZooHunterEntity) {
-                this.setCustomName(Component.literal(name + " " + net.zootycoon.util.ZooTranslations.get("zootycoon.entity.security.combat_tag")).withStyle(ChatFormatting.RED));
-            } else {
-                this.setCustomName(Component.literal(name + " " + net.zootycoon.util.ZooTranslations.get("zootycoon.entity.security.tag")).withStyle(ChatFormatting.AQUA));
+        if (!level().isClientSide() && level() instanceof net.minecraft.server.level.ServerLevel sLevel) {
+            net.zootycoon.claim.ZooClaimManager claimManager = net.zootycoon.claim.ZooClaimManager.get(sLevel);
+            if (ownerUuid == null && tickCount % 20 == 0) {
+                net.zootycoon.claim.ZooClaim nearest = findClosestClaim(claimManager);
+                if (nearest != null) {
+                    ownerUuid = nearest.getOwnerUuid();
+                }
+            }
+
+            // When not actively chasing a hunter/target, strictly stay inside the claimed zoo area
+            if (getTarget() == null || !getTarget().isAlive()) {
+                net.minecraft.core.BlockPos currentPos = this.blockPosition();
+                boolean inside = (ownerUuid != null)
+                        ? claimManager.isClaimedBy(currentPos, ownerUuid)
+                        : claimManager.isInsideAnyClaim(currentPos);
+                if (!inside) {
+                    if (tickCount % 10 == 0) {
+                        returnToClaimedLand(sLevel, claimManager);
+                    }
+                } else if (this.getNavigation().isInProgress()) {
+                    net.minecraft.core.BlockPos targetPos = this.getNavigation().getTargetPos();
+                    if (targetPos != null) {
+                        boolean targetInside = (ownerUuid != null)
+                                ? claimManager.isClaimedBy(targetPos, ownerUuid)
+                                : claimManager.isInsideAnyClaim(targetPos);
+                        if (!targetInside) {
+                            this.getNavigation().stop();
+                        }
+                    }
+                }
+            }
+
+            if (tickCount % 20 == 0) {
+                String name = getSecurityName();
+                if (getTarget() instanceof ZooHunterEntity) {
+                    this.setCustomName(Component.literal(name + " " + net.zootycoon.util.ZooTranslations.get("zootycoon.entity.security.combat_tag")).withStyle(ChatFormatting.RED));
+                } else {
+                    this.setCustomName(Component.literal(name + " " + net.zootycoon.util.ZooTranslations.get("zootycoon.entity.security.tag")).withStyle(ChatFormatting.AQUA));
+                }
             }
         }
     }

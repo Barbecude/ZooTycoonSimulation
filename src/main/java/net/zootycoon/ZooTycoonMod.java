@@ -72,6 +72,7 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.economy.ZooRatingManager.reset();
             net.zootycoon.construction.ConstructionManager.reset();
             net.zootycoon.block.ZooFeedingTroughBlock.reset();
+            net.zootycoon.block.ToiletBlockEntity.reset();
             net.zootycoon.hunter.ZooHunterManager.reset();
             net.zootycoon.visitor.ZooVisitorManager.reset();
         });
@@ -83,6 +84,7 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.economy.ZooRatingManager.reset();
             net.zootycoon.construction.ConstructionManager.reset();
             net.zootycoon.block.ZooFeedingTroughBlock.reset();
+            net.zootycoon.block.ToiletBlockEntity.reset();
             net.zootycoon.hunter.ZooHunterManager.reset();
             net.zootycoon.visitor.ZooVisitorManager.reset();
             net.zootycoon.construction.ConstructionManager.loadFromFile(server);
