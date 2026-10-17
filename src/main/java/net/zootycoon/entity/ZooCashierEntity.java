@@ -23,6 +23,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.PathfinderMob;
@@ -63,6 +64,8 @@ public class ZooCashierEntity extends PathfinderMob {
     private final SimpleContainer stockInventory = new SimpleContainer(STOCK_SLOTS);
     private final List<UUID> customerQueue = new ArrayList<>();
     private int serveCooldown = 0;
+    private UUID servingTicketCustomerUuid = null;
+    private int ticketServiceTicks = 0;
 
     public ZooCashierEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
@@ -373,9 +376,9 @@ public class ZooCashierEntity extends PathfinderMob {
         }
         return switch (role) {
             case "TICKET" -> !v.getTags().contains("ticket_purchased");
-            case "BURGER" -> v.canEat() && (v.getHunger() >= 35 || v.getMood() == ZooVisitorEntity.VisitorMood.HUNGRY
+            case "BURGER" -> v.hasWatchedAnimal() && v.canEat() && (v.getHunger() >= 35 || v.getMood() == ZooVisitorEntity.VisitorMood.HUNGRY
                     || (v.getGuidedPlayerUuid() != null && v.getHunger() >= 15));
-            case "DRINK" -> v.canDrink() && (v.getThirst() >= 25 || v.getMood() == ZooVisitorEntity.VisitorMood.THIRSTY
+            case "DRINK" -> v.hasWatchedAnimal() && v.canDrink() && (v.getThirst() >= 25 || v.getMood() == ZooVisitorEntity.VisitorMood.THIRSTY
                     || (v.getGuidedPlayerUuid() != null && v.getThirst() >= 15));
             case "SOUVENIR" -> v.getTags().contains("ticket_purchased")
                     && v.getItemBySlot(EquipmentSlot.HEAD).isEmpty()
@@ -515,16 +518,38 @@ public class ZooCashierEntity extends PathfinderMob {
                     }
                 }
             } else if ("TICKET".equals(role)) {
-                ZooVisitorEntity customer = resolveNextReadyCustomer(sLevel, role);
-                if (customer != null) {
-                    removeFromQueue(customer.getUUID());
-                    customer.addTag("ticket_purchased");
-                    creditOwner(sLevel, getItemPrice("TICKET", ItemStack.EMPTY));
-                    sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.8F, 1.1F);
-                    sLevel.playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.7F, 1.2F);
-                    sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
-                    customer.onTransactionComplete(this.blockPosition(), "TICKET", ItemStack.EMPTY, false);
-                    serveCooldown = 25;
+                if (servingTicketCustomerUuid != null) {
+                    Entity ent = sLevel.getEntity(servingTicketCustomerUuid);
+                    if (ent instanceof ZooVisitorEntity customer && customer.isAlive()
+                            && customer.distanceToSqr(getQueueSlotVec(0)) <= 25.0D) {
+                        ticketServiceTicks--;
+                        this.getLookControl().setLookAt(customer, 30.0F, 30.0F);
+                        if (ticketServiceTicks % 30 == 0) {
+                            sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_WORK_LIBRARIAN, SoundSource.NEUTRAL, 0.6F, 1.1F);
+                        }
+                        if (ticketServiceTicks <= 0) {
+                            removeFromQueue(customer.getUUID());
+                            customer.addTag("ticket_purchased");
+                            creditOwner(sLevel, getItemPrice("TICKET", ItemStack.EMPTY));
+                            sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.8F, 1.1F);
+                            sLevel.playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.7F, 1.2F);
+                            sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
+                            customer.onTransactionComplete(this.blockPosition(), "TICKET", ItemStack.EMPTY, false);
+                            servingTicketCustomerUuid = null;
+                            ticketServiceTicks = 0;
+                            serveCooldown = 20;
+                        }
+                    } else {
+                        servingTicketCustomerUuid = null;
+                        ticketServiceTicks = 0;
+                    }
+                } else if (serveCooldown <= 0) {
+                    ZooVisitorEntity customer = resolveNextReadyCustomer(sLevel, role);
+                    if (customer != null) {
+                        servingTicketCustomerUuid = customer.getUUID();
+                        ticketServiceTicks = 600; // 30 seconds (600 ticks)
+                        sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_WORK_LIBRARIAN, SoundSource.NEUTRAL, 0.7F, 1.0F);
+                    }
                 }
             }
         }

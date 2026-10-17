@@ -131,6 +131,8 @@ public class ZooVisitorEntity extends PathfinderMob {
     private int foodCount = 0;
     private int drinkCount = 0;
     private int cashierCooldown = 0;
+    private boolean hasWatchedAnimal = false;
+    private int lastWatchedAnimalId = -1;
     private BlockPos escapeTarget = null;
     private int escapeTicks = 0;
 
@@ -304,6 +306,22 @@ public class ZooVisitorEntity extends PathfinderMob {
 
     public void setCashierCooldown(int ticks) {
         this.cashierCooldown = ticks;
+    }
+
+    public boolean hasWatchedAnimal() {
+        return this.hasWatchedAnimal;
+    }
+
+    public void setHasWatchedAnimal(boolean hasWatchedAnimal) {
+        this.hasWatchedAnimal = hasWatchedAnimal;
+    }
+
+    public int getLastWatchedAnimalId() {
+        return this.lastWatchedAnimalId;
+    }
+
+    public void setLastWatchedAnimalId(int lastWatchedAnimalId) {
+        this.lastWatchedAnimalId = lastWatchedAnimalId;
     }
 
     public BlockPos getEscapeTarget() {
@@ -527,11 +545,11 @@ public class ZooVisitorEntity extends PathfinderMob {
             setMood(VisitorMood.TOILET);
             return;
         }
-        if (canEat() && getHunger() >= 50) {
+        if (canEat() && getHunger() >= 50 && hasWatchedAnimal) {
             setMood(VisitorMood.HUNGRY);
             return;
         }
-        if (canDrink() && getThirst() >= 50) {
+        if (canDrink() && getThirst() >= 50 && hasWatchedAnimal) {
             setMood(VisitorMood.THIRSTY);
             return;
         }
@@ -785,6 +803,8 @@ public class ZooVisitorEntity extends PathfinderMob {
         tag.putInt("FoodCount", foodCount);
         tag.putInt("DrinkCount", drinkCount);
         tag.putInt("CashierCooldown", cashierCooldown);
+        tag.putBoolean("HasWatchedAnimal", hasWatchedAnimal);
+        tag.putInt("LastWatchedAnimalId", lastWatchedAnimalId);
         if (guidingPlayerUuid != null) {
             tag.putString("GuidingPlayerUuid", guidingPlayerUuid.toString());
         }
@@ -815,6 +835,8 @@ public class ZooVisitorEntity extends PathfinderMob {
         foodCount = tag.getInt("FoodCount");
         drinkCount = tag.getInt("DrinkCount");
         cashierCooldown = tag.getInt("CashierCooldown");
+        hasWatchedAnimal = tag.getBoolean("HasWatchedAnimal");
+        lastWatchedAnimalId = tag.contains("LastWatchedAnimalId") ? tag.getInt("LastWatchedAnimalId") : -1;
         setHunger(tag.getInt("Hunger"));
         setThirst(tag.getInt("Thirst"));
         setMood(VisitorMood.fromOrdinal(tag.contains("Mood") ? tag.getInt("Mood") : VisitorMood.NEUTRAL.ordinal()));
@@ -1217,10 +1239,10 @@ public class ZooVisitorEntity extends PathfinderMob {
             if (!visitor.getTags().contains("ticket_purchased") || visitor.guidingPlayerUuid != null) {
                 return null;
             }
-            if (visitor.canEat() && (visitor.getHunger() >= 35 || visitor.getMood() == VisitorMood.HUNGRY)) {
+            if (visitor.hasWatchedAnimal() && visitor.canEat() && (visitor.getHunger() >= 35 || visitor.getMood() == VisitorMood.HUNGRY)) {
                 return "BURGER";
             }
-            if (visitor.canDrink() && (visitor.getThirst() >= 25 || visitor.getMood() == VisitorMood.THIRSTY)) {
+            if (visitor.hasWatchedAnimal() && visitor.canDrink() && (visitor.getThirst() >= 25 || visitor.getMood() == VisitorMood.THIRSTY)) {
                 return "DRINK";
             }
             if (visitor.wantsSouvenir()) {
@@ -1465,33 +1487,31 @@ public class ZooVisitorEntity extends PathfinderMob {
         public boolean canUse() {
             if (visitor.isTimeToLeave()) return false;
             if (!visitor.getTags().contains("ticket_purchased")) return false;
-            if (visitor.tickCount % 40 != 0) return false;
+            if (visitor.hasWatchedAnimal && visitor.tickCount % 40 != 0) return false;
+            if (!visitor.hasWatchedAnimal && visitor.tickCount % 10 != 0) return false;
 
-            // Search for registered zoo animals across the zoo
-            List<Animal> nearbyAnimals = visitor.level().getEntitiesOfClass(
+            // Search for registered zoo animals across the entire claimed zoo area
+            List<Animal> allZooAnimals = visitor.level().getEntitiesOfClass(
                     Animal.class,
-                    visitor.getBoundingBox().inflate(36.0D),
+                    visitor.getFullZooSearchBox(),
                     a -> a.isAlive() && ZooAnimalHungerManager.isTagged(a)
             );
 
-            if (nearbyAnimals.isEmpty()) return false;
+            if (allZooAnimals.isEmpty()) return false;
 
-            // Pick nearest animal
-            Animal best = null;
-            double bestDist = Double.MAX_VALUE;
-            for (Animal a : nearbyAnimals) {
-                double d = visitor.distanceToSqr(a);
-                if (d < bestDist) {
-                    bestDist = d;
-                    best = a;
+            // Pick randomly among all candidates, avoiding the same animal if > 1 exist
+            List<Animal> candidates = allZooAnimals;
+            if (candidates.size() > 1 && visitor.lastWatchedAnimalId != -1) {
+                List<Animal> filtered = candidates.stream()
+                        .filter(a -> a.getId() != visitor.lastWatchedAnimalId)
+                        .toList();
+                if (!filtered.isEmpty()) {
+                    candidates = filtered;
                 }
             }
 
-            if (best != null) {
-                this.targetAnimal = best;
-                return true;
-            }
-            return false;
+            this.targetAnimal = candidates.get(visitor.random.nextInt(candidates.size()));
+            return true;
         }
 
         @Override
@@ -1508,6 +1528,10 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         @Override
         public void stop() {
+            if (targetAnimal != null) {
+                visitor.hasWatchedAnimal = true;
+                visitor.lastWatchedAnimalId = targetAnimal.getId();
+            }
             visitor.watchingAnimalId = -1;
             visitor.watchingAnimalSize = -1;
             targetAnimal = null;
@@ -1528,8 +1552,12 @@ public class ZooVisitorEntity extends PathfinderMob {
 
             if (watchPos != null) {
                 double dist = visitor.distanceToSqr(watchPos.getX() + 0.5, watchPos.getY(), watchPos.getZ() + 0.5);
+                if (dist <= 64.0D) {
+                    visitor.hasWatchedAnimal = true;
+                    visitor.lastWatchedAnimalId = targetAnimal.getId();
+                }
                 if (dist > 4.0D || visitor.getNavigation().isDone()) {
-                    visitor.moveTowardLongRange(watchPos, 1.0D);
+                    visitor.moveTowardLongRange(watchPos, 1.05D);
                 }
             }
 

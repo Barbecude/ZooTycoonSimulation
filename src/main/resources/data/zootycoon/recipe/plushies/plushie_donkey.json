@@ -1,0 +1,32 @@
+{
+  "fabric:load_conditions": [
+    {
+      "condition": "fabric:all_mods_loaded",
+      "values": [
+        "plushie_buddies"
+      ]
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "W": {
+      "tag": "minecraft:wool"
+    },
+    "S": {
+      "item": "minecraft:string"
+    },
+    "M": {
+      "item": "minecraft:chest"
+    }
+  },
+  "pattern": [
+    "WWW",
+    "WMW",
+    "SWS"
+  ],
+  "result": {
+    "count": 1,
+    "id": "plushie_buddies:plushie_donkey"
+  }
+}
