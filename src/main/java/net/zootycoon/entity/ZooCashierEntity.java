@@ -37,6 +37,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.zootycoon.claim.ZooClaim;
 import net.zootycoon.claim.ZooClaimManager;
@@ -65,6 +66,7 @@ public class ZooCashierEntity extends PathfinderMob {
     private final SimpleContainer stockInventory = new SimpleContainer(STOCK_SLOTS);
     private final List<UUID> customerQueue = new ArrayList<>();
     private int serveCooldown = 0;
+    private int fomoCooldown = 0;
     private UUID servingCustomerUuid = null;
     private int serviceTicks = 0;
 
@@ -115,8 +117,54 @@ public class ZooCashierEntity extends PathfinderMob {
         if (idx == -1) {
             customerQueue.add(visitorUuid);
             idx = customerQueue.size() - 1;
+            if (customerQueue.size() == 1 && fomoCooldown <= 0) {
+                tryTriggerFomoEffect(visitorUuid);
+            }
         }
         return idx;
+    }
+
+    private void tryTriggerFomoEffect(UUID triggerVisitorUuid) {
+        if (this.level().isClientSide()) return;
+        if (!isRoleAssigned() || isOutOfStock()) return;
+
+        // 25% chance as specified
+        if (this.random.nextFloat() >= 0.25f) {
+            return;
+        }
+
+        // Set cooldown on cashier (1200 ticks = 60s) to prevent cascading loops
+        this.fomoCooldown = 1200;
+
+        String role = getCashierRole();
+        double searchRadius = 40.0D;
+        AABB searchBox = this.getBoundingBox().inflate(searchRadius, 12.0D, searchRadius);
+        List<ZooVisitorEntity> candidates = this.level().getEntitiesOfClass(
+                ZooVisitorEntity.class, searchBox,
+                v -> v.isAlive()
+                        && !v.getUUID().equals(triggerVisitorUuid)
+                        && !v.isTimeToLeave()
+                        && !v.isLeaving()
+                        && !v.isFomoTarget()
+                        && !customerQueue.contains(v.getUUID())
+                        && !v.needsToilet()
+                        && !v.isConsuming()
+                        && v.getGuidingPlayerUuid() == null
+                        && ("TICKET".equalsIgnoreCase(role)
+                            ? !v.getTags().contains("ticket_purchased")
+                            : (v.getTags().contains("ticket_purchased") && (
+                                ("BURGER".equalsIgnoreCase(role) && v.canEat()) ||
+                                ("DRINK".equalsIgnoreCase(role) && v.canDrink())
+                              )))
+        );
+
+        if (candidates.isEmpty()) return;
+
+        java.util.Collections.shuffle(candidates);
+        int take = Math.min(4, candidates.size());
+        for (int i = 0; i < take; i++) {
+            candidates.get(i).triggerFomoForCashier(this);
+        }
     }
 
     public void removeFromQueue(UUID visitorUuid) {
@@ -376,6 +424,9 @@ public class ZooCashierEntity extends PathfinderMob {
         if (v == null || !v.isAlive() || v.isTimeToLeave() || v.isConsuming() || v.hasCashierCooldown()) {
             return false;
         }
+        if (v.isFomoTarget() && v.getFomoCashier() == this) {
+            return true;
+        }
         return switch (role) {
             case "TICKET" -> !v.getTags().contains("ticket_purchased");
             case "BURGER" -> v.hasWatchedAnimal() && v.canEat() && (v.getHunger() >= 35 || v.getMood() == ZooVisitorEntity.VisitorMood.HUNGRY
@@ -443,6 +494,7 @@ public class ZooCashierEntity extends PathfinderMob {
         super.tick();
         if (this.level().isClientSide()) return;
         if (serveCooldown > 0) serveCooldown--;
+        if (fomoCooldown > 0) fomoCooldown--;
 
         if (this.tickCount % 20 == 0) {
             updateStockStatus();
