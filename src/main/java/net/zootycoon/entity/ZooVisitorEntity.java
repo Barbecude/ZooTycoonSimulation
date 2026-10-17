@@ -745,8 +745,14 @@ public class ZooVisitorEntity extends PathfinderMob {
                 updateMood();
             }
 
-            // Natural running and jumping behavior
-            if (this.isPassenger() || needsToilet()) {
+            // Natural running and jumping behavior (strictly random during calm zoo strolls, NEVER while leaving cashier or eating)
+            boolean isNearOrLeavingCashier = (this.escapeTicks > 0
+                    || this.cashierCooldown > 240
+                    || this.isConsuming()
+                    || this.postPurchaseEatMode > EAT_MODE_NONE
+                    || !this.getTags().contains("ticket_purchased"));
+
+            if (this.isPassenger() || needsToilet() || isNearOrLeavingCashier) {
                 if (runBurstTimer > 0) {
                     runBurstTimer = 0;
                     runBurstType = 0;
@@ -780,7 +786,7 @@ public class ZooVisitorEntity extends PathfinderMob {
                     }
                     if (jumpCooldown <= 0 && this.onGround() && this.getDeltaMovement().horizontalDistanceSqr() > 0.003D) {
                         this.getJumpControl().jump();
-                        jumpCooldown = isChildVisitor() ? 24 + this.random.nextInt(12) : 12 + this.random.nextInt(8); // child skips gently
+                        jumpCooldown = isChildVisitor() ? 24 + this.random.nextInt(12) : 14 + this.random.nextInt(10); // child skips gently
                     }
                 }
 
@@ -793,12 +799,12 @@ public class ZooVisitorEntity extends PathfinderMob {
                     }
                 }
             } else {
-                // Periodically decide if visitor wants a burst of excitement/running
-                int interval = isChildVisitor() ? 70 : 90;
+                // Periodically decide if visitor wants a burst of excitement/running during general zoo strolling
+                int interval = isChildVisitor() ? 80 : 100;
                 if (this.tickCount % interval == 0) {
-                    float chance = isChildVisitor() ? 0.20F : 0.12F;
+                    float chance = isChildVisitor() ? 0.18F : 0.10F;
                     if (this.random.nextFloat() < chance && (!this.getNavigation().isDone() || this.getDeltaMovement().horizontalDistanceSqr() > 0.002D)) {
-                        runBurstTimer = isChildVisitor() ? (20 + this.random.nextInt(25)) : (40 + this.random.nextInt(60)); // shorter, gentle sprint for children
+                        runBurstTimer = isChildVisitor() ? (20 + this.random.nextInt(25)) : (35 + this.random.nextInt(40)); // gentle sprint
                         runBurstType = this.random.nextBoolean() ? 1 : 2;
                         jumpCooldown = 6;
                         this.setSprinting(true);
@@ -1110,7 +1116,7 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         this.escapeTarget = new BlockPos((int) targetX, ty, (int) targetZ);
         boolean isChild = this.isChildVisitor();
-        int burstTicks = isChild ? 20 : 30;
+        int burstTicks = isChild ? 30 : 45;
         this.escapeTicks = burstTicks;
         this.runBurstTimer = 0;
         this.runBurstType = 0;
@@ -1120,7 +1126,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             if (attr.hasModifier(SPRINT_MODIFIER_ID)) attr.removeModifier(SPRINT_MODIFIER_ID);
             if (attr.hasModifier(CHILD_SPRINT_MODIFIER_ID)) attr.removeModifier(CHILD_SPRINT_MODIFIER_ID);
         }
-        this.getNavigation().moveTo(this.escapeTarget.getX() + 0.5D, this.escapeTarget.getY(), this.escapeTarget.getZ() + 0.5D, 1.0D);
+        this.getNavigation().moveTo(this.escapeTarget.getX() + 0.5D, this.escapeTarget.getY(), this.escapeTarget.getZ() + 0.5D, 0.85D);
     }
 
     public void completeGuideReward(net.minecraft.server.level.ServerLevel sLevel, String facilityType) {
@@ -1182,11 +1188,16 @@ public class ZooVisitorEntity extends PathfinderMob {
         public void start() {
             if (visitor.escapeTarget != null) {
                 visitor.setSprinting(false);
+                var attr = visitor.getAttribute(Attributes.MOVEMENT_SPEED);
+                if (attr != null) {
+                    if (attr.hasModifier(SPRINT_MODIFIER_ID)) attr.removeModifier(SPRINT_MODIFIER_ID);
+                    if (attr.hasModifier(CHILD_SPRINT_MODIFIER_ID)) attr.removeModifier(CHILD_SPRINT_MODIFIER_ID);
+                }
                 visitor.getNavigation().moveTo(
                         visitor.escapeTarget.getX() + 0.5D,
                         visitor.escapeTarget.getY(),
                         visitor.escapeTarget.getZ() + 0.5D,
-                        1.0D
+                        0.85D
                 );
             }
         }
@@ -1194,6 +1205,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         @Override
         public void tick() {
             if (visitor.escapeTarget != null) {
+                visitor.setSprinting(false);
                 double distSq = visitor.distanceToSqr(
                         visitor.escapeTarget.getX() + 0.5D,
                         visitor.escapeTarget.getY(),
@@ -1208,7 +1220,7 @@ public class ZooVisitorEntity extends PathfinderMob {
                             visitor.escapeTarget.getX() + 0.5D,
                             visitor.escapeTarget.getY(),
                             visitor.escapeTarget.getZ() + 0.5D,
-                            1.0D
+                            0.85D
                     );
                 }
             }

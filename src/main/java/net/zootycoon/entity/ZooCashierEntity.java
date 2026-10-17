@@ -64,8 +64,8 @@ public class ZooCashierEntity extends PathfinderMob {
     private final SimpleContainer stockInventory = new SimpleContainer(STOCK_SLOTS);
     private final List<UUID> customerQueue = new ArrayList<>();
     private int serveCooldown = 0;
-    private UUID servingTicketCustomerUuid = null;
-    private int ticketServiceTicks = 0;
+    private UUID servingCustomerUuid = null;
+    private int serviceTicks = 0;
 
     public ZooCashierEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
@@ -458,78 +458,87 @@ public class ZooCashierEntity extends PathfinderMob {
                         || v.distanceToSqr(this) > 32.0D * 32.0D);
             }
 
-            // 1. TICKET ongoing service: process EVERY TICK so 200 ticks = exactly 10 seconds
-            if ("TICKET".equals(role) && servingTicketCustomerUuid != null) {
-                Entity ent = sLevel.getEntity(servingTicketCustomerUuid);
+            // 1. Ongoing service: process active customer transaction
+            if (servingCustomerUuid != null) {
+                Entity ent = sLevel.getEntity(servingCustomerUuid);
                 if (ent instanceof ZooVisitorEntity customer && customer.isAlive()
                         && (customer.distanceToSqr(getQueueSlotVec(0)) <= 36.0D || customer.distanceToSqr(this) <= 25.0D)) {
-                    ticketServiceTicks--;
+                    serviceTicks--;
                     this.getLookControl().setLookAt(customer, 30.0F, 30.0F);
-                    if (ticketServiceTicks % 20 == 0) {
-                        sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_WORK_LIBRARIAN, SoundSource.NEUTRAL, 0.6F, 1.1F);
-                    }
-                    if (ticketServiceTicks <= 0) {
-                        removeFromQueue(customer.getUUID());
-                        customer.addTag("ticket_purchased");
-                        creditOwner(sLevel, getItemPrice("TICKET", ItemStack.EMPTY));
-                        sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.8F, 1.1F);
-                        sLevel.playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.7F, 1.2F);
-                        sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
-                        customer.onTransactionComplete(this.blockPosition(), "TICKET", ItemStack.EMPTY, false);
-                        servingTicketCustomerUuid = null;
-                        ticketServiceTicks = 0;
-                        serveCooldown = 10;
-                    }
-                } else {
-                    servingTicketCustomerUuid = null;
-                    ticketServiceTicks = 0;
-                }
-            }
 
-            // 2. Start new service for queued visitors (checked periodically when serveCooldown <= 0)
-            if (this.tickCount % 10 == 0 && serveCooldown <= 0) {
-                if ("BURGER".equals(role)) {
-                    if (!isOutOfStock()) {
-                        ZooVisitorEntity customer = resolveNextReadyCustomer(sLevel, role);
-                        if (customer != null) {
+                    if ("TICKET".equals(role)) {
+                        if (serviceTicks % 20 == 0) {
+                            sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_WORK_LIBRARIAN, SoundSource.NEUTRAL, 0.6F, 1.1F);
+                        }
+                        if (serviceTicks <= 0) {
+                            removeFromQueue(customer.getUUID());
+                            customer.addTag("ticket_purchased");
+                            creditOwner(sLevel, getItemPrice("TICKET", ItemStack.EMPTY));
+                            sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.8F, 1.1F);
+                            sLevel.playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.7F, 1.2F);
+                            sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
+                            customer.onTransactionComplete(this.blockPosition(), "TICKET", ItemStack.EMPTY, false);
+                            servingCustomerUuid = null;
+                            serviceTicks = 0;
+                            serveCooldown = 10;
+                        }
+                    } else if ("BURGER".equals(role)) {
+                        // Sizzling / cooking burger sounds and smoke particles
+                        if (serviceTicks % 20 == 0) {
+                            sLevel.playSound(null, this.blockPosition(), SoundEvents.CAMPFIRE_CRACKLE, SoundSource.NEUTRAL, 0.7F, 1.1F);
+                            sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_WORK_BUTCHER, SoundSource.NEUTRAL, 0.6F, 1.0F);
+                            sLevel.sendParticles(ParticleTypes.SMOKE, this.getX(), this.getY() + 1.1D, this.getZ(), 3, 0.15, 0.1, 0.15, 0.01);
+                        }
+                        if (serviceTicks <= 0) {
                             ItemStack soldBurger = consumeOneStockItem();
                             if (!soldBurger.isEmpty()) {
                                 removeFromQueue(customer.getUUID());
                                 int price = getItemPrice(role, soldBurger);
                                 creditOwner(sLevel, price);
                                 sLevel.playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.7F, 1.2F);
+                                sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.7F, 1.1F);
                                 sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 5, 0.25, 0.25, 0.25, 0.02);
                                 if (customer.getGuidedPlayerUuid() != null) {
                                     customer.completeGuideReward(sLevel, "BURGER");
                                 }
                                 customer.onTransactionComplete(this.blockPosition(), "BURGER", soldBurger, false);
-                                serveCooldown = 35;
                             }
+                            servingCustomerUuid = null;
+                            serviceTicks = 0;
+                            serveCooldown = 15;
                         }
-                    }
-                } else if ("DRINK".equals(role)) {
-                    if (!isOutOfStock()) {
-                        ZooVisitorEntity customer = resolveNextReadyCustomer(sLevel, role);
-                        if (customer != null) {
+                    } else if ("DRINK".equals(role)) {
+                        // Pouring and bubbling drink sounds
+                        if (serviceTicks % 20 == 0) {
+                            sLevel.playSound(null, this.blockPosition(), SoundEvents.BOTTLE_FILL, SoundSource.NEUTRAL, 0.7F, 1.0F);
+                            sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_WORK_CLERIC, SoundSource.NEUTRAL, 0.5F, 1.1F);
+                            sLevel.sendParticles(ParticleTypes.SPLASH, this.getX(), this.getY() + 1.1D, this.getZ(), 4, 0.15, 0.1, 0.15, 0.02);
+                        }
+                        if (serviceTicks <= 0) {
                             ItemStack soldDrink = consumeOneStockItem();
                             if (!soldDrink.isEmpty()) {
                                 removeFromQueue(customer.getUUID());
                                 int price = getItemPrice(role, soldDrink);
                                 creditOwner(sLevel, price);
                                 sLevel.playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.7F, 1.2F);
+                                sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.7F, 1.1F);
                                 sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 5, 0.25, 0.25, 0.25, 0.02);
                                 if (customer.getGuidedPlayerUuid() != null) {
                                     customer.completeGuideReward(sLevel, "DRINK");
                                 }
                                 customer.onTransactionComplete(this.blockPosition(), "DRINK", soldDrink, true);
-                                serveCooldown = 35;
                             }
+                            servingCustomerUuid = null;
+                            serviceTicks = 0;
+                            serveCooldown = 15;
                         }
-                    }
-                } else if ("SOUVENIR".equals(role)) {
-                    if (!isOutOfStock()) {
-                        ZooVisitorEntity customer = resolveNextReadyCustomer(sLevel, role);
-                        if (customer != null) {
+                    } else if ("SOUVENIR".equals(role)) {
+                        // Packaging plushie sounds
+                        if (serviceTicks % 20 == 0) {
+                            sLevel.playSound(null, this.blockPosition(), SoundEvents.ARMOR_EQUIP_LEATHER.value(), SoundSource.NEUTRAL, 0.7F, 1.1F);
+                            sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_WORK_LEATHERWORKER, SoundSource.NEUTRAL, 0.5F, 1.1F);
+                        }
+                        if (serviceTicks <= 0) {
                             ItemStack soldPlushie = consumeOneStockItem();
                             if (!soldPlushie.isEmpty()) {
                                 removeFromQueue(customer.getUUID());
@@ -541,18 +550,53 @@ public class ZooCashierEntity extends PathfinderMob {
                                 sLevel.playSound(null, this.blockPosition(), SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.NEUTRAL, 0.8F, 1.4F);
                                 sLevel.sendParticles(ParticleTypes.HEART, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 5, 0.25, 0.25, 0.25, 0.02);
                                 customer.onTransactionComplete(this.blockPosition(), "SOUVENIR", ItemStack.EMPTY, false);
-                                serveCooldown = 50;
                             }
+                            servingCustomerUuid = null;
+                            serviceTicks = 0;
+                            serveCooldown = 15;
+                        }
+                    }
+                } else {
+                    servingCustomerUuid = null;
+                    serviceTicks = 0;
+                }
+            }
+
+            // 2. Start new service for queued visitors when cashier is ready
+            if (this.tickCount % 5 == 0 && serveCooldown <= 0 && servingCustomerUuid == null) {
+                if ("BURGER".equals(role)) {
+                    if (!isOutOfStock()) {
+                        ZooVisitorEntity customer = resolveNextReadyCustomer(sLevel, role);
+                        if (customer != null) {
+                            servingCustomerUuid = customer.getUUID();
+                            serviceTicks = 80; // 4 seconds to prepare burger
+                            sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_WORK_BUTCHER, SoundSource.NEUTRAL, 0.7F, 1.0F);
+                        }
+                    }
+                } else if ("DRINK".equals(role)) {
+                    if (!isOutOfStock()) {
+                        ZooVisitorEntity customer = resolveNextReadyCustomer(sLevel, role);
+                        if (customer != null) {
+                            servingCustomerUuid = customer.getUUID();
+                            serviceTicks = 80; // 4 seconds to prepare drink
+                            sLevel.playSound(null, this.blockPosition(), SoundEvents.BOTTLE_FILL, SoundSource.NEUTRAL, 0.7F, 1.0F);
+                        }
+                    }
+                } else if ("SOUVENIR".equals(role)) {
+                    if (!isOutOfStock()) {
+                        ZooVisitorEntity customer = resolveNextReadyCustomer(sLevel, role);
+                        if (customer != null) {
+                            servingCustomerUuid = customer.getUUID();
+                            serviceTicks = 80; // 4 seconds to prepare souvenir
+                            sLevel.playSound(null, this.blockPosition(), SoundEvents.ARMOR_EQUIP_LEATHER.value(), SoundSource.NEUTRAL, 0.7F, 1.0F);
                         }
                     }
                 } else if ("TICKET".equals(role)) {
-                    if (servingTicketCustomerUuid == null) {
-                        ZooVisitorEntity customer = resolveNextReadyCustomer(sLevel, role);
-                        if (customer != null) {
-                            servingTicketCustomerUuid = customer.getUUID();
-                            ticketServiceTicks = 200; // 10 seconds (200 ticks)
-                            sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_WORK_LIBRARIAN, SoundSource.NEUTRAL, 0.7F, 1.0F);
-                        }
+                    ZooVisitorEntity customer = resolveNextReadyCustomer(sLevel, role);
+                    if (customer != null) {
+                        servingCustomerUuid = customer.getUUID();
+                        serviceTicks = 200; // 10 seconds (200 ticks)
+                        sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_WORK_LIBRARIAN, SoundSource.NEUTRAL, 0.7F, 1.0F);
                     }
                 }
             }
