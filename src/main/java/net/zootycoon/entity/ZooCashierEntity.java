@@ -32,6 +32,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodProperties;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.UseAnim;
@@ -279,13 +280,22 @@ public class ZooCashierEntity extends PathfinderMob {
         }
 
         if ("SOUVENIR".equalsIgnoreCase(role)) {
-            if ("plushie_buddies".equals(namespace) && !path.contains("workbench")) {
-                return true;
-            }
-            return path.contains("plushie");
+            return isPlushieItem(stack.getItem());
         }
 
         return false;
+    }
+
+    public static boolean isPlushieItem(Item item) {
+        if (item == null) return false;
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
+        if (id == null) return false;
+        String namespace = id.getNamespace().toLowerCase(Locale.ROOT);
+        String path = id.getPath().toLowerCase(Locale.ROOT);
+        if ("plushie_buddies".equals(namespace) && !path.contains("workbench")) {
+            return true;
+        }
+        return path.contains("plushie");
     }
 
     public static int getItemPrice(String role, ItemStack stack) {

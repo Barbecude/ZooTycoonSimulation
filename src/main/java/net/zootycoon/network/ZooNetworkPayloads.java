@@ -1355,16 +1355,17 @@ public class ZooNetworkPayloads {
                     int maxToMove = payload.singleItem() ? 1 : pStack.getCount();
                     int movedTotal = 0;
                     int targetSlot = payload.cashierSlot();
+                    int slotCap = "SOUVENIR".equalsIgnoreCase(role) || net.zootycoon.entity.ZooCashierEntity.isPlushieItem(pStack.getItem()) ? 64 : pStack.getMaxStackSize();
 
                     // 1. If a specific cashierSlot (0..4) was targeted, try inserting there first
                     if (targetSlot >= 0 && targetSlot < net.zootycoon.entity.ZooCashierEntity.STOCK_SLOTS) {
                         ItemStack existing = stockInv.getItem(targetSlot);
                         if (existing.isEmpty()) {
-                            int cap = Math.min(maxToMove, pStack.getMaxStackSize());
+                            int cap = Math.min(maxToMove, slotCap);
                             stockInv.setItem(targetSlot, pStack.split(cap));
                             movedTotal += cap;
-                        } else if (ItemStack.isSameItemSameComponents(existing, pStack) && existing.getCount() < existing.getMaxStackSize()) {
-                            int space = existing.getMaxStackSize() - existing.getCount();
+                        } else if (canMergeStock(existing, pStack) && existing.getCount() < slotCap) {
+                            int space = slotCap - existing.getCount();
                             int add = Math.min(maxToMove, space);
                             existing.grow(add);
                             pStack.shrink(add);
@@ -1377,8 +1378,8 @@ public class ZooNetworkPayloads {
                     if (remaining > 0 && !pStack.isEmpty()) {
                         for (int i = 0; i < net.zootycoon.entity.ZooCashierEntity.STOCK_SLOTS && remaining > 0 && !pStack.isEmpty(); i++) {
                             ItemStack existing = stockInv.getItem(i);
-                            if (!existing.isEmpty() && ItemStack.isSameItemSameComponents(existing, pStack) && existing.getCount() < existing.getMaxStackSize()) {
-                                int space = existing.getMaxStackSize() - existing.getCount();
+                            if (!existing.isEmpty() && canMergeStock(existing, pStack) && existing.getCount() < slotCap) {
+                                int space = slotCap - existing.getCount();
                                 int add = Math.min(remaining, Math.min(space, pStack.getCount()));
                                 existing.grow(add);
                                 pStack.shrink(add);
@@ -1389,7 +1390,7 @@ public class ZooNetworkPayloads {
                         for (int i = 0; i < net.zootycoon.entity.ZooCashierEntity.STOCK_SLOTS && remaining > 0 && !pStack.isEmpty(); i++) {
                             ItemStack existing = stockInv.getItem(i);
                             if (existing.isEmpty()) {
-                                int add = Math.min(remaining, Math.min(pStack.getMaxStackSize(), pStack.getCount()));
+                                int add = Math.min(remaining, Math.min(slotCap, pStack.getCount()));
                                 stockInv.setItem(i, pStack.split(add));
                                 remaining -= add;
                                 movedTotal += add;
@@ -1626,6 +1627,12 @@ public class ZooNetworkPayloads {
 
         ServerPlayNetworking.send(player, new SyncAnimalsPayload(list));
         ServerPlayNetworking.send(player, new SyncZookeepersPayload(keepers));
+    }
+
+    private static boolean canMergeStock(ItemStack a, ItemStack b) {
+        if (a == null || b == null || a.isEmpty() || b.isEmpty()) return false;
+        if (a.getItem() != b.getItem()) return false;
+        return ItemStack.isSameItemSameComponents(a, b) || a.getItem() == b.getItem();
     }
 }
 
