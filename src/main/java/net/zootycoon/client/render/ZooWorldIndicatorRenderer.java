@@ -82,6 +82,21 @@ public class ZooWorldIndicatorRenderer {
                 continue;
             }
 
+            // 1b-2. Cashier indicator: exclamation mark if stock is empty
+            if (entity instanceof net.zootycoon.entity.ZooCashierEntity cashier) {
+                if (cashier.isOutOfStock()) {
+                    double renderY = (pos.y + cashier.getBbHeight() + 1.25D + bob) - camPos.y;
+                    renderBillboard(
+                            buffer, poseStack, RenderType.entityCutout(EXCLAMATION_TEXTURE),
+                            dx, renderY, dz,
+                            0.20f, 0.28f,
+                            camRot,
+                            255, 255, 255, 255
+                    );
+                }
+                continue;
+            }
+
             // 1c. Visitor mood emoji: cleanly billboarded to camera at natural height just above head
             if (entity instanceof net.zootycoon.entity.ZooVisitorEntity visitor) {
                 var mood = visitor.getMood();
@@ -95,7 +110,8 @@ public class ZooWorldIndicatorRenderer {
                         default -> null;
                     };
                     if (tex != null) {
-                        double renderY = (pos.y + visitor.getBbHeight() + 0.65D + bob) - camPos.y;
+                        double hatOffset = visitor.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).isEmpty() ? 0.65D : 1.05D;
+                        double renderY = (pos.y + visitor.getBbHeight() + hatOffset + bob) - camPos.y;
                         renderBillboard(
                                 buffer, poseStack, RenderType.entityCutout(tex),
                                 dx, renderY, dz,

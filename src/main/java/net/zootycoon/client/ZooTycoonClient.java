@@ -337,11 +337,19 @@ public class ZooTycoonClient implements ClientModInitializer {
 
         ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.OpenCashierScreenPayload.TYPE, (payload, context) -> {
             context.client().execute(() -> {
-                Minecraft.getInstance().setScreen(new net.zootycoon.client.ui.CashierDialogScreen(
-                        payload.entityId(),
-                        payload.currentRole(),
-                        payload.cashierName()
-                ));
+                Minecraft mc = Minecraft.getInstance();
+                if (mc.screen instanceof net.zootycoon.client.ui.CashierDialogScreen existing
+                        && existing.getEntityId() == payload.entityId()
+                        && existing.getCurrentRole().equalsIgnoreCase(payload.currentRole())) {
+                    existing.updateStockItems(payload.stockItems());
+                } else {
+                    mc.setScreen(new net.zootycoon.client.ui.CashierDialogScreen(
+                            payload.entityId(),
+                            payload.currentRole(),
+                            payload.cashierName(),
+                            payload.stockItems()
+                    ));
+                }
             });
         });
 

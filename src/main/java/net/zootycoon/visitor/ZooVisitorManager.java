@@ -5,8 +5,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.block.DoorBlock;
-import net.minecraft.world.level.block.FenceGateBlock;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
@@ -52,8 +51,9 @@ public class ZooVisitorManager {
 
     /**
      * Periodic visitor lifecycle and spawning tick:
-     * Evaluates active zoos, ticket stands, animal attractions, and naturally spawns
-     * guests/visitors to explore the zoo and generate revenue!
+     * Visitors ONLY spawn if the zoo has an active Ticket Booth cashier ("TICKET").
+     * They spawn 5 blocks OUTSIDE the claimed zoo boundary near the Ticket Booth cashier,
+     * then walk in to purchase a ticket at the Ticket Booth.
      */
     public static void tickServer(ServerLevel level) {
         if (level.getServer() == null || level != level.getServer().overworld()) {
@@ -83,93 +83,48 @@ public class ZooVisitorManager {
                 maxZ = Math.max(maxZ, b.maxZ());
             }
 
-            AABB zooArea = new AABB(minX - 10, level.getMinBuildHeight(), minZ - 10,
-                    maxX + 10, level.getMaxBuildHeight(), maxZ + 10);
+            AABB zooArea = new AABB(minX - 16, level.getMinBuildHeight(), minZ - 16,
+                    maxX + 16, level.getMaxBuildHeight(), maxZ + 16);
+
+            // Find all Cashiers in this zoo
+            List<ZooCashierEntity> allCashiers = level.getEntitiesOfClass(
+                    ZooCashierEntity.class, zooArea, Entity::isAlive
+            );
+
+            // Filter specifically for Ticket Booth ("TICKET") cashiers
+            List<ZooCashierEntity> ticketCashiers = allCashiers.stream()
+                    .filter(c -> "TICKET".equalsIgnoreCase(c.getCashierRole()))
+                    .toList();
+
+            // Visitors ONLY spawn if there is at least one Ticket Booth cashier
+            if (ticketCashiers.isEmpty()) {
+                continue;
+            }
 
             // Count existing visitors in this zoo
             List<ZooVisitorEntity> currentVisitors = level.getEntitiesOfClass(
                     ZooVisitorEntity.class, zooArea, Entity::isAlive
             );
 
-            // Find Cashier NPCs in this zoo (especially Ticket booths)
-            List<ZooCashierEntity> cashiers = level.getEntitiesOfClass(
-                    ZooCashierEntity.class, zooArea, Entity::isAlive
-            );
-
-            // Calculate visitor capacity based on zoo size, animals, and cashiers
+            // Calculate visitor capacity based on zoo cashiers
             int baseCapacity = 4;
-            int cashierBonus = cashiers.size() * 3;
+            int cashierBonus = allCashiers.size() * 3;
             int maxCapacity = Math.min(20, baseCapacity + cashierBonus);
 
             if (currentVisitors.size() >= maxCapacity) {
                 continue;
             }
 
-            // Find best entrance / spawn location:
-            BlockPos spawnPos = null;
+            // Pick a Ticket Booth cashier and compute spawn position 5 blocks OUTSIDE the claimed zoo area near it
+            ZooCashierEntity ticketCashier = ticketCashiers.get(level.getRandom().nextInt(ticketCashiers.size()));
+            BlockPos spawnPos = findOutsideSpawnNearTicketCashier(level, claims, ticketCashier);
 
-            // 1. Prefer spawning near a Ticket booth or Cashier
-            for (ZooCashierEntity cashier : cashiers) {
-                BlockPos cPos = cashier.blockPosition();
-                for (Direction dir : Direction.Plane.HORIZONTAL) {
-                    BlockPos candidate = cPos.relative(dir, 2);
-                    if (isValidWalkablePos(level, candidate)) {
-                        spawnPos = candidate;
-                        break;
-                    }
-                }
-                if (spawnPos != null) break;
-            }
-
-            // 2. Fallback: find a fence gate or door along the claim edge
-            if (spawnPos == null) {
-                ZooClaim sampleClaim = claims.get(level.getRandom().nextInt(claims.size()));
-                var b = sampleClaim.getBox();
-                int checkY = (int) player.getY();
-
-                // Sample perimeter points
-                for (int attempt = 0; attempt < 8; attempt++) {
-                    int px = b.minX() + level.getRandom().nextInt(Math.max(1, b.maxX() - b.minX() + 1));
-                    int pz = (attempt % 2 == 0) ? b.minZ() : b.maxZ();
-                    BlockPos p = new BlockPos(px, checkY, pz);
-                    for (int dy = -3; dy <= 3; dy++) {
-                        BlockPos test = p.above(dy);
-                        BlockState st = level.getBlockState(test);
-                        if (st.getBlock() instanceof FenceGateBlock || st.getBlock() instanceof DoorBlock) {
-                            spawnPos = test;
-                            break;
-                        }
-                    }
-                    if (spawnPos != null) break;
-                }
-            }
-
-            // 3. Fallback: spawn on a valid surface block near claim perimeter
-            if (spawnPos == null) {
-                ZooClaim sampleClaim = claims.get(level.getRandom().nextInt(claims.size()));
-                var b = sampleClaim.getBox();
-                int px = b.minX() + level.getRandom().nextInt(Math.max(1, b.maxX() - b.minX() + 1));
-                int pz = b.minZ() + (level.getRandom().nextBoolean() ? 1 : Math.max(1, b.maxZ() - b.minZ() - 1));
-                int py = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, px, pz);
-                BlockPos candidate = new BlockPos(px, py, pz);
-                if (isValidWalkablePos(level, candidate)) {
-                    spawnPos = candidate;
-                }
-            }
-
-            // 4. Final fallback: near player
-            if (spawnPos == null) {
-                double angle = level.getRandom().nextDouble() * Math.PI * 2;
-                double dist = 10.0 + level.getRandom().nextDouble() * 6.0;
-                int px = (int) (player.getX() + Math.cos(angle) * dist);
-                int pz = (int) (player.getZ() + Math.sin(angle) * dist);
-                int py = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, px, pz);
-                spawnPos = new BlockPos(px, py, pz);
-            }
-
-            if (spawnPos != null && isValidWalkablePos(level, spawnPos)) {
+            if (spawnPos != null) {
                 Vec3 spawnVec = new Vec3(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5);
                 ZooVisitorEntity visitor = spawnVisitor(level, spawnVec, spawnPos);
+                if (visitor != null) {
+                    visitor.getNavigation().moveTo(ticketCashier, 1.05D);
+                }
 
                 // 30% chance to spawn an accompanying child visitor
                 if (level.getRandom().nextFloat() < 0.30f && currentVisitors.size() + 1 < maxCapacity) {
@@ -177,6 +132,7 @@ public class ZooVisitorManager {
                     ZooVisitorEntity child = spawnVisitor(level, childVec, spawnPos);
                     if (child != null) {
                         child.setChildVisitor(true);
+                        child.getNavigation().moveTo(ticketCashier, 1.05D);
                     }
                 }
 
@@ -189,6 +145,120 @@ public class ZooVisitorManager {
         }
     }
 
+    private static boolean isInsideClaims(List<ZooClaim> claims, int x, int z) {
+        for (ZooClaim c : claims) {
+            if (c.contains(x, z)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Finds a walkable spawn position 5 blocks OUTSIDE the claimed zoo area,
+     * aligned with the nearest border to the Ticket Booth cashier.
+     */
+    private static BlockPos findOutsideSpawnNearTicketCashier(
+            ServerLevel level,
+            List<ZooClaim> claims,
+            ZooCashierEntity ticketCashier
+    ) {
+        BlockPos cPos = ticketCashier.blockPosition();
+        int cx = cPos.getX();
+        int cy = cPos.getY();
+        int cz = cPos.getZ();
+
+        Direction outwardDir = Direction.NORTH;
+        BlockPos borderEdgePos = cPos;
+
+        if (isInsideClaims(claims, cx, cz)) {
+            // Cashier is inside the claimed zoo area: find the closest claim boundary edge in cardinal directions
+            int minStepsToOutside = Integer.MAX_VALUE;
+            for (Direction dir : Direction.Plane.HORIZONTAL) {
+                for (int step = 1; step <= 64; step++) {
+                    int tx = cx + dir.getStepX() * step;
+                    int tz = cz + dir.getStepZ() * step;
+                    if (!isInsideClaims(claims, tx, tz)) {
+                        if (step < minStepsToOutside) {
+                            minStepsToOutside = step;
+                            outwardDir = dir;
+                            borderEdgePos = new BlockPos(
+                                    cx + dir.getStepX() * (step - 1),
+                                    cy,
+                                    cz + dir.getStepZ() * (step - 1)
+                            );
+                        }
+                        break;
+                    }
+                }
+            }
+        } else {
+            // Cashier is already just outside the claimed zoo border: find which direction the claim is, and step opposite
+            int minStepsToClaim = Integer.MAX_VALUE;
+            Direction inwardDir = Direction.SOUTH;
+            for (Direction dir : Direction.Plane.HORIZONTAL) {
+                for (int step = 1; step <= 32; step++) {
+                    int tx = cx + dir.getStepX() * step;
+                    int tz = cz + dir.getStepZ() * step;
+                    if (isInsideClaims(claims, tx, tz)) {
+                        if (step < minStepsToClaim) {
+                            minStepsToClaim = step;
+                            inwardDir = dir;
+                        }
+                        break;
+                    }
+                }
+            }
+            outwardDir = inwardDir.getOpposite();
+            borderEdgePos = cPos;
+        }
+
+        // Target is 5 blocks outside the border edge in outwardDir
+        Direction lateralDir = outwardDir.getClockWise();
+
+        // Search around targetBase (distance 5, then 4..6, with small lateral offsets) for a valid walkable block outside the claim
+        int[] distOffsets = {5, 6, 4, 7};
+        int[] latOffsets = {0, 1, -1, 2, -2};
+
+        for (int dist : distOffsets) {
+            BlockPos baseAtDist = borderEdgePos.relative(outwardDir, dist);
+            for (int lat : latOffsets) {
+                int tx = baseAtDist.getX() + lateralDir.getStepX() * lat;
+                int tz = baseAtDist.getZ() + lateralDir.getStepZ() * lat;
+
+                // Must be OUTSIDE the claimed zoo area
+                if (isInsideClaims(claims, tx, tz)) {
+                    continue;
+                }
+
+                BlockPos groundPos = findWalkableAtColumn(level, tx, cy, tz);
+                if (groundPos != null) {
+                    return groundPos;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static BlockPos findWalkableAtColumn(ServerLevel level, int x, int refY, int z) {
+        // First check near the cashier's elevation
+        int[] dyOrder = {0, 1, -1, 2, -2, 3, -3, 4, -4};
+        for (int dy : dyOrder) {
+            BlockPos candidate = new BlockPos(x, refY + dy, z);
+            if (isValidWalkablePos(level, candidate)) {
+                return candidate;
+            }
+        }
+        // Fallback to surface heightmap
+        int surfaceY = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+        BlockPos surfacePos = new BlockPos(x, surfaceY, z);
+        if (isValidWalkablePos(level, surfacePos)) {
+            return surfacePos;
+        }
+        return null;
+    }
+
     private static boolean isValidWalkablePos(ServerLevel level, BlockPos pos) {
         if (pos.getY() <= level.getMinBuildHeight() || pos.getY() >= level.getMaxBuildHeight() - 2) {
             return false;
@@ -198,7 +268,8 @@ public class ZooVisitorManager {
         BlockState below = level.getBlockState(pos.below());
 
         boolean airSpace = (feet.isAir() || feet.canBeReplaced()) && (head.isAir() || head.canBeReplaced());
-        boolean solidGround = below.isSolid() && !below.isAir() && !below.is(net.minecraft.world.level.block.Blocks.LAVA) && !below.is(net.minecraft.world.level.block.Blocks.FIRE);
+        boolean solidGround = below.isSolid() && !below.isAir()
+                && !below.is(Blocks.LAVA) && !below.is(Blocks.FIRE) && !below.is(Blocks.WATER);
 
         return airSpace && solidGround;
     }

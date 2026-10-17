@@ -677,15 +677,48 @@ public class ZooNetworkPayloads {
     }
 
     // 20. Open Cashier Screen Payload (S2C)
-    public record OpenCashierScreenPayload(int entityId, String currentRole, String cashierName) implements CustomPacketPayload {
+    public record OpenCashierScreenPayload(int entityId, String currentRole, String cashierName, List<ItemStack> stockItems) implements CustomPacketPayload {
         public static final CustomPacketPayload.Type<OpenCashierScreenPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("open_cashier_screen"));
         public static final StreamCodec<FriendlyByteBuf, OpenCashierScreenPayload> CODEC = CustomPacketPayload.codec(
                 (payload, buf) -> {
                     buf.writeInt(payload.entityId);
                     buf.writeUtf(payload.currentRole != null ? payload.currentRole : "UNASSIGNED");
                     buf.writeUtf(payload.cashierName != null ? payload.cashierName : "");
+                    List<ItemStack> items = payload.stockItems != null ? payload.stockItems : List.of();
+                    buf.writeInt(items.size());
+                    for (ItemStack st : items) {
+                        if (st == null || st.isEmpty()) {
+                            buf.writeUtf("minecraft:air");
+                            buf.writeInt(0);
+                        } else {
+                            ResourceLocation key = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem());
+                            buf.writeUtf(key != null ? key.toString() : "minecraft:air");
+                            buf.writeInt(st.getCount());
+                        }
+                    }
                 },
-                buf -> new OpenCashierScreenPayload(buf.readInt(), buf.readUtf(), buf.readUtf())
+                buf -> {
+                    int entityId = buf.readInt();
+                    String role = buf.readUtf();
+                    String name = buf.readUtf();
+                    int size = buf.readInt();
+                    List<ItemStack> items = new ArrayList<>(size);
+                    for (int i = 0; i < size; i++) {
+                        String idStr = buf.readUtf();
+                        int count = buf.readInt();
+                        if (count <= 0 || "minecraft:air".equals(idStr)) {
+                            items.add(ItemStack.EMPTY);
+                        } else {
+                            try {
+                                net.minecraft.world.item.Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(ResourceLocation.parse(idStr));
+                                items.add(new ItemStack(item, count));
+                            } catch (Exception e) {
+                                items.add(ItemStack.EMPTY);
+                            }
+                        }
+                    }
+                    return new OpenCashierScreenPayload(entityId, role, name, items);
+                }
         );
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
@@ -699,6 +732,24 @@ public class ZooNetworkPayloads {
                     buf.writeUtf(payload.role != null ? payload.role : "UNASSIGNED");
                 },
                 buf -> new SetCashierRolePayload(buf.readInt(), buf.readUtf())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 21b. Cashier Slot Click / Inventory Transfer Payload (C2S)
+    // action: 0 = insert from playerSlot into cashierSlot (or -1 for auto-slot)
+    //         1 = withdraw from cashierSlot to player inventory
+    public record CashierSlotClickPayload(int entityId, int action, int playerSlot, int cashierSlot, boolean singleItem) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<CashierSlotClickPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("cashier_slot_click"));
+        public static final StreamCodec<FriendlyByteBuf, CashierSlotClickPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeInt(payload.entityId);
+                    buf.writeInt(payload.action);
+                    buf.writeInt(payload.playerSlot);
+                    buf.writeInt(payload.cashierSlot);
+                    buf.writeBoolean(payload.singleItem);
+                },
+                buf -> new CashierSlotClickPayload(buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readBoolean())
         );
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
@@ -779,6 +830,7 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playC2S().register(GuideVisitorPayload.TYPE, GuideVisitorPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(InteractSecurityPayload.TYPE, InteractSecurityPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SetCashierRolePayload.TYPE, SetCashierRolePayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(CashierSlotClickPayload.TYPE, CashierSlotClickPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(AssignZookeeperPayload.TYPE, AssignZookeeperPayload.CODEC);
 
         PayloadTypeRegistry.playS2C().register(SyncClaimsPayload.TYPE, SyncClaimsPayload.CODEC);
@@ -1132,16 +1184,133 @@ public class ZooNetworkPayloads {
             });
         });
 
-        // Handler: Set Cashier Role from GUI
+        // Handler: Set Cashier Role from GUI (permanent once assigned)
         ServerPlayNetworking.registerGlobalReceiver(SetCashierRolePayload.TYPE, (payload, context) -> {
             ServerPlayer player = context.player();
             net.minecraft.server.level.ServerLevel level = (net.minecraft.server.level.ServerLevel) player.level();
             context.server().execute(() -> {
                 net.minecraft.world.entity.Entity ent = level.getEntity(payload.entityId());
-                if (ent instanceof net.zootycoon.entity.ZooCashierEntity cashier) {
-                    cashier.setCashierRole(payload.role());
-                    level.playSound(null, cashier.blockPosition(), net.minecraft.sounds.SoundEvents.VILLAGER_YES, net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 1.0F);
-                    sendToast(player, "zootycoon.toast.title.info", "zootycoon.cashier.assigned", 1);
+                if (ent instanceof net.zootycoon.entity.ZooCashierEntity cashier && cashier.isAlive()) {
+                    if (cashier.tryAssignRole(payload.role())) {
+                        level.playSound(null, cashier.blockPosition(), net.minecraft.sounds.SoundEvents.VILLAGER_YES, net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 1.0F);
+                        sendToast(player, "zootycoon.toast.title.info", "zootycoon.cashier.assigned", 1, cashier.getName().getString());
+                        cashier.sendScreenToPlayer(player);
+                    } else {
+                        sendToast(player, "zootycoon.toast.title.warning", "zootycoon.cashier.role_locked", 2);
+                    }
+                }
+            });
+        });
+
+        // Handler: Cashier Slot Click / Inventory Transfer
+        ServerPlayNetworking.registerGlobalReceiver(CashierSlotClickPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            net.minecraft.server.level.ServerLevel level = (net.minecraft.server.level.ServerLevel) player.level();
+            context.server().execute(() -> {
+                net.minecraft.world.entity.Entity ent = level.getEntity(payload.entityId());
+                if (!(ent instanceof net.zootycoon.entity.ZooCashierEntity cashier) || !cashier.isAlive()) {
+                    return;
+                }
+                String role = cashier.getCashierRole();
+                var stockInv = cashier.getStockInventory();
+
+                if (payload.action() == 0) {
+                    // Insert from player inventory slot into cashier 5-slot stock
+                    int pSlot = payload.playerSlot();
+                    if (pSlot < 0 || pSlot >= player.getInventory().items.size()) return;
+                    ItemStack pStack = player.getInventory().getItem(pSlot);
+                    if (pStack.isEmpty()) return;
+
+                    if (!net.zootycoon.entity.ZooCashierEntity.isValidItemForRole(role, pStack)) {
+                        String msgKey = switch (role) {
+                            case "BURGER" -> "zootycoon.cashier.invalid_item_burger";
+                            case "DRINK" -> "zootycoon.cashier.invalid_item_drink";
+                            case "SOUVENIR" -> "zootycoon.cashier.invalid_item_souvenir";
+                            default -> "zootycoon.cashier.invalid_item_generic";
+                        };
+                        sendToast(player, "zootycoon.toast.title.warning", msgKey, 2);
+                        return;
+                    }
+
+                    int maxToMove = payload.singleItem() ? 1 : pStack.getCount();
+                    int movedTotal = 0;
+                    int targetSlot = payload.cashierSlot();
+
+                    // 1. If a specific cashierSlot (0..4) was targeted, try inserting there first
+                    if (targetSlot >= 0 && targetSlot < net.zootycoon.entity.ZooCashierEntity.STOCK_SLOTS) {
+                        ItemStack existing = stockInv.getItem(targetSlot);
+                        if (existing.isEmpty()) {
+                            int cap = Math.min(maxToMove, pStack.getMaxStackSize());
+                            stockInv.setItem(targetSlot, pStack.split(cap));
+                            movedTotal += cap;
+                        } else if (ItemStack.isSameItemSameComponents(existing, pStack) && existing.getCount() < existing.getMaxStackSize()) {
+                            int space = existing.getMaxStackSize() - existing.getCount();
+                            int add = Math.min(maxToMove, space);
+                            existing.grow(add);
+                            pStack.shrink(add);
+                            movedTotal += add;
+                        }
+                    }
+
+                    // 2. If auto-slot (-1) or still remaining items from a stack transfer, merge into existing stacks then empty slots
+                    int remaining = maxToMove - movedTotal;
+                    if (remaining > 0 && !pStack.isEmpty()) {
+                        for (int i = 0; i < net.zootycoon.entity.ZooCashierEntity.STOCK_SLOTS && remaining > 0 && !pStack.isEmpty(); i++) {
+                            ItemStack existing = stockInv.getItem(i);
+                            if (!existing.isEmpty() && ItemStack.isSameItemSameComponents(existing, pStack) && existing.getCount() < existing.getMaxStackSize()) {
+                                int space = existing.getMaxStackSize() - existing.getCount();
+                                int add = Math.min(remaining, Math.min(space, pStack.getCount()));
+                                existing.grow(add);
+                                pStack.shrink(add);
+                                remaining -= add;
+                                movedTotal += add;
+                            }
+                        }
+                        for (int i = 0; i < net.zootycoon.entity.ZooCashierEntity.STOCK_SLOTS && remaining > 0 && !pStack.isEmpty(); i++) {
+                            ItemStack existing = stockInv.getItem(i);
+                            if (existing.isEmpty()) {
+                                int add = Math.min(remaining, Math.min(pStack.getMaxStackSize(), pStack.getCount()));
+                                stockInv.setItem(i, pStack.split(add));
+                                remaining -= add;
+                                movedTotal += add;
+                            }
+                        }
+                    }
+
+                    if (pStack.isEmpty()) {
+                        player.getInventory().setItem(pSlot, ItemStack.EMPTY);
+                    }
+                    if (movedTotal > 0) {
+                        player.getInventory().setChanged();
+                        cashier.updateStockStatus();
+                        level.playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.ITEM_PICKUP, net.minecraft.sounds.SoundSource.PLAYERS, 0.7F, 1.15F);
+                        cashier.sendScreenToPlayer(player);
+                    }
+                } else if (payload.action() == 1) {
+                    // Withdraw from cashierSlot (0..4) back to player inventory
+                    int cSlot = payload.cashierSlot();
+                    if (cSlot < 0 || cSlot >= net.zootycoon.entity.ZooCashierEntity.STOCK_SLOTS) return;
+                    ItemStack cStack = stockInv.getItem(cSlot);
+                    if (cStack.isEmpty()) return;
+
+                    int takeCount = payload.singleItem() ? 1 : cStack.getCount();
+                    ItemStack extracted = cStack.split(takeCount);
+                    if (!player.getInventory().add(extracted)) {
+                        // Put unadded remainder back in slot
+                        if (cStack.isEmpty()) {
+                            stockInv.setItem(cSlot, extracted);
+                        } else {
+                            cStack.grow(extracted.getCount());
+                        }
+                    } else {
+                        if (cStack.isEmpty()) {
+                            stockInv.setItem(cSlot, ItemStack.EMPTY);
+                        }
+                        player.getInventory().setChanged();
+                        cashier.updateStockStatus();
+                        level.playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.ITEM_PICKUP, net.minecraft.sounds.SoundSource.PLAYERS, 0.7F, 0.9F);
+                        cashier.sendScreenToPlayer(player);
+                    }
                 }
             });
         });

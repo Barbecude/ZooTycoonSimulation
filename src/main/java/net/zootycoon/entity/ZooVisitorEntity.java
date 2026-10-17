@@ -62,6 +62,12 @@ public class ZooVisitorEntity extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> NEEDS_TOILET =
             SynchedEntityData.defineId(ZooVisitorEntity.class, EntityDataSerializers.BOOLEAN);
 
+    private static final EntityDataAccessor<Boolean> IS_CONSUMING =
+            SynchedEntityData.defineId(ZooVisitorEntity.class, EntityDataSerializers.BOOLEAN);
+
+    private static final EntityDataAccessor<Boolean> IS_DRINKING =
+            SynchedEntityData.defineId(ZooVisitorEntity.class, EntityDataSerializers.BOOLEAN);
+
     public static final int MAX_VARIANTS = 23;
     private static final int MAX_STAY = 2400; // 2 minutes (2400 ticks)
 
@@ -132,6 +138,8 @@ public class ZooVisitorEntity extends PathfinderMob {
         builder.define(MOOD, VisitorMood.NEUTRAL.ordinal());
         builder.define(HAS_TRASH, false);
         builder.define(NEEDS_TOILET, Math.random() < 0.08); // 8% arrive already needing restroom
+        builder.define(IS_CONSUMING, false);
+        builder.define(IS_DRINKING, false);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -146,6 +154,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new FollowGuidePlayerGoal(this));
         this.goalSelector.addGoal(1, new LeaveZooGoal(this));
+        this.goalSelector.addGoal(1, new BuyTicketAtEntranceGoal(this));
         this.goalSelector.addGoal(2, new FindToiletGoal(this));
         this.goalSelector.addGoal(2, new FindTrashCanGoal(this));
         this.goalSelector.addGoal(3, new OpenDoorGoal(this, true));
@@ -321,12 +330,38 @@ public class ZooVisitorEntity extends PathfinderMob {
                 setHasTrash(true);
             }
 
-            // Eating / drinking finish logic
+            // Authentic player-like eating / drinking animation & particle tick
             if (eatTimer > 0) {
                 eatTimer--;
+                this.getNavigation().stop();
+                net.minecraft.world.item.ItemStack held = this.getMainHandItem();
+                if (!held.isEmpty() && this.level() instanceof net.minecraft.server.level.ServerLevel sLevel) {
+                    if (eatTimer % 4 == 0) {
+                        float pitch = 0.9F + this.random.nextFloat() * 0.2F;
+                        if (isDrinking()) {
+                            sLevel.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.GENERIC_DRINK, this.getSoundSource(), 0.85F, pitch);
+                        } else {
+                            sLevel.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.GENERIC_EAT, this.getSoundSource(), 0.85F, pitch);
+                        }
+                        Vec3 look = this.getLookAngle();
+                        double px = this.getX() + look.x * 0.35D;
+                        double py = this.getEyeY() - 0.15D;
+                        double pz = this.getZ() + look.z * 0.35D;
+                        sLevel.sendParticles(
+                                new net.minecraft.core.particles.ItemParticleOption(net.minecraft.core.particles.ParticleTypes.ITEM, held),
+                                px, py, pz,
+                                5, 0.08D, 0.08D, 0.08D, 0.03D
+                        );
+                    }
+                }
                 if (eatTimer == 0) {
+                    if (!isDrinking()) {
+                        this.level().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.PLAYER_BURP, this.getSoundSource(), 0.7F, 0.9F + this.random.nextFloat() * 0.2F);
+                    }
+                    this.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, net.minecraft.world.item.ItemStack.EMPTY);
                     this.setItemInHand(InteractionHand.OFF_HAND, net.minecraft.world.item.ItemStack.EMPTY);
-                    this.playSound(SoundEvents.GENERIC_EAT, 1.0F, 1.0F);
+                    this.entityData.set(IS_CONSUMING, false);
+                    this.entityData.set(IS_DRINKING, false);
                 }
             }
 
@@ -525,6 +560,25 @@ public class ZooVisitorEntity extends PathfinderMob {
         this.eatTimer = ticks;
     }
 
+    public boolean isConsuming() {
+        return this.entityData.get(IS_CONSUMING);
+    }
+
+    public boolean isDrinking() {
+        return this.entityData.get(IS_DRINKING);
+    }
+
+    public void startConsuming(net.minecraft.world.item.ItemStack purchasedStack, boolean drink) {
+        if (purchasedStack == null || purchasedStack.isEmpty()) return;
+        this.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, purchasedStack.copyWithCount(1));
+        this.setDropChance(net.minecraft.world.entity.EquipmentSlot.MAINHAND, 0.0F);
+        this.setItemInHand(InteractionHand.OFF_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+        this.eatTimer = 48;
+        this.entityData.set(IS_CONSUMING, true);
+        this.entityData.set(IS_DRINKING, drink);
+        this.getNavigation().stop();
+    }
+
     public void completeGuideReward(net.minecraft.server.level.ServerLevel sLevel, String facilityType) {
         if (this.guidedPlayerUuid == null) return;
         Player player = sLevel.getPlayerByUUID(this.guidedPlayerUuid);
@@ -557,6 +611,79 @@ public class ZooVisitorEntity extends PathfinderMob {
     // =========================================================================
     // GOALS
     // =========================================================================
+
+    /**
+     * Goal for newly spawned visitors outside the zoo to walk into the Ticket Booth first.
+     */
+    public static class BuyTicketAtEntranceGoal extends Goal {
+        private final ZooVisitorEntity visitor;
+        private ZooCashierEntity targetTicketCashier;
+        private int repathTimer = 0;
+
+        public BuyTicketAtEntranceGoal(ZooVisitorEntity visitor) {
+            this.visitor = visitor;
+            this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+        }
+
+        @Override
+        public boolean canUse() {
+            if (visitor.isTimeToLeave() || visitor.getTags().contains("ticket_purchased")) {
+                return false;
+            }
+            if (visitor.guidingPlayerUuid != null) {
+                return false;
+            }
+            List<ZooCashierEntity> ticketCashiers = visitor.level().getEntitiesOfClass(
+                    ZooCashierEntity.class,
+                    visitor.getBoundingBox().inflate(28.0D, 8.0D, 28.0D),
+                    c -> c.isAlive() && "TICKET".equalsIgnoreCase(c.getCashierRole())
+            );
+            if (ticketCashiers.isEmpty()) {
+                return false;
+            }
+            ZooCashierEntity nearest = null;
+            double bestDist = Double.MAX_VALUE;
+            for (ZooCashierEntity c : ticketCashiers) {
+                double d = visitor.distanceToSqr(c);
+                if (d < bestDist) {
+                    bestDist = d;
+                    nearest = c;
+                }
+            }
+            this.targetTicketCashier = nearest;
+            return this.targetTicketCashier != null;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return !visitor.isTimeToLeave()
+                    && !visitor.getTags().contains("ticket_purchased")
+                    && targetTicketCashier != null
+                    && targetTicketCashier.isAlive()
+                    && "TICKET".equalsIgnoreCase(targetTicketCashier.getCashierRole());
+        }
+
+        @Override
+        public void start() {
+            this.repathTimer = 0;
+        }
+
+        @Override
+        public void stop() {
+            this.targetTicketCashier = null;
+        }
+
+        @Override
+        public void tick() {
+            if (targetTicketCashier == null) return;
+            visitor.getLookControl().setLookAt(targetTicketCashier, 30.0F, 30.0F);
+            if (repathTimer > 0) repathTimer--;
+            if (repathTimer <= 0 || visitor.getNavigation().isDone()) {
+                visitor.getNavigation().moveTo(targetTicketCashier, 1.05D);
+                repathTimer = 20;
+            }
+        }
+    }
 
     /**
      * Goal for following the guiding player when guided to a facility (Toilet, Food, or Drink).
