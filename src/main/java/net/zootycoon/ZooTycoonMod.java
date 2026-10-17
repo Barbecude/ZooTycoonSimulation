@@ -29,8 +29,9 @@ public class ZooTycoonMod implements ModInitializer {
     public void onInitialize() {
         LOGGER.info("Initializing Zoo Tycoon Simulation for Fabric 26.3...");
 
-        // 1. Register items, blocks and entities
+        // 1. Register items, blocks, sounds and entities
         ZooItems.register();
+        net.zootycoon.sound.ZooSounds.register();
         net.zootycoon.block.ZooBlocks.register();
         net.zootycoon.entity.ZooEntities.register();
 
@@ -72,6 +73,7 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.economy.ZooRatingManager.reset();
             net.zootycoon.construction.ConstructionManager.reset();
             net.zootycoon.block.ZooFeedingTroughBlock.reset();
+            net.zootycoon.block.ZooGachaMachineBlock.reset();
             net.zootycoon.block.ToiletBlockEntity.reset();
             net.zootycoon.hunter.ZooHunterManager.reset();
             net.zootycoon.visitor.ZooVisitorManager.reset();
@@ -84,6 +86,7 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.economy.ZooRatingManager.reset();
             net.zootycoon.construction.ConstructionManager.reset();
             net.zootycoon.block.ZooFeedingTroughBlock.reset();
+            net.zootycoon.block.ZooGachaMachineBlock.reset();
             net.zootycoon.block.ToiletBlockEntity.reset();
             net.zootycoon.hunter.ZooHunterManager.reset();
             net.zootycoon.visitor.ZooVisitorManager.reset();

@@ -369,6 +369,20 @@ public class ZooTycoonClient implements ClientModInitializer {
             });
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.OpenGachaMachineScreenPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                if (Minecraft.getInstance().screen instanceof net.zootycoon.client.ui.GachaMachineDialogScreen existingScreen) {
+                    existingScreen.updateData(payload.totalStock(), payload.slots());
+                } else {
+                    Minecraft.getInstance().setScreen(new net.zootycoon.client.ui.GachaMachineDialogScreen(
+                            payload.pos(),
+                            payload.totalStock(),
+                            payload.slots()
+                    ));
+                }
+            });
+        });
+
         ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.SyncRatingPayload.TYPE, (payload, context) -> {
             context.client().execute(() -> {
                 clientZooRating = payload.rating();

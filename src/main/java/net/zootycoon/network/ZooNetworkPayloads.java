@@ -898,6 +898,78 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // 26. Open Gacha Machine Screen Payload (S2C)
+    public record OpenGachaMachineScreenPayload(
+            BlockPos pos,
+            int totalStock,
+            List<ItemStack> slots
+    ) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<OpenGachaMachineScreenPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("open_gacha_machine_screen"));
+        public static final StreamCodec<FriendlyByteBuf, OpenGachaMachineScreenPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeBlockPos(payload.pos);
+                    buf.writeInt(payload.totalStock);
+                    List<ItemStack> items = payload.slots != null ? payload.slots : List.of();
+                    buf.writeInt(items.size());
+                    for (ItemStack st : items) {
+                        if (st == null || st.isEmpty()) {
+                            buf.writeUtf("minecraft:air");
+                            buf.writeInt(0);
+                        } else {
+                            ResourceLocation key = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem());
+                            buf.writeUtf(key != null ? key.toString() : "minecraft:air");
+                            buf.writeInt(st.getCount());
+                        }
+                    }
+                },
+                buf -> {
+                    BlockPos p = buf.readBlockPos();
+                    int stock = buf.readInt();
+                    int size = buf.readInt();
+                    List<ItemStack> list = new ArrayList<>(size);
+                    for (int i = 0; i < size; i++) {
+                        String idStr = buf.readUtf();
+                        int count = buf.readInt();
+                        if (count <= 0 || "minecraft:air".equals(idStr)) {
+                            list.add(ItemStack.EMPTY);
+                        } else {
+                            try {
+                                net.minecraft.world.item.Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(ResourceLocation.parse(idStr));
+                                list.add(new ItemStack(item, count));
+                            } catch (Exception e) {
+                                list.add(ItemStack.EMPTY);
+                            }
+                        }
+                    }
+                    return new OpenGachaMachineScreenPayload(p, stock, list);
+                }
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 27. Refill Gacha Machine Payload (C2S)
+    public record RefillGachaMachinePayload(BlockPos pos) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<RefillGachaMachinePayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("refill_gacha_machine"));
+        public static final StreamCodec<FriendlyByteBuf, RefillGachaMachinePayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> buf.writeBlockPos(payload.pos),
+                buf -> new RefillGachaMachinePayload(buf.readBlockPos())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 28. Extract Gacha Plushie Payload (C2S)
+    public record ExtractGachaPlushiePayload(BlockPos pos) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<ExtractGachaPlushiePayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("extract_gacha_plushie"));
+        public static final StreamCodec<FriendlyByteBuf, ExtractGachaPlushiePayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> buf.writeBlockPos(payload.pos),
+                buf -> new ExtractGachaPlushiePayload(buf.readBlockPos())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     public static void sendToast(ServerPlayer player, String titleKey, String msgKey, int toastType, Object... args) {
         if (player == null) return;
         List<String> strArgs = new ArrayList<>();
@@ -938,6 +1010,8 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playC2S().register(SelectFeedingTroughAnimalPayload.TYPE, SelectFeedingTroughAnimalPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ClearFeedingTroughAnimalPayload.TYPE, ClearFeedingTroughAnimalPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(DepositTroughFoodPayload.TYPE, DepositTroughFoodPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(RefillGachaMachinePayload.TYPE, RefillGachaMachinePayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(ExtractGachaPlushiePayload.TYPE, ExtractGachaPlushiePayload.CODEC);
 
         PayloadTypeRegistry.playS2C().register(SyncClaimsPayload.TYPE, SyncClaimsPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncStudioStatePayload.TYPE, SyncStudioStatePayload.CODEC);
@@ -948,6 +1022,7 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playS2C().register(OpenVisitorScreenPayload.TYPE, OpenVisitorScreenPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenCashierScreenPayload.TYPE, OpenCashierScreenPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenFeedingTroughScreenPayload.TYPE, OpenFeedingTroughScreenPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(OpenGachaMachineScreenPayload.TYPE, OpenGachaMachineScreenPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncAnimalsPayload.TYPE, SyncAnimalsPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncZookeepersPayload.TYPE, SyncZookeepersPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncEmeraldBalancePayload.TYPE, SyncEmeraldBalancePayload.CODEC);
@@ -1345,7 +1420,6 @@ public class ZooNetworkPayloads {
                         String msgKey = switch (role) {
                             case "BURGER" -> "zootycoon.cashier.invalid_item_burger";
                             case "DRINK" -> "zootycoon.cashier.invalid_item_drink";
-                            case "SOUVENIR" -> "zootycoon.cashier.invalid_item_souvenir";
                             default -> "zootycoon.cashier.invalid_item_generic";
                         };
                         sendToast(player, "zootycoon.toast.title.warning", msgKey, 2);
@@ -1355,7 +1429,7 @@ public class ZooNetworkPayloads {
                     int maxToMove = payload.singleItem() ? 1 : pStack.getCount();
                     int movedTotal = 0;
                     int targetSlot = payload.cashierSlot();
-                    int slotCap = "SOUVENIR".equalsIgnoreCase(role) || net.zootycoon.entity.ZooCashierEntity.isPlushieItem(pStack.getItem()) ? 64 : pStack.getMaxStackSize();
+                    int slotCap = pStack.getMaxStackSize();
 
                     // 1. If a specific cashierSlot (0..4) was targeted, try inserting there first
                     if (targetSlot >= 0 && targetSlot < net.zootycoon.entity.ZooCashierEntity.STOCK_SLOTS) {
@@ -1562,6 +1636,55 @@ public class ZooNetworkPayloads {
                     } else {
                         sendToast(player, "zootycoon.toast.title.warning", "Tidak ada pakan yang cocok di inventory", 2);
                     }
+                }
+            });
+        });
+
+        // Handler: Refill Gacha Machine with Plushies from inventory
+        ServerPlayNetworking.registerGlobalReceiver(RefillGachaMachinePayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                ServerLevel sLevel = player.serverLevel();
+                net.minecraft.world.level.block.entity.BlockEntity be = sLevel.getBlockEntity(payload.pos());
+                if (be instanceof net.zootycoon.block.ZooGachaMachineBlockEntity gachaBe) {
+                    int deposited = 0;
+                    for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                        ItemStack st = player.getInventory().getItem(i);
+                        if (!st.isEmpty() && net.zootycoon.entity.ZooCashierEntity.isPlushieItem(st.getItem())) {
+                            int added = gachaBe.insertPlushies(st);
+                            deposited += added;
+                            if (gachaBe.getTotalStock() >= 320) break;
+                        }
+                    }
+                    if (deposited > 0) {
+                        player.getInventory().setChanged();
+                        sLevel.playSound(null, payload.pos(), net.minecraft.sounds.SoundEvents.ITEM_PICKUP, net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 1.2f);
+                        sendToast(player, "zootycoon.toast.title.success", "Berhasil memasukkan " + deposited + " boneka plushie!", 1);
+                    } else {
+                        sendToast(player, "zootycoon.toast.title.warning", "Tidak ada boneka plushie di tas yang dapat dimasukkan", 2);
+                    }
+                    ServerPlayNetworking.send(player, new OpenGachaMachineScreenPayload(payload.pos(), gachaBe.getTotalStock(), gachaBe.getSlotsList()));
+                }
+            });
+        });
+
+        // Handler: Extract Gacha Plushie into player inventory
+        ServerPlayNetworking.registerGlobalReceiver(ExtractGachaPlushiePayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                ServerLevel sLevel = player.serverLevel();
+                net.minecraft.world.level.block.entity.BlockEntity be = sLevel.getBlockEntity(payload.pos());
+                if (be instanceof net.zootycoon.block.ZooGachaMachineBlockEntity gachaBe) {
+                    if (!gachaBe.isEmpty()) {
+                        ItemStack withdrawn = gachaBe.extractPlushie();
+                        if (!withdrawn.isEmpty()) {
+                            if (!player.getInventory().add(withdrawn)) {
+                                player.drop(withdrawn, false);
+                            }
+                            sLevel.playSound(null, payload.pos(), net.minecraft.sounds.SoundEvents.ITEM_PICKUP, net.minecraft.sounds.SoundSource.BLOCKS, 0.8f, 1.0f);
+                        }
+                    }
+                    ServerPlayNetworking.send(player, new OpenGachaMachineScreenPayload(payload.pos(), gachaBe.getTotalStock(), gachaBe.getSlotsList()));
                 }
             });
         });

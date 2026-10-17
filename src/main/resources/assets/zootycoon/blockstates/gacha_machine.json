@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "facing=north,half=lower": { "model": "zootycoon:block/gacha_machine/lower" },
+    "facing=north,half=upper": { "model": "zootycoon:block/gacha_machine/upper" },
+    "facing=south,half=lower": { "model": "zootycoon:block/gacha_machine/lower", "y": 180 },
+    "facing=south,half=upper": { "model": "zootycoon:block/gacha_machine/upper", "y": 180 },
+    "facing=east,half=lower": { "model": "zootycoon:block/gacha_machine/lower", "y": 90 },
+    "facing=east,half=upper": { "model": "zootycoon:block/gacha_machine/upper", "y": 90 },
+    "facing=west,half=lower": { "model": "zootycoon:block/gacha_machine/lower", "y": 270 },
+    "facing=west,half=upper": { "model": "zootycoon:block/gacha_machine/upper", "y": 270 }
+  }
+}
+

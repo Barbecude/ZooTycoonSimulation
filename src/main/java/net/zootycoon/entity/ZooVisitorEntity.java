@@ -13,8 +13,10 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -212,6 +214,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         this.goalSelector.addGoal(1, new BuyTicketAtEntranceGoal(this));
         this.goalSelector.addGoal(2, new FindToiletGoal(this));
         this.goalSelector.addGoal(2, new QueueAtCashierGoal(this));
+        this.goalSelector.addGoal(2, new UseGachaMachineGoal(this));
         this.goalSelector.addGoal(2, new FindTrashCanGoal(this));
         this.goalSelector.addGoal(3, new OpenDoorGoal(this, true));
         this.goalSelector.addGoal(4, new FindSeatGoal(this));
@@ -1007,8 +1010,6 @@ public class ZooVisitorEntity extends PathfinderMob {
         } else if ("DRINK".equalsIgnoreCase(role)) {
             this.drinkCount++;
             setThirst(0);
-        } else if ("SOUVENIR".equalsIgnoreCase(role)) {
-            this.wantsSouvenir = false;
         } else if ("TICKET".equalsIgnoreCase(role)) {
             this.addTag("ticket_purchased");
         }
@@ -1380,9 +1381,6 @@ public class ZooVisitorEntity extends PathfinderMob {
             if (visitor.hasWatchedAnimal() && visitor.canDrink() && (visitor.getThirst() >= 25 || visitor.getMood() == VisitorMood.THIRSTY)) {
                 return "DRINK";
             }
-            if (visitor.wantsSouvenir()) {
-                return "SOUVENIR";
-            }
             return null;
         }
 
@@ -1438,10 +1436,6 @@ public class ZooVisitorEntity extends PathfinderMob {
         public void stop() {
             if (this.targetCashier != null) {
                 this.targetCashier.removeFromQueue(visitor.getUUID());
-            }
-            if ("SOUVENIR".equalsIgnoreCase(this.targetRole)
-                    && !visitor.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).isEmpty()) {
-                visitor.setWantsSouvenir(false);
             }
             this.targetCashier = null;
             this.targetRole = null;
@@ -2357,6 +2351,134 @@ public class ZooVisitorEntity extends PathfinderMob {
                 this.targetPos = null;
             } else if (visitor.getNavigation().isDone() || visitor.tickCount % 20 == 0) {
                 visitor.getNavigation().moveTo(targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, 1.0D);
+            }
+        }
+    }
+
+    public static class UseGachaMachineGoal extends Goal {
+        private final ZooVisitorEntity visitor;
+        private BlockPos targetMachinePos = null;
+        private int rollTicks = 0;
+        private int repathTimer = 0;
+
+        public UseGachaMachineGoal(ZooVisitorEntity visitor) {
+            this.visitor = visitor;
+            this.setFlags(java.util.EnumSet.of(Flag.MOVE, Flag.LOOK));
+        }
+
+        @Override
+        public boolean canUse() {
+            if (visitor.isTimeToLeave() || visitor.isConsuming() || visitor.postPurchaseEatMode > 0
+                    || visitor.needsToilet() || !visitor.getTags().contains("ticket_purchased")
+                    || visitor.guidingPlayerUuid != null) {
+                return false;
+            }
+            if (!visitor.wantsSouvenir() || !visitor.getItemBySlot(EquipmentSlot.HEAD).isEmpty()) {
+                return false;
+            }
+
+            BlockPos bestPos = null;
+            double bestDist = Double.MAX_VALUE;
+            for (BlockPos pos : net.zootycoon.block.ZooGachaMachineBlock.KNOWN_MACHINES) {
+                if (!visitor.level().isLoaded(pos)) continue;
+                net.minecraft.world.level.block.entity.BlockEntity be = visitor.level().getBlockEntity(pos);
+                if (be instanceof net.zootycoon.block.ZooGachaMachineBlockEntity gachaBe && gachaBe.getTotalStock() > 0) {
+                    double d = visitor.distanceToSqr(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+                    if (d < 48.0 * 48.0 && d < bestDist) {
+                        bestDist = d;
+                        bestPos = pos;
+                    }
+                }
+            }
+            if (bestPos != null) {
+                this.targetMachinePos = bestPos;
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            if (targetMachinePos == null || visitor.isTimeToLeave() || visitor.needsToilet() || !visitor.wantsSouvenir()) {
+                return false;
+            }
+            if (!visitor.getItemBySlot(EquipmentSlot.HEAD).isEmpty()) {
+                return false;
+            }
+            net.minecraft.world.level.block.entity.BlockEntity be = visitor.level().getBlockEntity(targetMachinePos);
+            return be instanceof net.zootycoon.block.ZooGachaMachineBlockEntity gachaBe && gachaBe.getTotalStock() > 0;
+        }
+
+        @Override
+        public void start() {
+            this.rollTicks = 0;
+            this.repathTimer = 0;
+            if (targetMachinePos != null) {
+                visitor.getNavigation().moveTo(targetMachinePos.getX() + 0.5, targetMachinePos.getY(), targetMachinePos.getZ() + 0.5, 1.0D);
+            }
+        }
+
+        @Override
+        public void stop() {
+            this.targetMachinePos = null;
+            this.rollTicks = 0;
+            this.repathTimer = 0;
+        }
+
+        @Override
+        public void tick() {
+            if (targetMachinePos == null) return;
+            double dSq = visitor.distanceToSqr(targetMachinePos.getX() + 0.5, targetMachinePos.getY(), targetMachinePos.getZ() + 0.5);
+            visitor.getLookControl().setLookAt(targetMachinePos.getX() + 0.5, targetMachinePos.getY() + 1.0, targetMachinePos.getZ() + 0.5, 30.0F, 30.0F);
+
+            if (dSq > 3.0D * 3.0D) {
+                if (--repathTimer <= 0) {
+                    repathTimer = 15;
+                    visitor.getNavigation().moveTo(targetMachinePos.getX() + 0.5, targetMachinePos.getY(), targetMachinePos.getZ() + 0.5, 1.0D);
+                }
+            } else {
+                visitor.getNavigation().stop();
+                rollTicks++;
+
+                if (rollTicks % 10 == 0 && visitor.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                    sl.playSound(null, targetMachinePos, net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), net.minecraft.sounds.SoundSource.BLOCKS, 0.4F, 1.4F);
+                }
+
+                if (rollTicks >= 30) {
+                    if (visitor.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                        net.minecraft.world.level.block.entity.BlockEntity be = sl.getBlockEntity(targetMachinePos);
+                        if (be instanceof net.zootycoon.block.ZooGachaMachineBlockEntity gachaBe && !gachaBe.isEmpty()) {
+                            ItemStack plushie = gachaBe.rollRandomPlushie();
+                            if (!plushie.isEmpty()) {
+                                visitor.setItemSlot(EquipmentSlot.HEAD, plushie.copyWithCount(1));
+                                visitor.setDropChance(EquipmentSlot.HEAD, 0.0F);
+                                visitor.setMood(VisitorMood.ADORED);
+                                visitor.setWantsSouvenir(false);
+
+                                java.util.UUID ownerUuid = gachaBe.getOwnerUuid();
+                                if (ownerUuid == null) {
+                                    for (net.zootycoon.claim.ZooClaim claim : net.zootycoon.claim.ZooClaimManager.get(sl).getAllClaims()) {
+                                        if (claim.contains(targetMachinePos.getX(), targetMachinePos.getZ())) {
+                                            ownerUuid = claim.getOwnerUuid();
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (ownerUuid != null && sl.getServer() != null) {
+                                    var eco = net.zootycoon.economy.ZooEconomyManager.get(sl.getServer());
+                                    ServerPlayer owner = sl.getServer().getPlayerList().getPlayer(ownerUuid);
+                                    eco.addBalance(ownerUuid, 4, owner);
+                                }
+
+                                sl.playSound(null, targetMachinePos, net.zootycoon.sound.ZooSounds.KACHING, net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 1.0F);
+                                sl.sendParticles(net.minecraft.core.particles.ParticleTypes.HEART, visitor.getX(), visitor.getY() + 1.2D, visitor.getZ(), 5, 0.25, 0.25, 0.25, 0.02);
+                                sl.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, targetMachinePos.getX() + 0.5, targetMachinePos.getY() + 1.2, targetMachinePos.getZ() + 0.5, 10, 0.25, 0.25, 0.25, 0.05);
+                            }
+                        }
+                    }
+                    visitor.setWantsSouvenir(false);
+                    this.stop();
+                }
             }
         }
     }

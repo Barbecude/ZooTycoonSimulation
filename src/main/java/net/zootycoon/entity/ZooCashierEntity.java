@@ -177,7 +177,6 @@ public class ZooCashierEntity extends PathfinderMob {
         switch (role) {
             case "BURGER" -> this.setCustomName(Component.literal("Kasir Stand Burger"));
             case "DRINK" -> this.setCustomName(Component.literal("Kasir Stand Minuman"));
-            case "SOUVENIR" -> this.setCustomName(Component.literal("Kasir Toko Souvenir"));
             case "TICKET" -> this.setCustomName(Component.literal("Kasir Loket Tiket"));
             default -> this.setCustomName(Component.literal("Kasir Zoo"));
         }
@@ -220,7 +219,7 @@ public class ZooCashierEntity extends PathfinderMob {
             this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.PAPER));
             return;
         }
-        if ("BURGER".equalsIgnoreCase(role) || "DRINK".equalsIgnoreCase(role) || "SOUVENIR".equalsIgnoreCase(role)) {
+        if ("BURGER".equalsIgnoreCase(role) || "DRINK".equalsIgnoreCase(role)) {
             ItemStack firstValid = ItemStack.EMPTY;
             for (int i = 0; i < STOCK_SLOTS; i++) {
                 ItemStack st = this.stockInventory.getItem(i);
@@ -279,10 +278,6 @@ public class ZooCashierEntity extends PathfinderMob {
             });
         }
 
-        if ("SOUVENIR".equalsIgnoreCase(role)) {
-            return isPlushieItem(stack.getItem());
-        }
-
         return false;
     }
 
@@ -319,9 +314,6 @@ public class ZooCashierEntity extends PathfinderMob {
                 }
             }
             return 2;
-        }
-        if ("SOUVENIR".equalsIgnoreCase(role)) {
-            return 5;
         }
         if ("TICKET".equalsIgnoreCase(role)) {
             return 2;
@@ -390,9 +382,6 @@ public class ZooCashierEntity extends PathfinderMob {
                     || (v.getGuidedPlayerUuid() != null && v.getHunger() >= 15));
             case "DRINK" -> v.hasWatchedAnimal() && v.canDrink() && (v.getThirst() >= 25 || v.getMood() == ZooVisitorEntity.VisitorMood.THIRSTY
                     || (v.getGuidedPlayerUuid() != null && v.getThirst() >= 15));
-            case "SOUVENIR" -> v.getTags().contains("ticket_purchased")
-                    && v.getItemBySlot(EquipmentSlot.HEAD).isEmpty()
-                    && !v.needsToilet();
             default -> false;
         };
     }
@@ -542,29 +531,6 @@ public class ZooCashierEntity extends PathfinderMob {
                             serviceTicks = 0;
                             serveCooldown = 15;
                         }
-                    } else if ("SOUVENIR".equals(role)) {
-                        // Packaging plushie sounds
-                        if (serviceTicks % 20 == 0) {
-                            sLevel.playSound(null, this.blockPosition(), SoundEvents.ARMOR_EQUIP_LEATHER.value(), SoundSource.NEUTRAL, 0.7F, 1.1F);
-                            sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_WORK_LEATHERWORKER, SoundSource.NEUTRAL, 0.5F, 1.1F);
-                        }
-                        if (serviceTicks <= 0) {
-                            ItemStack soldPlushie = consumeOneStockItem();
-                            if (!soldPlushie.isEmpty()) {
-                                removeFromQueue(customer.getUUID());
-                                int price = getItemPrice(role, soldPlushie);
-                                customer.setItemSlot(EquipmentSlot.HEAD, soldPlushie.copyWithCount(1));
-                                customer.setDropChance(EquipmentSlot.HEAD, 0.0F);
-                                customer.setMood(ZooVisitorEntity.VisitorMood.ADORED);
-                                creditOwner(sLevel, price);
-                                sLevel.playSound(null, this.blockPosition(), SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.NEUTRAL, 0.8F, 1.4F);
-                                sLevel.sendParticles(ParticleTypes.HEART, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 5, 0.25, 0.25, 0.25, 0.02);
-                                customer.onTransactionComplete(this.blockPosition(), "SOUVENIR", ItemStack.EMPTY, false);
-                            }
-                            servingCustomerUuid = null;
-                            serviceTicks = 0;
-                            serveCooldown = 15;
-                        }
                     }
                 } else {
                     servingCustomerUuid = null;
@@ -590,15 +556,6 @@ public class ZooCashierEntity extends PathfinderMob {
                             servingCustomerUuid = customer.getUUID();
                             serviceTicks = 80; // 4 seconds to prepare drink
                             sLevel.playSound(null, this.blockPosition(), SoundEvents.BOTTLE_FILL, SoundSource.NEUTRAL, 0.7F, 1.0F);
-                        }
-                    }
-                } else if ("SOUVENIR".equals(role)) {
-                    if (!isOutOfStock()) {
-                        ZooVisitorEntity customer = resolveNextReadyCustomer(sLevel, role);
-                        if (customer != null) {
-                            servingCustomerUuid = customer.getUUID();
-                            serviceTicks = 80; // 4 seconds to prepare souvenir
-                            sLevel.playSound(null, this.blockPosition(), SoundEvents.ARMOR_EQUIP_LEATHER.value(), SoundSource.NEUTRAL, 0.7F, 1.0F);
                         }
                     }
                 } else if ("TICKET".equals(role)) {

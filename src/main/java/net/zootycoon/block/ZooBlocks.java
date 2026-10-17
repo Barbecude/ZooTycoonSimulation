@@ -90,6 +90,32 @@ public class ZooBlocks {
             FabricBlockEntityTypeBuilder.create(ZooFeedingTroughBlockEntity::new, FEEDING_TROUGH).build()
     );
 
+    // 8. Gacha Machine Block
+    public static final ResourceKey<Block> GACHA_MACHINE_KEY = ResourceKey.create(
+            Registries.BLOCK,
+            ZooTycoonMod.id("gacha_machine")
+    );
+    public static final ResourceKey<Item> GACHA_MACHINE_ITEM_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("gacha_machine")
+    );
+    public static final Block GACHA_MACHINE = new ZooGachaMachineBlock();
+    public static final BlockItem GACHA_MACHINE_ITEM = new BlockItem(
+            GACHA_MACHINE,
+            new Item.Properties()
+    );
+
+    // 9. Gacha Machine Block Entity
+    public static final ResourceKey<BlockEntityType<?>> GACHA_MACHINE_BE_KEY = ResourceKey.create(
+            Registries.BLOCK_ENTITY_TYPE,
+            ZooTycoonMod.id("gacha_machine")
+    );
+    public static final BlockEntityType<ZooGachaMachineBlockEntity> GACHA_MACHINE_BLOCK_ENTITY = Registry.register(
+            BuiltInRegistries.BLOCK_ENTITY_TYPE,
+            ZooTycoonMod.id("gacha_machine"),
+            FabricBlockEntityTypeBuilder.create(ZooGachaMachineBlockEntity::new, GACHA_MACHINE).build()
+    );
+
     public static void register() {
         // Blocks
         Registry.register(BuiltInRegistries.BLOCK, ConstructionTapeBlock.BLOCK_KEY, CONSTRUCTION_TAPE);
@@ -97,6 +123,7 @@ public class ZooBlocks {
         Registry.register(BuiltInRegistries.BLOCK, TrashCanBlock.BLOCK_KEY, TRASH_CAN);
         Registry.register(BuiltInRegistries.BLOCK, TrashBlock.BLOCK_KEY, TRASH);
         Registry.register(BuiltInRegistries.BLOCK, ZooTycoonMod.id("feeding_trough"), FEEDING_TROUGH);
+        Registry.register(BuiltInRegistries.BLOCK, GACHA_MACHINE_KEY, GACHA_MACHINE);
 
         // Block Items
         Registry.register(BuiltInRegistries.ITEM, CONSTRUCTION_TAPE_ITEM_KEY, CONSTRUCTION_TAPE_ITEM);
@@ -104,5 +131,6 @@ public class ZooBlocks {
         Registry.register(BuiltInRegistries.ITEM, TRASH_CAN_ITEM_KEY, TRASH_CAN_ITEM);
         Registry.register(BuiltInRegistries.ITEM, TRASH_ITEM_KEY, TRASH_ITEM);
         Registry.register(BuiltInRegistries.ITEM, FEEDING_TROUGH_ITEM_KEY, FEEDING_TROUGH_ITEM);
+        Registry.register(BuiltInRegistries.ITEM, GACHA_MACHINE_ITEM_KEY, GACHA_MACHINE_ITEM);
     }
 }

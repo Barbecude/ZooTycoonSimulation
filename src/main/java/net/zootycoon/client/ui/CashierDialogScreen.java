@@ -75,8 +75,7 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
     private boolean isStockRole() {
         return "BURGER".equalsIgnoreCase(currentRole)
                 || "DRINK".equalsIgnoreCase(currentRole)
-                || "ICE_CREAM".equalsIgnoreCase(currentRole)
-                || "SOUVENIR".equalsIgnoreCase(currentRole);
+                || "ICE_CREAM".equalsIgnoreCase(currentRole);
     }
 
     private boolean isUnassigned() {
@@ -108,11 +107,6 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
             return stocked
                     ? ZooTranslations.component("zootycoon.dialog.cashier.speech.drink_ready")
                     : ZooTranslations.component("zootycoon.dialog.cashier.speech.drink_empty");
-        }
-        if ("SOUVENIR".equalsIgnoreCase(role)) {
-            return stocked
-                    ? ZooTranslations.component("zootycoon.dialog.cashier.speech.souvenir_ready")
-                    : ZooTranslations.component("zootycoon.dialog.cashier.speech.souvenir_empty");
         }
         return ZooTranslations.component("zootycoon.dialog.cashier.speech");
     }
@@ -167,13 +161,7 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
             }).asPrimary();
             addRenderableWidget(drinkBtn);
 
-            var souvenirBtn = new ZooButton(rightX, startBtnY + btnH + gap, colW, btnH,
-                    ZooTranslations.component("zootycoon.dialog.cashier.btn.souvenir"), b -> {
-                ClientPlayNetworking.send(new ZooNetworkPayloads.SetCashierRolePayload(this.entityId, "SOUVENIR"));
-            }).asPrimary();
-            addRenderableWidget(souvenirBtn);
-
-            var ticketBtn = new ZooButton(rightX + colW + 6, startBtnY + btnH + gap, colW, btnH,
+            var ticketBtn = new ZooButton(rightX, startBtnY + btnH + gap, rightW, btnH,
                     ZooTranslations.component("zootycoon.dialog.cashier.btn.ticket"), b -> {
                 ClientPlayNetworking.send(new ZooNetworkPayloads.SetCashierRolePayload(this.entityId, "TICKET"));
             }).asPrimary();

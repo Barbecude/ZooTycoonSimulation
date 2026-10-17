@@ -286,6 +286,7 @@ public class ZooItems {
 
         ItemGroupEvents.modifyEntriesEvent(CREATIVE_TAB_KEY).register(entries -> {
             entries.accept(net.zootycoon.block.ZooBlocks.FEEDING_TROUGH_ITEM);
+            entries.accept(net.zootycoon.block.ZooBlocks.GACHA_MACHINE_ITEM);
             entries.accept(MAGNIFYING_GLASS);
             entries.accept(BROOM);
             entries.accept(net.zootycoon.block.ZooBlocks.TOILET_ITEM);
