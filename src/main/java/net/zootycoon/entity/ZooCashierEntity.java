@@ -66,9 +66,13 @@ public class ZooCashierEntity extends PathfinderMob {
     public void setCashierRole(String role) {
         this.entityData.set(CASHIER_ROLE, role);
         switch (role) {
-            case "ICE_CREAM" -> {
-                this.setCustomName(Component.literal("Kasir Stand Es Krim"));
-                this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.SNOWBALL));
+            case "BURGER" -> {
+                this.setCustomName(Component.literal("Kasir Stand Burger"));
+                this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.COOKED_BEEF));
+            }
+            case "DRINK", "ICE_CREAM" -> {
+                this.setCustomName(Component.literal("Kasir Stand Minuman"));
+                this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.POTION));
             }
             case "SOUVENIR" -> {
                 this.setCustomName(Component.literal("Kasir Toko Souvenir"));
@@ -110,41 +114,80 @@ public class ZooCashierEntity extends PathfinderMob {
         if (this.tickCount % 40 == 0 && serveCooldown <= 0 && this.level() instanceof ServerLevel sLevel) {
             String role = getCashierRole();
 
-            if ("ICE_CREAM".equals(role)) {
-                // Serve thirsty visitors
+            if ("BURGER".equals(role)) {
+                // Serve hungry visitors or visitors guided for hunger
                 List<ZooVisitorEntity> visitors = sLevel.getEntitiesOfClass(
                         ZooVisitorEntity.class,
                         this.getBoundingBox().inflate(6.0D, 3.0D, 6.0D),
-                        v -> v.isAlive() && (v.getThirst() >= 25 || v.getHunger() >= 35)
+                        v -> v.isAlive() && (v.getHunger() >= 35 || v.getMood() == ZooVisitorEntity.VisitorMood.HUNGRY || (v.getGuidedPlayerUuid() != null && v.getHunger() >= 15))
+                );
+                if (!visitors.isEmpty()) {
+                    ZooVisitorEntity customer = visitors.get(0);
+                    this.getLookControl().setLookAt(customer, 30.0F, 30.0F);
+                    customer.setHunger(0);
+                    customer.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(Items.COOKED_BEEF));
+                    customer.setEatTimer(40);
+                    customer.updateMood();
+                    creditOwner(sLevel, 2);
+                    sLevel.playSound(null, this.blockPosition(), SoundEvents.GENERIC_EAT, SoundSource.NEUTRAL, 1.0F, 1.0F);
+                    sLevel.playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.7F, 1.2F);
+                    sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 5, 0.25, 0.25, 0.25, 0.02);
+                    if (customer.getGuidedPlayerUuid() != null) {
+                        customer.completeGuideReward(sLevel, "BURGER");
+                    }
+                    serveCooldown = 80;
+                }
+            } else if ("DRINK".equals(role) || "ICE_CREAM".equals(role)) {
+                // Serve thirsty visitors or visitors guided for thirst
+                List<ZooVisitorEntity> visitors = sLevel.getEntitiesOfClass(
+                        ZooVisitorEntity.class,
+                        this.getBoundingBox().inflate(6.0D, 3.0D, 6.0D),
+                        v -> v.isAlive() && (v.getThirst() >= 25 || v.getMood() == ZooVisitorEntity.VisitorMood.THIRSTY || (v.getGuidedPlayerUuid() != null && v.getThirst() >= 15))
                 );
                 if (!visitors.isEmpty()) {
                     ZooVisitorEntity customer = visitors.get(0);
                     this.getLookControl().setLookAt(customer, 30.0F, 30.0F);
                     customer.setThirst(0);
-                    customer.setHunger(Math.max(0, customer.getHunger() - 25));
                     customer.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(Items.POTION));
+                    customer.setEatTimer(40);
                     customer.updateMood();
-                    creditOwner(sLevel, 1);
+                    creditOwner(sLevel, 2);
+                    sLevel.playSound(null, this.blockPosition(), SoundEvents.GENERIC_DRINK, SoundSource.NEUTRAL, 1.0F, 1.0F);
                     sLevel.playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.7F, 1.2F);
                     sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 5, 0.25, 0.25, 0.25, 0.02);
+                    if (customer.getGuidedPlayerUuid() != null) {
+                        customer.completeGuideReward(sLevel, "DRINK");
+                    }
                     serveCooldown = 80;
                 }
             } else if ("SOUVENIR".equals(role)) {
-                // Serve visitors wanting souvenirs
+                // Random NPC visitors wandering by buy souvenirs
                 List<ZooVisitorEntity> visitors = sLevel.getEntitiesOfClass(
                         ZooVisitorEntity.class,
                         this.getBoundingBox().inflate(6.0D, 3.0D, 6.0D),
-                        v -> v.isAlive() && v.getMood() != ZooVisitorEntity.VisitorMood.ADORED
+                        v -> v.isAlive() && v.getMood() != ZooVisitorEntity.VisitorMood.ADORED && !v.needsToilet()
                 );
                 if (!visitors.isEmpty()) {
                     ZooVisitorEntity customer = visitors.get(0);
                     this.getLookControl().setLookAt(customer, 30.0F, 30.0F);
                     customer.setMood(ZooVisitorEntity.VisitorMood.ADORED);
                     customer.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(Items.RABBIT_FOOT));
-                    creditOwner(sLevel, 2);
+                    customer.setEatTimer(60);
+                    creditOwner(sLevel, 3);
                     sLevel.playSound(null, this.blockPosition(), SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.NEUTRAL, 0.8F, 1.4F);
                     sLevel.sendParticles(ParticleTypes.HEART, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 4, 0.25, 0.25, 0.25, 0.02);
                     serveCooldown = 120;
+                } else if (this.tickCount % 200 == 0) {
+                    // Occasionally summon a random wandering visitor within 16 blocks to visit souvenir shop
+                    List<ZooVisitorEntity> wanderers = sLevel.getEntitiesOfClass(
+                            ZooVisitorEntity.class,
+                            this.getBoundingBox().inflate(16.0D, 4.0D, 16.0D),
+                            v -> v.isAlive() && v.getMood() != ZooVisitorEntity.VisitorMood.ADORED && !v.needsToilet() && v.getGuidedPlayerUuid() == null && v.getHunger() < 50 && v.getThirst() < 50
+                    );
+                    if (!wanderers.isEmpty()) {
+                        ZooVisitorEntity wanderer = wanderers.get(this.random.nextInt(wanderers.size()));
+                        wanderer.getNavigation().moveTo(this, 1.0D);
+                    }
                 }
             } else if ("TICKET".equals(role)) {
                 // Serve newly arriving visitors

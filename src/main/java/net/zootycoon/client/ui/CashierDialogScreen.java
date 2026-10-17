@@ -43,49 +43,62 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
     protected void initDialogWidgets() {
         int rightX = startX + 114 + 14;
         int rightW = panelWidth - (rightX - startX) - 14;
+        int colW = (rightW - 6) / 2;
         int btnH = 22;
         int gap = 4;
         int startBtnY = startY + 86;
 
-        boolean isIceCream = "ICE_CREAM".equalsIgnoreCase(currentRole);
+        boolean isBurger = "BURGER".equalsIgnoreCase(currentRole);
+        boolean isDrink = "DRINK".equalsIgnoreCase(currentRole) || "ICE_CREAM".equalsIgnoreCase(currentRole);
         boolean isSouvenir = "SOUVENIR".equalsIgnoreCase(currentRole);
         boolean isTicket = "TICKET".equalsIgnoreCase(currentRole);
 
-        // Button 1: Kasir Stand Es Krim
-        Component iceText = isIceCream ?
-                ZooTranslations.component("zootycoon.dialog.cashier.btn.ice_cream_active") :
-                ZooTranslations.component("zootycoon.dialog.cashier.btn.ice_cream");
-        var iceCreamBtn = new ZooButton(rightX, startBtnY, rightW, btnH, iceText, b -> {
-            ClientPlayNetworking.send(new ZooNetworkPayloads.SetCashierRolePayload(this.entityId, "ICE_CREAM"));
+        // Row 1, Col 1: Stand Burger
+        Component burgerText = isBurger ?
+                ZooTranslations.component("zootycoon.dialog.cashier.btn.burger_active") :
+                ZooTranslations.component("zootycoon.dialog.cashier.btn.burger");
+        var burgerBtn = new ZooButton(rightX, startBtnY, colW, btnH, burgerText, b -> {
+            ClientPlayNetworking.send(new ZooNetworkPayloads.SetCashierRolePayload(this.entityId, "BURGER"));
             this.onClose();
         }).asPrimary();
-        if (isIceCream) iceCreamBtn.active = false;
-        addRenderableWidget(iceCreamBtn);
+        if (isBurger) burgerBtn.active = false;
+        addRenderableWidget(burgerBtn);
 
-        // Button 2: Kasir Toko Souvenir
+        // Row 1, Col 2: Stand Minuman
+        Component drinkText = isDrink ?
+                ZooTranslations.component("zootycoon.dialog.cashier.btn.drink_active") :
+                ZooTranslations.component("zootycoon.dialog.cashier.btn.drink");
+        var drinkBtn = new ZooButton(rightX + colW + 6, startBtnY, colW, btnH, drinkText, b -> {
+            ClientPlayNetworking.send(new ZooNetworkPayloads.SetCashierRolePayload(this.entityId, "DRINK"));
+            this.onClose();
+        }).asPrimary();
+        if (isDrink) drinkBtn.active = false;
+        addRenderableWidget(drinkBtn);
+
+        // Row 2, Col 1: Toko Souvenir
         Component souvText = isSouvenir ?
                 ZooTranslations.component("zootycoon.dialog.cashier.btn.souvenir_active") :
                 ZooTranslations.component("zootycoon.dialog.cashier.btn.souvenir");
-        var souvenirBtn = new ZooButton(rightX, startBtnY + btnH + gap, rightW, btnH, souvText, b -> {
+        var souvenirBtn = new ZooButton(rightX, startBtnY + btnH + gap, colW, btnH, souvText, b -> {
             ClientPlayNetworking.send(new ZooNetworkPayloads.SetCashierRolePayload(this.entityId, "SOUVENIR"));
             this.onClose();
         }).asPrimary();
         if (isSouvenir) souvenirBtn.active = false;
         addRenderableWidget(souvenirBtn);
 
-        // Button 3: Kasir Loket Tiket
+        // Row 2, Col 2: Loket Tiket
         Component ticketText = isTicket ?
                 ZooTranslations.component("zootycoon.dialog.cashier.btn.ticket_active") :
                 ZooTranslations.component("zootycoon.dialog.cashier.btn.ticket");
-        var ticketBtn = new ZooButton(rightX, startBtnY + (btnH + gap) * 2, rightW, btnH, ticketText, b -> {
+        var ticketBtn = new ZooButton(rightX + colW + 6, startBtnY + btnH + gap, colW, btnH, ticketText, b -> {
             ClientPlayNetworking.send(new ZooNetworkPayloads.SetCashierRolePayload(this.entityId, "TICKET"));
             this.onClose();
         }).asPrimary();
         if (isTicket) ticketBtn.active = false;
         addRenderableWidget(ticketBtn);
 
-        // Button 4: Nanti dulu yaa (Batal / Tutup)
-        var closeBtn = new ZooButton(rightX, startBtnY + (btnH + gap) * 3, rightW, btnH,
+        // Row 3 (Full width): Nanti dulu yaa (Batal / Tutup)
+        var closeBtn = new ZooButton(rightX, startBtnY + (btnH + gap) * 2, rightW, btnH,
                 ZooTranslations.component("zootycoon.dialog.cashier.btn.later"), b -> {
             this.onClose();
         }).asPrimary();

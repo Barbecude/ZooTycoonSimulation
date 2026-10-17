@@ -43,6 +43,9 @@ public class ZooTycoonMod implements ModInitializer {
         // 4. Initialize Claim Manager & Protection hooks
         ZooClaimManager.initProtectionHooks();
 
+        // 4b. Initialize Zoo Commands (/satwa hunger, etc.)
+        net.zootycoon.command.ZooCommands.init();
+
         // 5. Initialize Construction Manager ticks
         ConstructionManager.initServerEvents();
 

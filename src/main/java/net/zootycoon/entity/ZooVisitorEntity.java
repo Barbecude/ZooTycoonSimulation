@@ -102,6 +102,8 @@ public class ZooVisitorEntity extends PathfinderMob {
 
     private BlockPos gatePos = null;
     private UUID guidingPlayerUuid = null;
+    private UUID guidedPlayerUuid = null;
+    private int guideTimeout = 0;
     private int stayTime = 0;
     private int toiletTimer = 0;
     private int watchingAnimalId = -1;
@@ -328,6 +330,15 @@ public class ZooVisitorEntity extends PathfinderMob {
                 }
             }
 
+            // Guide timeout tick
+            if (guidedPlayerUuid != null) {
+                if (guideTimeout > 0) {
+                    guideTimeout--;
+                } else {
+                    guidedPlayerUuid = null;
+                }
+            }
+
             // Update mood every 5 ticks
             if (this.tickCount % 5 == 0) {
                 updateMood();
@@ -448,6 +459,9 @@ public class ZooVisitorEntity extends PathfinderMob {
         if (guidingPlayerUuid != null) {
             tag.putString("GuidingPlayerUuid", guidingPlayerUuid.toString());
         }
+        if (guidedPlayerUuid != null) {
+            tag.putString("GuidedPlayerUuid", guidedPlayerUuid.toString());
+        }
     }
 
     @Override
@@ -474,6 +488,11 @@ public class ZooVisitorEntity extends PathfinderMob {
                 guidingPlayerUuid = UUID.fromString(tag.getString("GuidingPlayerUuid"));
             } catch (Exception ignored) {}
         }
+        if (tag.contains("GuidedPlayerUuid")) {
+            try {
+                guidedPlayerUuid = UUID.fromString(tag.getString("GuidedPlayerUuid"));
+            } catch (Exception ignored) {}
+        }
     }
 
     public void startFollowingPlayer(Player player) {
@@ -482,12 +501,49 @@ public class ZooVisitorEntity extends PathfinderMob {
             this.stopRiding();
         }
         this.guidingPlayerUuid = player.getUUID();
+        this.guidedPlayerUuid = player.getUUID();
+        this.guideTimeout = 1200;
         this.getNavigation().stop();
     }
 
     public void stopFollowingPlayer() {
         this.guidingPlayerUuid = null;
+        this.guidedPlayerUuid = null;
+        this.guideTimeout = 0;
         this.getNavigation().stop();
+    }
+
+    public UUID getGuidedPlayerUuid() {
+        return guidedPlayerUuid;
+    }
+
+    public void setGuidedPlayerUuid(UUID uuid) {
+        this.guidedPlayerUuid = uuid;
+    }
+
+    public void setEatTimer(int ticks) {
+        this.eatTimer = ticks;
+    }
+
+    public void completeGuideReward(net.minecraft.server.level.ServerLevel sLevel, String facilityType) {
+        if (this.guidedPlayerUuid == null) return;
+        Player player = sLevel.getPlayerByUUID(this.guidedPlayerUuid);
+        this.guidingPlayerUuid = null;
+        this.guidedPlayerUuid = null;
+        this.guideTimeout = 0;
+        if (player instanceof ServerPlayer sPlayer && sLevel.getServer() != null) {
+            int newRating = net.zootycoon.economy.ZooRatingManager.get(sLevel.getServer()).addRating(player.getUUID(), 2, sPlayer);
+            String toastKey = switch (facilityType) {
+                case "TOILET" -> "zootycoon.toast.rating.guide_toilet_success";
+                case "BURGER" -> "zootycoon.toast.rating.guide_burger_success";
+                case "DRINK" -> "zootycoon.toast.rating.guide_drink_success";
+                default -> "zootycoon.toast.rating.guide_success";
+            };
+            net.zootycoon.network.ZooNetworkPayloads.sendToast(sPlayer, "zootycoon.toast.title.rating_up", toastKey, 1, newRating);
+            sLevel.playSound(null, this.blockPosition(), SoundEvents.PLAYER_LEVELUP, net.minecraft.sounds.SoundSource.NEUTRAL, 0.8F, 1.2F);
+            sLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, this.getX(), this.getY() + 1.2D, this.getZ(), 8, 0.3, 0.3, 0.3, 0.05);
+            sLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.HEART, this.getX(), this.getY() + 1.4D, this.getZ(), 4, 0.25, 0.25, 0.25, 0.02);
+        }
     }
 
     public Player getGuidingPlayer() {
@@ -553,6 +609,10 @@ public class ZooVisitorEntity extends PathfinderMob {
 
             visitor.getLookControl().setLookAt(player, 30.0F, 30.0F);
 
+            if (handleFacilityApproached()) {
+                return;
+            }
+
             double distSq = visitor.distanceToSqr(player);
             if (distSq > 3.5 * 3.5) {
                 if (pathingCooldown > 0) {
@@ -565,79 +625,54 @@ public class ZooVisitorEntity extends PathfinderMob {
             } else {
                 visitor.getNavigation().stop();
             }
-
-            if (checkFacilityReached()) {
-                fulfillGuideFacility(player);
-            }
         }
 
-        private boolean checkFacilityReached() {
+        private boolean handleFacilityApproached() {
             BlockPos vPos = visitor.blockPosition();
 
-            // 1. Toilet facility check
+            // 1. Toilet facility check: if visitor needs toilet and toilet is within 6 blocks
             if (visitor.needsToilet() || visitor.getMood() == VisitorMood.TOILET) {
-                for (BlockPos p : BlockPos.betweenClosed(vPos.offset(-5, -2, -5), vPos.offset(5, 2, 5))) {
+                for (BlockPos p : BlockPos.betweenClosed(vPos.offset(-6, -2, -6), vPos.offset(6, 2, 6))) {
                     if (visitor.level().getBlockState(p).is(net.zootycoon.block.ZooBlocks.TOILET)) {
+                        // Stop following player movement so FindToiletGoal can path and occupy the toilet
+                        visitor.guidingPlayerUuid = null;
+                        visitor.getNavigation().stop();
                         return true;
                     }
                 }
             }
 
-            // 2. Hunger facility check
+            // 2. Hunger facility check: must be a registered BURGER stand
             if (visitor.getHunger() >= 50 || visitor.getMood() == VisitorMood.HUNGRY) {
-                List<ZooCashierEntity> cashiers = visitor.level().getEntitiesOfClass(
+                List<ZooCashierEntity> burgerCashiers = visitor.level().getEntitiesOfClass(
                         ZooCashierEntity.class,
                         visitor.getBoundingBox().inflate(6.0D, 3.0D, 6.0D),
-                        c -> c.isAlive() && ("ICE_CREAM".equals(c.getCashierRole()) || "UNASSIGNED".equals(c.getCashierRole()))
+                        c -> c.isAlive() && "BURGER".equals(c.getCashierRole())
                 );
-                if (!cashiers.isEmpty()) return true;
+                if (!burgerCashiers.isEmpty()) {
+                    // Stop following player and approach the burger cashier
+                    visitor.guidingPlayerUuid = null;
+                    visitor.getNavigation().moveTo(burgerCashiers.get(0), 1.0D);
+                    return true;
+                }
             }
 
-            // 3. Thirst facility check
+            // 3. Thirst facility check: must be a registered DRINK stand (or ICE_CREAM)
             if (visitor.getThirst() >= 50 || visitor.getMood() == VisitorMood.THIRSTY) {
-                List<ZooCashierEntity> cashiers = visitor.level().getEntitiesOfClass(
+                List<ZooCashierEntity> drinkCashiers = visitor.level().getEntitiesOfClass(
                         ZooCashierEntity.class,
                         visitor.getBoundingBox().inflate(6.0D, 3.0D, 6.0D),
-                        c -> c.isAlive() && ("ICE_CREAM".equals(c.getCashierRole()) || "UNASSIGNED".equals(c.getCashierRole()))
+                        c -> c.isAlive() && ("DRINK".equals(c.getCashierRole()) || "ICE_CREAM".equals(c.getCashierRole()))
                 );
-                if (!cashiers.isEmpty()) return true;
+                if (!drinkCashiers.isEmpty()) {
+                    // Stop following player and approach the drink cashier
+                    visitor.guidingPlayerUuid = null;
+                    visitor.getNavigation().moveTo(drinkCashiers.get(0), 1.0D);
+                    return true;
+                }
             }
 
             return false;
-        }
-
-        private void fulfillGuideFacility(Player player) {
-            visitor.stopFollowingPlayer();
-            visitor.getNavigation().stop();
-
-            if (visitor.level() instanceof net.minecraft.server.level.ServerLevel sLevel) {
-                if (visitor.needsToilet()) {
-                    visitor.setNeedsToilet(false);
-                    visitor.toiletTimer = 0;
-                }
-                if (visitor.getHunger() >= 50 || visitor.getMood() == VisitorMood.HUNGRY) {
-                    visitor.setHunger(0);
-                    visitor.setItemInHand(InteractionHand.OFF_HAND, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COOKIE));
-                    visitor.eatTimer = 40;
-                    sLevel.playSound(null, visitor.blockPosition(), SoundEvents.GENERIC_EAT, net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 1.0F);
-                }
-                if (visitor.getThirst() >= 50 || visitor.getMood() == VisitorMood.THIRSTY) {
-                    visitor.setThirst(0);
-                    visitor.setItemInHand(InteractionHand.OFF_HAND, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.POTION));
-                    visitor.eatTimer = 40;
-                    sLevel.playSound(null, visitor.blockPosition(), SoundEvents.GENERIC_DRINK, net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 1.0F);
-                }
-                visitor.updateMood();
-
-                sLevel.playSound(null, visitor.blockPosition(), SoundEvents.PLAYER_LEVELUP, net.minecraft.sounds.SoundSource.NEUTRAL, 0.8F, 1.2F);
-                sLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, visitor.getX(), visitor.getY() + 1.2D, visitor.getZ(), 8, 0.3, 0.3, 0.3, 0.05);
-                sLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.HEART, visitor.getX(), visitor.getY() + 1.4D, visitor.getZ(), 4, 0.25, 0.25, 0.25, 0.02);
-
-                if (player instanceof ServerPlayer sPlayer && sLevel.getServer() != null) {
-                    int newRating = net.zootycoon.economy.ZooRatingManager.get(sLevel.getServer()).addRating(player.getUUID(), 2, sPlayer);
-                    net.zootycoon.network.ZooNetworkPayloads.sendToast(sPlayer, "zootycoon.toast.title.rating_up", "zootycoon.toast.rating.guide_success", 1, newRating);
-                }
-            }
         }
     }
 
@@ -1022,6 +1057,9 @@ public class ZooVisitorEntity extends PathfinderMob {
                         if (sl.getBlockEntity(targetPos) instanceof ToiletBlockEntity toilet) {
                             toilet.flush(sl);
                             toilet.releaseVisitorOccupant(visitor.getUUID());
+                        }
+                        if (visitor.guidedPlayerUuid != null) {
+                            visitor.completeGuideReward(sl, "TOILET");
                         }
                     }
 

@@ -121,3 +121,4 @@ public class ZooRatingManager {
         ServerPlayNetworking.send(player, new ZooNetworkPayloads.SyncRatingPayload(rating));
     }
 }
+
