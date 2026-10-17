@@ -15,6 +15,8 @@ fungsi yg udah fix (tidak boleh sampe rusak karena mengubah kode):
 2. Logic pemilihan zookeper untuk hewan
 3. Logic dan ui cashier
 4. logic antri
+5. pengunjung
+6. hunter
 
 fungsi yg akan ada tapi belum tanpil di ui/atau belum punya perilaku ke sistem hanya static:
 1. rating

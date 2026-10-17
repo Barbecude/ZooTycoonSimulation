@@ -12,14 +12,25 @@ import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.Containers;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+
+import java.util.UUID;
 
 public class ZooFeedingTroughBlockEntity extends BlockEntity implements Container {
 
     private final NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
     private int waterLevel = 0; // 0: no water, 1-3: water level
     private long placedGameTime = 0;
+
+    private int assignedAnimalId = -1;
+    private UUID assignedAnimalUuid = null;
+    private String assignedAnimalName = "";
+    private String assignedAnimalSpecies = "";
+    private String assignedFoodItemId = "";
 
     public ZooFeedingTroughBlockEntity(BlockPos pos, BlockState state) {
         super(ZooBlocks.FEEDING_TROUGH_BLOCK_ENTITY, pos, state);
@@ -97,6 +108,63 @@ public class ZooFeedingTroughBlockEntity extends BlockEntity implements Containe
         }
     }
 
+    public int getAssignedAnimalId() {
+        return assignedAnimalId;
+    }
+
+    public UUID getAssignedAnimalUuid() {
+        return assignedAnimalUuid;
+    }
+
+    public String getAssignedAnimalName() {
+        return assignedAnimalName;
+    }
+
+    public String getAssignedAnimalSpecies() {
+        return assignedAnimalSpecies;
+    }
+
+    public String getAssignedFoodItemId() {
+        return assignedFoodItemId;
+    }
+
+    public boolean isAssigned() {
+        return assignedAnimalUuid != null || !assignedAnimalSpecies.isEmpty();
+    }
+
+    public boolean isAssignedTo(Entity animal) {
+        if (animal == null) return false;
+        if (assignedAnimalUuid != null && assignedAnimalUuid.equals(animal.getUUID())) {
+            return true;
+        }
+        if (assignedAnimalId != -1 && assignedAnimalId == animal.getId()) {
+            return true;
+        }
+        ResourceLocation loc = BuiltInRegistries.ENTITY_TYPE.getKey(animal.getType());
+        if (loc != null && !assignedAnimalSpecies.isEmpty() && loc.toString().equalsIgnoreCase(assignedAnimalSpecies)) {
+            return true;
+        }
+        return false;
+    }
+
+    public void assignAnimal(UUID uuid, int id, String name, String species, String foodItem) {
+        this.assignedAnimalUuid = uuid;
+        this.assignedAnimalId = id;
+        this.assignedAnimalName = name != null ? name : "";
+        this.assignedAnimalSpecies = species != null ? species : "";
+        this.assignedFoodItemId = foodItem != null ? foodItem : "";
+        markUpdated();
+    }
+
+    public void clearAssignedAnimal() {
+        this.assignedAnimalUuid = null;
+        this.assignedAnimalId = -1;
+        this.assignedAnimalName = "";
+        this.assignedAnimalSpecies = "";
+        this.assignedFoodItemId = "";
+        markUpdated();
+    }
+
     private void markUpdated() {
         setChanged();
         if (level != null) {
@@ -109,6 +177,13 @@ public class ZooFeedingTroughBlockEntity extends BlockEntity implements Containe
         super.saveAdditional(tag, registries);
         ContainerHelper.saveAllItems(tag, items, registries);
         tag.putInt("WaterLevel", waterLevel);
+        if (assignedAnimalUuid != null) {
+            tag.putUUID("AssignedAnimalUuid", assignedAnimalUuid);
+        }
+        tag.putInt("AssignedAnimalId", assignedAnimalId);
+        tag.putString("AssignedAnimalName", assignedAnimalName);
+        tag.putString("AssignedAnimalSpecies", assignedAnimalSpecies);
+        tag.putString("AssignedFoodItemId", assignedFoodItemId);
     }
 
     @Override
@@ -117,6 +192,15 @@ public class ZooFeedingTroughBlockEntity extends BlockEntity implements Containe
         this.items.set(0, ItemStack.EMPTY);
         ContainerHelper.loadAllItems(tag, items, registries);
         this.waterLevel = tag.getInt("WaterLevel");
+        if (tag.hasUUID("AssignedAnimalUuid")) {
+            this.assignedAnimalUuid = tag.getUUID("AssignedAnimalUuid");
+        } else {
+            this.assignedAnimalUuid = null;
+        }
+        this.assignedAnimalId = tag.getInt("AssignedAnimalId");
+        this.assignedAnimalName = tag.getString("AssignedAnimalName");
+        this.assignedAnimalSpecies = tag.getString("AssignedAnimalSpecies");
+        this.assignedFoodItemId = tag.getString("AssignedFoodItemId");
     }
 
     @Override

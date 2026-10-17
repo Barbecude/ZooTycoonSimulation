@@ -15,6 +15,8 @@ import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -108,6 +110,12 @@ public class ZooVisitorEntity extends PathfinderMob {
     private static final net.minecraft.world.entity.ai.attributes.AttributeModifier SPRINT_MODIFIER =
             new net.minecraft.world.entity.ai.attributes.AttributeModifier(
                     SPRINT_MODIFIER_ID, 0.40D, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
+
+    private static final net.minecraft.resources.ResourceLocation CHILD_SPRINT_MODIFIER_ID =
+            ZooTycoonMod.id("visitor_child_sprint_boost");
+    private static final net.minecraft.world.entity.ai.attributes.AttributeModifier CHILD_SPRINT_MODIFIER =
+            new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+                    CHILD_SPRINT_MODIFIER_ID, 0.12D, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
 
     private BlockPos gatePos = null;
     private UUID guidingPlayerUuid = null;
@@ -689,8 +697,9 @@ public class ZooVisitorEntity extends PathfinderMob {
                     runBurstType = 0;
                     this.setSprinting(false);
                     var attr = this.getAttribute(Attributes.MOVEMENT_SPEED);
-                    if (attr != null && attr.hasModifier(SPRINT_MODIFIER_ID)) {
-                        attr.removeModifier(SPRINT_MODIFIER_ID);
+                    if (attr != null) {
+                        if (attr.hasModifier(SPRINT_MODIFIER_ID)) attr.removeModifier(SPRINT_MODIFIER_ID);
+                        if (attr.hasModifier(CHILD_SPRINT_MODIFIER_ID)) attr.removeModifier(CHILD_SPRINT_MODIFIER_ID);
                     }
                 }
             } else if (runBurstTimer > 0) {
@@ -698,8 +707,16 @@ public class ZooVisitorEntity extends PathfinderMob {
                 this.setSprinting(true);
 
                 var attr = this.getAttribute(Attributes.MOVEMENT_SPEED);
-                if (attr != null && !attr.hasModifier(SPRINT_MODIFIER_ID)) {
-                    attr.addTransientModifier(SPRINT_MODIFIER);
+                if (attr != null) {
+                    if (isChildVisitor()) {
+                        if (!attr.hasModifier(CHILD_SPRINT_MODIFIER_ID)) {
+                            attr.addTransientModifier(CHILD_SPRINT_MODIFIER);
+                        }
+                    } else {
+                        if (!attr.hasModifier(SPRINT_MODIFIER_ID)) {
+                            attr.addTransientModifier(SPRINT_MODIFIER);
+                        }
+                    }
                 }
 
                 if (runBurstType == 2) { // Lari sambil loncat
@@ -708,26 +725,27 @@ public class ZooVisitorEntity extends PathfinderMob {
                     }
                     if (jumpCooldown <= 0 && this.onGround() && this.getDeltaMovement().horizontalDistanceSqr() > 0.003D) {
                         this.getJumpControl().jump();
-                        jumpCooldown = 12 + this.random.nextInt(8); // jump cadence every ~0.6-1.0s
+                        jumpCooldown = isChildVisitor() ? 24 + this.random.nextInt(12) : 12 + this.random.nextInt(8); // child skips gently
                     }
                 }
 
                 if (runBurstTimer <= 0) {
                     this.setSprinting(false);
                     runBurstType = 0;
-                    if (attr != null && attr.hasModifier(SPRINT_MODIFIER_ID)) {
-                        attr.removeModifier(SPRINT_MODIFIER_ID);
+                    if (attr != null) {
+                        if (attr.hasModifier(SPRINT_MODIFIER_ID)) attr.removeModifier(SPRINT_MODIFIER_ID);
+                        if (attr.hasModifier(CHILD_SPRINT_MODIFIER_ID)) attr.removeModifier(CHILD_SPRINT_MODIFIER_ID);
                     }
                 }
             } else {
                 // Periodically decide if visitor wants a burst of excitement/running
-                int interval = isChildVisitor() ? 50 : 90;
+                int interval = isChildVisitor() ? 70 : 90;
                 if (this.tickCount % interval == 0) {
-                    float chance = isChildVisitor() ? 0.30F : 0.12F;
+                    float chance = isChildVisitor() ? 0.20F : 0.12F;
                     if (this.random.nextFloat() < chance && (!this.getNavigation().isDone() || this.getDeltaMovement().horizontalDistanceSqr() > 0.002D)) {
-                        runBurstTimer = 40 + this.random.nextInt(60); // 2 to 5 seconds
-                        runBurstType = this.random.nextBoolean() ? 1 : 2; // 50% run only, 50% run and jump!
-                        jumpCooldown = 4;
+                        runBurstTimer = isChildVisitor() ? (20 + this.random.nextInt(25)) : (40 + this.random.nextInt(60)); // shorter, gentle sprint for children
+                        runBurstType = this.random.nextBoolean() ? 1 : 2;
+                        jumpCooldown = 6;
                         this.setSprinting(true);
                     }
                 }
@@ -1006,15 +1024,22 @@ public class ZooVisitorEntity extends PathfinderMob {
         }
 
         this.escapeTarget = new BlockPos((int) targetX, ty, (int) targetZ);
-        this.escapeTicks = 70; // 3.5 seconds
-        this.runBurstTimer = 70;
+        boolean isChild = this.isChildVisitor();
+        int burstTicks = isChild ? 40 : 70;
+        this.escapeTicks = burstTicks;
+        this.runBurstTimer = burstTicks;
         this.runBurstType = 1;
         this.setSprinting(true);
         var attr = this.getAttribute(Attributes.MOVEMENT_SPEED);
-        if (attr != null && !attr.hasModifier(SPRINT_MODIFIER_ID)) {
-            attr.addTransientModifier(SPRINT_MODIFIER);
+        if (attr != null) {
+            ResourceLocation modId = isChild ? CHILD_SPRINT_MODIFIER_ID : SPRINT_MODIFIER_ID;
+            AttributeModifier mod = isChild ? CHILD_SPRINT_MODIFIER : SPRINT_MODIFIER;
+            if (!attr.hasModifier(modId)) {
+                attr.addTransientModifier(mod);
+            }
         }
-        this.getNavigation().moveTo(this.escapeTarget.getX() + 0.5D, this.escapeTarget.getY(), this.escapeTarget.getZ() + 0.5D, 1.35D);
+        double navSpeed = isChild ? 1.05D : 1.35D;
+        this.getNavigation().moveTo(this.escapeTarget.getX() + 0.5D, this.escapeTarget.getY(), this.escapeTarget.getZ() + 0.5D, navSpeed);
     }
 
     public void completeGuideReward(net.minecraft.server.level.ServerLevel sLevel, String facilityType) {
@@ -1076,11 +1101,12 @@ public class ZooVisitorEntity extends PathfinderMob {
         public void start() {
             if (visitor.escapeTarget != null) {
                 visitor.setSprinting(true);
+                double navSpeed = visitor.isChildVisitor() ? 1.05D : 1.35D;
                 visitor.getNavigation().moveTo(
                         visitor.escapeTarget.getX() + 0.5D,
                         visitor.escapeTarget.getY(),
                         visitor.escapeTarget.getZ() + 0.5D,
-                        1.35D
+                        navSpeed
                 );
             }
         }
@@ -1098,11 +1124,12 @@ public class ZooVisitorEntity extends PathfinderMob {
                     visitor.escapeTarget = null;
                     visitor.getNavigation().stop();
                 } else if (visitor.getNavigation().isDone() || visitor.tickCount % 15 == 0) {
+                    double navSpeed = visitor.isChildVisitor() ? 1.05D : 1.35D;
                     visitor.getNavigation().moveTo(
                             visitor.escapeTarget.getX() + 0.5D,
                             visitor.escapeTarget.getY(),
                             visitor.escapeTarget.getZ() + 0.5D,
-                            1.35D
+                            navSpeed
                     );
                 }
             }
@@ -1114,8 +1141,13 @@ public class ZooVisitorEntity extends PathfinderMob {
             visitor.escapeTicks = 0;
             visitor.setSprinting(false);
             var attr = visitor.getAttribute(Attributes.MOVEMENT_SPEED);
-            if (attr != null && attr.hasModifier(SPRINT_MODIFIER_ID)) {
-                attr.removeModifier(SPRINT_MODIFIER_ID);
+            if (attr != null) {
+                if (attr.hasModifier(SPRINT_MODIFIER_ID)) {
+                    attr.removeModifier(SPRINT_MODIFIER_ID);
+                }
+                if (attr.hasModifier(CHILD_SPRINT_MODIFIER_ID)) {
+                    attr.removeModifier(CHILD_SPRINT_MODIFIER_ID);
+                }
             }
         }
     }

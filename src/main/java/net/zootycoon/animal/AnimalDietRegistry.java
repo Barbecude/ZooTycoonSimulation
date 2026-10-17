@@ -127,6 +127,14 @@ public class AnimalDietRegistry {
         DIET_REGISTRY.put(entityTypeId.toLowerCase(Locale.ROOT), new AnimalDiet(feedingType, description, foods));
     }
 
+    public static AnimalDiet getDiet(String entityTypeId) {
+        if (entityTypeId == null || entityTypeId.isEmpty()) return getFallbackDiet(null);
+        String key = entityTypeId.toLowerCase(Locale.ROOT);
+        AnimalDiet diet = DIET_REGISTRY.get(key);
+        if (diet != null) return diet;
+        return getFallbackDiet(null);
+    }
+
     public static AnimalDiet getDiet(Entity entity) {
         if (entity == null) return getFallbackDiet(null);
         ResourceLocation id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());

@@ -353,6 +353,22 @@ public class ZooTycoonClient implements ClientModInitializer {
             });
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.OpenFeedingTroughScreenPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                Minecraft.getInstance().setScreen(new net.zootycoon.client.ui.FeedingTroughDialogScreen(
+                        payload.pos(),
+                        payload.assignedAnimalId(),
+                        payload.assignedAnimalUuid(),
+                        payload.assignedAnimalName(),
+                        payload.assignedAnimalSpecies(),
+                        payload.assignedFoodItemId(),
+                        payload.foodCount(),
+                        payload.foodItemKey(),
+                        payload.waterLevel()
+                ));
+            });
+        });
+
         ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.SyncRatingPayload.TYPE, (payload, context) -> {
             context.client().execute(() -> {
                 clientZooRating = payload.rating();

@@ -146,13 +146,11 @@ public class ZooFeedingTroughBlock extends BaseEntityBlock {
             return ItemInteractionResult.SUCCESS;
         }
 
-        // 3. Insert Food if holding food and trough does not have water
-        if (!stack.isEmpty() && !trough.hasWater()) {
+        // 3. Shift-Right-Click with food to insert directly
+        if (player.isShiftKeyDown() && !stack.isEmpty() && !trough.hasWater()) {
             boolean isAnimalFood = AnimalDietRegistry.isAnyFood(stack) || AnimalDietRegistry.isAnyTroughFood(stack);
-
             if (isAnimalFood) {
-                int insertCount = player.isShiftKeyDown() ? stack.getCount() : 1;
-                boolean inserted = trough.insertFood(stack, insertCount);
+                boolean inserted = trough.insertFood(stack, stack.getCount());
                 if (inserted) {
                     if (!level.isClientSide()) {
                         level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8f, 1.2f);
@@ -162,21 +160,55 @@ public class ZooFeedingTroughBlock extends BaseEntityBlock {
             }
         }
 
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        // 4. Normal Right-Click: Open Feeding Trough Selection Dialog Screen
+        if (!level.isClientSide() && player instanceof net.minecraft.server.level.ServerPlayer sp) {
+            String foodKey = trough.hasFood() ? net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(trough.getFoodStack().getItem()).toString() : "";
+            net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(sp, new net.zootycoon.network.ZooNetworkPayloads.OpenFeedingTroughScreenPayload(
+                    pos,
+                    trough.getAssignedAnimalId(),
+                    trough.getAssignedAnimalUuid() != null ? trough.getAssignedAnimalUuid().toString() : "",
+                    trough.getAssignedAnimalName(),
+                    trough.getAssignedAnimalSpecies(),
+                    trough.getAssignedFoodItemId(),
+                    trough.getFoodStack().getCount(),
+                    foodKey,
+                    trough.getWaterLevel()
+            ));
+        }
+
+        return ItemInteractionResult.sidedSuccess(level.isClientSide());
     }
 
     @Override
     protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
         BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof ZooFeedingTroughBlockEntity trough && !trough.isEmpty() && !trough.hasWater()) {
-            if (!level.isClientSide()) {
-                ItemStack removed = trough.extractFood(player.isShiftKeyDown() ? 64 : 1);
-                if (!removed.isEmpty()) {
-                    if (!player.getInventory().add(removed)) {
-                        player.drop(removed, false);
+        if (be instanceof ZooFeedingTroughBlockEntity trough) {
+            if (player.isShiftKeyDown() && !trough.isEmpty() && !trough.hasWater()) {
+                if (!level.isClientSide()) {
+                    ItemStack removed = trough.extractFood(64);
+                    if (!removed.isEmpty()) {
+                        if (!player.getInventory().add(removed)) {
+                            player.drop(removed, false);
+                        }
+                        level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8f, 1.0f);
                     }
-                    level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8f, 1.0f);
                 }
+                return net.minecraft.world.InteractionResult.sidedSuccess(level.isClientSide());
+            }
+
+            if (!level.isClientSide() && player instanceof net.minecraft.server.level.ServerPlayer sp) {
+                String foodKey = trough.hasFood() ? net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(trough.getFoodStack().getItem()).toString() : "";
+                net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(sp, new net.zootycoon.network.ZooNetworkPayloads.OpenFeedingTroughScreenPayload(
+                        pos,
+                        trough.getAssignedAnimalId(),
+                        trough.getAssignedAnimalUuid() != null ? trough.getAssignedAnimalUuid().toString() : "",
+                        trough.getAssignedAnimalName(),
+                        trough.getAssignedAnimalSpecies(),
+                        trough.getAssignedFoodItemId(),
+                        trough.getFoodStack().getCount(),
+                        foodKey,
+                        trough.getWaterLevel()
+                ));
             }
             return net.minecraft.world.InteractionResult.sidedSuccess(level.isClientSide());
         }

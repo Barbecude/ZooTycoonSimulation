@@ -96,6 +96,14 @@ public class ZooButton extends AbstractWidget {
         return this;
     }
 
+    public ZooButton asSecondary() {
+        this.borderColor = 0xFF282E3B;
+        this.hoverBorderColor = 0xFF38BDF8;
+        this.hoverBgColor = 0xFF1C2536;
+        this.hoverTextColor = 0xFFFFFFFF;
+        return this;
+    }
+
     public ZooButton asEmerald() {
         // Essential-Mod slate with clean white border hover
         this.borderColor = 0xFF3A4456;

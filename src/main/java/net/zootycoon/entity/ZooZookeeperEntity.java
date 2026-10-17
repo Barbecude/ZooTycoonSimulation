@@ -70,7 +70,7 @@ public class ZooZookeeperEntity extends PathfinderMob {
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
-        builder.define(FOOD_STOCK_DATA, 16); // Starts with 16 food units
+        builder.define(FOOD_STOCK_DATA, 0); // Starts with 0 food units (player supplies food)
         builder.define(SWEEPING, false);
     }
 
@@ -315,49 +315,58 @@ public class ZooZookeeperEntity extends PathfinderMob {
         this.entityData.set(SWEEPING, false);
 
         // ========================================================
-        // 2. PRIORITY 2: Check Feeding Trough if assigned animal is hungry (<= 25% hunger)
+        // 2. PRIORITY 2: Check Feeding Trough for assigned animal
+        // Prioritize designated trough specifically assigned to this animal
         // ========================================================
         if (assignedAnimal != null) {
-            int animalHunger = ZooAnimalHungerManager.getHunger(assignedAnimal);
-            if (animalHunger <= 25) {
-                var diet = AnimalDietRegistry.getDiet(assignedAnimal);
-                Item targetFoodItem = Items.WHEAT;
-                if (diet != null && !diet.acceptedFoods.isEmpty()) {
-                    targetFoodItem = diet.acceptedFoods.get(0);
-                } else if (assignedAnimal instanceof net.minecraft.world.entity.animal.Animal a) {
-                    if (a.isFood(new ItemStack(Items.CARROT))) targetFoodItem = Items.CARROT;
-                    else if (a.isFood(new ItemStack(Items.WHEAT_SEEDS))) targetFoodItem = Items.WHEAT_SEEDS;
-                    else if (a.isFood(new ItemStack(Items.BAMBOO))) targetFoodItem = Items.BAMBOO;
-                    else if (a.isFood(new ItemStack(Items.APPLE))) targetFoodItem = Items.APPLE;
-                }
+            var diet = AnimalDietRegistry.getDiet(assignedAnimal);
+            Item targetFoodItem = Items.WHEAT;
+            if (diet != null && !diet.acceptedFoods.isEmpty()) {
+                targetFoodItem = diet.acceptedFoods.get(0);
+            } else if (assignedAnimal instanceof net.minecraft.world.entity.animal.Animal a) {
+                if (a.isFood(new ItemStack(Items.CARROT))) targetFoodItem = Items.CARROT;
+                else if (a.isFood(new ItemStack(Items.WHEAT_SEEDS))) targetFoodItem = Items.WHEAT_SEEDS;
+                else if (a.isFood(new ItemStack(Items.BAMBOO))) targetFoodItem = Items.BAMBOO;
+                else if (a.isFood(new ItemStack(Items.APPLE))) targetFoodItem = Items.APPLE;
+            }
 
-                BlockPos needRefillTrough = null;
-                double minTroughDistSq = Double.MAX_VALUE;
+            BlockPos designatedTrough = null;
+            double minAssignedDistSq = Double.MAX_VALUE;
 
-                for (BlockPos troughPos : ZooFeedingTroughBlock.KNOWN_TROUGHS) {
-                    if (ownerUuid != null && !claimManager.isClaimedBy(troughPos, ownerUuid)) continue;
-                    double distSq = myPos.distSqr(troughPos);
-                    if (distSq > 32 * 32) continue;
+            BlockPos fallbackTrough = null;
+            double minFallbackDistSq = Double.MAX_VALUE;
 
-                    BlockEntity be = sLevel.getBlockEntity(troughPos);
-                    if (be instanceof ZooFeedingTroughBlockEntity troughBe) {
-                        if (troughBe.hasWater()) continue;
-                        ItemStack foodInTrough = troughBe.getFoodStack();
-                        boolean matchingFood = foodInTrough.is(targetFoodItem) && foodInTrough.getCount() < 24;
-                        boolean emptyForMyAnimal = foodInTrough.isEmpty()
-                                && !troughBe.isPlacementCooldown(sLevel.getGameTime())
-                                && assignedAnimal.blockPosition().distSqr(troughPos) <= 24 * 24;
+            for (BlockPos troughPos : ZooFeedingTroughBlock.KNOWN_TROUGHS) {
+                if (ownerUuid != null && !claimManager.isClaimedBy(troughPos, ownerUuid)) continue;
+                double distSq = myPos.distSqr(troughPos);
+                if (distSq > 48 * 48) continue;
 
-                        if (matchingFood || emptyForMyAnimal) {
-                            if (distSq < minTroughDistSq) {
-                                minTroughDistSq = distSq;
-                                needRefillTrough = troughPos;
+                BlockEntity be = sLevel.getBlockEntity(troughPos);
+                if (be instanceof ZooFeedingTroughBlockEntity troughBe) {
+                    if (troughBe.hasWater()) continue;
+                    ItemStack foodInTrough = troughBe.getFoodStack();
+                    boolean needsFood = foodInTrough.isEmpty() || (foodInTrough.is(targetFoodItem) && foodInTrough.getCount() < 32);
+
+                    if (needsFood) {
+                        if (troughBe.isAssignedTo(assignedAnimal)) {
+                            if (distSq < minAssignedDistSq) {
+                                minAssignedDistSq = distSq;
+                                designatedTrough = troughPos;
+                            }
+                        } else if (!troughBe.isAssigned() && assignedAnimal.blockPosition().distSqr(troughPos) <= 24 * 24) {
+                            if (distSq < minFallbackDistSq) {
+                                minFallbackDistSq = distSq;
+                                fallbackTrough = troughPos;
                             }
                         }
                     }
                 }
+            }
 
-                if (needRefillTrough != null) {
+            BlockPos needRefillTrough = (designatedTrough != null) ? designatedTrough : fallbackTrough;
+
+            if (needRefillTrough != null) {
+                if (this.getFoodStock() > 0) {
                     currentDutyState = "REFILL";
                     this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(targetFoodItem));
 
@@ -368,13 +377,19 @@ public class ZooZookeeperEntity extends PathfinderMob {
                         // Refill the trough with the assigned animal's food!
                         BlockEntity be = sLevel.getBlockEntity(needRefillTrough);
                         if (be instanceof ZooFeedingTroughBlockEntity troughBe) {
-                            troughBe.insertFood(new ItemStack(targetFoodItem, 8), 8);
-                            sLevel.playSound(null, needRefillTrough, SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.9f, 1.2f);
-                            sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, needRefillTrough.getX() + 0.5, needRefillTrough.getY() + 0.8, needRefillTrough.getZ() + 0.5, 6, 0.2, 0.2, 0.2, 0.02);
-                            actionCooldown = 60; // 3 seconds cooldown between refills
+                            int toInsert = Math.min(8, this.getFoodStock());
+                            boolean inserted = troughBe.insertFood(new ItemStack(targetFoodItem, toInsert), toInsert);
+                            if (inserted) {
+                                this.setFoodStock(this.getFoodStock() - toInsert);
+                                sLevel.playSound(null, needRefillTrough, SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.9f, 1.2f);
+                                sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, needRefillTrough.getX() + 0.5, needRefillTrough.getY() + 0.8, needRefillTrough.getZ() + 0.5, 6, 0.2, 0.2, 0.2, 0.02);
+                                actionCooldown = 40; // 2 seconds cooldown between refills
+                            }
                         }
                     }
                     return;
+                } else {
+                    currentDutyState = "NEED_FOOD";
                 }
             }
         }

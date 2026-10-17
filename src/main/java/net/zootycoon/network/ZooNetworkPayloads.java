@@ -806,6 +806,98 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // 22. Open Feeding Trough Screen Payload (S2C)
+    public record OpenFeedingTroughScreenPayload(
+            BlockPos pos,
+            int assignedAnimalId,
+            String assignedAnimalUuid,
+            String assignedAnimalName,
+            String assignedAnimalSpecies,
+            String assignedFoodItemId,
+            int foodCount,
+            String foodItemKey,
+            int waterLevel
+    ) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<OpenFeedingTroughScreenPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("open_feeding_trough_screen"));
+        public static final StreamCodec<FriendlyByteBuf, OpenFeedingTroughScreenPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeBlockPos(payload.pos);
+                    buf.writeInt(payload.assignedAnimalId);
+                    buf.writeUtf(payload.assignedAnimalUuid != null ? payload.assignedAnimalUuid : "");
+                    buf.writeUtf(payload.assignedAnimalName != null ? payload.assignedAnimalName : "");
+                    buf.writeUtf(payload.assignedAnimalSpecies != null ? payload.assignedAnimalSpecies : "");
+                    buf.writeUtf(payload.assignedFoodItemId != null ? payload.assignedFoodItemId : "");
+                    buf.writeInt(payload.foodCount);
+                    buf.writeUtf(payload.foodItemKey != null ? payload.foodItemKey : "");
+                    buf.writeInt(payload.waterLevel);
+                },
+                buf -> new OpenFeedingTroughScreenPayload(
+                        buf.readBlockPos(),
+                        buf.readInt(),
+                        buf.readUtf(),
+                        buf.readUtf(),
+                        buf.readUtf(),
+                        buf.readUtf(),
+                        buf.readInt(),
+                        buf.readUtf(),
+                        buf.readInt()
+                )
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 23. Select Feeding Trough Animal Payload (C2S)
+    public record SelectFeedingTroughAnimalPayload(
+            BlockPos pos,
+            int animalEntityId,
+            String animalUuid,
+            String animalName,
+            String animalSpecies
+    ) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<SelectFeedingTroughAnimalPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("select_feeding_trough_animal"));
+        public static final StreamCodec<FriendlyByteBuf, SelectFeedingTroughAnimalPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeBlockPos(payload.pos);
+                    buf.writeInt(payload.animalEntityId);
+                    buf.writeUtf(payload.animalUuid != null ? payload.animalUuid : "");
+                    buf.writeUtf(payload.animalName != null ? payload.animalName : "");
+                    buf.writeUtf(payload.animalSpecies != null ? payload.animalSpecies : "");
+                },
+                buf -> new SelectFeedingTroughAnimalPayload(
+                        buf.readBlockPos(),
+                        buf.readInt(),
+                        buf.readUtf(),
+                        buf.readUtf(),
+                        buf.readUtf()
+                )
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 24. Clear Feeding Trough Animal Payload (C2S)
+    public record ClearFeedingTroughAnimalPayload(BlockPos pos) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<ClearFeedingTroughAnimalPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("clear_feeding_trough_animal"));
+        public static final StreamCodec<FriendlyByteBuf, ClearFeedingTroughAnimalPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> buf.writeBlockPos(payload.pos),
+                buf -> new ClearFeedingTroughAnimalPayload(buf.readBlockPos())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 25. Deposit Trough Food Payload (C2S)
+    public record DepositTroughFoodPayload(BlockPos pos) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<DepositTroughFoodPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("deposit_trough_food"));
+        public static final StreamCodec<FriendlyByteBuf, DepositTroughFoodPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> buf.writeBlockPos(payload.pos),
+                buf -> new DepositTroughFoodPayload(buf.readBlockPos())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     public static void sendToast(ServerPlayer player, String titleKey, String msgKey, int toastType, Object... args) {
         if (player == null) return;
         List<String> strArgs = new ArrayList<>();
@@ -843,6 +935,9 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playC2S().register(CashierSlotClickPayload.TYPE, CashierSlotClickPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RotateCashierPayload.TYPE, RotateCashierPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(AssignZookeeperPayload.TYPE, AssignZookeeperPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(SelectFeedingTroughAnimalPayload.TYPE, SelectFeedingTroughAnimalPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(ClearFeedingTroughAnimalPayload.TYPE, ClearFeedingTroughAnimalPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(DepositTroughFoodPayload.TYPE, DepositTroughFoodPayload.CODEC);
 
         PayloadTypeRegistry.playS2C().register(SyncClaimsPayload.TYPE, SyncClaimsPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncStudioStatePayload.TYPE, SyncStudioStatePayload.CODEC);
@@ -852,6 +947,7 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playS2C().register(OpenSecurityScreenPayload.TYPE, OpenSecurityScreenPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenVisitorScreenPayload.TYPE, OpenVisitorScreenPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenCashierScreenPayload.TYPE, OpenCashierScreenPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(OpenFeedingTroughScreenPayload.TYPE, OpenFeedingTroughScreenPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncAnimalsPayload.TYPE, SyncAnimalsPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncZookeepersPayload.TYPE, SyncZookeepersPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncEmeraldBalancePayload.TYPE, SyncEmeraldBalancePayload.CODEC);
@@ -1379,6 +1475,91 @@ public class ZooNetworkPayloads {
                         sendAnimalSync(player);
                         sendToast(player, "zootycoon.toast.title.success", "zootycoon.ui.animals.zookeeper_assigned_toast", 1);
                         break;
+                    }
+                }
+            });
+        });
+
+        // Handler: Select Animal for Feeding Trough
+        ServerPlayNetworking.registerGlobalReceiver(SelectFeedingTroughAnimalPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                ServerLevel sLevel = player.serverLevel();
+                net.minecraft.world.level.block.entity.BlockEntity be = sLevel.getBlockEntity(payload.pos());
+                if (be instanceof net.zootycoon.block.ZooFeedingTroughBlockEntity trough) {
+                    net.minecraft.world.entity.Entity ent = sLevel.getEntity(payload.animalEntityId());
+                    UUID animalUuid = null;
+                    if (ent != null) {
+                        animalUuid = ent.getUUID();
+                    } else if (payload.animalUuid() != null && !payload.animalUuid().isEmpty()) {
+                        try {
+                            animalUuid = UUID.fromString(payload.animalUuid());
+                        } catch (Exception ignored) {}
+                    }
+
+                    net.minecraft.world.item.Item requiredFood = net.minecraft.world.item.Items.WHEAT;
+                    if (ent != null) {
+                        var diet = net.zootycoon.animal.AnimalDietRegistry.getDiet(ent);
+                        if (diet != null && !diet.acceptedFoods.isEmpty()) {
+                            requiredFood = diet.acceptedFoods.get(0);
+                        }
+                    } else {
+                        var diet = net.zootycoon.animal.AnimalDietRegistry.getDiet(payload.animalSpecies());
+                        if (diet != null && !diet.acceptedFoods.isEmpty()) {
+                            requiredFood = diet.acceptedFoods.get(0);
+                        }
+                    }
+
+                    String foodKey = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(requiredFood).toString();
+                    trough.assignAnimal(animalUuid, payload.animalEntityId(), payload.animalName(), payload.animalSpecies(), foodKey);
+                    sLevel.playSound(null, payload.pos(), net.minecraft.sounds.SoundEvents.NOTE_BLOCK_BELL.value(), net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 1.2f);
+                    sLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, payload.pos().getX() + 0.5, payload.pos().getY() + 0.8, payload.pos().getZ() + 0.5, 6, 0.2, 0.2, 0.2, 0.02);
+                    sendToast(player, "zootycoon.toast.title.success", "Tempat pakan terhubung ke " + payload.animalName(), 1);
+                }
+            });
+        });
+
+        // Handler: Clear Feeding Trough Animal
+        ServerPlayNetworking.registerGlobalReceiver(ClearFeedingTroughAnimalPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                ServerLevel sLevel = player.serverLevel();
+                net.minecraft.world.level.block.entity.BlockEntity be = sLevel.getBlockEntity(payload.pos());
+                if (be instanceof net.zootycoon.block.ZooFeedingTroughBlockEntity trough) {
+                    trough.clearAssignedAnimal();
+                    sLevel.playSound(null, payload.pos(), net.minecraft.sounds.SoundEvents.ITEM_PICKUP, net.minecraft.sounds.SoundSource.BLOCKS, 0.8f, 0.9f);
+                    sendToast(player, "zootycoon.toast.title.info", "Hubungan tempat pakan dilepas", 2);
+                }
+            });
+        });
+
+        // Handler: Deposit Trough Food from Inventory
+        ServerPlayNetworking.registerGlobalReceiver(DepositTroughFoodPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                ServerLevel sLevel = player.serverLevel();
+                net.minecraft.world.level.block.entity.BlockEntity be = sLevel.getBlockEntity(payload.pos());
+                if (be instanceof net.zootycoon.block.ZooFeedingTroughBlockEntity trough && !trough.hasWater()) {
+                    int deposited = 0;
+                    for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                        ItemStack st = player.getInventory().getItem(i);
+                        if (!st.isEmpty()) {
+                            boolean isFood = net.zootycoon.animal.AnimalDietRegistry.isAnyFood(st) || net.zootycoon.animal.AnimalDietRegistry.isAnyTroughFood(st);
+                            if (isFood) {
+                                int toAdd = Math.min(st.getCount(), 64 - trough.getFoodStack().getCount());
+                                if (toAdd > 0 && trough.insertFood(st, toAdd)) {
+                                    deposited += toAdd;
+                                    if (trough.getFoodStack().getCount() >= 64) break;
+                                }
+                            }
+                        }
+                    }
+                    if (deposited > 0) {
+                        player.getInventory().setChanged();
+                        sLevel.playSound(null, payload.pos(), net.minecraft.sounds.SoundEvents.ITEM_PICKUP, net.minecraft.sounds.SoundSource.BLOCKS, 0.9f, 1.2f);
+                        sendToast(player, "zootycoon.toast.title.success", "Berhasil memasukkan " + deposited + " pakan!", 1);
+                    } else {
+                        sendToast(player, "zootycoon.toast.title.warning", "Tidak ada pakan yang cocok di inventory", 2);
                     }
                 }
             });
