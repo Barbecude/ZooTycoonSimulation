@@ -1235,8 +1235,11 @@ public class ZooVisitorEntity extends PathfinderMob {
                 targetSlot = targetTicketCashier.getQueueSlotPos(targetTicketCashier.getQueueSize());
             }
 
-            double distToSlotSq = visitor.distanceToSqr(targetSlot.getX() + 0.5D, targetSlot.getY(), targetSlot.getZ() + 0.5D);
-            if (distToSlotSq <= 0.65D) {
+            double dx = visitor.getX() - (targetSlot.getX() + 0.5D);
+            double dz = visitor.getZ() - (targetSlot.getZ() + 0.5D);
+            double horizDistSq = dx * dx + dz * dz;
+            double dy = Math.abs(visitor.getY() - targetSlot.getY());
+            if (horizDistSq <= 0.85D && dy <= 1.5D) {
                 visitor.getNavigation().stop();
                 return;
             }
@@ -1358,8 +1361,11 @@ public class ZooVisitorEntity extends PathfinderMob {
                 targetSlot = targetCashier.getQueueSlotPos(targetCashier.getQueueSize());
             }
 
-            double distToSlotSq = visitor.distanceToSqr(targetSlot.getX() + 0.5D, targetSlot.getY(), targetSlot.getZ() + 0.5D);
-            if (distToSlotSq <= 0.65D) {
+            double dx = visitor.getX() - (targetSlot.getX() + 0.5D);
+            double dz = visitor.getZ() - (targetSlot.getZ() + 0.5D);
+            double horizDistSq = dx * dx + dz * dz;
+            double dy = Math.abs(visitor.getY() - targetSlot.getY());
+            if (horizDistSq <= 0.85D && dy <= 1.5D) {
                 visitor.getNavigation().stop();
                 return;
             }
