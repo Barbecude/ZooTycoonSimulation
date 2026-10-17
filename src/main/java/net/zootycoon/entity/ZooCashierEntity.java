@@ -486,8 +486,8 @@ public class ZooCashierEntity extends PathfinderMob {
                 }
             }
 
-            // 2. Start new service for queued visitors (checked periodically every 5 ticks when serveCooldown <= 0)
-            if (this.tickCount % 5 == 0 && serveCooldown <= 0) {
+            // 2. Start new service for queued visitors (checked periodically when serveCooldown <= 0)
+            if (this.tickCount % 10 == 0 && serveCooldown <= 0) {
                 if ("BURGER".equals(role)) {
                     if (!isOutOfStock()) {
                         ZooVisitorEntity customer = resolveNextReadyCustomer(sLevel, role);
@@ -503,7 +503,7 @@ public class ZooCashierEntity extends PathfinderMob {
                                     customer.completeGuideReward(sLevel, "BURGER");
                                 }
                                 customer.onTransactionComplete(this.blockPosition(), "BURGER", soldBurger, false);
-                                serveCooldown = 20;
+                                serveCooldown = 35;
                             }
                         }
                     }
@@ -522,7 +522,7 @@ public class ZooCashierEntity extends PathfinderMob {
                                     customer.completeGuideReward(sLevel, "DRINK");
                                 }
                                 customer.onTransactionComplete(this.blockPosition(), "DRINK", soldDrink, true);
-                                serveCooldown = 20;
+                                serveCooldown = 35;
                             }
                         }
                     }
@@ -541,7 +541,7 @@ public class ZooCashierEntity extends PathfinderMob {
                                 sLevel.playSound(null, this.blockPosition(), SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.NEUTRAL, 0.8F, 1.4F);
                                 sLevel.sendParticles(ParticleTypes.HEART, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 5, 0.25, 0.25, 0.25, 0.02);
                                 customer.onTransactionComplete(this.blockPosition(), "SOUVENIR", ItemStack.EMPTY, false);
-                                serveCooldown = 25;
+                                serveCooldown = 50;
                             }
                         }
                     }
