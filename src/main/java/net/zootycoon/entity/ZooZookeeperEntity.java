@@ -80,7 +80,7 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
         if (!level.isClientSide()) {
             int nameIdx = this.random.nextInt(NAMES.length);
-            this.setCustomName(Component.literal(NAMES[nameIdx] + " - Zookeeper"));
+            this.setCustomName(Component.literal(NAMES[nameIdx]));
             this.setCustomNameVisible(true);
             this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
             this.addTag("zootycoon_staff");
@@ -188,6 +188,19 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
         if (actionCooldown > 0) actionCooldown--;
 
+        // Sanitize legacy custom name if it contains " - Zookeeper" or "Zookeeper"
+        Component cn = this.getCustomName();
+        if (cn != null) {
+            String str = cn.getString();
+            if (str.contains(" - Zookeeper") || str.contains("Zookeeper - ") || str.equalsIgnoreCase("Zookeeper")) {
+                String cleaned = str.replace(" - Zookeeper", "").replace("Zookeeper - ", "").trim();
+                if (cleaned.isEmpty() || cleaned.equalsIgnoreCase("Zookeeper")) {
+                    cleaned = NAMES[Math.abs(this.getUUID().hashCode()) % NAMES.length];
+                }
+                this.setCustomName(Component.literal(cleaned));
+            }
+        }
+
         ZooClaimManager claimManager = ZooClaimManager.get(sLevel);
         if (ownerUuid == null && this.tickCount % 20 == 0) {
             ZooClaim nearest = findClosestClaim(claimManager);
@@ -264,51 +277,61 @@ public class ZooZookeeperEntity extends PathfinderMob {
         }
 
         // ========================================================
-        // 1. PRIORITY 1: Check Visitor Litter (TrashBlock) & Sweep
-        // As requested: clean trash first, then return to following animal
+        // 1. Zookeepers with an assigned animal will NEVER sweep trash!
+        // Only unassigned zookeepers sweep and clean visitor litter.
         // ========================================================
-        BlockPos nearestTrash = null;
-        double minTrashDistSq = Double.MAX_VALUE;
+        if (assignedAnimal == null) {
+            BlockPos nearestTrash = null;
+            double minTrashDistSq = Double.MAX_VALUE;
 
-        for (int dx = -14; dx <= 14; dx += 2) {
-            for (int dz = -14; dz <= 14; dz += 2) {
-                for (int dy = -2; dy <= 2; dy++) {
-                    BlockPos p = myPos.offset(dx, dy, dz);
-                    if (sLevel.getBlockState(p).is(ZooBlocks.TRASH)) {
-                        if (ownerUuid != null && !claimManager.isClaimedBy(p, ownerUuid)) continue;
-                        double d = myPos.distSqr(p);
-                        if (d < minTrashDistSq) {
-                            minTrashDistSq = d;
-                            nearestTrash = p.immutable();
+            for (int dx = -14; dx <= 14; dx += 2) {
+                for (int dz = -14; dz <= 14; dz += 2) {
+                    for (int dy = -2; dy <= 2; dy++) {
+                        BlockPos p = myPos.offset(dx, dy, dz);
+                        if (sLevel.getBlockState(p).is(ZooBlocks.TRASH)) {
+                            if (ownerUuid != null && !claimManager.isClaimedBy(p, ownerUuid)) continue;
+                            double d = myPos.distSqr(p);
+                            if (d < minTrashDistSq) {
+                                minTrashDistSq = d;
+                                nearestTrash = p.immutable();
+                            }
                         }
                     }
                 }
             }
-        }
 
-        if (nearestTrash != null) {
-            currentDutyState = "SWEEPING";
-            this.entityData.set(SWEEPING, true);
-            // Hold broom in hand
-            if (!this.getMainHandItem().is(ZooItems.BROOM)) {
-                this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ZooItems.BROOM));
+            if (nearestTrash != null) {
+                currentDutyState = "SWEEPING";
+                this.entityData.set(SWEEPING, true);
+                // Hold broom in hand
+                if (!this.getMainHandItem().is(ZooItems.BROOM)) {
+                    this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ZooItems.BROOM));
+                }
+
+                double distSq = this.distanceToSqr(nearestTrash.getX() + 0.5, nearestTrash.getY(), nearestTrash.getZ() + 0.5);
+                if (distSq > 2.2 * 2.2) {
+                    this.getNavigation().moveTo(nearestTrash.getX() + 0.5, nearestTrash.getY(), nearestTrash.getZ() + 0.5, 1.15);
+                } else {
+                    // Sweep litter!
+                    this.swing(InteractionHand.MAIN_HAND);
+                    sLevel.playSound(null, nearestTrash, SoundEvents.BRUSH_GENERIC, SoundSource.BLOCKS, 1.0f, 1.0f);
+                    sLevel.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, nearestTrash.getX() + 0.5, nearestTrash.getY() + 0.3, nearestTrash.getZ() + 0.5, 6, 0.2, 0.1, 0.2, 0.02);
+                    sLevel.destroyBlock(nearestTrash, false, this);
+                    actionCooldown = 30;
+                }
+                return;
             }
 
-            double distSq = this.distanceToSqr(nearestTrash.getX() + 0.5, nearestTrash.getY(), nearestTrash.getZ() + 0.5);
-            if (distSq > 2.2 * 2.2) {
-                this.getNavigation().moveTo(nearestTrash.getX() + 0.5, nearestTrash.getY(), nearestTrash.getZ() + 0.5, 1.15);
-            } else {
-                // Sweep litter!
-                this.swing(InteractionHand.MAIN_HAND);
-                sLevel.playSound(null, nearestTrash, SoundEvents.BRUSH_GENERIC, SoundSource.BLOCKS, 1.0f, 1.0f);
-                sLevel.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, nearestTrash.getX() + 0.5, nearestTrash.getY() + 0.3, nearestTrash.getZ() + 0.5, 6, 0.2, 0.1, 0.2, 0.02);
-                sLevel.destroyBlock(nearestTrash, false, this);
-                actionCooldown = 30;
+            // Cleaned or no trash: remove broom and stay idle/strolling
+            if (this.getMainHandItem().is(ZooItems.BROOM)) {
+                this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
             }
+            this.entityData.set(SWEEPING, false);
+            currentDutyState = "IDLE";
             return;
         }
 
-        // Cleaned or no trash: remove broom
+        // Assigned animal is present: NEVER sweep trash! Put away broom if held
         if (this.getMainHandItem().is(ZooItems.BROOM)) {
             this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
         }
@@ -469,8 +492,8 @@ public class ZooZookeeperEntity extends PathfinderMob {
         String dialogText = "";
         if (dialogOverride != null) {
             dialogText = dialogOverride;
-        } else if ("SWEEPING".equals(currentDutyState)) {
-            dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.sweeping");
+        } else if (!hasAnimal) {
+            dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.speech_no_animal");
         }
 
         ServerPlayNetworking.send(player, new ZooNetworkPayloads.OpenZookeeperScreenPayload(

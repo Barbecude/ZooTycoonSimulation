@@ -5,11 +5,14 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.zootycoon.animal.AnimalDietRegistry;
 import net.zootycoon.client.ZooTycoonClient;
 import net.zootycoon.entity.ZooEntities;
 import net.zootycoon.network.ZooNetworkPayloads;
@@ -146,28 +149,12 @@ public class ZookeeperDialogScreen extends EasyNpcDialogScreen {
         }
     }
 
-    private static final Map<String, LivingEntity> dummyAnimalCache = new HashMap<>();
-
-    private LivingEntity resolveAnimalEntity(ZooNetworkPayloads.AnimalSyncData animal) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.level != null) {
-            var ent = mc.level.getEntity(animal.entityId());
-            if (ent instanceof LivingEntity living) return living;
+    private static Item getPrimaryFood(String entityTypeId) {
+        var diet = AnimalDietRegistry.getDiet(entityTypeId);
+        if (diet != null && !diet.acceptedFoods.isEmpty()) {
+            return diet.acceptedFoods.get(0);
         }
-        if (dummyAnimalCache.containsKey(animal.entityTypeId())) {
-            return dummyAnimalCache.get(animal.entityTypeId());
-        }
-        try {
-            var type = BuiltInRegistries.ENTITY_TYPE.get(ResourceLocation.parse(animal.entityTypeId()));
-            if (type != null && mc.level != null) {
-                var dummy = type.create(mc.level);
-                if (dummy instanceof LivingEntity living) {
-                    dummyAnimalCache.put(animal.entityTypeId(), living);
-                    return living;
-                }
-            }
-        } catch (Exception ignored) {}
-        return null;
+        return Items.WHEAT;
     }
 
     @Override
@@ -208,19 +195,8 @@ public class ZookeeperDialogScreen extends EasyNpcDialogScreen {
                     graphics.fill(dropdownX + 2, curY, dropdownX + dropdownW - (maxScroll > 0 ? 8 : 2), curY + itemH, 0x4011151D);
                 }
 
-                // 3D Model of animal
-                LivingEntity ent = resolveAnimalEntity(animal);
-                if (ent != null) {
-                    float bbH = Math.max(0.4f, ent.getBbHeight());
-                    float bbW = Math.max(0.4f, ent.getBbWidth());
-                    float maxDim = Math.max(bbH, bbW * 0.8f);
-                    int scale = (int) Math.clamp(14.0f / maxDim, 6, 16);
-                    InventoryScreen.renderEntityInInventoryFollowsMouse(
-                            graphics,
-                            dropdownX + 6, curY + 2, dropdownX + 28, curY + 24,
-                            scale, 0.0f, (float) mouseX, (float) mouseY, ent
-                    );
-                }
+                Item food = getPrimaryFood(animal.entityTypeId());
+                graphics.renderItem(new ItemStack(food), dropdownX + 6, curY + 5);
 
                 String displayName = animal.customName().isEmpty() ? formatSpecies(animal.entityTypeId()) : animal.customName();
                 if (isAlreadyAssigned) {
