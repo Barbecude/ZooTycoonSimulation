@@ -134,6 +134,15 @@ public class ZooVisitorEntity extends PathfinderMob {
     private int jumpCooldown = 0;
     private int sitCooldown = 0;
 
+    public static final int EAT_MODE_NONE = 0;
+    public static final int EAT_MODE_STAND = 1;
+    public static final int EAT_MODE_SEAT = 2;
+    public static final int EAT_MODE_WATCH_ANIMAL = 3;
+
+    private int postPurchaseEatMode = EAT_MODE_NONE;
+    private int postPurchaseTimer = 0;
+    private boolean isDrinkingItem = false;
+
     // Consumer preference: 0 = FOOD_ONLY (max 3 meals, never drinks), 1 = DRINK_ONLY (max 3 drinks, never eats)
     private int consumerType = 0;
     private int foodCount = 0;
@@ -143,6 +152,26 @@ public class ZooVisitorEntity extends PathfinderMob {
     private int lastWatchedAnimalId = -1;
     private BlockPos escapeTarget = null;
     private int escapeTicks = 0;
+
+    public boolean hasNearbySeat(int radius) {
+        BlockPos current = this.blockPosition();
+        for (BlockPos p : BlockPos.betweenClosed(current.offset(-radius, -2, -radius), current.offset(radius, 2, radius))) {
+            if (net.zootycoon.util.ZooSeatHelper.isSeatableBlock(this.level(), p, this.level().getBlockState(p))) {
+                if (net.zootycoon.util.ZooSeatHelper.isSeatNotOccupied(this.level(), p)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public boolean hasZooAnimals() {
+        return !this.level().getEntitiesOfClass(
+                Animal.class,
+                this.getFullZooSearchBox(),
+                a -> a.isAlive() && ZooAnimalHungerManager.isTagged(a)
+        ).isEmpty();
+    }
 
     public ZooVisitorEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
@@ -642,7 +671,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             // Authentic player-like eating / drinking animation & particle tick
             if (eatTimer > 0) {
                 eatTimer--;
-                if (escapeTicks <= 0) {
+                if (escapeTicks <= 0 && !this.isPassenger() && postPurchaseEatMode != EAT_MODE_WATCH_ANIMAL) {
                     this.getNavigation().stop();
                 }
                 net.minecraft.world.item.ItemStack held = this.getMainHandItem();
@@ -673,6 +702,32 @@ public class ZooVisitorEntity extends PathfinderMob {
                     this.setItemInHand(InteractionHand.OFF_HAND, net.minecraft.world.item.ItemStack.EMPTY);
                     this.entityData.set(IS_CONSUMING, false);
                     this.entityData.set(IS_DRINKING, false);
+                    this.postPurchaseEatMode = EAT_MODE_NONE;
+                }
+            }
+
+            // Post-purchase food/drink behavior handling (Stand, Seat, or Watch Animal)
+            if (postPurchaseEatMode > EAT_MODE_NONE && !isConsuming()) {
+                postPurchaseTimer++;
+                if (postPurchaseEatMode == EAT_MODE_STAND) {
+                    if (escapeTicks <= 0) {
+                        this.getNavigation().stop();
+                        startConsuming(this.getMainHandItem(), this.isDrinkingItem, 75);
+                    }
+                } else if (postPurchaseEatMode == EAT_MODE_SEAT) {
+                    if (this.isPassenger()) {
+                        startConsuming(this.getMainHandItem(), this.isDrinkingItem, 95);
+                    } else if (postPurchaseTimer > 160) {
+                        this.getNavigation().stop();
+                        startConsuming(this.getMainHandItem(), this.isDrinkingItem, 75);
+                    }
+                } else if (postPurchaseEatMode == EAT_MODE_WATCH_ANIMAL) {
+                    if (watchingAnimalId != -1) {
+                        startConsuming(this.getMainHandItem(), this.isDrinkingItem, 95);
+                    } else if (postPurchaseTimer > 160) {
+                        this.getNavigation().stop();
+                        startConsuming(this.getMainHandItem(), this.isDrinkingItem, 75);
+                    }
                 }
             }
 
@@ -780,6 +835,7 @@ public class ZooVisitorEntity extends PathfinderMob {
     @Override
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         if (!this.level().isClientSide() && hand == InteractionHand.MAIN_HAND && player instanceof ServerPlayer sPlayer) {
+            updateMood();
             VisitorMood currentMood = getMood();
             net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(sPlayer, new net.zootycoon.network.ZooNetworkPayloads.OpenVisitorScreenPayload(
                     this.getId(),
@@ -823,6 +879,8 @@ public class ZooVisitorEntity extends PathfinderMob {
         tag.putInt("CashierCooldown", cashierCooldown);
         tag.putBoolean("HasWatchedAnimal", hasWatchedAnimal);
         tag.putInt("LastWatchedAnimalId", lastWatchedAnimalId);
+        tag.putInt("EatMode", postPurchaseEatMode);
+        tag.putBoolean("DrinkingItem", isDrinkingItem);
         if (guidingPlayerUuid != null) {
             tag.putString("GuidingPlayerUuid", guidingPlayerUuid.toString());
         }
@@ -862,6 +920,12 @@ public class ZooVisitorEntity extends PathfinderMob {
         hasUsedToilet = tag.getBoolean("HasUsedToilet");
         setNeedsToilet(tag.getBoolean("NeedsToilet"));
         sitCooldown = tag.getInt("SitCooldown");
+        if (tag.contains("EatMode")) {
+            postPurchaseEatMode = tag.getInt("EatMode");
+        }
+        if (tag.contains("DrinkingItem")) {
+            isDrinkingItem = tag.getBoolean("DrinkingItem");
+        }
         if (tag.contains("GuidingPlayerUuid")) {
             try {
                 guidingPlayerUuid = UUID.fromString(tag.getString("GuidingPlayerUuid"));
@@ -913,14 +977,18 @@ public class ZooVisitorEntity extends PathfinderMob {
     }
 
     public void startConsuming(net.minecraft.world.item.ItemStack purchasedStack, boolean drink) {
+        startConsuming(purchasedStack, drink, 75);
+    }
+
+    public void startConsuming(net.minecraft.world.item.ItemStack purchasedStack, boolean drink, int duration) {
         if (purchasedStack == null || purchasedStack.isEmpty()) return;
         this.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, purchasedStack.copyWithCount(1));
         this.setDropChance(net.minecraft.world.entity.EquipmentSlot.MAINHAND, 0.0F);
         this.setItemInHand(InteractionHand.OFF_HAND, net.minecraft.world.item.ItemStack.EMPTY);
-        this.eatTimer = 48;
+        this.eatTimer = duration;
         this.entityData.set(IS_CONSUMING, true);
         this.entityData.set(IS_DRINKING, drink);
-        if (escapeTicks <= 0) {
+        if (!this.isPassenger() && postPurchaseEatMode != EAT_MODE_WATCH_ANIMAL) {
             this.getNavigation().stop();
         }
     }
@@ -930,29 +998,49 @@ public class ZooVisitorEntity extends PathfinderMob {
         if ("BURGER".equalsIgnoreCase(role)) {
             this.foodCount++;
             setHunger(0);
-            if (purchasedItem != null && !purchasedItem.isEmpty()) {
-                startConsuming(purchasedItem, false);
-            }
         } else if ("DRINK".equalsIgnoreCase(role)) {
             this.drinkCount++;
             setThirst(0);
-            if (purchasedItem != null && !purchasedItem.isEmpty()) {
-                startConsuming(purchasedItem, true);
-            }
         } else if ("SOUVENIR".equalsIgnoreCase(role)) {
             this.wantsSouvenir = false;
         } else if ("TICKET".equalsIgnoreCase(role)) {
             this.addTag("ticket_purchased");
         }
         updateMood();
-        triggerRunAwayFromCashier(cashierPos);
+
+        if ("BURGER".equalsIgnoreCase(role) || "DRINK".equalsIgnoreCase(role)) {
+            if (purchasedItem != null && !purchasedItem.isEmpty()) {
+                this.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, purchasedItem.copyWithCount(1));
+                this.setDropChance(net.minecraft.world.entity.EquipmentSlot.MAINHAND, 0.0F);
+                this.isDrinkingItem = isDrink;
+                this.postPurchaseTimer = 0;
+
+                int choice = this.random.nextInt(3);
+                if (choice == 1 && !hasNearbySeat(24)) {
+                    choice = this.random.nextBoolean() ? 0 : 2;
+                }
+                if (choice == 2 && !hasZooAnimals()) {
+                    choice = 0;
+                }
+                this.postPurchaseEatMode = choice + 1;
+            }
+            triggerRunAwayFromCashier(cashierPos, true);
+        } else {
+            triggerRunAwayFromCashier(cashierPos, false);
+        }
     }
 
     public void triggerRunAwayFromCashier(BlockPos cashierPos) {
+        triggerRunAwayFromCashier(cashierPos, false);
+    }
+
+    public void triggerRunAwayFromCashier(BlockPos cashierPos, boolean isFoodDrink) {
         if (!(this.level() instanceof net.minecraft.server.level.ServerLevel sLevel)) return;
         net.zootycoon.claim.ZooClaim claim = findActiveZooClaim();
         double targetX;
         double targetZ;
+
+        double runDist = isFoodDrink ? (5.0D + this.random.nextDouble() * 2.5D) : (6.0D + this.random.nextDouble() * 3.0D);
 
         if (claim != null) {
             var box = claim.getBox();
@@ -978,8 +1066,8 @@ public class ZooVisitorEntity extends PathfinderMob {
                 double nz = dz / (dist > 0.01D ? dist : 1.0D);
 
                 // If running away points further outside the claim, point into the claim interior instead
-                double testX = this.getX() + nx * 14.0D;
-                double testZ = this.getZ() + nz * 14.0D;
+                double testX = this.getX() + nx * runDist;
+                double testZ = this.getZ() + nz * runDist;
                 if (!claim.contains((int) testX, (int) testZ)) {
                     double cx = (interiorMinX + interiorMaxX) / 2.0D;
                     double cz = (interiorMinZ + interiorMaxZ) / 2.0D;
@@ -990,13 +1078,11 @@ public class ZooVisitorEntity extends PathfinderMob {
                     nz = toClaimZ / (toClaimLen > 0.01D ? toClaimLen : 1.0D);
                 }
 
-                double runDist = 14.0D + this.random.nextDouble() * 4.0D;
                 targetX = Math.clamp(this.getX() + nx * runDist, interiorMinX, interiorMaxX);
                 targetZ = Math.clamp(this.getZ() + nz * runDist, interiorMinZ, interiorMaxZ);
             } else {
                 double nx = dist > 0.01D ? dx / dist : 1.0D;
                 double nz = dist > 0.01D ? dz / dist : 0.0D;
-                double runDist = 14.0D + this.random.nextDouble() * 4.0D;
                 targetX = Math.clamp(this.getX() + nx * runDist, interiorMinX, interiorMaxX);
                 targetZ = Math.clamp(this.getZ() + nz * runDist, interiorMinZ, interiorMaxZ);
             }
@@ -1012,7 +1098,6 @@ public class ZooVisitorEntity extends PathfinderMob {
             }
             double nx = dx / dist;
             double nz = dz / dist;
-            double runDist = 14.0D + this.random.nextDouble() * 4.0D;
             targetX = this.getX() + nx * runDist;
             targetZ = this.getZ() + nz * runDist;
         }
@@ -1025,21 +1110,17 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         this.escapeTarget = new BlockPos((int) targetX, ty, (int) targetZ);
         boolean isChild = this.isChildVisitor();
-        int burstTicks = isChild ? 40 : 70;
+        int burstTicks = isChild ? 20 : 30;
         this.escapeTicks = burstTicks;
-        this.runBurstTimer = burstTicks;
-        this.runBurstType = 1;
-        this.setSprinting(true);
+        this.runBurstTimer = 0;
+        this.runBurstType = 0;
+        this.setSprinting(false);
         var attr = this.getAttribute(Attributes.MOVEMENT_SPEED);
         if (attr != null) {
-            ResourceLocation modId = isChild ? CHILD_SPRINT_MODIFIER_ID : SPRINT_MODIFIER_ID;
-            AttributeModifier mod = isChild ? CHILD_SPRINT_MODIFIER : SPRINT_MODIFIER;
-            if (!attr.hasModifier(modId)) {
-                attr.addTransientModifier(mod);
-            }
+            if (attr.hasModifier(SPRINT_MODIFIER_ID)) attr.removeModifier(SPRINT_MODIFIER_ID);
+            if (attr.hasModifier(CHILD_SPRINT_MODIFIER_ID)) attr.removeModifier(CHILD_SPRINT_MODIFIER_ID);
         }
-        double navSpeed = isChild ? 1.05D : 1.35D;
-        this.getNavigation().moveTo(this.escapeTarget.getX() + 0.5D, this.escapeTarget.getY(), this.escapeTarget.getZ() + 0.5D, navSpeed);
+        this.getNavigation().moveTo(this.escapeTarget.getX() + 0.5D, this.escapeTarget.getY(), this.escapeTarget.getZ() + 0.5D, 1.0D);
     }
 
     public void completeGuideReward(net.minecraft.server.level.ServerLevel sLevel, String facilityType) {
@@ -1100,13 +1181,12 @@ public class ZooVisitorEntity extends PathfinderMob {
         @Override
         public void start() {
             if (visitor.escapeTarget != null) {
-                visitor.setSprinting(true);
-                double navSpeed = visitor.isChildVisitor() ? 1.05D : 1.35D;
+                visitor.setSprinting(false);
                 visitor.getNavigation().moveTo(
                         visitor.escapeTarget.getX() + 0.5D,
                         visitor.escapeTarget.getY(),
                         visitor.escapeTarget.getZ() + 0.5D,
-                        navSpeed
+                        1.0D
                 );
             }
         }
@@ -1124,12 +1204,11 @@ public class ZooVisitorEntity extends PathfinderMob {
                     visitor.escapeTarget = null;
                     visitor.getNavigation().stop();
                 } else if (visitor.getNavigation().isDone() || visitor.tickCount % 15 == 0) {
-                    double navSpeed = visitor.isChildVisitor() ? 1.05D : 1.35D;
                     visitor.getNavigation().moveTo(
                             visitor.escapeTarget.getX() + 0.5D,
                             visitor.escapeTarget.getY(),
                             visitor.escapeTarget.getZ() + 0.5D,
-                            navSpeed
+                            1.0D
                     );
                 }
             }
@@ -1277,7 +1356,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         }
 
         private String determineDesiredRole() {
-            if (visitor.isTimeToLeave() || visitor.isConsuming() || visitor.needsToilet() || visitor.hasCashierCooldown()) {
+            if (visitor.isTimeToLeave() || visitor.isConsuming() || visitor.postPurchaseEatMode > 0 || visitor.needsToilet() || visitor.hasCashierCooldown()) {
                 return null;
             }
             if (!visitor.getTags().contains("ticket_purchased") || visitor.guidingPlayerUuid != null) {
@@ -1534,8 +1613,12 @@ public class ZooVisitorEntity extends PathfinderMob {
         public boolean canUse() {
             if (visitor.isTimeToLeave()) return false;
             if (!visitor.getTags().contains("ticket_purchased")) return false;
-            if (visitor.hasWatchedAnimal && visitor.tickCount % 40 != 0) return false;
-            if (!visitor.hasWatchedAnimal && visitor.tickCount % 10 != 0) return false;
+            if (visitor.postPurchaseEatMode == EAT_MODE_WATCH_ANIMAL) {
+                // Priority activation to go watch animals and eat
+            } else {
+                if (visitor.hasWatchedAnimal && visitor.tickCount % 40 != 0) return false;
+                if (!visitor.hasWatchedAnimal && visitor.tickCount % 10 != 0) return false;
+            }
 
             // Search for registered zoo animals across the entire claimed zoo area
             List<Animal> allZooAnimals = visitor.level().getEntitiesOfClass(
@@ -1602,6 +1685,9 @@ public class ZooVisitorEntity extends PathfinderMob {
                 if (dist <= 64.0D) {
                     visitor.hasWatchedAnimal = true;
                     visitor.lastWatchedAnimalId = targetAnimal.getId();
+                    if (visitor.postPurchaseEatMode == EAT_MODE_WATCH_ANIMAL && !visitor.isConsuming()) {
+                        visitor.startConsuming(visitor.getMainHandItem(), visitor.isDrinkingItem, 95);
+                    }
                 }
                 if (dist > 4.0D || visitor.getNavigation().isDone()) {
                     visitor.moveTowardLongRange(watchPos, 1.05D);
@@ -2151,28 +2237,33 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         @Override
         public boolean canUse() {
-            if (visitor.isTimeToLeave()) return false;
-            if (!visitor.getTags().contains("ticket_purchased")) return false;
-            if (visitor.needsToilet()) return false;
-            if (visitor.hasTrash()) return false;
-            if (visitor.isPassenger()) return false;
-            if (visitor.sitCooldown > 0) {
-                visitor.sitCooldown--;
-                return false;
+            if (visitor.postPurchaseEatMode == EAT_MODE_SEAT) {
+                if (visitor.isTimeToLeave() || visitor.isPassenger()) return false;
+            } else {
+                if (visitor.isTimeToLeave()) return false;
+                if (!visitor.getTags().contains("ticket_purchased")) return false;
+                if (visitor.needsToilet()) return false;
+                if (visitor.hasTrash()) return false;
+                if (visitor.isPassenger()) return false;
+                if (visitor.sitCooldown > 0) {
+                    visitor.sitCooldown--;
+                    return false;
+                }
+
+                if (searchCooldown > 0) {
+                    searchCooldown--;
+                    return false;
+                }
+                searchCooldown = 40 + visitor.getRandom().nextInt(30);
             }
 
-            if (searchCooldown > 0) {
-                searchCooldown--;
-                return false;
-            }
-            searchCooldown = 40 + visitor.getRandom().nextInt(30);
-
-            // Search within 14 blocks horizontally and 2 blocks vertically
+            int radH = (visitor.postPurchaseEatMode == EAT_MODE_SEAT) ? 20 : 14;
+            int radV = (visitor.postPurchaseEatMode == EAT_MODE_SEAT) ? 3 : 2;
             BlockPos current = visitor.blockPosition();
             BlockPos best = null;
             double bestDist = Double.MAX_VALUE;
 
-            for (BlockPos p : BlockPos.betweenClosed(current.offset(-14, -2, -14), current.offset(14, 2, 14))) {
+            for (BlockPos p : BlockPos.betweenClosed(current.offset(-radH, -radV, -radH), current.offset(radH, radV, radH))) {
                 if (net.zootycoon.util.ZooSeatHelper.isSeatableBlock(visitor.level(), p, visitor.level().getBlockState(p))) {
                     double d = visitor.distanceToSqr(p.getX() + 0.5, p.getY(), p.getZ() + 0.5);
                     if (d < bestDist) {
@@ -2245,6 +2336,9 @@ public class ZooVisitorEntity extends PathfinderMob {
                         this.isSeated = true;
                         this.sitTicks = 180 + visitor.getRandom().nextInt(240); // 9-21 seconds sitting
                         visitor.getNavigation().stop();
+                        if (visitor.postPurchaseEatMode == EAT_MODE_SEAT) {
+                            visitor.startConsuming(visitor.getMainHandItem(), visitor.isDrinkingItem, 95);
+                        }
                         return;
                     }
                 }

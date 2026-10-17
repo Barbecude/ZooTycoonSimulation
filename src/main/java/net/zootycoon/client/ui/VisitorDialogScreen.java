@@ -94,14 +94,11 @@ public class VisitorDialogScreen extends EasyNpcDialogScreen {
         Component actionText;
         Component closeText;
 
-        boolean isNeedState = "TOILET".equalsIgnoreCase(moodName)
+        boolean isNeedFacility = "TOILET".equalsIgnoreCase(moodName)
                 || "HUNGRY".equalsIgnoreCase(moodName)
-                || "THIRSTY".equalsIgnoreCase(moodName)
-                || needsToilet
-                || hunger >= 50
-                || thirst >= 50;
+                || "THIRSTY".equalsIgnoreCase(moodName);
 
-        if (isNeedState) {
+        if (isNeedFacility) {
             actionText = ZooTranslations.component("zootycoon.dialog.visitor.btn.follow_me");
             closeText = ZooTranslations.component("zootycoon.dialog.visitor.btn.not_available");
 
