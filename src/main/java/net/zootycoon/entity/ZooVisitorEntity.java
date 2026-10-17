@@ -366,8 +366,51 @@ public class ZooVisitorEntity extends PathfinderMob {
         return gatePos;
     }
 
+    public static boolean isLateNight(Level level) {
+        if (level != null) {
+            long dayTime = level.getDayTime() % 24000L;
+            return dayTime >= 16500L && dayTime <= 23000L;
+        }
+        return false;
+    }
+
     public boolean isTimeToLeave() {
-        return stayTime > MAX_STAY;
+        return stayTime > MAX_STAY || isLateNight(this.level());
+    }
+
+    public BlockPos resolveLeaveTarget() {
+        if (this.gatePos != null) {
+            return this.gatePos;
+        }
+        net.zootycoon.claim.ZooClaim claim = findActiveZooClaim();
+        if (claim != null) {
+            var box = claim.getBox();
+            BlockPos cur = this.blockPosition();
+            int dMinX = Math.abs(cur.getX() - box.minX());
+            int dMaxX = Math.abs(cur.getX() - box.maxX());
+            int dMinZ = Math.abs(cur.getZ() - box.minZ());
+            int dMaxZ = Math.abs(cur.getZ() - box.maxZ());
+
+            int minD = Math.min(Math.min(dMinX, dMaxX), Math.min(dMinZ, dMaxZ));
+            int tx = cur.getX();
+            int tz = cur.getZ();
+
+            if (minD == dMinX) tx = box.minX() - 4;
+            else if (minD == dMaxX) tx = box.maxX() + 4;
+            else if (minD == dMinZ) tz = box.minZ() - 4;
+            else tz = box.maxZ() + 4;
+
+            int ty = cur.getY();
+            if (this.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                int surf = sl.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, tx, tz);
+                if (Math.abs(surf - cur.getY()) <= 8) {
+                    ty = surf;
+                }
+            }
+            this.gatePos = new BlockPos(tx, ty, tz);
+            return this.gatePos;
+        }
+        return null;
     }
 
     public boolean isLeaving() {
@@ -686,10 +729,11 @@ public class ZooVisitorEntity extends PathfinderMob {
         this.stayTime = MAX_STAY + 1;
         this.entityData.set(IS_LEAVING, true);
         this.setMood(VisitorMood.NEUTRAL);
-        if (gatePos != null) {
+        BlockPos gate = resolveLeaveTarget();
+        if (gate != null) {
             this.getNavigation().stop();
-            moveTowardLongRange(gatePos, 1.2D);
-            if (this.distanceToSqr(gatePos.getX() + 0.5, gatePos.getY(), gatePos.getZ() + 0.5) < 9.0D) {
+            moveTowardLongRange(gate, 1.2D);
+            if (this.distanceToSqr(gate.getX() + 0.5, gate.getY(), gate.getZ() + 0.5) < 9.0D) {
                 this.discard();
             }
         } else {
@@ -1288,6 +1332,12 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         @Override
         public boolean canUse() {
+            if (visitor.isTimeToLeave()) {
+                if (visitor.guidingPlayerUuid != null) {
+                    visitor.stopFollowingPlayer();
+                }
+                return false;
+            }
             Player player = visitor.getGuidingPlayer();
             if (player == null || !player.isAlive()) {
                 if (visitor.guidingPlayerUuid != null) {
@@ -1529,25 +1579,30 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         @Override
         public boolean canUse() {
-            return visitor.isTimeToLeave() && visitor.getGatePos() != null;
+            return visitor.isTimeToLeave();
         }
 
         @Override
         public void start() {
             visitor.setMood(VisitorMood.NEUTRAL);
-            BlockPos gate = visitor.getGatePos();
+            BlockPos gate = visitor.resolveLeaveTarget();
             if (gate != null) {
-                visitor.moveTowardLongRange(gate, 1.05D);
+                visitor.moveTowardLongRange(gate, 1.15D);
+            } else {
+                visitor.discard();
             }
         }
 
         @Override
         public void tick() {
-            BlockPos gate = visitor.getGatePos();
-            if (gate == null) return;
+            BlockPos gate = visitor.resolveLeaveTarget();
+            if (gate == null) {
+                visitor.discard();
+                return;
+            }
 
             if (visitor.getNavigation().isDone() || visitor.tickCount % 20 == 0) {
-                visitor.moveTowardLongRange(gate, 1.05D);
+                visitor.moveTowardLongRange(gate, 1.15D);
             }
 
             if (visitor.distanceToSqr(gate.getX() + 0.5, gate.getY(), gate.getZ() + 0.5) < 9.0D) {

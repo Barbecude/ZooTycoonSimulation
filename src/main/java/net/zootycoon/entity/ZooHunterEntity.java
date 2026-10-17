@@ -229,6 +229,19 @@ public class ZooHunterEntity extends PathfinderMob {
     }
 
     @Override
+    public void tick() {
+        super.tick();
+        if (!level().isClientSide() && tickCount % 40 == 0 && level() instanceof ServerLevel sLevel) {
+            long time = sLevel.getDayTime() % 24000L;
+            boolean isDay = time >= 1000L && time <= 12000L;
+            if (isDay && !isVehicle() && getTarget() == null) {
+                sLevel.sendParticles(ParticleTypes.LARGE_SMOKE, getX(), getY() + 0.8D, getZ(), 12, 0.25D, 0.4D, 0.25D, 0.05D);
+                this.discard();
+            }
+        }
+    }
+
+    @Override
     public void die(DamageSource damageSource) {
         if (!this.getPassengers().isEmpty()) {
             this.ejectPassengers();

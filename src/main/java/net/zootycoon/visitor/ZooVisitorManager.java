@@ -66,6 +66,11 @@ public class ZooVisitorManager {
         }
         lastSpawnTick = currentTick;
 
+        // Do not spawn visitors during late night / approaching midnight (park closing)
+        if (ZooVisitorEntity.isLateNight(level)) {
+            return;
+        }
+
         ZooClaimManager claimManager = ZooClaimManager.get(level);
 
         for (ServerPlayer player : level.players()) {

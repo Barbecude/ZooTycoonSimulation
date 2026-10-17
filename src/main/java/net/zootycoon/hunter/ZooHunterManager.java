@@ -62,6 +62,12 @@ public class ZooHunterManager {
         TEMP_DIRT_BLOCKS.clear();
     }
 
+    public static boolean isMidnight(ServerLevel level) {
+        if (level == null) return false;
+        long dayTime = level.getDayTime() % 24000L;
+        return dayTime >= 18000L && dayTime <= 22000L;
+    }
+
     public static void tickServer(ServerLevel level) {
         // 1. Clean up temporary hunter dirt blocks after 10 seconds (200 ticks)
         tickTempDirtCleanup(level);
@@ -77,6 +83,11 @@ public class ZooHunterManager {
             return;
         }
         lastCheckTick = currentTick;
+
+        // Hunters only spawn during midnight (18000 to 22000)
+        if (!isMidnight(level)) {
+            return;
+        }
 
         for (ServerPlayer player : level.players()) {
             List<ZooClaim> claims = ZooClaimManager.get(level).getPlayerClaims(player.getUUID());
