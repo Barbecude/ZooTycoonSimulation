@@ -151,56 +151,6 @@ public class ConstructionManager {
 
                 if (matchedSite != null) {
                     String builderName = entity.getCustomName() != null ? entity.getCustomName().getString() : ZooTranslations.get("zootycoon.dialog.builder.default_name");
-                    ItemStack held = player.getMainHandItem();
-                    if (!held.isEmpty()) {
-                        // Check if held item is a tool needed during land clearing phase
-                        if (matchedSite.isClearingPhase()) {
-                            if (matchedSite.needsShovel() && !matchedSite.hasShovel() && held.is(net.minecraft.tags.ItemTags.SHOVELS)) {
-                                matchedSite.setEquippedShovel(held);
-                                if (entity instanceof LivingEntity living) {
-                                    living.setItemSlot(EquipmentSlot.MAINHAND, held.copyWithCount(1));
-                                }
-                                String toolName = held.getHoverName().getString();
-                                held.shrink(1);
-                                sLevel.playSound(null, entity.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-                                ZooNetworkPayloads.sendToast(serverPlayer, "zootycoon.toast.title.construction", "zootycoon.builder.received_tool", 1, builderName, toolName);
-                                if (entity instanceof net.zootycoon.entity.ZooBuilderEntity zb) zb.updateNeedsIndicator();
-                                return InteractionResult.SUCCESS;
-                            }
-                            if (matchedSite.needsPickaxe() && !matchedSite.hasPickaxe() && held.is(net.minecraft.tags.ItemTags.PICKAXES)) {
-                                matchedSite.setEquippedPickaxe(held);
-                                if (entity instanceof LivingEntity living) {
-                                    living.setItemSlot(EquipmentSlot.MAINHAND, held.copyWithCount(1));
-                                }
-                                String toolName = held.getHoverName().getString();
-                                held.shrink(1);
-                                sLevel.playSound(null, entity.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-                                ZooNetworkPayloads.sendToast(serverPlayer, "zootycoon.toast.title.construction", "zootycoon.builder.received_tool", 1, builderName, toolName);
-                                if (entity instanceof net.zootycoon.entity.ZooBuilderEntity zb) zb.updateNeedsIndicator();
-                                return InteractionResult.SUCCESS;
-                            }
-                            if (matchedSite.needsAxe() && !matchedSite.hasAxe() && held.is(net.minecraft.tags.ItemTags.AXES)) {
-                                matchedSite.setEquippedAxe(held);
-                                if (entity instanceof LivingEntity living) {
-                                    living.setItemSlot(EquipmentSlot.MAINHAND, held.copyWithCount(1));
-                                }
-                                String toolName = held.getHoverName().getString();
-                                held.shrink(1);
-                                sLevel.playSound(null, entity.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-                                ZooNetworkPayloads.sendToast(serverPlayer, "zootycoon.toast.title.construction", "zootycoon.builder.received_tool", 1, builderName, toolName);
-                                if (entity instanceof net.zootycoon.entity.ZooBuilderEntity zb) zb.updateNeedsIndicator();
-                                return InteractionResult.SUCCESS;
-                            }
-                        }
-
-                        int accepted = matchedSite.deliverMaterial(held);
-                        if (accepted > 0) {
-                            sLevel.playSound(null, entity.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-                            ZooNetworkPayloads.sendToast(serverPlayer, "zootycoon.toast.title.construction", "zootycoon.builder.received_material_single", 1, builderName, accepted, held.getHoverName().getString());
-                            if (entity instanceof net.zootycoon.entity.ZooBuilderEntity zb) zb.updateNeedsIndicator();
-                            return InteractionResult.SUCCESS;
-                        }
-                    }
 
                     // Send S2C packet to open Builder dialogue / inspection screen
                     List<ZooNetworkPayloads.ItemEntry> missingList = new ArrayList<>();

@@ -335,55 +335,6 @@ public class ZooBuilderEntity extends PathfinderMob {
         ConstructionSite matchedSite = resolveSite();
 
         if (matchedSite != null) {
-            // Check if player holds matching item to deposit directly
-            ItemStack held = player.getMainHandItem();
-            if (!held.isEmpty()) {
-                if (matchedSite.isClearingPhase()) {
-                    if (matchedSite.needsShovel() && !matchedSite.hasShovel() && held.is(net.minecraft.tags.ItemTags.SHOVELS)) {
-                        matchedSite.setEquippedShovel(held);
-                        this.setItemSlot(EquipmentSlot.MAINHAND, held.copyWithCount(1));
-                        String toolName = held.getHoverName().getString();
-                        held.shrink(1);
-                        this.level().playSound(null, this.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-                        String builderName = this.getCustomName() != null ? this.getCustomName().getString() : ZooTranslations.get("zootycoon.dialog.builder.default_name");
-                        ZooNetworkPayloads.sendToast(serverPlayer, "zootycoon.toast.title.construction", "zootycoon.builder.received_tool", 1, builderName, toolName);
-                        updateNeedsIndicator();
-                        return InteractionResult.SUCCESS;
-                    }
-                    if (matchedSite.needsPickaxe() && !matchedSite.hasPickaxe() && held.is(net.minecraft.tags.ItemTags.PICKAXES)) {
-                        matchedSite.setEquippedPickaxe(held);
-                        this.setItemSlot(EquipmentSlot.MAINHAND, held.copyWithCount(1));
-                        String toolName = held.getHoverName().getString();
-                        held.shrink(1);
-                        this.level().playSound(null, this.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-                        String builderName = this.getCustomName() != null ? this.getCustomName().getString() : ZooTranslations.get("zootycoon.dialog.builder.default_name");
-                        ZooNetworkPayloads.sendToast(serverPlayer, "zootycoon.toast.title.construction", "zootycoon.builder.received_tool", 1, builderName, toolName);
-                        updateNeedsIndicator();
-                        return InteractionResult.SUCCESS;
-                    }
-                    if (matchedSite.needsAxe() && !matchedSite.hasAxe() && held.is(net.minecraft.tags.ItemTags.AXES)) {
-                        matchedSite.setEquippedAxe(held);
-                        this.setItemSlot(EquipmentSlot.MAINHAND, held.copyWithCount(1));
-                        String toolName = held.getHoverName().getString();
-                        held.shrink(1);
-                        this.level().playSound(null, this.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-                        String builderName = this.getCustomName() != null ? this.getCustomName().getString() : ZooTranslations.get("zootycoon.dialog.builder.default_name");
-                        ZooNetworkPayloads.sendToast(serverPlayer, "zootycoon.toast.title.construction", "zootycoon.builder.received_tool", 1, builderName, toolName);
-                        updateNeedsIndicator();
-                        return InteractionResult.SUCCESS;
-                    }
-                }
-
-                int accepted = matchedSite.deliverMaterial(held);
-                if (accepted > 0) {
-                    this.level().playSound(null, this.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-                    String builderName = this.getCustomName() != null ? this.getCustomName().getString() : ZooTranslations.get("zootycoon.dialog.builder.default_name");
-                    ZooNetworkPayloads.sendToast(serverPlayer, "zootycoon.toast.title.construction", "zootycoon.builder.received_material_single", 1, builderName, accepted, held.getHoverName().getString());
-                    updateNeedsIndicator();
-                    return InteractionResult.SUCCESS;
-                }
-            }
-
             // Open Builder Dialogue Screen
             List<ZooNetworkPayloads.ItemEntry> missingList = new ArrayList<>();
             for (var entry : matchedSite.getMissingMaterials().entrySet()) {
