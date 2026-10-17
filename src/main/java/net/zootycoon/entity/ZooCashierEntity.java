@@ -137,26 +137,29 @@ public class ZooCashierEntity extends PathfinderMob {
         this.fomoCooldown = 1200;
 
         String role = getCashierRole();
-        double searchRadius = 40.0D;
-        AABB searchBox = this.getBoundingBox().inflate(searchRadius, 12.0D, searchRadius);
-        List<ZooVisitorEntity> candidates = this.level().getEntitiesOfClass(
-                ZooVisitorEntity.class, searchBox,
-                v -> v.isAlive()
-                        && !v.getUUID().equals(triggerVisitorUuid)
-                        && !v.isTimeToLeave()
-                        && !v.isLeaving()
-                        && !v.isFomoTarget()
-                        && !customerQueue.contains(v.getUUID())
-                        && !v.needsToilet()
-                        && !v.isConsuming()
-                        && v.getGuidingPlayerUuid() == null
-                        && ("TICKET".equalsIgnoreCase(role)
-                            ? !v.getTags().contains("ticket_purchased")
-                            : (v.getTags().contains("ticket_purchased") && (
-                                ("BURGER".equalsIgnoreCase(role) && v.canEat()) ||
-                                ("DRINK".equalsIgnoreCase(role) && v.canDrink())
-                              )))
-        );
+        List<ZooVisitorEntity> candidates = new java.util.ArrayList<>();
+        if (this.level() instanceof ServerLevel sLevel) {
+            for (Entity entity : sLevel.getAllEntities()) {
+                if (entity instanceof ZooVisitorEntity v && v.isAlive()) {
+                    if (!v.getUUID().equals(triggerVisitorUuid)
+                            && !v.isTimeToLeave()
+                            && !v.isLeaving()
+                            && !v.isFomoTarget()
+                            && !customerQueue.contains(v.getUUID())
+                            && !v.needsToilet()
+                            && !v.isConsuming()
+                            && v.getGuidingPlayerUuid() == null
+                            && ("TICKET".equalsIgnoreCase(role)
+                                ? !v.getTags().contains("ticket_purchased")
+                                : (v.getTags().contains("ticket_purchased") && (
+                                    ("BURGER".equalsIgnoreCase(role) && v.canEat()) ||
+                                    ("DRINK".equalsIgnoreCase(role) && v.canDrink())
+                                  )))) {
+                        candidates.add(v);
+                    }
+                }
+            }
+        }
 
         if (candidates.isEmpty()) return;
 

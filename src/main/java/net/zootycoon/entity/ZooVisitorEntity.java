@@ -392,6 +392,36 @@ public class ZooVisitorEntity extends PathfinderMob {
         this.drinkCount = count;
     }
 
+    public void configureDebugMood(VisitorMood mood) {
+        this.addTag("ticket_purchased");
+        switch (mood) {
+            case HUNGRY -> {
+                this.setConsumerType(0);
+                this.setFoodCount(0);
+                this.setHunger(75);
+                this.setHasWatchedAnimal(true);
+                this.setNeedsToilet(false);
+                this.setMood(VisitorMood.HUNGRY);
+            }
+            case THIRSTY -> {
+                this.setConsumerType(1);
+                this.setDrinkCount(0);
+                this.setThirst(75);
+                this.setHasWatchedAnimal(true);
+                this.setNeedsToilet(false);
+                this.setMood(VisitorMood.THIRSTY);
+            }
+            case TOILET -> {
+                this.hasUsedToilet = false;
+                this.setNeedsToilet(true);
+                this.setMood(VisitorMood.TOILET);
+            }
+            default -> {
+                this.setMood(VisitorMood.NEUTRAL);
+            }
+        }
+    }
+
     public boolean hasCashierCooldown() {
         return cashierCooldown > 0;
     }
