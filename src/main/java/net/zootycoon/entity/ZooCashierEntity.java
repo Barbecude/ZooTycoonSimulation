@@ -368,15 +368,15 @@ public class ZooCashierEntity extends PathfinderMob {
     }
 
     private boolean isVisitorEligibleForRole(ZooVisitorEntity v, String role) {
-        if (v == null || !v.isAlive() || v.isTimeToLeave() || v.isConsuming()) {
+        if (v == null || !v.isAlive() || v.isTimeToLeave() || v.isConsuming() || v.hasCashierCooldown()) {
             return false;
         }
         return switch (role) {
             case "TICKET" -> !v.getTags().contains("ticket_purchased");
-            case "BURGER" -> v.getHunger() >= 35 || v.getMood() == ZooVisitorEntity.VisitorMood.HUNGRY
-                    || (v.getGuidedPlayerUuid() != null && v.getHunger() >= 15);
-            case "DRINK" -> v.getThirst() >= 25 || v.getMood() == ZooVisitorEntity.VisitorMood.THIRSTY
-                    || (v.getGuidedPlayerUuid() != null && v.getThirst() >= 15);
+            case "BURGER" -> v.canEat() && (v.getHunger() >= 35 || v.getMood() == ZooVisitorEntity.VisitorMood.HUNGRY
+                    || (v.getGuidedPlayerUuid() != null && v.getHunger() >= 15));
+            case "DRINK" -> v.canDrink() && (v.getThirst() >= 25 || v.getMood() == ZooVisitorEntity.VisitorMood.THIRSTY
+                    || (v.getGuidedPlayerUuid() != null && v.getThirst() >= 15));
             case "SOUVENIR" -> v.getTags().contains("ticket_purchased")
                     && v.getItemBySlot(EquipmentSlot.HEAD).isEmpty()
                     && !v.needsToilet();
@@ -468,15 +468,13 @@ public class ZooCashierEntity extends PathfinderMob {
                     if (!soldBurger.isEmpty()) {
                         removeFromQueue(customer.getUUID());
                         int price = getItemPrice(role, soldBurger);
-                        customer.setHunger(0);
-                        customer.startConsuming(soldBurger, false);
-                        customer.updateMood();
                         creditOwner(sLevel, price);
                         sLevel.playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.7F, 1.2F);
                         sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 5, 0.25, 0.25, 0.25, 0.02);
                         if (customer.getGuidedPlayerUuid() != null) {
                             customer.completeGuideReward(sLevel, "BURGER");
                         }
+                        customer.onTransactionComplete(this.blockPosition(), "BURGER", soldBurger, false);
                         serveCooldown = 35;
                     }
                 }
@@ -488,15 +486,13 @@ public class ZooCashierEntity extends PathfinderMob {
                     if (!soldDrink.isEmpty()) {
                         removeFromQueue(customer.getUUID());
                         int price = getItemPrice(role, soldDrink);
-                        customer.setThirst(0);
-                        customer.startConsuming(soldDrink, true);
-                        customer.updateMood();
                         creditOwner(sLevel, price);
                         sLevel.playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.7F, 1.2F);
                         sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 5, 0.25, 0.25, 0.25, 0.02);
                         if (customer.getGuidedPlayerUuid() != null) {
                             customer.completeGuideReward(sLevel, "DRINK");
                         }
+                        customer.onTransactionComplete(this.blockPosition(), "DRINK", soldDrink, true);
                         serveCooldown = 35;
                     }
                 }
@@ -514,6 +510,7 @@ public class ZooCashierEntity extends PathfinderMob {
                         creditOwner(sLevel, price);
                         sLevel.playSound(null, this.blockPosition(), SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.NEUTRAL, 0.8F, 1.4F);
                         sLevel.sendParticles(ParticleTypes.HEART, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 5, 0.25, 0.25, 0.25, 0.02);
+                        customer.onTransactionComplete(this.blockPosition(), "SOUVENIR", ItemStack.EMPTY, false);
                         serveCooldown = 50;
                     }
                 }
@@ -522,11 +519,11 @@ public class ZooCashierEntity extends PathfinderMob {
                 if (customer != null) {
                     removeFromQueue(customer.getUUID());
                     customer.addTag("ticket_purchased");
-                    customer.updateMood();
                     creditOwner(sLevel, getItemPrice("TICKET", ItemStack.EMPTY));
                     sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.8F, 1.1F);
                     sLevel.playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.7F, 1.2F);
                     sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
+                    customer.onTransactionComplete(this.blockPosition(), "TICKET", ItemStack.EMPTY, false);
                     serveCooldown = 25;
                 }
             }

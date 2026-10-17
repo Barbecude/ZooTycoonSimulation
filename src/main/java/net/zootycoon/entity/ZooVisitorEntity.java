@@ -126,8 +126,17 @@ public class ZooVisitorEntity extends PathfinderMob {
     private int jumpCooldown = 0;
     private int sitCooldown = 0;
 
+    // Consumer preference: 0 = FOOD_ONLY (max 3 meals, never drinks), 1 = DRINK_ONLY (max 3 drinks, never eats)
+    private int consumerType = 0;
+    private int foodCount = 0;
+    private int drinkCount = 0;
+    private int cashierCooldown = 0;
+    private BlockPos escapeTarget = null;
+    private int escapeTicks = 0;
+
     public ZooVisitorEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
+        this.consumerType = Math.random() < 0.5 ? 0 : 1;
         if (isChildVisitor()) {
             this.refreshDimensions();
         }
@@ -158,6 +167,7 @@ public class ZooVisitorEntity extends PathfinderMob {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
+        this.goalSelector.addGoal(1, new RunAwayFromCashierGoal(this));
         this.goalSelector.addGoal(1, new FollowGuidePlayerGoal(this));
         this.goalSelector.addGoal(1, new LeaveZooGoal(this));
         this.goalSelector.addGoal(1, new BuyTicketAtEntranceGoal(this));
@@ -223,19 +233,90 @@ public class ZooVisitorEntity extends PathfinderMob {
     }
 
     public int getHunger() {
+        if (consumerType != 0 || foodCount >= 3) {
+            return 0;
+        }
         return this.entityData.get(HUNGER);
     }
 
     public void setHunger(int hunger) {
+        if (consumerType != 0 || foodCount >= 3) {
+            this.entityData.set(HUNGER, 0);
+            return;
+        }
         this.entityData.set(HUNGER, Math.clamp(hunger, 0, 100));
     }
 
     public int getThirst() {
+        if (consumerType != 1 || drinkCount >= 3) {
+            return 0;
+        }
         return this.entityData.get(THIRST);
     }
 
     public void setThirst(int thirst) {
+        if (consumerType != 1 || drinkCount >= 3) {
+            this.entityData.set(THIRST, 0);
+            return;
+        }
         this.entityData.set(THIRST, Math.clamp(thirst, 0, 100));
+    }
+
+    public boolean canEat() {
+        return consumerType == 0 && foodCount < 3;
+    }
+
+    public boolean canDrink() {
+        return consumerType == 1 && drinkCount < 3;
+    }
+
+    public int getConsumerType() {
+        return consumerType;
+    }
+
+    public void setConsumerType(int type) {
+        this.consumerType = type;
+    }
+
+    public int getFoodCount() {
+        return foodCount;
+    }
+
+    public void setFoodCount(int count) {
+        this.foodCount = count;
+    }
+
+    public int getDrinkCount() {
+        return drinkCount;
+    }
+
+    public void setDrinkCount(int count) {
+        this.drinkCount = count;
+    }
+
+    public boolean hasCashierCooldown() {
+        return cashierCooldown > 0;
+    }
+
+    public int getCashierCooldown() {
+        return cashierCooldown;
+    }
+
+    public void setCashierCooldown(int ticks) {
+        this.cashierCooldown = ticks;
+    }
+
+    public BlockPos getEscapeTarget() {
+        return escapeTarget;
+    }
+
+    public int getEscapeTicks() {
+        return escapeTicks;
+    }
+
+    public void clearEscape() {
+        this.escapeTarget = null;
+        this.escapeTicks = 0;
     }
 
     public boolean hasTrash() {
@@ -390,6 +471,10 @@ public class ZooVisitorEntity extends PathfinderMob {
      * Authoritative mood updater based on priority:
      * Leaving (NEUTRAL) > TOILET > HUNGRY (>=50) > THIRSTY (>=50) > Animal Watching (AMAZED / ADORED / HAPPY) > NEUTRAL
      */
+    /**
+     * Authoritative mood updater based on priority:
+     * Leaving (NEUTRAL) > TOILET > HUNGRY (>=50) > THIRSTY (>=50) > Animal Watching (AMAZED / ADORED / HAPPY) > NEUTRAL
+     */
     public void updateMood() {
         if (isTimeToLeave() || isLeaving()) {
             setMood(VisitorMood.NEUTRAL);
@@ -399,11 +484,11 @@ public class ZooVisitorEntity extends PathfinderMob {
             setMood(VisitorMood.TOILET);
             return;
         }
-        if (getHunger() >= 50) {
+        if (canEat() && getHunger() >= 50) {
             setMood(VisitorMood.HUNGRY);
             return;
         }
-        if (getThirst() >= 50) {
+        if (canDrink() && getThirst() >= 50) {
             setMood(VisitorMood.THIRSTY);
             return;
         }
@@ -425,6 +510,9 @@ public class ZooVisitorEntity extends PathfinderMob {
         super.aiStep();
         if (!this.level().isClientSide()) {
             stayTime++;
+            if (cashierCooldown > 0) cashierCooldown--;
+            if (escapeTicks > 0) escapeTicks--;
+
             boolean leavingNow = isTimeToLeave();
             if (this.entityData.get(IS_LEAVING) != leavingNow) {
                 this.entityData.set(IS_LEAVING, leavingNow);
@@ -439,10 +527,14 @@ public class ZooVisitorEntity extends PathfinderMob {
                 }
             }
 
-            // Every 10 seconds (200 ticks): hunger and thirst build up
+            // Every 10 seconds (200 ticks): hunger and thirst build up according to exclusive diet type and 3x quota
             if (this.tickCount % 200 == 0 && !leavingNow) {
-                setHunger(getHunger() + 7);
-                setThirst(getThirst() + 10);
+                if (canEat()) {
+                    setHunger(getHunger() + 8);
+                }
+                if (canDrink()) {
+                    setThirst(getThirst() + 10);
+                }
             }
 
             // Every 20 seconds (400 ticks): 3% chance to need toilet (max 1 toilet quota per visitor)
@@ -481,7 +573,9 @@ public class ZooVisitorEntity extends PathfinderMob {
             // Authentic player-like eating / drinking animation & particle tick
             if (eatTimer > 0) {
                 eatTimer--;
-                this.getNavigation().stop();
+                if (escapeTicks <= 0) {
+                    this.getNavigation().stop();
+                }
                 net.minecraft.world.item.ItemStack held = this.getMainHandItem();
                 if (!held.isEmpty() && this.level() instanceof net.minecraft.server.level.ServerLevel sLevel) {
                     if (eatTimer % 4 == 0) {
@@ -643,6 +737,10 @@ public class ZooVisitorEntity extends PathfinderMob {
         tag.putBoolean("HasUsedToilet", hasUsedToilet);
         tag.putBoolean("NeedsToilet", needsToilet());
         tag.putInt("SitCooldown", sitCooldown);
+        tag.putInt("ConsumerType", consumerType);
+        tag.putInt("FoodCount", foodCount);
+        tag.putInt("DrinkCount", drinkCount);
+        tag.putInt("CashierCooldown", cashierCooldown);
         if (guidingPlayerUuid != null) {
             tag.putString("GuidingPlayerUuid", guidingPlayerUuid.toString());
         }
@@ -665,6 +763,14 @@ public class ZooVisitorEntity extends PathfinderMob {
         this.entityData.set(IS_LEAVING, isTimeToLeave());
         setVariant(tag.getInt("Variant"));
         setChildVisitor(tag.getBoolean("IsChild"));
+        if (tag.contains("ConsumerType")) {
+            consumerType = tag.getInt("ConsumerType");
+        } else {
+            consumerType = (this.getUUID().getLeastSignificantBits() & 1) == 0 ? 0 : 1;
+        }
+        foodCount = tag.getInt("FoodCount");
+        drinkCount = tag.getInt("DrinkCount");
+        cashierCooldown = tag.getInt("CashierCooldown");
         setHunger(tag.getInt("Hunger"));
         setThirst(tag.getInt("Thirst"));
         setMood(VisitorMood.fromOrdinal(tag.contains("Mood") ? tag.getInt("Mood") : VisitorMood.NEUTRAL.ordinal()));
@@ -730,7 +836,119 @@ public class ZooVisitorEntity extends PathfinderMob {
         this.eatTimer = 48;
         this.entityData.set(IS_CONSUMING, true);
         this.entityData.set(IS_DRINKING, drink);
-        this.getNavigation().stop();
+        if (escapeTicks <= 0) {
+            this.getNavigation().stop();
+        }
+    }
+
+    public void onTransactionComplete(BlockPos cashierPos, String role, net.minecraft.world.item.ItemStack purchasedItem, boolean isDrink) {
+        this.cashierCooldown = 400; // 20s cooldown against queueing again
+        if ("BURGER".equalsIgnoreCase(role)) {
+            this.foodCount++;
+            setHunger(0);
+            if (purchasedItem != null && !purchasedItem.isEmpty()) {
+                startConsuming(purchasedItem, false);
+            }
+        } else if ("DRINK".equalsIgnoreCase(role)) {
+            this.drinkCount++;
+            setThirst(0);
+            if (purchasedItem != null && !purchasedItem.isEmpty()) {
+                startConsuming(purchasedItem, true);
+            }
+        } else if ("SOUVENIR".equalsIgnoreCase(role)) {
+            this.wantsSouvenir = false;
+        } else if ("TICKET".equalsIgnoreCase(role)) {
+            this.addTag("ticket_purchased");
+        }
+        updateMood();
+        triggerRunAwayFromCashier(cashierPos);
+    }
+
+    public void triggerRunAwayFromCashier(BlockPos cashierPos) {
+        if (!(this.level() instanceof net.minecraft.server.level.ServerLevel sLevel)) return;
+        net.zootycoon.claim.ZooClaim claim = findActiveZooClaim();
+        double targetX;
+        double targetZ;
+
+        if (claim != null) {
+            var box = claim.getBox();
+            int marginX = Math.min(4, Math.max(1, (box.maxX() - box.minX()) / 4));
+            int marginZ = Math.min(4, Math.max(1, (box.maxZ() - box.minZ()) / 4));
+            int interiorMinX = box.minX() + marginX;
+            int interiorMaxX = box.maxX() - marginX;
+            int interiorMinZ = box.minZ() + marginZ;
+            int interiorMaxZ = box.maxZ() - marginZ;
+
+            boolean outside = !claim.contains(this.blockPosition().getX(), this.blockPosition().getZ());
+            double dx = this.getX() - (cashierPos.getX() + 0.5D);
+            double dz = this.getZ() - (cashierPos.getZ() + 0.5D);
+            double dist = Math.sqrt(dx * dx + dz * dz);
+
+            if (outside || dist < 4.0D) {
+                if (dist < 0.1D) {
+                    dx = ((interiorMinX + interiorMaxX) / 2.0D) - this.getX();
+                    dz = ((interiorMinZ + interiorMaxZ) / 2.0D) - this.getZ();
+                    dist = Math.sqrt(dx * dx + dz * dz);
+                }
+                double nx = dx / (dist > 0.01D ? dist : 1.0D);
+                double nz = dz / (dist > 0.01D ? dist : 1.0D);
+
+                // If running away points further outside the claim, point into the claim interior instead
+                double testX = this.getX() + nx * 14.0D;
+                double testZ = this.getZ() + nz * 14.0D;
+                if (!claim.contains((int) testX, (int) testZ)) {
+                    double cx = (interiorMinX + interiorMaxX) / 2.0D;
+                    double cz = (interiorMinZ + interiorMaxZ) / 2.0D;
+                    double toClaimX = cx - this.getX();
+                    double toClaimZ = cz - this.getZ();
+                    double toClaimLen = Math.sqrt(toClaimX * toClaimX + toClaimZ * toClaimZ);
+                    nx = toClaimX / (toClaimLen > 0.01D ? toClaimLen : 1.0D);
+                    nz = toClaimZ / (toClaimLen > 0.01D ? toClaimLen : 1.0D);
+                }
+
+                double runDist = 14.0D + this.random.nextDouble() * 4.0D;
+                targetX = Math.clamp(this.getX() + nx * runDist, interiorMinX, interiorMaxX);
+                targetZ = Math.clamp(this.getZ() + nz * runDist, interiorMinZ, interiorMaxZ);
+            } else {
+                double nx = dist > 0.01D ? dx / dist : 1.0D;
+                double nz = dist > 0.01D ? dz / dist : 0.0D;
+                double runDist = 14.0D + this.random.nextDouble() * 4.0D;
+                targetX = Math.clamp(this.getX() + nx * runDist, interiorMinX, interiorMaxX);
+                targetZ = Math.clamp(this.getZ() + nz * runDist, interiorMinZ, interiorMaxZ);
+            }
+        } else {
+            double dx = this.getX() - (cashierPos.getX() + 0.5D);
+            double dz = this.getZ() - (cashierPos.getZ() + 0.5D);
+            double dist = Math.sqrt(dx * dx + dz * dz);
+            if (dist < 0.1D) {
+                double ang = this.random.nextDouble() * Math.PI * 2.0D;
+                dx = Math.cos(ang);
+                dz = Math.sin(ang);
+                dist = 1.0D;
+            }
+            double nx = dx / dist;
+            double nz = dz / dist;
+            double runDist = 14.0D + this.random.nextDouble() * 4.0D;
+            targetX = this.getX() + nx * runDist;
+            targetZ = this.getZ() + nz * runDist;
+        }
+
+        int ty = (int) this.getY();
+        int surfY = sLevel.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) targetX, (int) targetZ);
+        if (Math.abs(surfY - this.blockPosition().getY()) <= 8) {
+            ty = surfY;
+        }
+
+        this.escapeTarget = new BlockPos((int) targetX, ty, (int) targetZ);
+        this.escapeTicks = 70; // 3.5 seconds
+        this.runBurstTimer = 70;
+        this.runBurstType = 1;
+        this.setSprinting(true);
+        var attr = this.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (attr != null && !attr.hasModifier(SPRINT_MODIFIER_ID)) {
+            attr.addTransientModifier(SPRINT_MODIFIER);
+        }
+        this.getNavigation().moveTo(this.escapeTarget.getX() + 0.5D, this.escapeTarget.getY(), this.escapeTarget.getZ() + 0.5D, 1.35D);
     }
 
     public void completeGuideReward(net.minecraft.server.level.ServerLevel sLevel, String facilityType) {
@@ -767,6 +985,76 @@ public class ZooVisitorEntity extends PathfinderMob {
     // =========================================================================
 
     /**
+     * Priority-1 Goal that forces visitors who just finished buying from a cashier
+     * to immediately sprint far away into the zoo so cashier fronts never jam.
+     */
+    public static class RunAwayFromCashierGoal extends Goal {
+        private final ZooVisitorEntity visitor;
+
+        public RunAwayFromCashierGoal(ZooVisitorEntity visitor) {
+            this.visitor = visitor;
+            this.setFlags(EnumSet.of(Flag.MOVE));
+        }
+
+        @Override
+        public boolean canUse() {
+            return visitor.escapeTicks > 0 && visitor.escapeTarget != null;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return visitor.escapeTicks > 0 && visitor.escapeTarget != null;
+        }
+
+        @Override
+        public void start() {
+            if (visitor.escapeTarget != null) {
+                visitor.setSprinting(true);
+                visitor.getNavigation().moveTo(
+                        visitor.escapeTarget.getX() + 0.5D,
+                        visitor.escapeTarget.getY(),
+                        visitor.escapeTarget.getZ() + 0.5D,
+                        1.35D
+                );
+            }
+        }
+
+        @Override
+        public void tick() {
+            if (visitor.escapeTarget != null) {
+                double distSq = visitor.distanceToSqr(
+                        visitor.escapeTarget.getX() + 0.5D,
+                        visitor.escapeTarget.getY(),
+                        visitor.escapeTarget.getZ() + 0.5D
+                );
+                if (distSq <= 2.25D) {
+                    visitor.escapeTicks = 0;
+                    visitor.escapeTarget = null;
+                    visitor.getNavigation().stop();
+                } else if (visitor.getNavigation().isDone() || visitor.tickCount % 15 == 0) {
+                    visitor.getNavigation().moveTo(
+                            visitor.escapeTarget.getX() + 0.5D,
+                            visitor.escapeTarget.getY(),
+                            visitor.escapeTarget.getZ() + 0.5D,
+                            1.35D
+                    );
+                }
+            }
+        }
+
+        @Override
+        public void stop() {
+            visitor.escapeTarget = null;
+            visitor.escapeTicks = 0;
+            visitor.setSprinting(false);
+            var attr = visitor.getAttribute(Attributes.MOVEMENT_SPEED);
+            if (attr != null && attr.hasModifier(SPRINT_MODIFIER_ID)) {
+                attr.removeModifier(SPRINT_MODIFIER_ID);
+            }
+        }
+    }
+
+    /**
      * Goal for newly spawned visitors outside the zoo to queue at the Ticket Booth first,
      * then immediately walk inside the claimed zoo area once their ticket is purchased.
      */
@@ -782,7 +1070,7 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         @Override
         public boolean canUse() {
-            if (visitor.isTimeToLeave() || visitor.getTags().contains("ticket_purchased")) {
+            if (visitor.isTimeToLeave() || visitor.getTags().contains("ticket_purchased") || visitor.hasCashierCooldown()) {
                 return false;
             }
             if (visitor.guidingPlayerUuid != null) {
@@ -813,6 +1101,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         public boolean canContinueToUse() {
             return !visitor.isTimeToLeave()
                     && !visitor.getTags().contains("ticket_purchased")
+                    && !visitor.hasCashierCooldown()
                     && targetTicketCashier != null
                     && targetTicketCashier.isAlive()
                     && "TICKET".equalsIgnoreCase(targetTicketCashier.getCashierRole());
@@ -878,16 +1167,16 @@ public class ZooVisitorEntity extends PathfinderMob {
         }
 
         private String determineDesiredRole() {
-            if (visitor.isTimeToLeave() || visitor.isConsuming() || visitor.needsToilet()) {
+            if (visitor.isTimeToLeave() || visitor.isConsuming() || visitor.needsToilet() || visitor.hasCashierCooldown()) {
                 return null;
             }
             if (!visitor.getTags().contains("ticket_purchased") || visitor.guidingPlayerUuid != null) {
                 return null;
             }
-            if (visitor.getHunger() >= 35 || visitor.getMood() == VisitorMood.HUNGRY) {
+            if (visitor.canEat() && (visitor.getHunger() >= 35 || visitor.getMood() == VisitorMood.HUNGRY)) {
                 return "BURGER";
             }
-            if (visitor.getThirst() >= 25 || visitor.getMood() == VisitorMood.THIRSTY) {
+            if (visitor.canDrink() && (visitor.getThirst() >= 25 || visitor.getMood() == VisitorMood.THIRSTY)) {
                 return "DRINK";
             }
             if (visitor.wantsSouvenir()) {
