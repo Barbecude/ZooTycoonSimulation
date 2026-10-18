@@ -1,0 +1,16 @@
+{
+  "entities": [
+    "minecraft:wolf",
+    "naturalist:wolf",
+    "minecraft:fox",
+    "naturalist:bear",
+    "alexsmobs:grizzly_bear",
+    "naturalist:deer",
+    "alexsmobs:moose",
+    "alexsmobs:raccoon",
+    "alexsmobs:bald_eagle",
+    "naturalist:boar"
+  ],
+  "template": "zootycoon:forest"
+}
+

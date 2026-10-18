@@ -1,0 +1,14 @@
+{
+  "entities": [
+    "naturalist:giraffe"
+  ],
+  "template": "zootycoon:savanna",
+  "extra_blocks": [
+    {
+      "type": "trees",
+      "min_count": 4,
+      "label": "Pohon Akasia"
+    }
+  ]
+}
+

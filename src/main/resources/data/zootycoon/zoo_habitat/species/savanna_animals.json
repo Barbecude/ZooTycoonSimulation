@@ -1,0 +1,14 @@
+{
+  "entities": [
+    "naturalist:zebra",
+    "naturalist:rhino",
+    "alexsmobs:gazelle",
+    "alexsmobs:kangaroo",
+    "naturalist:hyena",
+    "naturalist:leopard",
+    "minecraft:llama",
+    "minecraft:trader_llama"
+  ],
+  "template": "zootycoon:savanna"
+}
+

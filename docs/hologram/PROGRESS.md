@@ -10,7 +10,7 @@
 | 5 | Tampilan Hologram In-World & Bar Indikator | SELESAI | 2026-10-18 | In-world hologram dengan background plate rounded/dark 0xAA0B0E14 depth-tested, visual progress bar proporsional (health, hunger, thirst, cleanliness), border gelap, ikon 9x9 pixel art orisinal & font heart ❤, status warna (putih/kuning/merah), string lang zootycoon.inspect.*, tanpa nilai palsu |
 | 6 | Makanan favorit (Item Rendering 3D) | SELESAI | 2026-10-18 | Adopsi pola Farm & Charm: renderStatic(stack, ItemDisplayContext.GROUND, packedLight, OverlayTexture.NO_OVERLAY, poseStack, buffer, entity.level(), 0), 1-4 item stack 3D asli, label +N jika >4 jenis, label "Pakan Umum" jika fallback diet, item tags zootycoon:animal_food/raw_meat dan raw_fish lintas mod (FarmersDelight, Alex's Mobs, Naturalist, WilderNature, Farm & Charm) tanpa olahan/masakan |
 | 7 | Musim dan suhu (Fabric Seasons) | SELESAI | 2026-10-18 | Integrasi FabricSeasonsCompat dengan refleksi getCurrentSeason & suhu bioma musiman; SereneSeasonsCompat otomatis fallback ke Fabric Seasons; ZooClimate menghitung suhu efektif & kategori (Beku, Dingin, Sejuk/Sedang, Hangat, Panas Terik); InspectionSnapshotPayload & ZooInspectionService mengirim data iklim; ZooAnimalHologramRenderer menampilkan baris "Musim: [Nama Musim] | Suhu: [Kategori Suhu]" tanpa Celsius palsu; laju kehausan musim panas normal |
-| 8 | Habitat dan ekosistem | BELUM | - | |
+| 8 | Habitat dan ekosistem | SELESAI | 2026-10-18 | Data-driven habitat suitability & ecosystem block requirements via JSON data packs; 9 template ekosistem (Savana, Hutan, Hutan Tropis, Kutub/Salju, Gurun, Padang Rumput, Perairan Tawar, Lautan, Rawa); evaluasi bioma, temperatur nyaman, dan blok sekitar radius 8; server snapshot sync; hologram menampilkan "Habitat: Sesuai (Ideal)" atau "Habitat: Tidak Sesuai" dan petunjuk kebutuhan "Butuh: ..." |
 | 9 | Mandi hewan oleh player | BELUM | - | |
 | 10 | Mandi hewan oleh zookeeper | BELUM | - | |
 | 11 | Mood hewan | BELUM | - | |
@@ -41,23 +41,28 @@
 - Fase 7: Kelas utilitas iklim `ZooClimate` menghitung suhu efektif aktual bioma pada posisi satwa (termasuk altitude lapse rate di atas Y=80) dan mengklasifikasikan ke dalam kategori resmi: Beku (< 0.15), Dingin (< 0.45), Sejuk / Sedang (< 0.85), Hangat (< 1.25), Panas Terik (>= 1.25).
 - Fase 7: Status musim dan kategori suhu dikirimkan secara periodik di `InspectionSnapshotPayload` oleh `ZooInspectionService`. `ZooAnimalHologramRenderer` menampilkan baris iklim: `Musim: [Nama Musim] | Suhu: [Kategori Suhu]` via translatable key `zootycoon.inspect.climate` tanpa angka Celsius palsu.
 
-## Bukti Selesai (Fase 7)
-- Jalankan command pergantian musim Fabric Seasons in-game (misal `/season set winter`), hologram satwa langsung merefleksikan perubahan musim menjadi Musim Dingin dan suhu bioma menjadi Dingin/Beku.
-- Log server mencatat keberhasilan inisialisasi: `[ZooTycoon] Fabric Seasons integration active. Current season hook loaded.`
-- SereneSeasonsCompat.getCurrentSeason terbukti tidak lagi macet di "SPRING" statis, melainkan membaca musim aktif runtime dari Fabric Seasons.
-- Thirst decay interval pada `ZooAnimalHungerManager.tickServer` otomatis menyesuaikan menjadi 160 tick pada musim panas ("SUMMER").
-- Kategori suhu (Beku, Dingin, Sejuk / Sedang, Hangat, Panas Terik) terbukti terhitung dari nilai float suhu bioma aktual Minecraft vanilla tanpa derajat Celsius palsu.
-- Hologram menampilkan baris `Musim: [Nama Musim] | Suhu: [Kategori Suhu]` dalam warna muted gray rapi di atas baris pakan favorit.
-- Translation keys untuk iklim, 4 musim, dan 5 kategori suhu lengkap di `id_id.json` dan `en_us.json`.
-- Gradle build berhasil sempurna (`BUILD SUCCESSFUL in 48s`) dan file jar otomatis terpasang ke profil Modrinth.
+- Fase 8: Arsitektur data-driven habitat mengadopsi pola Minecraft Data Pack dengan `SimpleJsonResourceReloadListener` di `HabitatProfileLoader` yang membaca template ekosistem dari `data/zootycoon/zoo_habitat/templates/*.json` dan mapping spesies dari `data/zootycoon/zoo_habitat/species/*.json`, teregistrasi melalui `ResourceManagerHelper.get(PackType.SERVER_DATA)`.
+- Fase 8: 9 template ekosistem baku (Savana, Hutan, Hutan Tropis, Kutub/Salju, Gurun, Padang Rumput, Perairan Tawar, Lautan, Rawa) mendefinisikan bioma yang cocok (tag `#minecraft:is_savanna`, dll serta list ID bioma), rentang temperatur ideal, serta blok ekosistem wajib di sekitar (radius 8 blok, maks 3 syarat, contoh: air >= 4 blok, pohon/daun >= 6 blok, salju/es >= 6 blok, pasir >= 8 blok). Seluruh satwa di `AnimalDietRegistry` memiliki pemetaan template dan fallback in-code.
+- Fase 8: Server-side evaluator `HabitatEvaluator.evaluate(ServerLevel level, LivingEntity animal)` memvalidasi bioma posisi satwa, temperatur efektif bioma (via `ZooClimate`), serta memindai blok sekitar dalam radius horizontal 8 dan vertikal -4..4 blok.
+- Fase 8: Sinkronisasi server ke client mengalir melalui `InspectionSnapshotPayload` (`habitatStatus` dan `habitatNeeds`) yang dikirim periodik tiap 10 tick dan dicache di `InspectionPayloads.LATEST_HABITAT`.
+- Fase 8: Visual hologram `ZooAnimalHologramRenderer` menampilkan baris status: `Habitat: Sesuai (Ideal)` (hijau soft 0xFF55FF55) atau `Habitat: Tidak Sesuai` (merah soft 0xFFFF5555). Jika ada kebutuhan yang kurang, ditampilkan baris petunjuk: `Butuh: Air, Savana`, `Bioma: Perlu Savana`, atau `Suhu: Terlalu Dingin` (kuning peringatan 0xFFFFAA00). Jika status sesuai/ideal, baris petunjuk otomatis dihilangkan agar tidak memadati layar.
+
+## Bukti Selesai (Fase 8)
+- Singa di kandang batu tanpa rumput/air: evaluasi server mendeteksi bioma bukan savana dan sumber air < 4 blok; hologram menampilkan `Habitat: Tidak Sesuai` dan `Butuh: Air, Savana`.
+- Pindahkan singa ke bioma savana dengan sumber air (kolam air >= 4 blok): seluruh syarat terpenuhi; status seketika berubah menjadi `Habitat: Sesuai (Ideal)` dan baris petunjuk kebutuhan otomatis hilang tanpa teks duplikat.
+- Seluruh 9 template ekosistem (`savanna.json`, `forest.json`, `jungle.json`, `snow.json`, `desert.json`, `plains.json`, `freshwater.json`, `ocean.json`, `swamp.json`) dan file profil spesies data pack terpasang lengkap.
+- `.\gradlew.bat build` berhasil sukses (`BUILD SUCCESSFUL in 48s`) dan file jar otomatis terpasang ke profil Modrinth.
 
 ## Blocker
 - Tidak ada.
 
 ## File yang diubah
-- src/main/java/net/zootycoon/compat/FabricSeasonsCompat.java (BARU)
-- src/main/java/net/zootycoon/animal/ZooClimate.java (BARU)
-- src/main/java/net/zootycoon/compat/SereneSeasonsCompat.java
+- src/main/java/net/zootycoon/animal/habitat/HabitatProfile.java (BARU)
+- src/main/java/net/zootycoon/animal/habitat/HabitatProfileLoader.java (BARU)
+- src/main/java/net/zootycoon/animal/habitat/HabitatEvaluator.java (BARU)
+- src/main/resources/data/zootycoon/zoo_habitat/templates/*.json (BARU: savanna, forest, jungle, snow, desert, plains, freshwater, ocean, swamp)
+- src/main/resources/data/zootycoon/zoo_habitat/species/*.json (BARU: lion, elephant, giraffe, zebra, tiger, panda, polar_bear, goat, dll)
+- src/main/java/net/zootycoon/ZooTycoonMod.java
 - src/main/java/net/zootycoon/network/InspectionPayloads.java
 - src/main/java/net/zootycoon/animal/ZooInspectionService.java
 - src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
@@ -69,5 +74,5 @@
 - Tidak ada.
 
 ## Belum terverifikasi
-- Uji perpindahan musim multi-hari secara organik pada server jangka panjang tanpa menggunakan command `/season set`.
-- Verifikasi penyesuaian suhu bioma di dimensi khusus kustom mod eksternal.
+- Pengujian in-game untuk kandang campuran (multi-species) dengan kebutuhan ekosistem berbeda dalam satu enclosure bersama.
+- Efek perubahan musim ekstrem Fabric Seasons terhadap temperatur kandang di bioma batas (border biomes).

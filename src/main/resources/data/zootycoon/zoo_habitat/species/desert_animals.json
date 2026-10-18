@@ -1,0 +1,12 @@
+{
+  "entities": [
+    "minecraft:camel",
+    "alexsmobs:roadrunner",
+    "alexsmobs:rattlesnake",
+    "alexsmobs:komodo_dragon",
+    "naturalist:tortoise",
+    "minecraft:strider"
+  ],
+  "template": "zootycoon:desert"
+}
+

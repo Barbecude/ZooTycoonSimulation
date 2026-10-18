@@ -43,6 +43,10 @@ public class ZooTycoonMod implements ModInitializer {
         net.zootycoon.network.InspectionPayloads.registerCommon();
         net.zootycoon.animal.ZooInspectionService.registerServerReceivers();
 
+        // 3b. Register data-driven habitat profile reload listener
+        net.fabricmc.fabric.api.resource.ResourceManagerHelper.get(net.minecraft.server.packs.PackType.SERVER_DATA)
+                .registerReloadListener(new net.zootycoon.animal.habitat.HabitatProfileLoader());
+
         // 4. Initialize Claim Manager & Protection hooks
         ZooClaimManager.initProtectionHooks();
 

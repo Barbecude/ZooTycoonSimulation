@@ -1,0 +1,18 @@
+{
+  "name": "swamp",
+  "display_name": "Rawa",
+  "biomes": [
+    "minecraft:swamp",
+    "minecraft:mangrove_swamp"
+  ],
+  "min_temperature": 0.5,
+  "max_temperature": 1.0,
+  "required_blocks": [
+    {
+      "type": "water",
+      "min_count": 6,
+      "label": "Air"
+    }
+  ]
+}
+

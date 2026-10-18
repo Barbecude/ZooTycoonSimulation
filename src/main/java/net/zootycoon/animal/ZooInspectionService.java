@@ -136,6 +136,11 @@ public class ZooInspectionService {
         float temp = ZooClimate.getEffectiveTemperature(animal);
         String tempCat = ZooClimate.getCategory(temp).key;
 
+        net.zootycoon.animal.habitat.HabitatEvaluator.HabitatResult habitat =
+                net.zootycoon.animal.habitat.HabitatEvaluator.evaluate(player.serverLevel(), animal);
+        String habitatStatus = habitat.status().name();
+        String habitatNeeds = habitat.formatHint();
+
         long timestamp = System.currentTimeMillis();
         InspectionPayloads.InspectionSnapshotPayload payload = new InspectionPayloads.InspectionSnapshotPayload(
                 animal.getId(),
@@ -145,6 +150,8 @@ public class ZooInspectionService {
                 cleanliness,
                 season,
                 tempCat,
+                habitatStatus,
+                habitatNeeds,
                 timestamp
         );
 

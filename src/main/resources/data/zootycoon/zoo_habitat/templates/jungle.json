@@ -1,0 +1,25 @@
+{
+  "name": "jungle",
+  "display_name": "Hutan Tropis",
+  "biomes": [
+    "#minecraft:is_jungle",
+    "minecraft:jungle",
+    "minecraft:sparse_jungle",
+    "minecraft:bamboo_jungle"
+  ],
+  "min_temperature": 0.85,
+  "max_temperature": 1.4,
+  "required_blocks": [
+    {
+      "type": "trees",
+      "min_count": 6,
+      "label": "Pepohonan"
+    },
+    {
+      "type": "water",
+      "min_count": 4,
+      "label": "Air"
+    }
+  ]
+}
+

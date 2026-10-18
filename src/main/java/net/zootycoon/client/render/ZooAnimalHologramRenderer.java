@@ -169,6 +169,42 @@ public class ZooAnimalHologramRenderer {
         Component climateComponent = Component.translatable("zootycoon.inspect.climate", seasonComp, tempComp);
         int climateWidth = font.width(climateComponent);
 
+        // Retrieve habitat data (status & unmet requirements hint)
+        InspectionPayloads.HabitatData habitatData = InspectionPayloads.getLatestHabitat(entity.getId());
+        Component habitatStatusComp;
+        int habitatStatusColor;
+        boolean hasHabitatHint = false;
+        Component habitatHintComp = null;
+
+        if (habitatData != null) {
+            String hStatus = habitatData.status();
+            String hNeeds = habitatData.needs();
+            if ("SUITABLE".equalsIgnoreCase(hStatus)) {
+                habitatStatusComp = Component.translatable("zootycoon.inspect.habitat",
+                        Component.translatable("zootycoon.inspect.habitat.suitable"));
+                habitatStatusColor = 0xFF55FF55;
+            } else if ("UNSUITABLE".equalsIgnoreCase(hStatus)) {
+                habitatStatusComp = Component.translatable("zootycoon.inspect.habitat",
+                        Component.translatable("zootycoon.inspect.habitat.unsuitable"));
+                habitatStatusColor = 0xFFFF5555;
+                if (hNeeds != null && !hNeeds.isEmpty()) {
+                    hasHabitatHint = true;
+                    habitatHintComp = Component.literal(hNeeds);
+                }
+            } else {
+                habitatStatusComp = Component.translatable("zootycoon.inspect.habitat",
+                        Component.translatable("zootycoon.inspect.habitat.no_data"));
+                habitatStatusColor = HologramBarRenderer.COLOR_MUTED;
+            }
+        } else {
+            habitatStatusComp = Component.translatable("zootycoon.inspect.habitat",
+                    Component.translatable("zootycoon.inspect.habitat.no_data"));
+            habitatStatusColor = HologramBarRenderer.COLOR_MUTED;
+        }
+
+        int habitatStatusWidth = font.width(habitatStatusComp);
+        int habitatHintWidth = (hasHabitatHint && habitatHintComp != null) ? font.width(habitatHintComp) : 0;
+
         // Calculate layout geometry
         Component titleComponent = entity.getDisplayName();
         int titleWidth = font.width(titleComponent);
@@ -187,18 +223,26 @@ public class ZooAnimalHologramRenderer {
                 Math.max(font.width(thirstText), font.width(cleanText))));
 
         float rowBlockWidth = iconWidth + gapIconToBar + barWidth + gapBarToText + Math.max(24.0f, (float) maxTextWidth);
-        float boxWidth = Math.max(rowBlockWidth + 12.0f, Math.max(maxHeaderWidth + 14.0f, Math.max(foodSectionWidth + 14.0f, climateWidth + 14.0f)));
+        float boxWidth = Math.max(rowBlockWidth + 12.0f,
+                Math.max(maxHeaderWidth + 14.0f,
+                Math.max(foodSectionWidth + 14.0f,
+                Math.max(climateWidth + 14.0f,
+                Math.max(habitatStatusWidth + 14.0f, habitatHintWidth + 14.0f)))));
 
         float rowHeight = 11.0f;
         float headerHeight = isRegistered ? 13.0f : 23.0f;
         float barsHeight = 4.0f * rowHeight;
+        float habitatGap = 3.0f;
+        float habitatStatusHeight = 10.0f;
+        float habitatHintHeight = hasHabitatHint ? 10.0f : 0.0f;
+        float habitatSectionHeight = habitatStatusHeight + habitatHintHeight;
         float climateGap = 3.0f;
         float climateHeight = 10.0f;
         float foodGap = 4.0f;
         float foodHeaderHeight = 10.0f;
         float foodItemsHeight = renderedFoodCount > 0 ? 14.0f : 0.0f;
         float foodSectionHeight = foodHeaderHeight + foodItemsHeight;
-        float contentHeight = headerHeight + barsHeight + climateGap + climateHeight + foodGap + foodSectionHeight;
+        float contentHeight = headerHeight + barsHeight + habitatGap + habitatSectionHeight + climateGap + climateHeight + foodGap + foodSectionHeight;
         float totalBoxHeight = contentHeight + 8.0f; // 4px padding top, 4px padding bottom
 
         float minX = -boxWidth / 2.0f;
@@ -239,6 +283,19 @@ public class ZooAnimalHologramRenderer {
             float thirstRowY = curY + (rowHeight * 2.0f);
             float cleanRowY = curY + (rowHeight * 3.0f);
             curY += (rowHeight * 4.0f);
+
+            curY += habitatGap;
+            float habitatStatusX = -habitatStatusWidth / 2.0f;
+            float habitatStatusY = curY;
+            curY += habitatStatusHeight;
+
+            float habitatHintX = 0;
+            float habitatHintY = 0;
+            if (hasHabitatHint && habitatHintComp != null) {
+                habitatHintX = -habitatHintWidth / 2.0f;
+                habitatHintY = curY;
+                curY += habitatHintHeight;
+            }
 
             curY += climateGap;
             float climateX = -climateWidth / 2.0f;
@@ -304,6 +361,14 @@ public class ZooAnimalHologramRenderer {
             font.drawInBatch(hungerText, textX, hungerRowY + 1.0f, hungerTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             font.drawInBatch(thirstText, textX, thirstRowY + 1.0f, thirstTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             font.drawInBatch(cleanText, textX, cleanRowY + 1.0f, cleanTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+
+            // Draw habitat status line (e.g. "Habitat: Sesuai (Ideal)" or "Habitat: Tidak Sesuai")
+            font.drawInBatch(habitatStatusComp, habitatStatusX, habitatStatusY, habitatStatusColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+
+            // Draw habitat hint line if unsuitable (e.g. "Butuh: Air, Savana")
+            if (hasHabitatHint && habitatHintComp != null) {
+                font.drawInBatch(habitatHintComp, habitatHintX, habitatHintY, 0xFFFFAA00, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            }
 
             // Draw climate line (e.g. "Musim: Musim Semi | Suhu: Sejuk / Sedang")
             font.drawInBatch(climateComponent, climateX, climateY, HologramBarRenderer.COLOR_MUTED, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);

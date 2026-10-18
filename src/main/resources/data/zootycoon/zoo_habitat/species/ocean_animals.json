@@ -1,0 +1,9 @@
+{
+  "entities": [
+    "minecraft:dolphin",
+    "alexsmobs:orca",
+    "alexsmobs:seagull"
+  ],
+  "template": "zootycoon:ocean"
+}
+

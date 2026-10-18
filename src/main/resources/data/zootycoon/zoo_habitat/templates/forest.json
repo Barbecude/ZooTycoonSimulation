@@ -1,0 +1,22 @@
+{
+  "name": "forest",
+  "display_name": "Hutan",
+  "biomes": [
+    "#minecraft:is_forest",
+    "minecraft:forest",
+    "minecraft:flower_forest",
+    "minecraft:birch_forest",
+    "minecraft:dark_forest",
+    "minecraft:old_growth_birch_forest"
+  ],
+  "min_temperature": 0.45,
+  "max_temperature": 0.85,
+  "required_blocks": [
+    {
+      "type": "trees",
+      "min_count": 6,
+      "label": "Pepohonan"
+    }
+  ]
+}
+

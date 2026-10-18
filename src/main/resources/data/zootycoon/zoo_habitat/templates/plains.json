@@ -1,0 +1,20 @@
+{
+  "name": "plains",
+  "display_name": "Padang Rumput",
+  "biomes": [
+    "minecraft:plains",
+    "minecraft:sunflower_plains",
+    "minecraft:meadow",
+    "minecraft:cherry_grove"
+  ],
+  "min_temperature": 0.45,
+  "max_temperature": 0.95,
+  "required_blocks": [
+    {
+      "type": "grass",
+      "min_count": 8,
+      "label": "Rumput"
+    }
+  ]
+}
+

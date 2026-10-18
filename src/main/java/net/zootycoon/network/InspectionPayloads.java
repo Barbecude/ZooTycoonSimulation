@@ -47,6 +47,8 @@ public class InspectionPayloads {
             int cleanliness,
             String season,
             String tempCategory,
+            String habitatStatus,
+            String habitatNeeds,
             long timestamp
     ) implements CustomPacketPayload {
         public static final CustomPacketPayload.Type<InspectionSnapshotPayload> TYPE =
@@ -60,6 +62,8 @@ public class InspectionPayloads {
                     buf.writeInt(payload.cleanliness);
                     buf.writeUtf(payload.season);
                     buf.writeUtf(payload.tempCategory);
+                    buf.writeUtf(payload.habitatStatus != null ? payload.habitatStatus : "NO_DATA");
+                    buf.writeUtf(payload.habitatNeeds != null ? payload.habitatNeeds : "");
                     buf.writeLong(payload.timestamp);
                 },
                 buf -> {
@@ -69,6 +73,8 @@ public class InspectionPayloads {
                             buf.readInt(),
                             buf.readInt(),
                             buf.readInt(),
+                            buf.readUtf(),
+                            buf.readUtf(),
                             buf.readUtf(),
                             buf.readUtf(),
                             buf.readLong()
@@ -85,17 +91,24 @@ public class InspectionPayloads {
     }
 
     private static final java.util.Map<Integer, ClimateData> LATEST_CLIMATE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.Map<Integer, HabitatData> LATEST_HABITAT = new java.util.concurrent.ConcurrentHashMap<>();
 
     public record ClimateData(String season, String tempCategory) {}
+    public record HabitatData(String status, String needs) {}
 
     public static void onSnapshotReceived(InspectionSnapshotPayload payload) {
         if (payload != null) {
             LATEST_CLIMATE.put(payload.entityId(), new ClimateData(payload.season(), payload.tempCategory()));
+            LATEST_HABITAT.put(payload.entityId(), new HabitatData(payload.habitatStatus(), payload.habitatNeeds()));
         }
     }
 
     public static ClimateData getLatestClimate(int entityId) {
         return LATEST_CLIMATE.get(entityId);
+    }
+
+    public static HabitatData getLatestHabitat(int entityId) {
+        return LATEST_HABITAT.get(entityId);
     }
 
     public static void registerCommon() {

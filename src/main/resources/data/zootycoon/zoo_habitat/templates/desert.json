@@ -1,0 +1,21 @@
+{
+  "name": "desert",
+  "display_name": "Gurun",
+  "biomes": [
+    "#minecraft:is_badlands",
+    "minecraft:desert",
+    "minecraft:badlands",
+    "minecraft:eroded_badlands",
+    "minecraft:wooded_badlands"
+  ],
+  "min_temperature": 1.25,
+  "max_temperature": 2.5,
+  "required_blocks": [
+    {
+      "type": "sand",
+      "min_count": 8,
+      "label": "Pasir"
+    }
+  ]
+}
+

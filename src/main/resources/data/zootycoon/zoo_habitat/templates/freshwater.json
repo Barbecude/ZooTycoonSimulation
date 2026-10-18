@@ -1,0 +1,20 @@
+{
+  "name": "freshwater",
+  "display_name": "Perairan Tawar",
+  "biomes": [
+    "#minecraft:is_river",
+    "minecraft:river",
+    "minecraft:swamp",
+    "minecraft:mangrove_swamp"
+  ],
+  "min_temperature": 0.3,
+  "max_temperature": 1.2,
+  "required_blocks": [
+    {
+      "type": "water",
+      "min_count": 12,
+      "label": "Air"
+    }
+  ]
+}
+

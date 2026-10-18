@@ -1,0 +1,18 @@
+{
+  "entities": [
+    "minecraft:cow",
+    "minecraft:sheep",
+    "minecraft:pig",
+    "minecraft:chicken",
+    "minecraft:horse",
+    "minecraft:donkey",
+    "minecraft:mule",
+    "minecraft:rabbit",
+    "minecraft:sniffer",
+    "minecraft:cat",
+    "naturalist:sparrow",
+    "alexsmobs:emu"
+  ],
+  "template": "zootycoon:plains"
+}
+

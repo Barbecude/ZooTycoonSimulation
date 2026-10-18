@@ -1,0 +1,14 @@
+{
+  "entities": [
+    "minecraft:polar_bear"
+  ],
+  "template": "zootycoon:snow",
+  "extra_blocks": [
+    {
+      "type": "water",
+      "min_count": 4,
+      "label": "Air"
+    }
+  ]
+}
+

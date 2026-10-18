@@ -1,0 +1,27 @@
+{
+  "name": "snow",
+  "display_name": "Kutub/Salju",
+  "biomes": [
+    "#minecraft:spawns_snow_foxes",
+    "#minecraft:spawns_white_rabbits",
+    "minecraft:snowy_plains",
+    "minecraft:ice_spikes",
+    "minecraft:snowy_taiga",
+    "minecraft:snowy_slopes",
+    "minecraft:frozen_peaks",
+    "minecraft:jagged_peaks",
+    "minecraft:grove",
+    "minecraft:frozen_ocean",
+    "minecraft:deep_frozen_ocean"
+  ],
+  "min_temperature": -0.5,
+  "max_temperature": 0.15,
+  "required_blocks": [
+    {
+      "type": "snow",
+      "min_count": 6,
+      "label": "Salju/Es"
+    }
+  ]
+}
+

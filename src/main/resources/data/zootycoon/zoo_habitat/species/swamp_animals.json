@@ -1,0 +1,11 @@
+{
+  "entities": [
+    "alexsmobs:crocodile",
+    "naturalist:crocodile",
+    "naturalist:alligator",
+    "alexsmobs:alligator_snapping_turtle",
+    "naturalist:hippo"
+  ],
+  "template": "zootycoon:swamp"
+}
+

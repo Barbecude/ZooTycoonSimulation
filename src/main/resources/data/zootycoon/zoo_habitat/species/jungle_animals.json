@@ -1,0 +1,12 @@
+{
+  "entities": [
+    "alexsmobs:gorilla",
+    "alexsmobs:capuchin_monkey",
+    "alexsmobs:gelada_monkey",
+    "minecraft:ocelot",
+    "alexsmobs:hummingbird",
+    "naturalist:canary"
+  ],
+  "template": "zootycoon:jungle"
+}
+

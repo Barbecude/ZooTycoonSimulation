@@ -1,0 +1,14 @@
+{
+  "entities": [
+    "minecraft:panda"
+  ],
+  "template": "zootycoon:jungle",
+  "extra_blocks": [
+    {
+      "type": "bamboo",
+      "min_count": 4,
+      "label": "Bambu"
+    }
+  ]
+}
+
