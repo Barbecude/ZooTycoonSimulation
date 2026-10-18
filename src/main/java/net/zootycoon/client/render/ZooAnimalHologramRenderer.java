@@ -3,24 +3,32 @@ package net.zootycoon.client.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.entity.ItemRenderer;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
+import net.zootycoon.animal.AnimalDietRegistry;
 import net.zootycoon.client.inspect.HologramBarRenderer;
 import net.zootycoon.client.inspect.InspectionClientCache;
 import net.zootycoon.client.inspect.InspectionTargetTracker;
 import org.joml.Matrix4f;
 
+import java.util.List;
+
 /**
  * World-space in-world billboarded inspection hologram renderer.
- * Displays species identity, visual health bar with vanilla heart icon, and
- * visual hunger, thirst, and cleanliness status bars.
+ * Displays species identity, visual health bar with vanilla heart icon,
+ * visual hunger, thirst, and cleanliness status bars, and 3D favorite food items.
  */
 public class ZooAnimalHologramRenderer {
 
@@ -124,6 +132,31 @@ public class ZooAnimalHologramRenderer {
             cleanProgress = 0.0f;
         }
 
+        // Retrieve favorite foods data
+        List<ItemStack> favoriteStacks = AnimalDietRegistry.getFavoriteFoodStacks(entity);
+        boolean isFallbackDiet = AnimalDietRegistry.isFallbackDiet(entity);
+        Component foodHeaderComponent;
+        if (isFallbackDiet) {
+            foodHeaderComponent = Component.translatable("zootycoon.inspect.favorite_food")
+                    .withStyle(ChatFormatting.WHITE)
+                    .append(" ")
+                    .append(Component.translatable("zootycoon.inspect.general_diet").withStyle(ChatFormatting.YELLOW));
+        } else {
+            foodHeaderComponent = Component.translatable("zootycoon.inspect.favorite_food")
+                    .withStyle(ChatFormatting.WHITE);
+        }
+        int foodHeaderWidth = font.width(foodHeaderComponent);
+
+        int totalFoods = favoriteStacks.size();
+        int renderedFoodCount = Math.min(4, totalFoods);
+        int extraFoods = totalFoods - renderedFoodCount;
+        String extraFoodsText = extraFoods > 0 ? "+" + extraFoods : "";
+        int extraFoodsWidth = extraFoods > 0 ? font.width(extraFoodsText) : 0;
+
+        float itemSlotWidth = 14.0f;
+        float itemsRowWidth = (renderedFoodCount * itemSlotWidth) + (extraFoods > 0 ? extraFoodsWidth + 3.0f : 0.0f);
+        float foodSectionWidth = Math.max((float) foodHeaderWidth, itemsRowWidth);
+
         // Calculate layout geometry
         Component titleComponent = entity.getDisplayName();
         int titleWidth = font.width(titleComponent);
@@ -142,11 +175,16 @@ public class ZooAnimalHologramRenderer {
                 Math.max(font.width(thirstText), font.width(cleanText))));
 
         float rowBlockWidth = iconWidth + gapIconToBar + barWidth + gapBarToText + Math.max(24.0f, (float) maxTextWidth);
-        float boxWidth = Math.max(rowBlockWidth + 12.0f, maxHeaderWidth + 14.0f);
+        float boxWidth = Math.max(rowBlockWidth + 12.0f, Math.max(maxHeaderWidth + 14.0f, foodSectionWidth + 14.0f));
 
         float rowHeight = 11.0f;
         float headerHeight = isRegistered ? 13.0f : 23.0f;
-        float contentHeight = headerHeight + (4.0f * rowHeight);
+        float barsHeight = 4.0f * rowHeight;
+        float foodGap = 4.0f;
+        float foodHeaderHeight = 10.0f;
+        float foodItemsHeight = renderedFoodCount > 0 ? 14.0f : 0.0f;
+        float foodSectionHeight = foodHeaderHeight + foodItemsHeight;
+        float contentHeight = headerHeight + barsHeight + foodGap + foodSectionHeight;
         float totalBoxHeight = contentHeight + 8.0f; // 4px padding top, 4px padding bottom
 
         float minX = -boxWidth / 2.0f;
@@ -186,6 +224,15 @@ public class ZooAnimalHologramRenderer {
             float hungerRowY = curY + rowHeight;
             float thirstRowY = curY + (rowHeight * 2.0f);
             float cleanRowY = curY + (rowHeight * 3.0f);
+            curY += (rowHeight * 4.0f);
+
+            curY += foodGap;
+            float foodHeaderX = -foodHeaderWidth / 2.0f;
+            float foodHeaderY = curY;
+            curY += foodHeaderHeight;
+
+            float foodItemsY = curY + 6.0f; // center Y of 3D items
+            float itemsStartX = -(itemsRowWidth / 2.0f) + (itemSlotWidth / 2.0f);
 
             VertexConsumer barConsumer = buffer.getBuffer(RenderType.textBackground());
             HologramBarRenderer.drawBar(barConsumer, matrix, barX, healthRowY + 3.5f, barWidth, barHeight, hpProgress, HologramBarRenderer.HEALTH_COLOR, HologramBarRenderer.HEALTH_TRACK, LightTexture.FULL_BRIGHT);
@@ -205,7 +252,31 @@ public class ZooAnimalHologramRenderer {
             HologramBarRenderer.drawTexturedIcon(buffer, matrix, HologramBarRenderer.THIRST_ICON, iconX, thirstRowY + 1.0f, 9.0f, 9.0f, LightTexture.FULL_BRIGHT);
             HologramBarRenderer.drawTexturedIcon(buffer, matrix, HologramBarRenderer.CLEANLINESS_ICON, iconX, cleanRowY + 1.0f, 9.0f, 9.0f, LightTexture.FULL_BRIGHT);
 
-            // 5. Draw text components (clean font without shadow)
+            // 5. Render 3D favorite food item stacks
+            ItemRenderer itemRenderer = mc.getItemRenderer();
+            for (int i = 0; i < renderedFoodCount; i++) {
+                ItemStack stack = favoriteStacks.get(i);
+                float itemX = itemsStartX + (i * itemSlotWidth);
+
+                poseStack.pushPose();
+                poseStack.translate(itemX, foodItemsY, -1.5f);
+                poseStack.scale(16.0f, -16.0f, 16.0f);
+
+                itemRenderer.renderStatic(
+                        stack,
+                        ItemDisplayContext.GROUND,
+                        LightTexture.FULL_BRIGHT,
+                        OverlayTexture.NO_OVERLAY,
+                        poseStack,
+                        buffer,
+                        entity.level(),
+                        0
+                );
+
+                poseStack.popPose();
+            }
+
+            // 6. Draw text components (clean font without shadow)
             font.drawInBatch(titleComponent, titleX, titleY, 0xFFFFFFFF, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             if (!isRegistered) {
                 font.drawInBatch(unregComponent, unregX, unregY, HologramBarRenderer.COLOR_MUTED, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
@@ -214,6 +285,16 @@ public class ZooAnimalHologramRenderer {
             font.drawInBatch(hungerText, textX, hungerRowY + 1.0f, hungerTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             font.drawInBatch(thirstText, textX, thirstRowY + 1.0f, thirstTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             font.drawInBatch(cleanText, textX, cleanRowY + 1.0f, cleanTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+
+            // Draw Favorite Food header
+            font.drawInBatch(foodHeaderComponent, foodHeaderX, foodHeaderY, 0xFFFFFFFF, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+
+            // Draw +N if more than 4 foods
+            if (extraFoods > 0) {
+                float extraX = itemsStartX + (renderedFoodCount * itemSlotWidth) - (itemSlotWidth / 2.0f) + 3.0f;
+                float extraY = foodItemsY - 4.0f;
+                font.drawInBatch(extraFoodsText, extraX, extraY, 0xFFAAAAAA, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            }
 
             if (buffer instanceof MultiBufferSource.BufferSource bs) {
                 bs.endBatch();

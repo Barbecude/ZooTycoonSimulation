@@ -2,7 +2,9 @@ package net.zootycoon.animal;
 
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.item.Item;
@@ -13,6 +15,21 @@ import java.util.*;
 
 public class AnimalDietRegistry {
 
+    public static final TagKey<Item> RAW_MEAT_TAG = TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("zootycoon", "animal_food/raw_meat"));
+    public static final TagKey<Item> RAW_FISH_TAG = TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("zootycoon", "animal_food/raw_fish"));
+    public static final TagKey<Item> C_RAW_MEAT_TAG = TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("c", "foods/raw_meat"));
+    public static final TagKey<Item> C_RAW_FISH_TAG = TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("c", "foods/raw_fish"));
+
+    public static boolean isRawMeat(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        return stack.is(RAW_MEAT_TAG) || stack.is(C_RAW_MEAT_TAG);
+    }
+
+    public static boolean isRawFish(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        return stack.is(RAW_FISH_TAG) || stack.is(C_RAW_FISH_TAG);
+    }
+
     public enum FeedingType {
         TROUGH,         // Herbivora / Pemakan Palung Pakan
         THROWN_MEAT     // Karnivora / Predator (Dilempar Daging/Ikan)
@@ -22,12 +39,46 @@ public class AnimalDietRegistry {
         public final FeedingType feedingType;
         public final List<Item> acceptedFoods;
         public final String description;
+        public final boolean acceptsRawMeat;
+        public final boolean acceptsRawFish;
+        public final boolean isFallback;
 
-        public AnimalDiet(FeedingType feedingType, String description, Item... foods) {
+        public AnimalDiet(FeedingType feedingType, String description, boolean acceptsRawMeat, boolean acceptsRawFish, boolean isFallback, Item... foods) {
             this.feedingType = feedingType;
             this.description = description;
+            this.acceptsRawMeat = acceptsRawMeat;
+            this.acceptsRawFish = acceptsRawFish;
+            this.isFallback = isFallback;
             this.acceptedFoods = Arrays.asList(foods);
         }
+
+        public AnimalDiet(FeedingType feedingType, String description, boolean acceptsRawMeat, boolean acceptsRawFish, Item... foods) {
+            this(feedingType, description, acceptsRawMeat, acceptsRawFish, false, foods);
+        }
+
+        public AnimalDiet(FeedingType feedingType, String description, Item... foods) {
+            this(feedingType, description, autoDetectRawMeat(feedingType, foods), autoDetectRawFish(foods), false, foods);
+        }
+    }
+
+    private static boolean autoDetectRawMeat(FeedingType feedingType, Item... foods) {
+        if (foods == null) return false;
+        for (Item f : foods) {
+            if (f == Items.BEEF || f == Items.PORKCHOP || f == Items.CHICKEN || f == Items.MUTTON || f == Items.RABBIT) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean autoDetectRawFish(Item... foods) {
+        if (foods == null) return false;
+        for (Item f : foods) {
+            if (f == Items.COD || f == Items.SALMON || f == Items.TROPICAL_FISH || f == Items.PUFFERFISH) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static final Map<String, AnimalDiet> DIET_REGISTRY = new HashMap<>();
@@ -127,6 +178,10 @@ public class AnimalDietRegistry {
         DIET_REGISTRY.put(entityTypeId.toLowerCase(Locale.ROOT), new AnimalDiet(feedingType, description, foods));
     }
 
+    public static void register(String entityTypeId, FeedingType feedingType, String description, boolean acceptsRawMeat, boolean acceptsRawFish, Item... foods) {
+        DIET_REGISTRY.put(entityTypeId.toLowerCase(Locale.ROOT), new AnimalDiet(feedingType, description, acceptsRawMeat, acceptsRawFish, false, foods));
+    }
+
     public static AnimalDiet getDiet(String entityTypeId) {
         if (entityTypeId == null || entityTypeId.isEmpty()) return getFallbackDiet(null);
         String key = entityTypeId.toLowerCase(Locale.ROOT);
@@ -150,10 +205,16 @@ public class AnimalDietRegistry {
     private static AnimalDiet getFallbackDiet(Entity entity) {
         if (entity instanceof Animal) {
             // Default peaceful animal -> Trough with Wheat, Carrots, Seeds
-            return new AnimalDiet(FeedingType.TROUGH, "Herbivora Umum (Gandum & Sayur)", Items.WHEAT, Items.CARROT, Items.APPLE, Items.WHEAT_SEEDS);
+            return new AnimalDiet(FeedingType.TROUGH, "Herbivora Umum (Gandum & Sayur)", false, false, true, Items.WHEAT, Items.CARROT, Items.APPLE, Items.WHEAT_SEEDS);
         }
         // Hostile / Monster / Predator fallback -> Thrown Meat
-        return new AnimalDiet(FeedingType.THROWN_MEAT, "Karnivora Umum (Daging Segar)", Items.BEEF, Items.PORKCHOP, Items.CHICKEN, Items.ROTTEN_FLESH);
+        return new AnimalDiet(FeedingType.THROWN_MEAT, "Karnivora Umum (Daging Segar)", true, false, true, Items.BEEF, Items.PORKCHOP, Items.CHICKEN, Items.ROTTEN_FLESH);
+    }
+
+    public static boolean isFallbackDiet(Entity entity) {
+        if (entity == null) return true;
+        AnimalDiet diet = getDiet(entity);
+        return diet == null || diet.isFallback;
     }
 
     public static FeedingType getFeedingType(Entity entity) {
@@ -164,17 +225,39 @@ public class AnimalDietRegistry {
         return getDiet(entity).acceptedFoods;
     }
 
+    /**
+     * Client-safe method to retrieve a list of favorite food ItemStacks for an entity.
+     */
+    public static List<ItemStack> getFavoriteFoodStacks(Entity entity) {
+        if (entity == null) return Collections.emptyList();
+        AnimalDiet diet = getDiet(entity);
+        if (diet == null || diet.acceptedFoods == null || diet.acceptedFoods.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<ItemStack> stacks = new ArrayList<>(diet.acceptedFoods.size());
+        for (Item item : diet.acceptedFoods) {
+            if (item != null && item != Items.AIR) {
+                stacks.add(new ItemStack(item));
+            }
+        }
+        return stacks;
+    }
+
     public static boolean isFoodValid(Entity entity, ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
         if (entity instanceof Animal a && a.isFood(stack)) return true;
+        AnimalDiet diet = getDiet(entity);
+        if (diet == null) return false;
+        if (diet.acceptsRawMeat && isRawMeat(stack)) return true;
+        if (diet.acceptsRawFish && isRawFish(stack)) return true;
         Item item = stack.getItem();
-        List<Item> accepted = getAcceptedFoods(entity);
-        return accepted.contains(item);
+        return diet.acceptedFoods != null && diet.acceptedFoods.contains(item);
     }
 
     public static boolean isAnyFood(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
         if (stack.has(DataComponents.FOOD)) return true;
+        if (isRawMeat(stack) || isRawFish(stack)) return true;
         Item item = stack.getItem();
         for (AnimalDiet d : DIET_REGISTRY.values()) {
             if (d.acceptedFoods.contains(item)) return true;

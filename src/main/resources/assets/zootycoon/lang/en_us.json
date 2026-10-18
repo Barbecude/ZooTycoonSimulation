@@ -517,5 +517,7 @@
   "zootycoon.inspect.health": "Health",
   "zootycoon.inspect.hunger": "Hunger",
   "zootycoon.inspect.thirst": "Thirst",
-  "zootycoon.inspect.cleanliness": "Cleanliness"
+  "zootycoon.inspect.cleanliness": "Cleanliness",
+  "zootycoon.inspect.favorite_food": "Favorite Food:",
+  "zootycoon.inspect.general_diet": "General Diet"
 }

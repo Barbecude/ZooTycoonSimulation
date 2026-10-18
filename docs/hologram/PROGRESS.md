@@ -8,7 +8,7 @@
 | 3 | Deteksi target & Billboarding Hologram | SELESAI | 2026-10-18 | Adopsi pola Farm & Charm: InspectionTargetTracker dengan crosshair pick + raycast collider 16 blok, zero-delay release, billboard world-space di ZooAnimalHologramRenderer dengan Font.DisplayMode.NORMAL |
 | 4 | Sinkronisasi data | SELESAI | 2026-10-18 | Adopsi pola Farm & Charm: InspectionPayloads (InspectStart, InspectStop, InspectionSnapshot), ZooInspectionService (server manager, snapshot tiap 10 tick, validasi kaca pembesar/jarak/kandidat), InspectionClientCache (timeout 40 tick), ZooAnimalHologramRenderer membaca cache aktual dan menampilkan "-" untuk hewan belum terdaftar tanpa angka palsu |
 | 5 | Tampilan Hologram In-World & Bar Indikator | SELESAI | 2026-10-18 | In-world hologram dengan background plate rounded/dark 0xAA0B0E14 depth-tested, visual progress bar proporsional (health, hunger, thirst, cleanliness), border gelap, ikon 9x9 pixel art orisinal & font heart ❤, status warna (putih/kuning/merah), string lang zootycoon.inspect.*, tanpa nilai palsu |
-| 6 | Makanan favorit (Item Rendering 3D) | BELUM | - | |
+| 6 | Makanan favorit (Item Rendering 3D) | SELESAI | 2026-10-18 | Adopsi pola Farm & Charm: renderStatic(stack, ItemDisplayContext.GROUND, packedLight, OverlayTexture.NO_OVERLAY, poseStack, buffer, entity.level(), 0), 1-4 item stack 3D asli, label +N jika >4 jenis, label "Pakan Umum" jika fallback diet, item tags zootycoon:animal_food/raw_meat dan raw_fish lintas mod (FarmersDelight, Alex's Mobs, Naturalist, WilderNature, Farm & Charm) tanpa olahan/masakan |
 | 7 | Musim dan suhu (Fabric Seasons) | BELUM | - | |
 | 8 | Habitat dan ekosistem | BELUM | - | |
 | 9 | Mandi hewan oleh player | BELUM | - | |
@@ -34,33 +34,35 @@
 - Fase 5: Membangun helper in-world `HologramBarRenderer` untuk background plate rounded chamfered semi-transparan `0xAA0B0E14` ber-depth test (terocclude dinding/blok), bar proporsional dengan 1px border gelap `0xFF05070A`, track latar, dan highlight 1px.
 - Fase 5: Ralat ikon sesuai preferensi pengguna: ikon health dan hunger menggunakan sprite GUI resmi Minecraft vanilla (`minecraft:hud/heart/full` dan `minecraft:hud/food_full`) via `GuiSpriteManager`. Ikon thirst dan cleanliness menggunakan pixel art orisinal 9x9 (`thirst.png`, `cleanliness.png`) di bawah lisensi MIT Zoo Tycoon dan dicatat di `docs/hologram/ASSETS.md`.
 - Fase 5: Indikator status warna teks nilai: putih (> 50%), kuning peringatan (<= 50%), merah kritis (<= 15%). Jika hewan belum terdaftar, bar dikosongkan (0%), teks bertuliskan "-", dan baris kedua menampilkan teks "Belum Terdaftar" abu-abu via translation key `zootycoon.inspect.unregistered`.
+- Fase 6: Tag item `zootycoon:animal_food/raw_meat` dan `raw_fish` dibuat mencakup `#c:foods/raw_meat`, `#c:foods/raw_fish`, daging/ikan mentah vanilla, serta item mentah lintas mod (FarmersDelight, Farm & Charm, Naturalist, Alex's Mobs, WilderNature) dengan flag `"required": false`. Seluruh item olahan/masakan dilarang keras masuk agar tidak menjadi pakan satwa liar.
+- Fase 6: `AnimalDietRegistry` diperbarui dengan pendeteksian otomatis flag `acceptsRawMeat` dan `acceptsRawFish` pada diet karnivora/piscivora. Method `isFoodValid(entity, stack)` memvalidasi kecocokan item terhadap tag daging dan ikan mentah tersebut sehingga satwa karnivora/piscivora dapat menerima potongan daging mentah mod tanpa merusak logic feeding trough herbivora atau zookeeper.
+- Fase 6: Client-safe method `AnimalDietRegistry.getFavoriteFoodStacks(entity)` dan `isFallbackDiet(entity)` diimplementasikan. `ZooAnimalHologramRenderer` merender deretan 1-4 item 3D nyata menggunakan `mc.getItemRenderer().renderStatic(stack, ItemDisplayContext.GROUND, packedLight, OverlayTexture.NO_OVERLAY, poseStack, buffer, entity.level(), 0)` (pola Farm & Charm). Jika makanan > 4 jenis, ditampilkan label `+N`. Jika menggunakan fallback diet, ditampilkan label "Pakan Umum" (`zootycoon.inspect.general_diet`) dengan warna kuning tanpa nilai palsu.
 
-## Bukti Selesai (Fase 5)
-- Hologram melayang rapi di atas kepala satwa, teks tajam tanpa bold berlebihan dan background plate `0xAA0B0E14` terocclude blok dengan benar jika terhalang dinding.
-- Visual health bar dengan proporsi aktual `hp / maxHp`, ikon hati resmi Minecraft vanilla (`hud/heart/full`), teks status nilai "X/Y". Pukul hewan: bar health langsung berkurang secara visual dan akurat.
-- Hunger bar berwarna cokelat-oranye dengan proporsi `hunger / 100`, ikon paha ayam resmi Minecraft vanilla (`hud/food_full`).
-- Thirst bar biru laut `thirst / 100` dengan ikon tetes air 9x9, cleanliness bar biru muda `cleanliness / 100` dengan ikon gelembung 9x9.
-- Indikator status warna teks dinamis: putih jika normal (> 50%), kuning jika peringatan (<= 50%), merah jika kritis (<= 15%).
-- Satwa liar belum terdaftar: bar hunger/thirst/cleanliness dikosongkan (0%), teks kebutuhan menampilkan "-", baris kedua menampilkan teks "Belum Terdaftar" abu-abu via lang `zootycoon.inspect.unregistered`. Dilarang dan terbukti tidak menampilkan angka palsu 80/100.
-- String UI inspeksi terdaftar di `en_us.json` dan `id_id.json` di bawah key `zootycoon.inspect.*`.
-- Gradle build berhasil sempurna (`BUILD SUCCESSFUL in 38s`) dan file jar otomatis terpasang ke profil Modrinth.
+## Bukti Selesai (Fase 6)
+- Sapi (`minecraft:cow`) menampilkan deretan ikon item Gandum & Hay Block 3D nyata di hologram.
+- Harimau Alex's Mobs (`alexsmobs:tiger`) dan Singa Naturalist (`naturalist:lion`) menampilkan ikon Daging 3D dan menerima daging mentah dari FarmersDelight (misalnya `farmersdelight:minced_beef`, `farmersdelight:chicken_cuts`, `farmersdelight:bacon`) saat diberi makan langsung oleh pemain melalui `isFoodValid`.
+- Makanan olahan/masakan (misal `farmersdelight:beef_patty`, `farm_and_charm:cooked_bacon`) terbukti ditolak karena tidak terdapat di dalam tag `raw_meat`/`raw_fish`.
+- Item makanan yang dirender pada hologram adalah item Minecraft nyata via `renderStatic` 3D (bukan tekstur datar palsu).
+- Hewan dengan lebih dari 4 variasi pakan menampilkan 4 ikon terdepan disertai teks `+N` di samping kanan ikon.
+- Satwa yang belum terdaftar di registry diet menggunakan fallback diet umum dan menampilkan label "Pakan Umum" (`zootycoon.inspect.general_diet`).
+- Translation key `zootycoon.inspect.favorite_food` dan `zootycoon.inspect.general_diet` terdaftar di `en_us.json` dan `id_id.json`.
+- Gradle build berhasil sempurna (`BUILD SUCCESSFUL in 38s`) dan jar otomatis terpasang ke profil Modrinth.
 
 ## Blocker
 - Tidak ada.
 
 ## File yang diubah
+- src/main/java/net/zootycoon/animal/AnimalDietRegistry.java
+- src/main/resources/data/zootycoon/tags/item/animal_food/raw_meat.json (BARU)
+- src/main/resources/data/zootycoon/tags/item/animal_food/raw_fish.json (BARU)
 - src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
-- src/main/java/net/zootycoon/client/inspect/HologramBarRenderer.java (BARU)
 - src/main/resources/assets/zootycoon/lang/en_us.json
 - src/main/resources/assets/zootycoon/lang/id_id.json
-- src/main/resources/assets/zootycoon/textures/gui/inspect/thirst.png (BARU)
-- src/main/resources/assets/zootycoon/textures/gui/inspect/cleanliness.png (BARU)
-- docs/hologram/ASSETS.md (BARU)
 - docs/hologram/PROGRESS.md
 
 ## Butuh izin user
-- Tidak ada (isu izin aset ThirstWasTaken2 telah dituntaskan dengan aset orisinal 9x9 berlisensi MIT).
+- Tidak ada.
 
 ## Belum terverifikasi
-- Uji interaktif koneksi jaringan remote multiplayer multi-client untuk memverifikasi reliabilitas rate 10-tick snapshot pada kondisi latensi tinggi.
-- Verifikasi visual in-game pada berbagai mod shader (Iris/Sodium) untuk memastikan blend mode textBackground kompatibel penuh.
+- Uji interaktif langsung in-game pemberian aneka daging mentah dari mod pihak ketiga pada berbagai entitas karnivora predator di multiplayer remote server.
+- Verifikasi visual orientasi 3D item tertentu yang memiliki custom model loader khusus dari mod eksternal.

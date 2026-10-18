@@ -526,5 +526,7 @@
   "zootycoon.inspect.health": "Kesehatan",
   "zootycoon.inspect.hunger": "Rasa Lapar",
   "zootycoon.inspect.thirst": "Rasa Haus",
-  "zootycoon.inspect.cleanliness": "Kebersihan"
+  "zootycoon.inspect.cleanliness": "Kebersihan",
+  "zootycoon.inspect.favorite_food": "Makanan Favorit:",
+  "zootycoon.inspect.general_diet": "Pakan Umum"
 }
