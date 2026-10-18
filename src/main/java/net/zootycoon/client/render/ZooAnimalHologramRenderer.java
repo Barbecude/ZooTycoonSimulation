@@ -18,9 +18,11 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.zootycoon.animal.AnimalDietRegistry;
+import net.zootycoon.animal.ZooClimate;
 import net.zootycoon.client.inspect.HologramBarRenderer;
 import net.zootycoon.client.inspect.InspectionClientCache;
 import net.zootycoon.client.inspect.InspectionTargetTracker;
+import net.zootycoon.network.InspectionPayloads;
 import org.joml.Matrix4f;
 
 import java.util.List;
@@ -157,6 +159,16 @@ public class ZooAnimalHologramRenderer {
         float itemsRowWidth = (renderedFoodCount * itemSlotWidth) + (extraFoods > 0 ? extraFoodsWidth + 3.0f : 0.0f);
         float foodSectionWidth = Math.max((float) foodHeaderWidth, itemsRowWidth);
 
+        // Retrieve climate data (season & temperature category)
+        InspectionPayloads.ClimateData climateData = InspectionPayloads.getLatestClimate(entity.getId());
+        String currentSeason = climateData != null ? climateData.season() : ZooClimate.getCurrentSeason(entity.level());
+        String currentTempCat = climateData != null ? climateData.tempCategory() : ZooClimate.getCategory(ZooClimate.getEffectiveTemperature(entity)).key;
+
+        Component seasonComp = ZooClimate.getSeasonComponent(currentSeason);
+        Component tempComp = ZooClimate.getTempCategoryComponent(currentTempCat);
+        Component climateComponent = Component.translatable("zootycoon.inspect.climate", seasonComp, tempComp);
+        int climateWidth = font.width(climateComponent);
+
         // Calculate layout geometry
         Component titleComponent = entity.getDisplayName();
         int titleWidth = font.width(titleComponent);
@@ -175,16 +187,18 @@ public class ZooAnimalHologramRenderer {
                 Math.max(font.width(thirstText), font.width(cleanText))));
 
         float rowBlockWidth = iconWidth + gapIconToBar + barWidth + gapBarToText + Math.max(24.0f, (float) maxTextWidth);
-        float boxWidth = Math.max(rowBlockWidth + 12.0f, Math.max(maxHeaderWidth + 14.0f, foodSectionWidth + 14.0f));
+        float boxWidth = Math.max(rowBlockWidth + 12.0f, Math.max(maxHeaderWidth + 14.0f, Math.max(foodSectionWidth + 14.0f, climateWidth + 14.0f)));
 
         float rowHeight = 11.0f;
         float headerHeight = isRegistered ? 13.0f : 23.0f;
         float barsHeight = 4.0f * rowHeight;
+        float climateGap = 3.0f;
+        float climateHeight = 10.0f;
         float foodGap = 4.0f;
         float foodHeaderHeight = 10.0f;
         float foodItemsHeight = renderedFoodCount > 0 ? 14.0f : 0.0f;
         float foodSectionHeight = foodHeaderHeight + foodItemsHeight;
-        float contentHeight = headerHeight + barsHeight + foodGap + foodSectionHeight;
+        float contentHeight = headerHeight + barsHeight + climateGap + climateHeight + foodGap + foodSectionHeight;
         float totalBoxHeight = contentHeight + 8.0f; // 4px padding top, 4px padding bottom
 
         float minX = -boxWidth / 2.0f;
@@ -225,6 +239,11 @@ public class ZooAnimalHologramRenderer {
             float thirstRowY = curY + (rowHeight * 2.0f);
             float cleanRowY = curY + (rowHeight * 3.0f);
             curY += (rowHeight * 4.0f);
+
+            curY += climateGap;
+            float climateX = -climateWidth / 2.0f;
+            float climateY = curY;
+            curY += climateHeight;
 
             curY += foodGap;
             float foodHeaderX = -foodHeaderWidth / 2.0f;
@@ -285,6 +304,9 @@ public class ZooAnimalHologramRenderer {
             font.drawInBatch(hungerText, textX, hungerRowY + 1.0f, hungerTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             font.drawInBatch(thirstText, textX, thirstRowY + 1.0f, thirstTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             font.drawInBatch(cleanText, textX, cleanRowY + 1.0f, cleanTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+
+            // Draw climate line (e.g. "Musim: Musim Semi | Suhu: Sejuk / Sedang")
+            font.drawInBatch(climateComponent, climateX, climateY, HologramBarRenderer.COLOR_MUTED, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 
             // Draw Favorite Food header
             font.drawInBatch(foodHeaderComponent, foodHeaderX, foodHeaderY, 0xFFFFFFFF, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);

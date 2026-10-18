@@ -528,5 +528,15 @@
   "zootycoon.inspect.thirst": "Rasa Haus",
   "zootycoon.inspect.cleanliness": "Kebersihan",
   "zootycoon.inspect.favorite_food": "Makanan Favorit:",
-  "zootycoon.inspect.general_diet": "Pakan Umum"
+  "zootycoon.inspect.general_diet": "Pakan Umum",
+  "zootycoon.inspect.climate": "Musim: %s | Suhu: %s",
+  "zootycoon.season.spring": "Musim Semi",
+  "zootycoon.season.summer": "Musim Panas",
+  "zootycoon.season.fall": "Musim Gugur",
+  "zootycoon.season.winter": "Musim Dingin",
+  "zootycoon.temperature.freezing": "Beku",
+  "zootycoon.temperature.cold": "Dingin",
+  "zootycoon.temperature.temperate": "Sejuk / Sedang",
+  "zootycoon.temperature.warm": "Hangat",
+  "zootycoon.temperature.hot": "Panas Terik"
 }

@@ -33,29 +33,31 @@ public class SereneSeasonsCompat {
 
     public static boolean isLoaded() {
         checkInit();
-        return isPresent;
+        return isPresent || FabricSeasonsCompat.isLoaded();
     }
 
     public static String getCurrentSeason(Level level) {
         checkInit();
-        if (!isPresent || level == null || getSeasonStateMethod == null || getSeasonMethod == null) {
-            return "SPRING";
-        }
-        try {
-            Object seasonState = getSeasonStateMethod.invoke(null, level);
-            if (seasonState != null) {
-                Object seasonEnum = getSeasonMethod.invoke(seasonState);
-                if (seasonEnum != null) {
-                    return seasonEnum.toString(); // "SPRING", "SUMMER", "AUTUMN", "WINTER"
+        if (isPresent && level != null && getSeasonStateMethod != null && getSeasonMethod != null) {
+            try {
+                Object seasonState = getSeasonStateMethod.invoke(null, level);
+                if (seasonState != null) {
+                    Object seasonEnum = getSeasonMethod.invoke(seasonState);
+                    if (seasonEnum != null) {
+                        return seasonEnum.toString().toUpperCase(java.util.Locale.ROOT); // "SPRING", "SUMMER", "AUTUMN", "WINTER"
+                    }
                 }
-            }
-        } catch (Throwable ignored) {}
+            } catch (Throwable ignored) {}
+        }
+        if (FabricSeasonsCompat.isLoaded()) {
+            return FabricSeasonsCompat.getCurrentSeason(level);
+        }
         return "SPRING";
     }
 
     public static String getSeasonDisplayName(Level level) {
         String s = getCurrentSeason(level);
-        return switch (s.toUpperCase()) {
+        return switch (s.toUpperCase(java.util.Locale.ROOT)) {
             case "SUMMER" -> "Musim Panas (Summer)";
             case "AUTUMN", "FALL" -> "Musim Gugur (Autumn)";
             case "WINTER" -> "Musim Dingin (Winter)";

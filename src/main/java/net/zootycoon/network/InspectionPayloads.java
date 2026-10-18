@@ -45,6 +45,8 @@ public class InspectionPayloads {
             int hunger,
             int thirst,
             int cleanliness,
+            String season,
+            String tempCategory,
             long timestamp
     ) implements CustomPacketPayload {
         public static final CustomPacketPayload.Type<InspectionSnapshotPayload> TYPE =
@@ -56,22 +58,44 @@ public class InspectionPayloads {
                     buf.writeInt(payload.hunger);
                     buf.writeInt(payload.thirst);
                     buf.writeInt(payload.cleanliness);
+                    buf.writeUtf(payload.season);
+                    buf.writeUtf(payload.tempCategory);
                     buf.writeLong(payload.timestamp);
                 },
-                buf -> new InspectionSnapshotPayload(
-                        buf.readInt(),
-                        buf.readBoolean(),
-                        buf.readInt(),
-                        buf.readInt(),
-                        buf.readInt(),
-                        buf.readLong()
-                )
+                buf -> {
+                    InspectionSnapshotPayload p = new InspectionSnapshotPayload(
+                            buf.readInt(),
+                            buf.readBoolean(),
+                            buf.readInt(),
+                            buf.readInt(),
+                            buf.readInt(),
+                            buf.readUtf(),
+                            buf.readUtf(),
+                            buf.readLong()
+                    );
+                    onSnapshotReceived(p);
+                    return p;
+                }
         );
 
         @Override
         public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
             return TYPE;
         }
+    }
+
+    private static final java.util.Map<Integer, ClimateData> LATEST_CLIMATE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public record ClimateData(String season, String tempCategory) {}
+
+    public static void onSnapshotReceived(InspectionSnapshotPayload payload) {
+        if (payload != null) {
+            LATEST_CLIMATE.put(payload.entityId(), new ClimateData(payload.season(), payload.tempCategory()));
+        }
+    }
+
+    public static ClimateData getLatestClimate(int entityId) {
+        return LATEST_CLIMATE.get(entityId);
     }
 
     public static void registerCommon() {

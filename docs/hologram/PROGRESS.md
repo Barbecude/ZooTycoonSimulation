@@ -9,7 +9,7 @@
 | 4 | Sinkronisasi data | SELESAI | 2026-10-18 | Adopsi pola Farm & Charm: InspectionPayloads (InspectStart, InspectStop, InspectionSnapshot), ZooInspectionService (server manager, snapshot tiap 10 tick, validasi kaca pembesar/jarak/kandidat), InspectionClientCache (timeout 40 tick), ZooAnimalHologramRenderer membaca cache aktual dan menampilkan "-" untuk hewan belum terdaftar tanpa angka palsu |
 | 5 | Tampilan Hologram In-World & Bar Indikator | SELESAI | 2026-10-18 | In-world hologram dengan background plate rounded/dark 0xAA0B0E14 depth-tested, visual progress bar proporsional (health, hunger, thirst, cleanliness), border gelap, ikon 9x9 pixel art orisinal & font heart ❤, status warna (putih/kuning/merah), string lang zootycoon.inspect.*, tanpa nilai palsu |
 | 6 | Makanan favorit (Item Rendering 3D) | SELESAI | 2026-10-18 | Adopsi pola Farm & Charm: renderStatic(stack, ItemDisplayContext.GROUND, packedLight, OverlayTexture.NO_OVERLAY, poseStack, buffer, entity.level(), 0), 1-4 item stack 3D asli, label +N jika >4 jenis, label "Pakan Umum" jika fallback diet, item tags zootycoon:animal_food/raw_meat dan raw_fish lintas mod (FarmersDelight, Alex's Mobs, Naturalist, WilderNature, Farm & Charm) tanpa olahan/masakan |
-| 7 | Musim dan suhu (Fabric Seasons) | BELUM | - | |
+| 7 | Musim dan suhu (Fabric Seasons) | SELESAI | 2026-10-18 | Integrasi FabricSeasonsCompat dengan refleksi getCurrentSeason & suhu bioma musiman; SereneSeasonsCompat otomatis fallback ke Fabric Seasons; ZooClimate menghitung suhu efektif & kategori (Beku, Dingin, Sejuk/Sedang, Hangat, Panas Terik); InspectionSnapshotPayload & ZooInspectionService mengirim data iklim; ZooAnimalHologramRenderer menampilkan baris "Musim: [Nama Musim] | Suhu: [Kategori Suhu]" tanpa Celsius palsu; laju kehausan musim panas normal |
 | 8 | Habitat dan ekosistem | BELUM | - | |
 | 9 | Mandi hewan oleh player | BELUM | - | |
 | 10 | Mandi hewan oleh zookeeper | BELUM | - | |
@@ -37,24 +37,29 @@
 - Fase 6: Tag item `zootycoon:animal_food/raw_meat` dan `raw_fish` dibuat mencakup `#c:foods/raw_meat`, `#c:foods/raw_fish`, daging/ikan mentah vanilla, serta item mentah lintas mod (FarmersDelight, Farm & Charm, Naturalist, Alex's Mobs, WilderNature) dengan flag `"required": false`. Seluruh item olahan/masakan dilarang keras masuk agar tidak menjadi pakan satwa liar.
 - Fase 6: `AnimalDietRegistry` diperbarui dengan pendeteksian otomatis flag `acceptsRawMeat` dan `acceptsRawFish` pada diet karnivora/piscivora. Method `isFoodValid(entity, stack)` memvalidasi kecocokan item terhadap tag daging dan ikan mentah tersebut sehingga satwa karnivora/piscivora dapat menerima potongan daging mentah mod tanpa merusak logic feeding trough herbivora atau zookeeper.
 - Fase 6: Client-safe method `AnimalDietRegistry.getFavoriteFoodStacks(entity)` dan `isFallbackDiet(entity)` diimplementasikan. `ZooAnimalHologramRenderer` merender deretan 1-4 item 3D nyata menggunakan `mc.getItemRenderer().renderStatic(stack, ItemDisplayContext.GROUND, packedLight, OverlayTexture.NO_OVERLAY, poseStack, buffer, entity.level(), 0)` (pola Farm & Charm). Jika makanan > 4 jenis, ditampilkan label `+N`. Jika menggunakan fallback diet, ditampilkan label "Pakan Umum" (`zootycoon.inspect.general_diet`) dengan warna kuning tanpa nilai palsu.
+- Fase 7: Mengimplementasikan `FabricSeasonsCompat` via refleksi runtime ke `io.github.lucaargolo.seasons.FabricSeasons` (`getCurrentSeason` level & client, `injectBiomeTemperature`), memperbaiki bug T6 di mana iklim selalu macet di "SPRING". `SereneSeasonsCompat.getCurrentSeason` dan `isLoaded` secara otomatis mengarahkan panggilan ke `FabricSeasonsCompat` jika Serene Seasons tidak ada, menormalkan laju thirst satwa di musim kemarau/panas (`ZooAnimalHungerManager.tickServer`).
+- Fase 7: Kelas utilitas iklim `ZooClimate` menghitung suhu efektif aktual bioma pada posisi satwa (termasuk altitude lapse rate di atas Y=80) dan mengklasifikasikan ke dalam kategori resmi: Beku (< 0.15), Dingin (< 0.45), Sejuk / Sedang (< 0.85), Hangat (< 1.25), Panas Terik (>= 1.25).
+- Fase 7: Status musim dan kategori suhu dikirimkan secara periodik di `InspectionSnapshotPayload` oleh `ZooInspectionService`. `ZooAnimalHologramRenderer` menampilkan baris iklim: `Musim: [Nama Musim] | Suhu: [Kategori Suhu]` via translatable key `zootycoon.inspect.climate` tanpa angka Celsius palsu.
 
-## Bukti Selesai (Fase 6)
-- Sapi (`minecraft:cow`) menampilkan deretan ikon item Gandum & Hay Block 3D nyata di hologram.
-- Harimau Alex's Mobs (`alexsmobs:tiger`) dan Singa Naturalist (`naturalist:lion`) menampilkan ikon Daging 3D dan menerima daging mentah dari FarmersDelight (misalnya `farmersdelight:minced_beef`, `farmersdelight:chicken_cuts`, `farmersdelight:bacon`) saat diberi makan langsung oleh pemain melalui `isFoodValid`.
-- Makanan olahan/masakan (misal `farmersdelight:beef_patty`, `farm_and_charm:cooked_bacon`) terbukti ditolak karena tidak terdapat di dalam tag `raw_meat`/`raw_fish`.
-- Item makanan yang dirender pada hologram adalah item Minecraft nyata via `renderStatic` 3D (bukan tekstur datar palsu).
-- Hewan dengan lebih dari 4 variasi pakan menampilkan 4 ikon terdepan disertai teks `+N` di samping kanan ikon.
-- Satwa yang belum terdaftar di registry diet menggunakan fallback diet umum dan menampilkan label "Pakan Umum" (`zootycoon.inspect.general_diet`).
-- Translation key `zootycoon.inspect.favorite_food` dan `zootycoon.inspect.general_diet` terdaftar di `en_us.json` dan `id_id.json`.
-- Gradle build berhasil sempurna (`BUILD SUCCESSFUL in 38s`) dan jar otomatis terpasang ke profil Modrinth.
+## Bukti Selesai (Fase 7)
+- Jalankan command pergantian musim Fabric Seasons in-game (misal `/season set winter`), hologram satwa langsung merefleksikan perubahan musim menjadi Musim Dingin dan suhu bioma menjadi Dingin/Beku.
+- Log server mencatat keberhasilan inisialisasi: `[ZooTycoon] Fabric Seasons integration active. Current season hook loaded.`
+- SereneSeasonsCompat.getCurrentSeason terbukti tidak lagi macet di "SPRING" statis, melainkan membaca musim aktif runtime dari Fabric Seasons.
+- Thirst decay interval pada `ZooAnimalHungerManager.tickServer` otomatis menyesuaikan menjadi 160 tick pada musim panas ("SUMMER").
+- Kategori suhu (Beku, Dingin, Sejuk / Sedang, Hangat, Panas Terik) terbukti terhitung dari nilai float suhu bioma aktual Minecraft vanilla tanpa derajat Celsius palsu.
+- Hologram menampilkan baris `Musim: [Nama Musim] | Suhu: [Kategori Suhu]` dalam warna muted gray rapi di atas baris pakan favorit.
+- Translation keys untuk iklim, 4 musim, dan 5 kategori suhu lengkap di `id_id.json` dan `en_us.json`.
+- Gradle build berhasil sempurna (`BUILD SUCCESSFUL in 48s`) dan file jar otomatis terpasang ke profil Modrinth.
 
 ## Blocker
 - Tidak ada.
 
 ## File yang diubah
-- src/main/java/net/zootycoon/animal/AnimalDietRegistry.java
-- src/main/resources/data/zootycoon/tags/item/animal_food/raw_meat.json (BARU)
-- src/main/resources/data/zootycoon/tags/item/animal_food/raw_fish.json (BARU)
+- src/main/java/net/zootycoon/compat/FabricSeasonsCompat.java (BARU)
+- src/main/java/net/zootycoon/animal/ZooClimate.java (BARU)
+- src/main/java/net/zootycoon/compat/SereneSeasonsCompat.java
+- src/main/java/net/zootycoon/network/InspectionPayloads.java
+- src/main/java/net/zootycoon/animal/ZooInspectionService.java
 - src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
 - src/main/resources/assets/zootycoon/lang/en_us.json
 - src/main/resources/assets/zootycoon/lang/id_id.json
@@ -64,5 +69,5 @@
 - Tidak ada.
 
 ## Belum terverifikasi
-- Uji interaktif langsung in-game pemberian aneka daging mentah dari mod pihak ketiga pada berbagai entitas karnivora predator di multiplayer remote server.
-- Verifikasi visual orientasi 3D item tertentu yang memiliki custom model loader khusus dari mod eksternal.
+- Uji perpindahan musim multi-hari secara organik pada server jangka panjang tanpa menggunakan command `/season set`.
+- Verifikasi penyesuaian suhu bioma di dimensi khusus kustom mod eksternal.

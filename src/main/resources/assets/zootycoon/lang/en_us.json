@@ -519,5 +519,15 @@
   "zootycoon.inspect.thirst": "Thirst",
   "zootycoon.inspect.cleanliness": "Cleanliness",
   "zootycoon.inspect.favorite_food": "Favorite Food:",
-  "zootycoon.inspect.general_diet": "General Diet"
+  "zootycoon.inspect.general_diet": "General Diet",
+  "zootycoon.inspect.climate": "Season: %s | Temp: %s",
+  "zootycoon.season.spring": "Spring",
+  "zootycoon.season.summer": "Summer",
+  "zootycoon.season.fall": "Fall",
+  "zootycoon.season.winter": "Winter",
+  "zootycoon.temperature.freezing": "Freezing",
+  "zootycoon.temperature.cold": "Cold",
+  "zootycoon.temperature.temperate": "Temperate",
+  "zootycoon.temperature.warm": "Warm",
+  "zootycoon.temperature.hot": "Hot"
 }

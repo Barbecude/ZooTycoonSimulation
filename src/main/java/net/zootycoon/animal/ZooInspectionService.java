@@ -132,6 +132,10 @@ public class ZooInspectionService {
             cleanliness = ZooAnimalHungerManager.getCleanliness(animal);
         }
 
+        String season = ZooClimate.getCurrentSeason(animal.level());
+        float temp = ZooClimate.getEffectiveTemperature(animal);
+        String tempCat = ZooClimate.getCategory(temp).key;
+
         long timestamp = System.currentTimeMillis();
         InspectionPayloads.InspectionSnapshotPayload payload = new InspectionPayloads.InspectionSnapshotPayload(
                 animal.getId(),
@@ -139,6 +143,8 @@ public class ZooInspectionService {
                 hunger,
                 thirst,
                 cleanliness,
+                season,
+                tempCat,
                 timestamp
         );
 
