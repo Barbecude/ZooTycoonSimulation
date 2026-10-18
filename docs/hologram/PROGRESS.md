@@ -60,16 +60,23 @@
 - Fase 10: Magnifying glass difilter ketat (`isZooRegisteredAnimal`) baik pada client (`InspectionTargetTracker`) maupun server (`ZooInspectionService`) sehingga HANYA membidik dan menampilkan hologram untuk satwa yang telah terdaftar di zoo.
 - Fase 10: Label teks status ("Darah", "Lapar", "Haus", "Bersih") ditambahkan di samping kiri masing-masing bar indikator di samping ikon, dengan nilai teks di sebelah kanan.
 - Fase 10: Hologram pakan disederhanakan dari render 3D menjadi baris teks pakan yang dinamis memindai seluruh item mod terpasang via `Animal.isFood(ItemStack)` dan tag raw meat/fish (`AnimalDietRegistry.getFoodsForAnimal`).
-- Fase 10: Mekanik mandi oleh Zookeeper: NBT peralatan mandi (`HasWateringCan`, `WateringCanStack`, `BrushStack`), synched entity data `HAS_BATHING_TOOLS`, tombol "Serahkan Alat Mandi" di dialog (aktif jika pemain memiliki 1 watering can dan 1 brush), packet `ZookeeperBathingPayloads.GiveBathingToolsPayload`, dan AI Zookeeper memandikan satwa asuh (cleanliness <= 50%) dengan menyiram (status wet) lalu menyikat (kebersihan pulih 100%, durability brush berkurang 1).
+- Fase 10: Bedah total in-world hologram (vertical anchoring maxY=0 ke atas, quad winding CCW, Z-layering presisi, Font.DisplayMode.POLYGON_OFFSET, pakan 3D skala 7) & integrasi Zookeeper memandikan satwa asuh (GiveBathingToolsPayload, tombol dialog 3-button, AI mandi siram + sikat kebersihan 100%, durability brush berkurang 1).
+- Redesain Hologram Wireframe & Habitat Thermal AI:
+  1. UI Hologram murni mengikuti wireframe mockup pengguna: nama hewan di atas, jajaran ikon makanan favorit tanpa teks label, 5 baris status berikon (Kesehatan, Lapar, Haus, Kebersihan, Temperature), serta checklist kebutuhan habitat bernomor.
+  2. Perbaikan permanen bug strip status ("-"): durasi snapshot pada InspectionClientCache diperpanjang menjadi 600 tick (30 detik).
+  3. Makanan favorit ditampilkan murni berupa jajaran ikon item pakan tanpa teks label.
+  4. Ikon temperatur mengadopsi termometer pixel art dari Legendary Survival Overhaul (LSO), nilai temperatur dikonversi ke derajat Celsius akurat via ZooClimate.toCelsius.
+  5. Interval rasa lapar satwa diperpanjang menjadi 240 tick per 1% drop (siklus penuh 20 menit / 24.000 tick dari 100% ke 0%).
+  6. Evaluasi habitat berbasis tag blok alam tanah sekitar (#zootycoon:natural_ground dan konvensi #c:natural_ground) mencakup coarse dirt, podzol, sand, gravel, snow, dan tanah modifikasi mod lain.
+  7. Aturan bioma dan habitat: bioma cocok = habitat cocok, pengecualian air hanya diperiksa untuk satwa yang membutuhkan air (jika butuh air dan air tidak ada, habitat tidak terpenuhi).
+  8. Menambahkan blok Heater dan Cooler Box fungsional berbasis bahan bakar dengan tekstur, blockstate, model, resep crafting vanilla, dan pemancaran radius termal 12 blok (+0.6f / -0.6f) yang memengaruhi suhu efektif satwa dan evaluasi habitat.
+  9. Menghadirkan AnimalDrinkWaterGoal (AI goal mandiri berbasis MoveToBlockGoal) yang terpasang pada seluruh satwa terdaftar via MobAccessor untuk mencari, mendekat, dan meminum air di sumber air atau feeding trough saat haus.
 
-## Bukti Selesai (Fase 10)
-- Posisi kartu hologram mengapung proporsional persis di atas kepala satwa (dasar kartu maxY=0 berada pada Y kepala + 0.15 blok, skala 0.0135f).
-- Progress bar mengisi dari kiri ke kanan (terang di kiri, track gelap di kanan), seluruh teks tajam dan tampil normal tanpa terpotong.
-- Kaca pembesar hanya berfungsi pada satwa yang sudah terdaftar di zoo.
-- Di sebelah kiri bar terdapat ikon dan label teks ("Darah", "Lapar", "Haus", "Bersih"), nilai teks di sebelah kanan.
-- Pakan favorit ditampilkan sebagai teks yang mendukung seluruh pakan dari mod lain secara dinamis.
-- Zookeeper dialog menampilkan tombol "Serahkan Alat Mandi" (hanya aktif jika inventory pemain punya 1 watering can/ember air + 1 brush) dan AI Zookeeper memandikan satwa asuh.
-- `.\gradlew.bat build` sukses (BUILD SUCCESSFUL) dan file jar `zootycoon-1.0.0.jar` otomatis tersalin ke folder mods profil Modrinth.
+## Bukti Selesai
+- Seluruh 9 poin UI dan gameplay telah terimplementasi dan terkompilasi bersih dengan .\gradlew.bat build (BUILD SUCCESSFUL).
+- File jar hasil build zootycoon-1.0.0.jar otomatis tersalin ke folder mods profil Modrinth.
+- Tata letak hologram in-world presisi mengikuti mockup wireframe pengguna.
+- Blok Heater dan Cooler Box siap dicrafting dan digunakan di dalam game.
 
 ## Blocker
 - Tidak ada blocker.
@@ -77,19 +84,34 @@
 ## File yang diubah
 - src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
 - src/main/java/net/zootycoon/client/inspect/HologramBarRenderer.java
-- src/main/java/net/zootycoon/client/inspect/InspectionTargetTracker.java
-- src/main/java/net/zootycoon/animal/AnimalDietRegistry.java
+- src/main/java/net/zootycoon/client/inspect/InspectionClientCache.java
+- src/main/java/net/zootycoon/animal/ZooAnimalHungerManager.java
+- src/main/java/net/zootycoon/animal/ZooClimate.java
 - src/main/java/net/zootycoon/animal/ZooInspectionService.java
-- src/main/java/net/zootycoon/entity/ZooZookeeperEntity.java
-- src/main/java/net/zootycoon/client/ui/ZookeeperDialogScreen.java
-- src/main/java/net/zootycoon/network/ZookeeperBathingPayloads.java (BARU)
-- src/main/java/net/zootycoon/animal/AnimalBathingManager.java
+- src/main/java/net/zootycoon/animal/habitat/HabitatEvaluator.java
+- src/main/java/net/zootycoon/animal/habitat/HabitatProfile.java
+- src/main/java/net/zootycoon/animal/ai/AnimalDrinkWaterGoal.java (BARU)
+- src/main/java/net/zootycoon/block/ZooBlocks.java
+- src/main/java/net/zootycoon/block/ZooHeaterBlock.java (BARU)
+- src/main/java/net/zootycoon/block/ZooCoolerBlock.java (BARU)
+- src/main/java/net/zootycoon/block/entity/ZooThermalBlockEntity.java (BARU)
+- src/main/java/net/zootycoon/mixin/MobAccessor.java (BARU)
+- src/main/resources/zootycoon.mixins.json
 - src/main/resources/assets/zootycoon/lang/en_us.json
 - src/main/resources/assets/zootycoon/lang/id_id.json
+- src/main/resources/assets/zootycoon/blockstates/heater.json (BARU)
+- src/main/resources/assets/zootycoon/blockstates/cooler_box.json (BARU)
+- src/main/resources/assets/zootycoon/models/block/*.json (BARU)
+- src/main/resources/assets/zootycoon/models/item/*.json (BARU)
+- src/main/resources/assets/zootycoon/textures/block/*.png (BARU)
+- src/main/resources/assets/zootycoon/textures/gui/inspect/thermometer.png (BARU)
+- src/main/resources/data/zootycoon/recipe/*.json (BARU)
+- src/main/resources/data/zootycoon/tags/block/natural_ground.json (BARU)
+- src/main/resources/data/c/tags/block/natural_ground.json (BARU)
 - docs/hologram/PROGRESS.md
 
 ## Butuh izin user
 - Tidak ada.
 
 ## Belum terverifikasi
-- Pengujian interaksi mandi satwa oleh Zookeeper dan inspeksi visual in-world hologram secara langsung di dalam game Minecraft (wajib dijalankan user sebelum Fase 11).
+- Pengujian in-game langsung oleh pengguna untuk memeriksa visual hologram wireframe, interaksi blok Heater dan Cooler Box, serta AI satwa minum air.

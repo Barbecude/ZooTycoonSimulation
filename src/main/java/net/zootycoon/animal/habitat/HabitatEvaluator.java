@@ -29,50 +29,38 @@ public class HabitatEvaluator {
         NO_DATA
     }
 
+    public static final TagKey<Block> NATURAL_GROUND = TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath("zootycoon", "natural_ground"));
+
     public record HabitatResult(
             HabitatStatus status,
             String ecosystemName,
+            boolean biomeOk,
+            boolean waterRequired,
+            boolean waterOk,
+            boolean tempOk,
+            boolean tooCold,
+            boolean groundOk,
+            boolean companionOk,
             List<String> unmetNeeds
     ) {
-        /**
-         * Formats a clear, concise hint line for unmet habitat needs.
-         * Examples:
-         * - "Butuh: Air, Savana"
-         * - "Butuh: Air, Pepohonan"
-         * - "Bioma: Perlu Savana"
-         * - "Suhu: Terlalu Dingin"
-         */
+        public String encodePayloadString() {
+            return "status=" + status.name()
+                    + ";eco=" + ecosystemName
+                    + ";biome=" + (biomeOk ? "OK" : "NO")
+                    + ";water=" + (waterRequired ? (waterOk ? "OK" : "NO") : "NA")
+                    + ";temp=" + (tempOk ? "OK" : (tooCold ? "HEATER" : "COOLER"))
+                    + ";ground=" + (groundOk ? "OK" : "NO")
+                    + ";mate=" + (companionOk ? "OK" : "NO");
+        }
+
         public String formatHint() {
             if (unmetNeeds == null || unmetNeeds.isEmpty()) {
                 return "";
             }
-
-            // Single need cases
             if (unmetNeeds.size() == 1) {
-                String single = unmetNeeds.getFirst();
-                if (single.startsWith("Suhu:")) {
-                    return single;
-                }
-                if (single.startsWith("Bioma:")) {
-                    return single;
-                }
-                return "Butuh: " + single;
+                return "Butuh: " + unmetNeeds.getFirst();
             }
-
-            // Multiple needs: join into "Butuh: Item1, Item2"
-            List<String> cleanList = new ArrayList<>(unmetNeeds.size());
-            for (String item : unmetNeeds) {
-                if (item.startsWith("Bioma: Perlu ")) {
-                    cleanList.add(item.substring("Bioma: Perlu ".length()));
-                } else if (item.startsWith("Bioma: ")) {
-                    cleanList.add(item.substring("Bioma: ".length()));
-                } else if (item.startsWith("Suhu: ")) {
-                    cleanList.add(item);
-                } else {
-                    cleanList.add(item);
-                }
-            }
-            return "Butuh: " + String.join(", ", cleanList);
+            return "Butuh: " + String.join(", ", unmetNeeds);
         }
     }
 
@@ -81,44 +69,65 @@ public class HabitatEvaluator {
      */
     public static HabitatResult evaluate(ServerLevel level, LivingEntity animal) {
         if (level == null || animal == null || !animal.isAlive()) {
-            return new HabitatResult(HabitatStatus.NO_DATA, "-", Collections.emptyList());
+            return new HabitatResult(HabitatStatus.NO_DATA, "-", false, false, false, false, false, false, false, Collections.emptyList());
         }
 
         HabitatProfile profile = HabitatProfileLoader.getProfile(animal);
         if (profile == null) {
-            return new HabitatResult(HabitatStatus.NO_DATA, "-", Collections.emptyList());
+            return new HabitatResult(HabitatStatus.NO_DATA, "-", false, false, false, false, false, false, false, Collections.emptyList());
         }
+
+        // 1. Check surrounding blocks (radius 8, dy -4..4)
+        Map<String, Integer> blockCounts = scanSurroundingBlocks(level, animal.blockPosition());
+
+        // 2. Check Natural Ground (Point 6: coarse dirt, podzol, sand, etc.)
+        int groundCount = blockCounts.getOrDefault("natural_ground", 0);
+        boolean groundOk = groundCount >= 8;
+
+        // 3. Check Water (Point 7: Pengecualian air dicek terpisah, hanya untuk hewan yang butuh air)
+        boolean waterRequired = profile.requiresWater();
+        int waterCount = blockCounts.getOrDefault("water", 0);
+        boolean waterOk = !waterRequired || waterCount >= 4;
+
+        // 4. Check Biome (Point 7: Biome terpenuhi = habitat terpenuhi)
+        Holder<Biome> currentBiome = level.getBiome(animal.blockPosition());
+        boolean biomeOk = profile.matchesBiome(currentBiome);
+
+        // 5. Check Effective Temperature & Thermal Blocks (Point 8: Heater & Cooler Box)
+        float effectiveTemp = ZooClimate.getEffectiveTemperature(level, animal.blockPosition());
+        boolean tooCold = effectiveTemp < profile.minTemperature();
+        boolean tooHot = effectiveTemp > profile.maxTemperature();
+        boolean tempOk = !tooCold && !tooHot;
+
+        // 6. Check Companion (living entity of same species in radius 16)
+        boolean hasCompanion = !level.getEntitiesOfClass(animal.getClass(), animal.getBoundingBox().inflate(16.0), e -> e != animal && e.isAlive()).isEmpty();
 
         List<String> unmet = new ArrayList<>();
-
-        // 1. Check Ecosystem Blocks (radius 8, dy -4..4)
-        Map<String, Integer> blockCounts = scanSurroundingBlocks(level, animal.blockPosition());
-        for (HabitatProfile.BlockRequirement req : profile.requiredBlocks()) {
-            int count = getRequirementCount(level, blockCounts, req);
-            if (count < req.minCount()) {
-                unmet.add(req.label());
-            }
-        }
-
-        // 2. Check Biome
-        Holder<Biome> currentBiome = level.getBiome(animal.blockPosition());
-        if (!profile.matchesBiome(currentBiome)) {
+        if (!biomeOk) {
             unmet.add("Bioma: Perlu " + profile.displayName());
         }
-
-        // 3. Check Effective Temperature
-        float effectiveTemp = ZooClimate.getEffectiveTemperature(level, animal.blockPosition());
-        if (effectiveTemp < profile.minTemperature()) {
-            unmet.add("Suhu: Terlalu Dingin");
-        } else if (effectiveTemp > profile.maxTemperature()) {
-            unmet.add("Suhu: Terlalu Panas");
+        if (waterRequired && !waterOk) {
+            unmet.add("Air: Butuh Air");
+        }
+        if (tooCold) {
+            unmet.add("Suhu: Butuh Heater");
+        } else if (tooHot) {
+            unmet.add("Suhu: Butuh Cooler Box");
+        }
+        if (!groundOk) {
+            unmet.add("Tanah: Butuh Tanah Alami");
+        }
+        if (!hasCompanion) {
+            unmet.add("Pasangan: Butuh Teman");
         }
 
-        if (unmet.isEmpty()) {
-            return new HabitatResult(HabitatStatus.SUITABLE, profile.displayName(), Collections.emptyList());
-        } else {
-            return new HabitatResult(HabitatStatus.UNSUITABLE, profile.displayName(), unmet);
-        }
+        // Rule 7: Biome terpenuhi = habitat terpenuhi, dan sebaliknya.
+        // Pengecualian: air dicek terpisah, hanya untuk hewan yang butuh air.
+        // Jika air tidak ada di sekitar, habitat tetap belum terpenuhi walau biome cocok.
+        boolean isSuitable = biomeOk && tempOk && groundOk && waterOk;
+        HabitatStatus status = isSuitable ? HabitatStatus.SUITABLE : HabitatStatus.UNSUITABLE;
+
+        return new HabitatResult(status, profile.displayName(), biomeOk, waterRequired, waterOk, tempOk, tooCold, groundOk, hasCompanion, unmet);
     }
 
     private static Map<String, Integer> scanSurroundingBlocks(ServerLevel level, BlockPos center) {
@@ -137,6 +146,11 @@ public class HabitatEvaluator {
                     pos.set(center.getX() + dx, center.getY() + dy, center.getZ() + dz);
                     BlockState state = level.getBlockState(pos);
                     if (state.isAir()) continue;
+
+                    // Natural Ground block tag (coarse dirt, podzol, sand, gravel, modded soil)
+                    if (state.is(NATURAL_GROUND)) {
+                        counts.merge("natural_ground", 1, Integer::sum);
+                    }
 
                     // Water
                     if (state.getFluidState().is(FluidTags.WATER) || state.is(Blocks.WATER)) {

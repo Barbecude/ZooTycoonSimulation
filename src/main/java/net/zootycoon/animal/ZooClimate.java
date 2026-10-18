@@ -68,15 +68,40 @@ public class ZooClimate {
 
     public static float getEffectiveTemperature(Level level, BlockPos pos) {
         if (level == null || pos == null) return 0.5f;
+        float baseTemp;
         if (FabricSeasonsCompat.isLoaded()) {
-            return FabricSeasonsCompat.getEffectiveTemperature(level, pos);
+            baseTemp = FabricSeasonsCompat.getEffectiveTemperature(level, pos);
+        } else {
+            baseTemp = level.getBiome(pos).value().getBaseTemperature();
+            if (pos.getY() > 80) {
+                float heightDrop = (pos.getY() - 80) * 0.05f / 40.0f;
+                baseTemp = baseTemp - heightDrop;
+            }
         }
-        float baseTemp = level.getBiome(pos).value().getBaseTemperature();
-        if (pos.getY() > 80) {
-            float heightDrop = (pos.getY() - 80) * 0.05f / 40.0f;
-            return baseTemp - heightDrop;
+        float adjustment = getThermalAdjustment(pos);
+        return Math.max(-0.5f, Math.min(2.5f, baseTemp + adjustment));
+    }
+
+    public static float getThermalAdjustment(BlockPos pos) {
+        if (pos == null) return 0.0f;
+        float adjustment = 0.0f;
+        for (BlockPos heaterPos : net.zootycoon.block.entity.ZooThermalBlockEntity.ACTIVE_HEATERS) {
+            if (pos.closerThan(heaterPos, 12.0)) {
+                adjustment += 0.6f;
+                break;
+            }
         }
-        return baseTemp;
+        for (BlockPos coolerPos : net.zootycoon.block.entity.ZooThermalBlockEntity.ACTIVE_COOLERS) {
+            if (pos.closerThan(coolerPos, 12.0)) {
+                adjustment -= 0.6f;
+                break;
+            }
+        }
+        return adjustment;
+    }
+
+    public static int toCelsius(float effectiveTemperature) {
+        return Math.round((effectiveTemperature - 0.15f) * 25.0f + 7.0f);
     }
 
     public static String getCurrentSeason(Level level) {

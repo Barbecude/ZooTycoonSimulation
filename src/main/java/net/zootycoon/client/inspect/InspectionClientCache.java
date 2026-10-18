@@ -18,7 +18,8 @@ public class InspectionClientCache {
             long receiveGameTime
     ) {
         public boolean isExpired(long currentGameTime) {
-            return (currentGameTime - receiveGameTime) > 40L;
+            // Retain snapshot for up to 30 seconds (600 ticks) to avoid flickering
+            return (currentGameTime - receiveGameTime) > 600L;
         }
     }
 
@@ -47,13 +48,12 @@ public class InspectionClientCache {
             return null;
         }
         Minecraft mc = Minecraft.getInstance();
-        long currentGameTime = 0L;
         if (mc.level != null) {
-            currentGameTime = mc.level.getGameTime();
-        }
-        if (snapshot.isExpired(currentGameTime)) {
-            CACHE.remove(entityId);
-            return null;
+            long currentGameTime = mc.level.getGameTime();
+            if (snapshot.isExpired(currentGameTime)) {
+                CACHE.remove(entityId);
+                return null;
+            }
         }
         return snapshot;
     }

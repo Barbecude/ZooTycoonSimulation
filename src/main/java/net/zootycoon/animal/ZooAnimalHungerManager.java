@@ -36,7 +36,7 @@ public class ZooAnimalHungerManager {
     public static final int MAX_HUNGER = 100;
     public static final int HUNGRY_THRESHOLD = 50;
     public static final int CRITICAL_THRESHOLD = 15;
-    private static final int DECAY_INTERVAL_TICKS = 40; // Faster hunger decay (every 2 seconds loses 1%, ~3.3 minutes 100% to 0%)
+    private static final int DECAY_INTERVAL_TICKS = 240; // 240 ticks = 12 seconds per 1% drop -> 24,000 ticks (~20 minutes / 1 full Minecraft day) from 100% to 0%
 
     public static final int MAX_THIRST = 100;
     public static final int THIRSTY_THRESHOLD = 50;
@@ -247,6 +247,9 @@ public class ZooAnimalHungerManager {
             }
 
             // Animal pathing to feeding trough and water source (ONLY registered animals)
+            if (animal instanceof net.minecraft.world.entity.PathfinderMob pathfinderMob) {
+                net.zootycoon.animal.ai.AnimalDrinkWaterGoal.attach(pathfinderMob);
+            }
             if (animal instanceof Mob mob) {
                 handleUniversalAnimalNeeds(level, mob);
             }

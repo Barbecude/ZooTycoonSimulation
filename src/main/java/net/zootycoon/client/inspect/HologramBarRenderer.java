@@ -22,6 +22,7 @@ public class HologramBarRenderer {
     // Custom Zoo Tycoon 9x9 pixel-art icons for mechanics not present in vanilla Minecraft
     public static final ResourceLocation THIRST_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/inspect/thirst.png");
     public static final ResourceLocation CLEANLINESS_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/inspect/cleanliness.png");
+    public static final ResourceLocation THERMOMETER_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/inspect/thermometer.png");
 
     // Background plate color: semi-transparent dark slate (0xAA0B0E14)
     public static final int PLATE_BACKGROUND = 0xAA0B0E14;
@@ -191,5 +192,12 @@ public class HologramBarRenderer {
      */
     public static void drawHeartIcon(Font font, MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light) {
         font.drawInBatch("❤", x, y, 0xFFFF3333, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, light);
+    }
+
+    /**
+     * Draws the Legendary Survival Overhaul thermometer icon for temperature status.
+     */
+    public static void drawThermometerIcon(MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light) {
+        drawTexturedIcon(buffer, matrix, THERMOMETER_ICON, x, y, 9.0f, 9.0f, light);
     }
 }

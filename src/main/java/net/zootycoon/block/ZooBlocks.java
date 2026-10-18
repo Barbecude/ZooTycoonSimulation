@@ -116,6 +116,46 @@ public class ZooBlocks {
             FabricBlockEntityTypeBuilder.create(ZooGachaMachineBlockEntity::new, GACHA_MACHINE).build()
     );
 
+    // 10. Heater Block
+    public static final ResourceKey<Block> HEATER_KEY = ResourceKey.create(
+            Registries.BLOCK,
+            ZooTycoonMod.id("heater")
+    );
+    public static final ResourceKey<Item> HEATER_ITEM_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("heater")
+    );
+    public static final Block HEATER = new ZooHeaterBlock();
+    public static final BlockItem HEATER_ITEM = new BlockItem(
+            HEATER,
+            new Item.Properties()
+    );
+    public static final BlockEntityType<net.zootycoon.block.entity.ZooThermalBlockEntity> HEATER_BLOCK_ENTITY = Registry.register(
+            BuiltInRegistries.BLOCK_ENTITY_TYPE,
+            ZooTycoonMod.id("heater"),
+            FabricBlockEntityTypeBuilder.create((pos, state) -> new net.zootycoon.block.entity.ZooThermalBlockEntity(pos, state, net.zootycoon.block.entity.ZooThermalBlockEntity.ThermalType.HEATING), HEATER).build()
+    );
+
+    // 11. Cooler Box Block
+    public static final ResourceKey<Block> COOLER_KEY = ResourceKey.create(
+            Registries.BLOCK,
+            ZooTycoonMod.id("cooler_box")
+    );
+    public static final ResourceKey<Item> COOLER_ITEM_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("cooler_box")
+    );
+    public static final Block COOLER = new ZooCoolerBlock();
+    public static final BlockItem COOLER_ITEM = new BlockItem(
+            COOLER,
+            new Item.Properties()
+    );
+    public static final BlockEntityType<net.zootycoon.block.entity.ZooThermalBlockEntity> COOLER_BLOCK_ENTITY = Registry.register(
+            BuiltInRegistries.BLOCK_ENTITY_TYPE,
+            ZooTycoonMod.id("cooler_box"),
+            FabricBlockEntityTypeBuilder.create((pos, state) -> new net.zootycoon.block.entity.ZooThermalBlockEntity(pos, state, net.zootycoon.block.entity.ZooThermalBlockEntity.ThermalType.COOLING), COOLER).build()
+    );
+
     public static void register() {
         // Blocks
         Registry.register(BuiltInRegistries.BLOCK, ConstructionTapeBlock.BLOCK_KEY, CONSTRUCTION_TAPE);
@@ -124,6 +164,8 @@ public class ZooBlocks {
         Registry.register(BuiltInRegistries.BLOCK, TrashBlock.BLOCK_KEY, TRASH);
         Registry.register(BuiltInRegistries.BLOCK, ZooTycoonMod.id("feeding_trough"), FEEDING_TROUGH);
         Registry.register(BuiltInRegistries.BLOCK, GACHA_MACHINE_KEY, GACHA_MACHINE);
+        Registry.register(BuiltInRegistries.BLOCK, HEATER_KEY, HEATER);
+        Registry.register(BuiltInRegistries.BLOCK, COOLER_KEY, COOLER);
 
         // Block Items
         Registry.register(BuiltInRegistries.ITEM, CONSTRUCTION_TAPE_ITEM_KEY, CONSTRUCTION_TAPE_ITEM);
@@ -132,5 +174,7 @@ public class ZooBlocks {
         Registry.register(BuiltInRegistries.ITEM, TRASH_ITEM_KEY, TRASH_ITEM);
         Registry.register(BuiltInRegistries.ITEM, FEEDING_TROUGH_ITEM_KEY, FEEDING_TROUGH_ITEM);
         Registry.register(BuiltInRegistries.ITEM, GACHA_MACHINE_ITEM_KEY, GACHA_MACHINE_ITEM);
+        Registry.register(BuiltInRegistries.ITEM, HEATER_ITEM_KEY, HEATER_ITEM);
+        Registry.register(BuiltInRegistries.ITEM, COOLER_ITEM_KEY, COOLER_ITEM);
     }
 }

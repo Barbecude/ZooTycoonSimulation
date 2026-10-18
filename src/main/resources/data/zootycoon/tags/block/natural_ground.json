@@ -1,0 +1,32 @@
+{
+  "replace": false,
+  "values": [
+    "#minecraft:dirt",
+    "#minecraft:sand",
+    "#minecraft:terracotta",
+    "minecraft:gravel",
+    "minecraft:snow_block",
+    "minecraft:snow",
+    "minecraft:powder_snow",
+    "minecraft:clay",
+    "minecraft:mud",
+    "minecraft:packed_mud",
+    {
+      "id": "#c:dirt",
+      "required": false
+    },
+    {
+      "id": "#c:sand",
+      "required": false
+    },
+    {
+      "id": "#c:gravel",
+      "required": false
+    },
+    {
+      "id": "#c:grass",
+      "required": false
+    }
+  ]
+}
+

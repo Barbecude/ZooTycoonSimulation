@@ -6,6 +6,7 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "LivingEntityAccessor",
+    "MobAccessor",
     "ItemStackMaxStackSizeMixin",
     "ItemDefaultMaxStackSizeMixin",
     "compat.FieldGuideScanUnlockMixin"

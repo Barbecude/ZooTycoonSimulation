@@ -1,17 +1,17 @@
 package net.zootycoon.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.zootycoon.animal.AnimalDietRegistry;
@@ -23,15 +23,69 @@ import net.zootycoon.network.InspectionPayloads;
 import org.joml.Matrix4f;
 
 import java.util.List;
+import java.util.Locale;
 
 /**
  * World-space in-world billboarded inspection hologram renderer.
- * Displays species identity, visual health bar with vanilla heart icon,
- * visual hunger, thirst, and cleanliness status bars, and 3D favorite food items.
+ * Formatted exactly according to the user wireframe mockup:
+ * [Nama Hewan]
+ * [Ikon Makanan 1] [Ikon Makanan 2] ...
+ * Kesehatan: [heart] XX%
+ * Lapar: [hunger] XX%
+ * Haus: [thirst] XX%
+ * Kebersihan: [clean] XX%
+ * Temperature: [thermometer] XX°C (Status)
+ * Kebutuhan Habitat:
+ * 1. Air: Sesuai [v]
+ * 2. Suhu: Sesuai [v]
+ * 3. Tanah Alami: Sesuai [v]
+ * 4. Pasangan: Ada [v]
+ * Biome: ... [v]
  */
 public class ZooAnimalHologramRenderer {
 
     public static LivingEntity currentTargetedAnimal = null;
+
+    public record HabitatParsedInfo(
+            String status,
+            String eco,
+            boolean biomeOk,
+            String waterStatus, // "OK", "NO", "NA"
+            String tempStatus,  // "OK", "HEATER", "COOLER"
+            boolean groundOk,
+            boolean mateOk
+    ) {
+        public static HabitatParsedInfo parse(String raw, String defaultEco) {
+            String fallbackEco = (defaultEco != null && !defaultEco.isEmpty() && !"-".equals(defaultEco)) ? defaultEco : "Savana";
+            if (raw == null || !raw.contains("status=")) {
+                return new HabitatParsedInfo("SUITABLE", fallbackEco, true, "OK", "OK", true, true);
+            }
+            String status = "SUITABLE";
+            String eco = fallbackEco;
+            boolean biomeOk = true;
+            String water = "NA";
+            String temp = "OK";
+            boolean ground = true;
+            boolean mate = true;
+
+            for (String part : raw.split(";")) {
+                String[] kv = part.split("=", 2);
+                if (kv.length != 2) continue;
+                String k = kv[0].trim();
+                String v = kv[1].trim();
+                switch (k) {
+                    case "status" -> status = v;
+                    case "eco" -> eco = v;
+                    case "biome" -> biomeOk = "OK".equalsIgnoreCase(v);
+                    case "water" -> water = v.toUpperCase(Locale.ROOT);
+                    case "temp" -> temp = v.toUpperCase(Locale.ROOT);
+                    case "ground" -> ground = "OK".equalsIgnoreCase(v);
+                    case "mate" -> mate = "OK".equalsIgnoreCase(v);
+                }
+            }
+            return new HabitatParsedInfo(status, eco, biomeOk, water, temp, ground, mate);
+        }
+    }
 
     public static void render(WorldRenderContext context) {
         Minecraft mc = Minecraft.getInstance();
@@ -40,7 +94,6 @@ public class ZooAnimalHologramRenderer {
             return;
         }
 
-        // Tick tracker on each render frame for zero-delay crosshair sensitivity
         InspectionTargetTracker.tick(mc);
 
         LivingEntity target = InspectionTargetTracker.getTarget();
@@ -70,182 +123,175 @@ public class ZooAnimalHologramRenderer {
         poseStack.pushPose();
         poseStack.translate(entX, entY, entZ);
         poseStack.mulPose(camera.rotation());
-        float scale = 0.0135f;
+        float scale = 0.0125f;
         poseStack.scale(scale, -scale, scale);
 
-        // Retrieve actual entity health data
+        // 1. Entity Health
         float currentHp = entity.getHealth();
         float maxHp = entity.getMaxHealth();
-        int hpInt = (int) Math.ceil(currentHp);
-        int maxHpInt = (int) Math.ceil(maxHp);
-        String hpText = hpInt + "/" + maxHpInt;
-        float hpPct = (currentHp / Math.max(1.0f, maxHp)) * 100.0f;
-        int hpTextColor = HologramBarRenderer.getStatusColor(hpPct);
-        float hpProgress = Math.max(0.0f, Math.min(1.0f, currentHp / Math.max(1.0f, maxHp)));
+        int hpPct = Math.round((currentHp / Math.max(1.0f, maxHp)) * 100.0f);
+        String hpText = hpPct + "%";
+        int hpTextColor = HologramBarRenderer.getStatusColor((float) hpPct);
 
-        // Read snapshot from server sync cache
+        // 2. Snapshot data from server
         InspectionClientCache.Snapshot snapshot = InspectionClientCache.getSnapshot(entity.getId());
         boolean isRegistered = snapshot != null && snapshot.registered();
 
-        // Prepare hunger status
         String hungerText;
         int hungerTextColor;
-        float hungerProgress;
         if (isRegistered && snapshot.hunger() >= 0) {
             int hVal = snapshot.hunger();
             hungerText = hVal + "%";
             hungerTextColor = HologramBarRenderer.getStatusColor((float) hVal);
-            hungerProgress = Math.max(0.0f, Math.min(1.0f, hVal / 100.0f));
         } else {
             hungerText = "-";
             hungerTextColor = HologramBarRenderer.COLOR_MUTED;
-            hungerProgress = 0.0f;
         }
 
-        // Prepare thirst status
         String thirstText;
         int thirstTextColor;
-        float thirstProgress;
         if (isRegistered && snapshot.thirst() >= 0) {
             int tVal = snapshot.thirst();
             thirstText = tVal + "%";
             thirstTextColor = HologramBarRenderer.getStatusColor((float) tVal);
-            thirstProgress = Math.max(0.0f, Math.min(1.0f, tVal / 100.0f));
         } else {
             thirstText = "-";
             thirstTextColor = HologramBarRenderer.COLOR_MUTED;
-            thirstProgress = 0.0f;
         }
 
-        // Prepare cleanliness status
         String cleanText;
         int cleanTextColor;
-          float cleanProgress;
         boolean isWet = isRegistered && InspectionPayloads.isAnimalWet(entity.getId());
         if (isRegistered && snapshot.cleanliness() >= 0) {
             int cVal = snapshot.cleanliness();
             cleanText = cVal + "%" + (isWet ? " " + Component.translatable("zootycoon.inspect.cleanliness.wet").getString() : "");
             cleanTextColor = HologramBarRenderer.getStatusColor((float) cVal);
-            cleanProgress = Math.max(0.0f, Math.min(1.0f, cVal / 100.0f));
         } else {
             cleanText = "-";
             cleanTextColor = HologramBarRenderer.COLOR_MUTED;
-            cleanProgress = 0.0f;
         }
 
-        // Status labels to display on the left of each bar
-        Component hpLabel = Component.translatable("zootycoon.inspect.health");
-        Component hungerLabel = Component.translatable("zootycoon.inspect.hunger");
-        Component thirstLabel = Component.translatable("zootycoon.inspect.thirst");
-        Component cleanLabel = Component.translatable("zootycoon.inspect.cleanliness");
+        // 3. Climate & Temperature
+        float effectiveTemp = ZooClimate.getEffectiveTemperature(entity);
+        int celsius = ZooClimate.toCelsius(effectiveTemp);
+
+        // 4. Habitat parsed data
+        InspectionPayloads.HabitatData habitatData = InspectionPayloads.getLatestHabitat(entity.getId());
+        HabitatParsedInfo habitatInfo = HabitatParsedInfo.parse(
+                habitatData != null ? habitatData.needs() : null,
+                habitatData != null ? habitatData.status() : null
+        );
+
+        String tempStatusText;
+        int tempTextColor;
+        if ("HEATER".equalsIgnoreCase(habitatInfo.tempStatus())) {
+            tempStatusText = Component.translatable("zootycoon.inspect.temp.need_heater").getString();
+            tempTextColor = 0xFF55FFFF;
+        } else if ("COOLER".equalsIgnoreCase(habitatInfo.tempStatus())) {
+            tempStatusText = Component.translatable("zootycoon.inspect.temp.need_cooler").getString();
+            tempTextColor = 0xFFFFAA00;
+        } else {
+            tempStatusText = Component.translatable("zootycoon.inspect.temp.comfortable").getString();
+            tempTextColor = 0xFFFFFFFF;
+        }
+        String tempValueText = celsius + "°C (" + tempStatusText + ")";
+
+        // 5. Stat Components
+        Component hpLabel = Component.translatable("zootycoon.inspect.stat.health");
+        Component hungerLabel = Component.translatable("zootycoon.inspect.stat.hunger");
+        Component thirstLabel = Component.translatable("zootycoon.inspect.stat.thirst");
+        Component cleanLabel = Component.translatable("zootycoon.inspect.stat.cleanliness");
+        Component tempLabel = Component.translatable("zootycoon.inspect.stat.temperature");
 
         int maxLabelWidth = Math.max(font.width(hpLabel),
                 Math.max(font.width(hungerLabel),
-                Math.max(font.width(thirstLabel), font.width(cleanLabel))));
+                Math.max(font.width(thirstLabel),
+                Math.max(font.width(cleanLabel), font.width(tempLabel)))));
 
-        // Retrieve foods data (dynamically scans all loaded mods)
+        int maxValueWidth = Math.max(font.width(hpText),
+                Math.max(font.width(hungerText),
+                Math.max(font.width(thirstText),
+                Math.max(font.width(cleanText), font.width(tempValueText)))));
+
+        // 6. Food items (icons only)
         List<ItemStack> foods = AnimalDietRegistry.getFoodsForAnimal(entity);
-        StringBuilder sb = new StringBuilder();
-        int showCount = Math.min(3, foods.size());
-        for (int i = 0; i < showCount; i++) {
-            if (i > 0) sb.append(", ");
-            sb.append(foods.get(i).getHoverName().getString());
-        }
-        if (foods.size() > showCount) {
-            sb.append(" (+").append(foods.size() - showCount).append(")");
-        }
-        String foodNamesText = !foods.isEmpty() ? sb.toString() : "-";
-        Component foodNamesComp = Component.literal(foodNamesText).withStyle(ChatFormatting.YELLOW);
-        int foodNamesWidth = font.width(foodNamesComp);
+        int foodCount = Math.min(5, foods.size());
+        float foodSpacing = 12.0f;
+        float foodsRowWidth = foodCount * foodSpacing;
 
-        Component foodHeaderComponent = Component.translatable("zootycoon.inspect.favorite_food")
-                .withStyle(ChatFormatting.WHITE);
-        int foodHeaderWidth = font.width(foodHeaderComponent);
-        float foodSectionWidth = Math.max((float) foodHeaderWidth, (float) foodNamesWidth);
+        // 7. Habitat checklist items
+        Component habitatHeader = Component.translatable("zootycoon.inspect.habitat_needs_header");
 
-        // Retrieve climate data (season & temperature category)
-        InspectionPayloads.ClimateData climateData = InspectionPayloads.getLatestClimate(entity.getId());
-        String currentSeason = climateData != null ? climateData.season() : ZooClimate.getCurrentSeason(entity.level());
-        String currentTempCat = climateData != null ? climateData.tempCategory() : ZooClimate.getCategory(ZooClimate.getEffectiveTemperature(entity)).key;
-
-        Component seasonComp = ZooClimate.getSeasonComponent(currentSeason);
-        Component tempComp = ZooClimate.getTempCategoryComponent(currentTempCat);
-        Component climateComponent = Component.translatable("zootycoon.inspect.climate", seasonComp, tempComp);
-        int climateWidth = font.width(climateComponent);
-
-        // Retrieve habitat data (status & unmet requirements hint)
-        InspectionPayloads.HabitatData habitatData = InspectionPayloads.getLatestHabitat(entity.getId());
-        Component habitatStatusComp;
-        int habitatStatusColor;
-        boolean hasHabitatHint = false;
-        Component habitatHintComp = null;
-
-        if (habitatData != null) {
-            String hStatus = habitatData.status();
-            String hNeeds = habitatData.needs();
-            if ("SUITABLE".equalsIgnoreCase(hStatus)) {
-                habitatStatusComp = Component.translatable("zootycoon.inspect.habitat",
-                        Component.translatable("zootycoon.inspect.habitat.suitable"));
-                habitatStatusColor = 0xFF55FF55;
-            } else if ("UNSUITABLE".equalsIgnoreCase(hStatus)) {
-                habitatStatusComp = Component.translatable("zootycoon.inspect.habitat",
-                        Component.translatable("zootycoon.inspect.habitat.unsuitable"));
-                habitatStatusColor = 0xFFFF5555;
-                if (hNeeds != null && !hNeeds.isEmpty()) {
-                    hasHabitatHint = true;
-                    habitatHintComp = Component.literal(hNeeds);
-                }
-            } else {
-                habitatStatusComp = Component.translatable("zootycoon.inspect.habitat",
-                        Component.translatable("zootycoon.inspect.habitat.no_data"));
-                habitatStatusColor = HologramBarRenderer.COLOR_MUTED;
-            }
+        Component waterCheckComp;
+        int waterCheckColor;
+        if ("OK".equalsIgnoreCase(habitatInfo.waterStatus())) {
+            waterCheckComp = Component.translatable("zootycoon.inspect.checklist.water.ok");
+            waterCheckColor = 0xFF55FF55;
+        } else if ("NO".equalsIgnoreCase(habitatInfo.waterStatus())) {
+            waterCheckComp = Component.translatable("zootycoon.inspect.checklist.water.fail");
+            waterCheckColor = 0xFFFF5555;
         } else {
-            habitatStatusComp = Component.translatable("zootycoon.inspect.habitat",
-                    Component.translatable("zootycoon.inspect.habitat.no_data"));
-            habitatStatusColor = HologramBarRenderer.COLOR_MUTED;
+            waterCheckComp = Component.translatable("zootycoon.inspect.checklist.water.na");
+            waterCheckColor = 0xFFAAAAAA;
         }
 
-        int habitatStatusWidth = font.width(habitatStatusComp);
-        int habitatHintWidth = (hasHabitatHint && habitatHintComp != null) ? font.width(habitatHintComp) : 0;
+        Component tempCheckComp;
+        int tempCheckColor;
+        if ("OK".equalsIgnoreCase(habitatInfo.tempStatus())) {
+            tempCheckComp = Component.translatable("zootycoon.inspect.checklist.temp.ok");
+            tempCheckColor = 0xFF55FF55;
+        } else if ("HEATER".equalsIgnoreCase(habitatInfo.tempStatus())) {
+            tempCheckComp = Component.translatable("zootycoon.inspect.checklist.temp.heater");
+            tempCheckColor = 0xFFFF5555;
+        } else {
+            tempCheckComp = Component.translatable("zootycoon.inspect.checklist.temp.cooler");
+            tempCheckColor = 0xFFFF5555;
+        }
 
-        // Calculate layout geometry
-        Component titleComponent = entity.getDisplayName();
-        int titleWidth = font.width(titleComponent);
+        Component groundCheckComp = habitatInfo.groundOk()
+                ? Component.translatable("zootycoon.inspect.checklist.ground.ok")
+                : Component.translatable("zootycoon.inspect.checklist.ground.fail");
+        int groundCheckColor = habitatInfo.groundOk() ? 0xFF55FF55 : 0xFFFF5555;
+
+        Component mateCheckComp = habitatInfo.mateOk()
+                ? Component.translatable("zootycoon.inspect.checklist.mate.ok")
+                : Component.translatable("zootycoon.inspect.checklist.mate.fail");
+        int mateCheckColor = habitatInfo.mateOk() ? 0xFF55FF55 : 0xFFFFAA00;
+
+        Component biomeLineComp = habitatInfo.biomeOk()
+                ? Component.translatable("zootycoon.inspect.biome.ok", habitatInfo.eco())
+                : Component.translatable("zootycoon.inspect.biome.fail", habitatInfo.eco());
+        int biomeLineColor = habitatInfo.biomeOk() ? 0xFF55FF55 : 0xFFFF5555;
+
+        // Calculate card layout geometry
+        Component titleComp = entity.getDisplayName();
+        int titleWidth = font.width(titleComp);
 
         float iconWidth = 9.0f;
-        float gapIconToLabel = 3.0f;
-        float gapLabelToBar = 4.0f;
-        float barWidth = 42.0f;
-        float barHeight = 4.0f;
-        float gapBarToText = 4.0f;
+        float gapLabelToIcon = 4.0f;
+        float gapIconToValue = 4.0f;
+        float statRowWidth = maxLabelWidth + gapLabelToIcon + iconWidth + gapIconToValue + maxValueWidth;
 
-        int maxTextWidth = Math.max(font.width(hpText),
-                Math.max(font.width(hungerText),
-                Math.max(font.width(thirstText), font.width(cleanText))));
+        float maxHabitatTextWidth = Math.max(font.width(habitatHeader),
+                Math.max(font.width(waterCheckComp),
+                Math.max(font.width(tempCheckComp),
+                Math.max(font.width(groundCheckComp),
+                Math.max(font.width(mateCheckComp), font.width(biomeLineComp))))));
 
-        float rowBlockWidth = iconWidth + gapIconToLabel + maxLabelWidth + gapLabelToBar + barWidth + gapBarToText + Math.max(20.0f, (float) maxTextWidth);
-        float boxWidth = Math.max(rowBlockWidth + 14.0f,
-                Math.max(titleWidth + 14.0f,
-                Math.max(foodSectionWidth + 14.0f,
-                Math.max(climateWidth + 14.0f,
-                Math.max(habitatStatusWidth + 14.0f, habitatHintWidth + 14.0f)))));
+        float boxWidth = Math.max(statRowWidth + 16.0f,
+                Math.max(titleWidth + 18.0f,
+                Math.max(foodsRowWidth + 16.0f, maxHabitatTextWidth + 18.0f)));
 
         float rowHeight = 11.0f;
-        float headerHeight = 13.0f;
-        float barsHeight = 4.0f * rowHeight;
-        float habitatGap = 3.0f;
-        float habitatStatusHeight = 10.0f;
-        float habitatHintHeight = hasHabitatHint ? 10.0f : 0.0f;
-        float habitatSectionHeight = habitatStatusHeight + habitatHintHeight;
-        float climateGap = 3.0f;
-        float climateHeight = 10.0f;
-        float foodGap = 4.0f;
-        float foodHeaderHeight = 10.0f;
-        float foodNamesHeight = 10.0f;
-        float foodSectionHeight = foodHeaderHeight + foodNamesHeight;
-        float contentHeight = headerHeight + barsHeight + habitatGap + habitatSectionHeight + climateGap + climateHeight + foodGap + foodSectionHeight;
-        float totalBoxHeight = contentHeight + 8.0f; // 4px padding top, 4px padding bottom
+        float headerHeight = 11.0f;
+        float foodSectionHeight = (foodCount > 0) ? 14.0f : 0.0f;
+        float statsSectionHeight = 5.0f * rowHeight;
+        float habitatHeaderHeight = 11.0f;
+        float checklistHeight = 4.0f * 10.0f;
+        float biomeHeight = 10.0f;
+
+        float contentHeight = headerHeight + foodSectionHeight + statsSectionHeight + 4.0f + habitatHeaderHeight + checklistHeight + 2.0f + biomeHeight;
+        float totalBoxHeight = contentHeight + 10.0f; // 5px padding top & bottom
 
         float minX = -boxWidth / 2.0f;
         float maxX = boxWidth / 2.0f;
@@ -256,93 +302,100 @@ public class ZooAnimalHologramRenderer {
         MultiBufferSource buffer = context.consumers();
 
         if (buffer != null) {
-            // 1. Draw rounded dark background plate (semi-transparent 0xAA0B0E14)
+            // 1. Draw rounded dark slate background plate (0xAA0B0E14)
             HologramBarRenderer.drawBackgroundPlate(buffer, matrix, minX, startY, maxX, maxY, LightTexture.FULL_BRIGHT);
-
-            // 2. Layout positions
-            float rowStartX = -rowBlockWidth / 2.0f;
-            float iconX = rowStartX;
-            float labelX = iconX + iconWidth + gapIconToLabel;
-            float barX = labelX + maxLabelWidth + gapLabelToBar;
-            float textX = barX + barWidth + gapBarToText;
-            float curY = startY + 4.0f;
-
-            float titleX = -titleWidth / 2.0f;
-            float titleY = curY;
-            curY += 12.0f; // Gap between title and bar rows
-
-            float healthRowY = curY;
-            float hungerRowY = curY + rowHeight;
-            float thirstRowY = curY + (rowHeight * 2.0f);
-            float cleanRowY = curY + (rowHeight * 3.0f);
-            curY += (rowHeight * 4.0f);
-
-            curY += habitatGap;
-            float habitatStatusX = -habitatStatusWidth / 2.0f;
-            float habitatStatusY = curY;
-            curY += habitatStatusHeight;
-
-            float habitatHintX = 0;
-            float habitatHintY = 0;
-            if (hasHabitatHint && habitatHintComp != null) {
-                habitatHintX = -habitatHintWidth / 2.0f;
-                habitatHintY = curY;
-                curY += habitatHintHeight;
-            }
-
-            curY += climateGap;
-            float climateX = -climateWidth / 2.0f;
-            float climateY = curY;
-            curY += climateHeight;
-
-            curY += foodGap;
-            float foodHeaderX = -foodHeaderWidth / 2.0f;
-            float foodHeaderY = curY;
-            curY += foodHeaderHeight;
-            float foodNamesX = -foodNamesWidth / 2.0f;
-            float foodNamesY = curY;
-
-            // 3. Draw visual bars (solid quads with border and track)
-            VertexConsumer barConsumer = buffer.getBuffer(RenderType.textBackground());
-            HologramBarRenderer.drawBar(barConsumer, matrix, barX, healthRowY + 3.5f, barWidth, barHeight, hpProgress, HologramBarRenderer.HEALTH_COLOR, HologramBarRenderer.HEALTH_TRACK, LightTexture.FULL_BRIGHT);
-            HologramBarRenderer.drawBar(barConsumer, matrix, barX, hungerRowY + 3.5f, barWidth, barHeight, hungerProgress, HologramBarRenderer.HUNGER_COLOR, HologramBarRenderer.HUNGER_TRACK, LightTexture.FULL_BRIGHT);
-            HologramBarRenderer.drawBar(barConsumer, matrix, barX, thirstRowY + 3.5f, barWidth, barHeight, thirstProgress, HologramBarRenderer.THIRST_COLOR, HologramBarRenderer.THIRST_TRACK, LightTexture.FULL_BRIGHT);
-            HologramBarRenderer.drawBar(barConsumer, matrix, barX, cleanRowY + 3.5f, barWidth, barHeight, cleanProgress, HologramBarRenderer.CLEANLINESS_COLOR, HologramBarRenderer.CLEANLINESS_TRACK, LightTexture.FULL_BRIGHT);
 
             if (buffer instanceof MultiBufferSource.BufferSource bs) {
                 bs.endBatch(RenderType.textBackground());
             }
 
-            // 4. Draw icons (heart, hunger, thirst, cleanliness)
-            HologramBarRenderer.drawVanillaHeartIcon(mc, font, buffer, matrix, iconX, healthRowY + 1.0f, LightTexture.FULL_BRIGHT);
-            HologramBarRenderer.drawVanillaHungerIcon(mc, buffer, matrix, iconX, hungerRowY + 1.0f, LightTexture.FULL_BRIGHT);
-            HologramBarRenderer.drawTexturedIcon(buffer, matrix, HologramBarRenderer.THIRST_ICON, iconX, thirstRowY + 1.0f, 9.0f, 9.0f, LightTexture.FULL_BRIGHT);
-            HologramBarRenderer.drawTexturedIcon(buffer, matrix, HologramBarRenderer.CLEANLINESS_ICON, iconX, cleanRowY + 1.0f, 9.0f, 9.0f, LightTexture.FULL_BRIGHT);
+            float curY = startY + 5.0f;
 
-            // 5. Draw labels on the left of each bar
-            font.drawInBatch(hpLabel, labelX, healthRowY + 1.0f, 0xFFDDDDDD, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(hungerLabel, labelX, hungerRowY + 1.0f, 0xFFDDDDDD, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(thirstLabel, labelX, thirstRowY + 1.0f, 0xFFDDDDDD, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(cleanLabel, labelX, cleanRowY + 1.0f, 0xFFDDDDDD, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            // 2. Animal Title
+            float titleX = -titleWidth / 2.0f;
+            font.drawInBatch(titleComp, titleX, curY, 0xFFFFFFFF, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            curY += headerHeight;
 
-            // 6. Draw values on the right of each bar
-            font.drawInBatch(hpText, textX, healthRowY + 1.0f, hpTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(hungerText, textX, hungerRowY + 1.0f, hungerTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(thirstText, textX, thirstRowY + 1.0f, thirstTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(cleanText, textX, cleanRowY + 1.0f, cleanTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-
-            // 7. Draw title, habitat, climate, and food list
-            font.drawInBatch(titleComponent, titleX, titleY, 0xFFFFFFFF, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-
-            font.drawInBatch(habitatStatusComp, habitatStatusX, habitatStatusY, habitatStatusColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            if (hasHabitatHint && habitatHintComp != null) {
-                font.drawInBatch(habitatHintComp, habitatHintX, habitatHintY, 0xFFFFAA00, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            // 3. Favorite Food Icons (Icons only, no text labels)
+            if (foodCount > 0) {
+                float foodStartX = -foodsRowWidth / 2.0f + (foodSpacing / 2.0f);
+                for (int i = 0; i < foodCount; i++) {
+                    ItemStack foodStack = foods.get(i);
+                    poseStack.pushPose();
+                    poseStack.translate(foodStartX + (i * foodSpacing), curY + 5.0f, -0.005f);
+                    poseStack.scale(8.0f, -8.0f, 8.0f);
+                    mc.getItemRenderer().renderStatic(
+                            foodStack,
+                            ItemDisplayContext.GUI,
+                            LightTexture.FULL_BRIGHT,
+                            OverlayTexture.NO_OVERLAY,
+                            poseStack,
+                            buffer,
+                            mc.level,
+                            0
+                    );
+                    poseStack.popPose();
+                }
+                curY += foodSectionHeight;
             }
 
-            font.drawInBatch(climateComponent, climateX, climateY, HologramBarRenderer.COLOR_MUTED, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            if (buffer instanceof MultiBufferSource.BufferSource bs) {
+                bs.endBatch();
+            }
 
-            font.drawInBatch(foodHeaderComponent, foodHeaderX, foodHeaderY, 0xFFFFFFFF, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(foodNamesComp, foodNamesX, foodNamesY, 0xFFFFFF55, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            // 4. Stat rows layout
+            float statStartX = -statRowWidth / 2.0f;
+            float labelX = statStartX;
+            float iconX = labelX + maxLabelWidth + gapLabelToIcon;
+            float valueX = iconX + iconWidth + gapIconToValue;
+
+            float r1Y = curY;
+            float r2Y = curY + rowHeight;
+            float r3Y = curY + (rowHeight * 2.0f);
+            float r4Y = curY + (rowHeight * 3.0f);
+            float r5Y = curY + (rowHeight * 4.0f);
+            curY += (rowHeight * 5.0f) + 4.0f;
+
+            // Render Stat Icons
+            HologramBarRenderer.drawVanillaHeartIcon(mc, font, buffer, matrix, iconX, r1Y + 1.0f, LightTexture.FULL_BRIGHT);
+            HologramBarRenderer.drawVanillaHungerIcon(mc, buffer, matrix, iconX, r2Y + 1.0f, LightTexture.FULL_BRIGHT);
+            HologramBarRenderer.drawTexturedIcon(buffer, matrix, HologramBarRenderer.THIRST_ICON, iconX, r3Y + 1.0f, 9.0f, 9.0f, LightTexture.FULL_BRIGHT);
+            HologramBarRenderer.drawTexturedIcon(buffer, matrix, HologramBarRenderer.CLEANLINESS_ICON, iconX, r4Y + 1.0f, 9.0f, 9.0f, LightTexture.FULL_BRIGHT);
+            HologramBarRenderer.drawThermometerIcon(buffer, matrix, iconX, r5Y + 1.0f, LightTexture.FULL_BRIGHT);
+
+            // Render Stat Labels
+            font.drawInBatch(hpLabel, labelX, r1Y + 1.0f, 0xFFDDDDDD, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(hungerLabel, labelX, r2Y + 1.0f, 0xFFDDDDDD, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(thirstLabel, labelX, r3Y + 1.0f, 0xFFDDDDDD, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(cleanLabel, labelX, r4Y + 1.0f, 0xFFDDDDDD, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(tempLabel, labelX, r5Y + 1.0f, 0xFFDDDDDD, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+
+            // Render Stat Values
+            font.drawInBatch(hpText, valueX, r1Y + 1.0f, hpTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(hungerText, valueX, r2Y + 1.0f, hungerTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(thirstText, valueX, r3Y + 1.0f, thirstTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(cleanText, valueX, r4Y + 1.0f, cleanTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(tempValueText, valueX, r5Y + 1.0f, tempTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+
+            // 5. Habitat Needs Section
+            float checklistStartX = minX + 8.0f;
+
+            font.drawInBatch(habitatHeader, checklistStartX, curY, 0xFFFFFF55, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            curY += habitatHeaderHeight;
+
+            font.drawInBatch(waterCheckComp, checklistStartX + 4.0f, curY, waterCheckColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            curY += 10.0f;
+
+            font.drawInBatch(tempCheckComp, checklistStartX + 4.0f, curY, tempCheckColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            curY += 10.0f;
+
+            font.drawInBatch(groundCheckComp, checklistStartX + 4.0f, curY, groundCheckColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            curY += 10.0f;
+
+            font.drawInBatch(mateCheckComp, checklistStartX + 4.0f, curY, mateCheckColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            curY += 12.0f;
+
+            font.drawInBatch(biomeLineComp, checklistStartX, curY, biomeLineColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 
             if (buffer instanceof MultiBufferSource.BufferSource bs) {
                 bs.endBatch();

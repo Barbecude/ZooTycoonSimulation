@@ -141,7 +141,7 @@ public class ZooInspectionService {
         net.zootycoon.animal.habitat.HabitatEvaluator.HabitatResult habitat =
                 net.zootycoon.animal.habitat.HabitatEvaluator.evaluate(player.serverLevel(), animal);
         String habitatStatus = habitat.status().name();
-        String habitatNeeds = habitat.formatHint();
+        String habitatNeeds = habitat.encodePayloadString();
 
         long timestamp = System.currentTimeMillis();
         InspectionPayloads.InspectionSnapshotPayload payload = new InspectionPayloads.InspectionSnapshotPayload(

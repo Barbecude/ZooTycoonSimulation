@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "P": {
+      "tag": "minecraft:planks"
+    },
+    "I": {
+      "item": "minecraft:ice"
+    },
+    "S": {
+      "item": "minecraft:iron_ingot"
+    }
+  },
+  "pattern": [
+    "PPP",
+    "SIS",
+    "PPP"
+  ],
+  "result": {
+    "count": 1,
+    "id": "zootycoon:cooler_box"
+  }
+}
+

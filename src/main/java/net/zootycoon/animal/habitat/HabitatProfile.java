@@ -76,5 +76,19 @@ public record HabitatProfile(
 
         return false;
     }
+
+    public boolean requiresWater() {
+        if ("freshwater".equalsIgnoreCase(name) || "ocean".equalsIgnoreCase(name) || "swamp".equalsIgnoreCase(name)) {
+            return true;
+        }
+        if (requiredBlocks != null) {
+            for (BlockRequirement req : requiredBlocks) {
+                if ("water".equalsIgnoreCase(req.type()) || (req.label() != null && req.label().toLowerCase(java.util.Locale.ROOT).contains("air"))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 }
 
