@@ -36,7 +36,7 @@ public class ZooAnimalHungerManager {
     public static final int MAX_HUNGER = 100;
     public static final int HUNGRY_THRESHOLD = 50;
     public static final int CRITICAL_THRESHOLD = 15;
-    private static final int DECAY_INTERVAL_TICKS = 89; // 2.7x faster hunger decay (every ~4.45 seconds loses 1%)
+    private static final int DECAY_INTERVAL_TICKS = 40; // Faster hunger decay (every 2 seconds loses 1%, ~3.3 minutes 100% to 0%)
 
     public static final int MAX_THIRST = 100;
     public static final int THIRSTY_THRESHOLD = 50;
@@ -283,22 +283,10 @@ public class ZooAnimalHungerManager {
                 }
             }
 
-            // Feeder trough feeding (works when animal has lost at least 10% hunger)
-            if (level.getGameTime() % 60 == 0 && currentHunger <= 90) {
-                if (tryEatFromNearbyFeederTrough(level, animal, currentHunger)) {
-                    currentHunger = getHunger(animal);
-                }
-            }
-
-            // Emergency foraging for herbivores on grass
-            if (currentHunger < 30 && AnimalDietRegistry.getFeedingType(animal) == AnimalDietRegistry.FeedingType.TROUGH) {
-                var standingOn = level.getBlockState(animal.blockPosition().below());
-                var inBlock = level.getBlockState(animal.blockPosition());
-                if (standingOn.is(Blocks.GRASS_BLOCK) || inBlock.is(Blocks.SHORT_GRASS)) {
-                    currentHunger = Math.min(MAX_HUNGER, currentHunger + 15);
-                    setHunger(animal, currentHunger);
-                    level.playSound(null, animal.blockPosition(), SoundEvents.GENERIC_EAT, SoundSource.NEUTRAL, 0.6f, 1.0f);
-                    level.sendParticles(ParticleTypes.HEART, animal.getX(), animal.getY() + animal.getBbHeight() + 0.25, animal.getZ(), 4, 0.3, 0.2, 0.3, 0.02);
+            // Natural health regeneration when at 100% hunger (like a player)
+            if (currentHunger >= MAX_HUNGER && animal.getHealth() < animal.getMaxHealth()) {
+                if (level.getGameTime() % 40 == 0) { // Recovers 1 HP every 2 seconds
+                    animal.heal(1.0f);
                 }
             }
 
@@ -359,14 +347,28 @@ public class ZooAnimalHungerManager {
             }
 
             if (closestWaterTrough != null && targetWaterTrough != null) {
-                if (closestTroughDist <= 3.5 * 3.5) {
+                double maxDrinkDist = (mob.getBbWidth() * 0.5) + 1.2;
+                if (closestTroughDist <= maxDrinkDist * maxDrinkDist) {
+                    double dx = (closestWaterTrough.getX() + 0.5) - mob.getX();
+                    double dz = (closestWaterTrough.getZ() + 0.5) - mob.getZ();
+                    double len = Math.sqrt(dx * dx + dz * dz);
+                    double dot = 1.0;
+                    if (len > 1.0E-4) {
+                        Vec3 look = mob.getViewVector(1.0f);
+                        dot = (look.x * (dx / len)) + (look.z * (dz / len));
+                    }
                     mob.getNavigation().stop();
-                    setThirst(mob, MAX_THIRST);
-                    level.playSound(null, mob.blockPosition(), SoundEvents.GENERIC_DRINK, SoundSource.NEUTRAL, 0.8f, 1.0f);
-                    level.sendParticles(ParticleTypes.SPLASH, mob.getX(), mob.getY() + 0.3, mob.getZ(), 8, 0.25, 0.15, 0.25, 0.05);
+                    mob.getLookControl().setLookAt(closestWaterTrough.getX() + 0.5, closestWaterTrough.getY() + 0.2, closestWaterTrough.getZ() + 0.5);
+
+                    if (dot >= 0.5 && targetWaterTrough.hasWater()) {
+                        setThirst(mob, MAX_THIRST);
+                        level.playSound(null, mob.blockPosition(), SoundEvents.GENERIC_DRINK, SoundSource.NEUTRAL, 0.8f, 1.0f);
+                        level.sendParticles(ParticleTypes.SPLASH, mob.getX(), mob.getY() + 0.3, mob.getZ(), 8, 0.25, 0.15, 0.25, 0.05);
+                    }
                     return;
                 } else {
                     mob.getNavigation().moveTo(closestWaterTrough.getX() + 0.5, closestWaterTrough.getY(), closestWaterTrough.getZ() + 0.5, 1.15);
+                    mob.getLookControl().setLookAt(closestWaterTrough.getX() + 0.5, closestWaterTrough.getY() + 0.3, closestWaterTrough.getZ() + 0.5);
                     return;
                 }
             }
@@ -387,14 +389,28 @@ public class ZooAnimalHungerManager {
             }
 
             if (closestWater != null) {
-                if (minWaterDist <= 3.2 * 3.2) {
+                double maxDrinkDist = (mob.getBbWidth() * 0.5) + 1.2;
+                if (minWaterDist <= maxDrinkDist * maxDrinkDist) {
+                    double dx = (closestWater.getX() + 0.5) - mob.getX();
+                    double dz = (closestWater.getZ() + 0.5) - mob.getZ();
+                    double len = Math.sqrt(dx * dx + dz * dz);
+                    double dot = 1.0;
+                    if (len > 1.0E-4) {
+                        Vec3 look = mob.getViewVector(1.0f);
+                        dot = (look.x * (dx / len)) + (look.z * (dz / len));
+                    }
                     mob.getNavigation().stop();
-                    setThirst(mob, MAX_THIRST);
-                    level.playSound(null, mob.blockPosition(), SoundEvents.GENERIC_DRINK, SoundSource.NEUTRAL, 0.8f, 1.0f);
-                    level.sendParticles(ParticleTypes.SPLASH, mob.getX(), mob.getY() + 0.3, mob.getZ(), 8, 0.25, 0.15, 0.25, 0.05);
+                    mob.getLookControl().setLookAt(closestWater.getX() + 0.5, closestWater.getY() + 0.2, closestWater.getZ() + 0.5);
+
+                    if (dot >= 0.5) {
+                        setThirst(mob, MAX_THIRST);
+                        level.playSound(null, mob.blockPosition(), SoundEvents.GENERIC_DRINK, SoundSource.NEUTRAL, 0.8f, 1.0f);
+                        level.sendParticles(ParticleTypes.SPLASH, mob.getX(), mob.getY() + 0.3, mob.getZ(), 8, 0.25, 0.15, 0.25, 0.05);
+                    }
                     return;
                 } else {
                     mob.getNavigation().moveTo(closestWater.getX() + 0.5, closestWater.getY(), closestWater.getZ() + 0.5, 1.05);
+                    mob.getLookControl().setLookAt(closestWater.getX() + 0.5, closestWater.getY() + 0.3, closestWater.getZ() + 0.5);
                     return;
                 }
             }
@@ -409,6 +425,9 @@ public class ZooAnimalHungerManager {
             for (BlockPos tp : ZooFeedingTroughBlock.KNOWN_TROUGHS) {
                 if (tp.distSqr(mob.blockPosition()) <= 48.0 * 48.0) { // within 48 blocks
                     if (level.getBlockEntity(tp) instanceof ZooFeedingTroughBlockEntity trough && trough.hasFood()) {
+                        if (trough.isAssigned() && !trough.isAssignedTo(mob)) {
+                            continue;
+                        }
                         if (AnimalDietRegistry.isFoodValid(mob, trough.getFoodStack())) {
                             double d = mob.distanceToSqr(tp.getX() + 0.5, tp.getY() + 0.5, tp.getZ() + 0.5);
                             if (d < closestFoodDist) {
@@ -422,47 +441,34 @@ public class ZooAnimalHungerManager {
             }
 
             if (closestFoodTrough != null && targetFoodTrough != null) {
-                if (closestFoodDist <= 3.5 * 3.5) {
-                    if (level.getGameTime() % 60 == 0) { // Feed interval
+                double maxEatDist = (mob.getBbWidth() * 0.5) + 1.2;
+                if (closestFoodDist <= maxEatDist * maxEatDist) {
+                    double dx = (closestFoodTrough.getX() + 0.5) - mob.getX();
+                    double dz = (closestFoodTrough.getZ() + 0.5) - mob.getZ();
+                    double len = Math.sqrt(dx * dx + dz * dz);
+                    double dot = 1.0;
+                    if (len > 1.0E-4) {
+                        Vec3 look = mob.getViewVector(1.0f);
+                        dot = (look.x * (dx / len)) + (look.z * (dz / len));
+                    }
+
+                    mob.getNavigation().stop();
+                    mob.getLookControl().setLookAt(closestFoodTrough.getX() + 0.5, closestFoodTrough.getY() + 0.2, closestFoodTrough.getZ() + 0.5);
+
+                    // Mob must physically be close and facing towards the feeding trough (dot >= 0.5 = within ~60 degrees)
+                    if (dot >= 0.5 && targetFoodTrough.hasFood()) {
                         ItemStack food = targetFoodTrough.extractFood(1);
                         if (!food.isEmpty()) {
-                            mob.getNavigation().stop();
                             feedAnimal(mob, food, null); // Emits HEART particles and restores hunger
                             targetFoodTrough.setChanged();
                         }
                     }
                 } else {
                     mob.getNavigation().moveTo(closestFoodTrough.getX() + 0.5, closestFoodTrough.getY(), closestFoodTrough.getZ() + 0.5, 1.15);
+                    mob.getLookControl().setLookAt(closestFoodTrough.getX() + 0.5, closestFoodTrough.getY() + 0.3, closestFoodTrough.getZ() + 0.5);
                 }
             }
         }
-    }
-
-    private static boolean tryEatFromNearbyFeederTrough(ServerLevel level, LivingEntity animal, int currentHunger) {
-        if (!isTagged(animal)) return false; // Untagged animals cannot eat from troughs
-        BlockPos center = animal.blockPosition();
-        for (BlockPos bp : BlockPos.betweenClosed(center.offset(-6, -2, -6), center.offset(6, 2, 6))) {
-            var be = level.getBlockEntity(bp);
-            if (be instanceof Container container) {
-                for (int i = 0; i < container.getContainerSize(); i++) {
-                    ItemStack st = container.getItem(i);
-                    if (!st.isEmpty() && AnimalDietRegistry.isFoodValid(animal, st)) {
-                        double distSqr = animal.distanceToSqr(bp.getX() + 0.5, bp.getY() + 0.5, bp.getZ() + 0.5);
-                        if (distSqr <= 4.0 * 4.0) {
-                            boolean fed = feedAnimal(animal, st, null);
-                            if (fed) {
-                                container.setChanged();
-                                return true;
-                            }
-                        } else if (animal instanceof Mob mob) {
-                            mob.getNavigation().moveTo(bp.getX() + 0.5, bp.getY(), bp.getZ() + 0.5, 1.1);
-                            return false;
-                        }
-                    }
-                }
-            }
-        }
-        return false;
     }
 
     public static boolean isTagged(Entity entity) {
@@ -656,6 +662,9 @@ public class ZooAnimalHungerManager {
         if (!AnimalDietRegistry.isFoodValid(animal, foodStack)) return false;
 
         int current = getHunger(animal);
+        if (feeder == null && current >= MAX_HUNGER) {
+            return false;
+        }
         int restored = Math.min(MAX_HUNGER, current + 35);
         setHunger(animal, restored);
         if (feeder != null && !isTagged(animal)) {
