@@ -72,16 +72,24 @@
   8. Menambahkan blok Heater dan Cooler Box fungsional berbasis bahan bakar dengan tekstur, blockstate, model, resep crafting vanilla, dan pemancaran radius termal 12 blok (+0.6f / -0.6f) yang memengaruhi suhu efektif satwa dan evaluasi habitat.
   9. Menghadirkan AnimalDrinkWaterGoal (AI goal mandiri berbasis MoveToBlockGoal) yang terpasang pada seluruh satwa terdaftar via MobAccessor untuk mencari, mendekat, dan meminum air di sumber air atau feeding trough saat haus.
 
+- Perbaikan Crash Startup & Command Debug Satwa:
+  1. Fix InvalidAccessorException pada LivingEntityAccessor: method accessor diganti ke penamaan standar `isJumping()`, sehingga Fabric Loom berhasil me-remap ke `field_6282:Z` di refmap produksi dan game berjalan tanpa crash.
+  2. Menambahkan command debug `/satwa` dan `/zootycoon satwa` untuk mengatur dan mengurangi stat kebutuhan satwa (lapar, haus, bersih, darah/kesehatan, dan semua indikator sekaligus) baik pada satwa yang sedang dibidik (crosshair) maupun seluruh satwa zoo sekaligus.
+
 ## Bukti Selesai
 - Seluruh 9 poin UI dan gameplay telah terimplementasi dan terkompilasi bersih dengan .\gradlew.bat build (BUILD SUCCESSFUL).
 - File jar hasil build zootycoon-1.0.0.jar otomatis tersalin ke folder mods profil Modrinth.
 - Tata letak hologram in-world presisi mengikuti mockup wireframe pengguna.
 - Blok Heater dan Cooler Box siap dicrafting dan digunakan di dalam game.
+- Crash InvalidAccessorException teratasi tuntas dengan mapping resmi di zootycoon-refmap.json.
 
 ## Blocker
 - Tidak ada blocker.
 
 ## File yang diubah
+- src/main/java/net/zootycoon/ZooTycoonMod.java
+- src/main/java/net/zootycoon/command/ZooCommands.java
+- src/main/java/net/zootycoon/mixin/LivingEntityAccessor.java
 - src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
 - src/main/java/net/zootycoon/client/inspect/HologramBarRenderer.java
 - src/main/java/net/zootycoon/client/inspect/InspectionClientCache.java

@@ -251,7 +251,7 @@ public class ZooTycoonMod implements ModInitializer {
                         angleScore.set(angleScore.get() - 1);
                     }
 
-                    if (((net.zootycoon.mixin.LivingEntityAccessor) player).zt_isJumping()) {
+                    if (((net.zootycoon.mixin.LivingEntityAccessor) player).isJumping()) {
                         scoreboard.getOrCreatePlayerScore(net.minecraft.world.scores.ScoreHolder.forNameOnly("#hand_brake"), mainScore).set(1);
                     }
 
