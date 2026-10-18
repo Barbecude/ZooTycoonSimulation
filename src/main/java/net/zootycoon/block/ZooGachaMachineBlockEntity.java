@@ -55,6 +55,10 @@ public class ZooGachaMachineBlockEntity extends BlockEntity implements Clearable
         return getTotalStock() == 0;
     }
 
+    public NonNullList<ItemStack> getItems() {
+        return this.items;
+    }
+
     public boolean canAccept(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
         if (!ZooCashierEntity.isPlushieItem(stack.getItem())) return false;

@@ -478,15 +478,20 @@ public class ZooTycoonClient implements ClientModInitializer {
                 net.zootycoon.client.render.ToiletSeatRenderer::new
         );
 
-        // 3h. Register transparent cutout render layers for blocks (Trash, Feeding Trough, Trash Can)
+        // 3h. Register transparent cutout and translucent render layers for blocks (Trash, Feeding Trough, Trash Can, Gacha Machine)
         net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap.INSTANCE.putBlock(net.zootycoon.block.ZooBlocks.TRASH, net.minecraft.client.renderer.RenderType.cutout());
         net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap.INSTANCE.putBlock(net.zootycoon.block.ZooBlocks.TRASH_CAN, net.minecraft.client.renderer.RenderType.cutout());
         net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap.INSTANCE.putBlock(net.zootycoon.block.ZooBlocks.FEEDING_TROUGH, net.minecraft.client.renderer.RenderType.cutout());
+        net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap.INSTANCE.putBlock(net.zootycoon.block.ZooBlocks.GACHA_MACHINE, net.minecraft.client.renderer.RenderType.translucent());
 
-        // 3h. Register Block Entity Renderer for Feeding Trough (Dynamic 3D food items)
+        // 3h. Register Block Entity Renderer for Feeding Trough (Dynamic 3D food items) and Gacha Machine (Dynamic 3D plushies)
         net.minecraft.client.renderer.blockentity.BlockEntityRenderers.register(
                 net.zootycoon.block.ZooBlocks.FEEDING_TROUGH_BLOCK_ENTITY,
                 net.zootycoon.client.render.ZooFeedingTroughRenderer::new
+        );
+        net.minecraft.client.renderer.blockentity.BlockEntityRenderers.register(
+                net.zootycoon.block.ZooBlocks.GACHA_MACHINE_BLOCK_ENTITY,
+                net.zootycoon.client.render.ZooGachaMachineRenderer::new
         );
 
         // 4. Register in-world render event for boundaries & Litematica-style preview & Holograms

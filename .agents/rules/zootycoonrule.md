@@ -25,6 +25,6 @@ fungsi yg udah fix (tidak boleh sampe rusak karena mengubah kode):
 4. logic antri
 5. pengunjung / visitor
 6. hunter
-
+7. ui feeding through
 fungsi yg akan ada tapi belum tanpil di ui/atau belum punya perilaku ke sistem hanya static:
 1. rating

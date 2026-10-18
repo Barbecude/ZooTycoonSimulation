@@ -1,5 +1,5 @@
 {
-	"render_type": "minecraft:cutout",
+	"render_type": "minecraft:translucent",
 	"texture_size": [64, 64],
 	"textures": {
 		"1": "zootycoon:block/gacha_machine",
@@ -56,58 +56,6 @@
 				"west": {"uv": [0, 4, 4, 4.75], "texture": "#1"},
 				"up": {"uv": [0, 4.75, 4, 8.75], "rotation": 270, "texture": "#1"},
 				"down": {"uv": [4, 10, 8, 14], "rotation": 90, "texture": "#1"}
-			}
-		},
-		{
-			"from": [3.25, 10, 5.25],
-			"to": [8.25, 15, 10.25],
-			"rotation": {"angle": 0, "axis": "y", "origin": [3.25, 11, 5.25]},
-			"faces": {
-				"north": {"uv": [8, 3.5, 9.25, 4.75], "texture": "#1"},
-				"east": {"uv": [8, 3.5, 9.25, 4.75], "texture": "#1"},
-				"south": {"uv": [8, 3.5, 9.25, 4.75], "texture": "#1"},
-				"west": {"uv": [8, 3.5, 9.25, 4.75], "texture": "#1"},
-				"up": {"uv": [9.25, 3.5, 10.5, 4.75], "texture": "#1"},
-				"down": {"uv": [10.5, 3.5, 11.75, 4.75], "texture": "#1"}
-			}
-		},
-		{
-			"from": [1, 14.5, 4],
-			"to": [6, 19.5, 9],
-			"rotation": {"angle": -22.5, "axis": "x", "origin": [1, 15.5, 4]},
-			"faces": {
-				"north": {"uv": [8, 6, 9.25, 7.25], "texture": "#1"},
-				"east": {"uv": [8, 6, 9.25, 7.25], "texture": "#1"},
-				"south": {"uv": [8, 6, 9.25, 7.25], "texture": "#1"},
-				"west": {"uv": [8, 6, 9.25, 7.25], "texture": "#1"},
-				"up": {"uv": [9.25, 3.5, 10.5, 4.75], "texture": "#1"},
-				"down": {"uv": [10.5, 6, 11.75, 7.25], "texture": "#1"}
-			}
-		},
-		{
-			"from": [9.25, 13, 6],
-			"to": [14.25, 18, 11],
-			"rotation": {"angle": -45, "axis": "z", "origin": [9.25, 14, 6]},
-			"faces": {
-				"north": {"uv": [8, 4.75, 9.25, 6], "texture": "#1"},
-				"east": {"uv": [8, 4.75, 9.25, 6], "texture": "#1"},
-				"south": {"uv": [8, 4.75, 9.25, 6], "texture": "#1"},
-				"west": {"uv": [8, 4.75, 9.25, 6], "texture": "#1"},
-				"up": {"uv": [9.25, 3.5, 10.5, 4.75], "texture": "#1"},
-				"down": {"uv": [10.5, 4.75, 11.75, 6], "texture": "#1"}
-			}
-		},
-		{
-			"from": [9, 14.5, 2.25],
-			"to": [14, 19.5, 7.25],
-			"rotation": {"angle": 45, "axis": "z", "origin": [9, 15.5, 2.25]},
-			"faces": {
-				"north": {"uv": [8, 7.25, 9.25, 8.5], "texture": "#1"},
-				"east": {"uv": [8, 7.25, 9.25, 8.5], "texture": "#1"},
-				"south": {"uv": [8, 7.25, 9.25, 8.5], "texture": "#1"},
-				"west": {"uv": [8, 7.25, 9.25, 8.5], "texture": "#1"},
-				"up": {"uv": [9.25, 3.5, 10.5, 4.75], "texture": "#1"},
-				"down": {"uv": [10.5, 7.25, 11.75, 8.5], "texture": "#1"}
 			}
 		},
 		{
