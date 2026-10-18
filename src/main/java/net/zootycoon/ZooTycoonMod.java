@@ -84,6 +84,7 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.hunter.ZooHunterManager.reset();
             net.zootycoon.visitor.ZooVisitorManager.reset();
             net.zootycoon.animal.ZooInspectionService.reset();
+            net.zootycoon.animal.AnimalBathingManager.reset();
         });
 
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTING.register(server -> {
@@ -98,10 +99,11 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.hunter.ZooHunterManager.reset();
             net.zootycoon.visitor.ZooVisitorManager.reset();
             net.zootycoon.animal.ZooInspectionService.reset();
+            net.zootycoon.animal.AnimalBathingManager.reset();
             net.zootycoon.construction.ConstructionManager.loadFromFile(server);
         });
 
-        // 5c. Spyglass/Field Guide right-click animal registration & direct player feeding with love particles
+        // 5c. Spyglass/Field Guide right-click animal registration, watering/brushing & direct player feeding
         net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
             if (!world.isClientSide() && player instanceof net.minecraft.server.level.ServerPlayer sp && entity instanceof net.minecraft.world.entity.LivingEntity living) {
                 net.minecraft.world.item.ItemStack held = player.getItemInHand(hand);
@@ -112,12 +114,25 @@ public class ZooTycoonMod implements ModInitializer {
                             return net.minecraft.world.InteractionResult.SUCCESS;
                         }
                     }
-                } else if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)
-                        && (held.is(Items.BRUSH) || held.is(net.zootycoon.item.ZooItems.BROOM))) {
-                    boolean cleaned = net.zootycoon.animal.ZooAnimalHungerManager.cleanAnimal(living, sp);
-                    if (cleaned) {
-                        ZooNetworkPayloads.sendAnimalSync(sp);
-                        return net.minecraft.world.InteractionResult.SUCCESS;
+                } else if (net.zootycoon.animal.AnimalBathingManager.isWateringCan(held)) {
+                    if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)
+                            && net.zootycoon.animal.ZooAnimalHungerManager.isTagged(living)) {
+                        boolean watered = net.zootycoon.animal.AnimalBathingManager.waterAnimal(living, sp, held, hand);
+                        if (watered) {
+                            return net.minecraft.world.InteractionResult.SUCCESS;
+                        }
+                    }
+                } else if (held.is(net.minecraft.world.item.Items.BRUSH)) {
+                    if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)) {
+                        if (net.zootycoon.animal.ZooAnimalHungerManager.isTagged(living) && net.zootycoon.animal.AnimalBathingManager.isWet(living)) {
+                            boolean brushed = net.zootycoon.animal.AnimalBathingManager.brushAnimal(living, sp, held, hand);
+                            if (brushed) {
+                                return net.minecraft.world.InteractionResult.SUCCESS;
+                            }
+                        } else {
+                            sp.displayClientMessage(net.minecraft.network.chat.Component.translatable("zootycoon.bathing.need_water"), true);
+                            return net.minecraft.world.InteractionResult.SUCCESS;
+                        }
                     }
                 } else if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)
                         && net.zootycoon.animal.AnimalDietRegistry.isFoodValid(living, held)) {

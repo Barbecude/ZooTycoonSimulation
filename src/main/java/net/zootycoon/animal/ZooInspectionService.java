@@ -125,11 +125,13 @@ public class ZooInspectionService {
         int hunger = -1;
         int thirst = -1;
         int cleanliness = -1;
+        boolean isWet = false;
 
         if (registered) {
             hunger = ZooAnimalHungerManager.getHunger(animal);
             thirst = ZooAnimalHungerManager.getThirst(animal);
             cleanliness = ZooAnimalHungerManager.getCleanliness(animal);
+            isWet = AnimalBathingManager.isWet(animal);
         }
 
         String season = ZooClimate.getCurrentSeason(animal.level());
@@ -148,6 +150,7 @@ public class ZooInspectionService {
                 hunger,
                 thirst,
                 cleanliness,
+                isWet,
                 season,
                 tempCat,
                 habitatStatus,
@@ -156,6 +159,20 @@ public class ZooInspectionService {
         );
 
         ServerPlayNetworking.send(player, payload);
+    }
+
+    public static void notifyAnimalUpdated(LivingEntity animal) {
+        if (animal == null || ACTIVE_INSPECTORS.isEmpty()) return;
+        MinecraftServer server = animal.getServer();
+        if (server == null) return;
+        for (Map.Entry<UUID, Integer> entry : ACTIVE_INSPECTORS.entrySet()) {
+            if (entry.getValue() == animal.getId()) {
+                ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
+                if (player != null && player.isAlive()) {
+                    sendSnapshot(player, animal);
+                }
+            }
+        }
     }
 
     public static void reset() {

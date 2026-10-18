@@ -123,9 +123,10 @@ public class ZooAnimalHologramRenderer {
         String cleanText;
         int cleanTextColor;
         float cleanProgress;
+        boolean isWet = isRegistered && InspectionPayloads.isAnimalWet(entity.getId());
         if (isRegistered && snapshot.cleanliness() >= 0) {
             int cVal = snapshot.cleanliness();
-            cleanText = cVal + "%";
+            cleanText = cVal + "%" + (isWet ? " " + Component.translatable("zootycoon.inspect.cleanliness.wet").getString() : "");
             cleanTextColor = HologramBarRenderer.getStatusColor((float) cVal);
             cleanProgress = Math.max(0.0f, Math.min(1.0f, cVal / 100.0f));
         } else {

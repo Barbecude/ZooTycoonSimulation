@@ -534,5 +534,8 @@
   "zootycoon.temperature.cold": "Cold",
   "zootycoon.temperature.temperate": "Temperate",
   "zootycoon.temperature.warm": "Warm",
-  "zootycoon.temperature.hot": "Hot"
+  "zootycoon.temperature.hot": "Hot",
+  "zootycoon.bathing.need_water": "Wet the animal first with a watering can!",
+  "zootycoon.inspect.cleanliness.wet": "(Wet)",
+  "zootycoon.inspect.wet": "(Wet)"
 }

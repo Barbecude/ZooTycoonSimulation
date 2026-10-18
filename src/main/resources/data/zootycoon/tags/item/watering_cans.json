@@ -1,0 +1,13 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:water_bucket",
+    { "id": "dewdrop:copper_watering_can", "required": false },
+    { "id": "dewdrop:iron_watering_can", "required": false },
+    { "id": "dewdrop:gold_watering_can", "required": false },
+    { "id": "dewdrop:diamond_watering_can", "required": false },
+    { "id": "dewdrop:netherite_watering_can", "required": false },
+    { "id": "farm_and_charm:watering_can", "required": false }
+  ]
+}
+

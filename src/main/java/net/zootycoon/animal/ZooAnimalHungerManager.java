@@ -228,15 +228,8 @@ public class ZooAnimalHungerManager {
                 }
             }
 
-            // Cleanliness decay & water/rain cleaning
-            if (animal.isInWater() || level.isRainingAt(animal.blockPosition())) {
-                if (level.getGameTime() % 60 == 0) {
-                    int currentClean = getCleanliness(animal);
-                    if (currentClean < MAX_CLEANLINESS) {
-                        setCleanliness(animal, Math.min(MAX_CLEANLINESS, currentClean + 5));
-                    }
-                }
-            } else if (level.getGameTime() % 240 == 0) { // Loses 1% every 12s
+            // Cleanliness decay
+            if (level.getGameTime() % 240 == 0) { // Loses 1% every 12s
                 int currentClean = getCleanliness(animal);
                 if (currentClean > 0) {
                     setCleanliness(animal, currentClean - 1);

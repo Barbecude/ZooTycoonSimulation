@@ -45,6 +45,7 @@ public class InspectionPayloads {
             int hunger,
             int thirst,
             int cleanliness,
+            boolean isWet,
             String season,
             String tempCategory,
             String habitatStatus,
@@ -60,6 +61,7 @@ public class InspectionPayloads {
                     buf.writeInt(payload.hunger);
                     buf.writeInt(payload.thirst);
                     buf.writeInt(payload.cleanliness);
+                    buf.writeBoolean(payload.isWet);
                     buf.writeUtf(payload.season);
                     buf.writeUtf(payload.tempCategory);
                     buf.writeUtf(payload.habitatStatus != null ? payload.habitatStatus : "NO_DATA");
@@ -73,6 +75,7 @@ public class InspectionPayloads {
                             buf.readInt(),
                             buf.readInt(),
                             buf.readInt(),
+                            buf.readBoolean(),
                             buf.readUtf(),
                             buf.readUtf(),
                             buf.readUtf(),
@@ -92,6 +95,7 @@ public class InspectionPayloads {
 
     private static final java.util.Map<Integer, ClimateData> LATEST_CLIMATE = new java.util.concurrent.ConcurrentHashMap<>();
     private static final java.util.Map<Integer, HabitatData> LATEST_HABITAT = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.Map<Integer, Boolean> LATEST_WET = new java.util.concurrent.ConcurrentHashMap<>();
 
     public record ClimateData(String season, String tempCategory) {}
     public record HabitatData(String status, String needs) {}
@@ -100,6 +104,7 @@ public class InspectionPayloads {
         if (payload != null) {
             LATEST_CLIMATE.put(payload.entityId(), new ClimateData(payload.season(), payload.tempCategory()));
             LATEST_HABITAT.put(payload.entityId(), new HabitatData(payload.habitatStatus(), payload.habitatNeeds()));
+            LATEST_WET.put(payload.entityId(), payload.isWet());
         }
     }
 
@@ -109,6 +114,10 @@ public class InspectionPayloads {
 
     public static HabitatData getLatestHabitat(int entityId) {
         return LATEST_HABITAT.get(entityId);
+    }
+
+    public static boolean isAnimalWet(int entityId) {
+        return Boolean.TRUE.equals(LATEST_WET.get(entityId));
     }
 
     public static void registerCommon() {

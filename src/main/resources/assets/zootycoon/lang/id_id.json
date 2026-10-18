@@ -543,5 +543,8 @@
   "zootycoon.temperature.cold": "Dingin",
   "zootycoon.temperature.temperate": "Sejuk / Sedang",
   "zootycoon.temperature.warm": "Hangat",
-  "zootycoon.temperature.hot": "Panas Terik"
+  "zootycoon.temperature.hot": "Panas Terik",
+  "zootycoon.bathing.need_water": "Basahi satwa terlebih dahulu dengan penyiram air!",
+  "zootycoon.inspect.cleanliness.wet": "(Basah)",
+  "zootycoon.inspect.wet": "(Basah)"
 }

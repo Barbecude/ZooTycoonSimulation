@@ -11,7 +11,7 @@
 | 6 | Makanan favorit (Item Rendering 3D) | SELESAI | 2026-10-18 | Adopsi pola Farm & Charm: renderStatic(stack, ItemDisplayContext.GROUND, packedLight, OverlayTexture.NO_OVERLAY, poseStack, buffer, entity.level(), 0), 1-4 item stack 3D asli, label +N jika >4 jenis, label "Pakan Umum" jika fallback diet, item tags zootycoon:animal_food/raw_meat dan raw_fish lintas mod (FarmersDelight, Alex's Mobs, Naturalist, WilderNature, Farm & Charm) tanpa olahan/masakan |
 | 7 | Musim dan suhu (Fabric Seasons) | SELESAI | 2026-10-18 | Integrasi FabricSeasonsCompat dengan refleksi getCurrentSeason & suhu bioma musiman; SereneSeasonsCompat otomatis fallback ke Fabric Seasons; ZooClimate menghitung suhu efektif & kategori (Beku, Dingin, Sejuk/Sedang, Hangat, Panas Terik); InspectionSnapshotPayload & ZooInspectionService mengirim data iklim; ZooAnimalHologramRenderer menampilkan baris "Musim: [Nama Musim] | Suhu: [Kategori Suhu]" tanpa Celsius palsu; laju kehausan musim panas normal |
 | 8 | Habitat dan ekosistem | SELESAI | 2026-10-18 | Data-driven habitat suitability & ecosystem block requirements via JSON data packs; 9 template ekosistem (Savana, Hutan, Hutan Tropis, Kutub/Salju, Gurun, Padang Rumput, Perairan Tawar, Lautan, Rawa); evaluasi bioma, temperatur nyaman, dan blok sekitar radius 8; server snapshot sync; hologram menampilkan "Habitat: Sesuai (Ideal)" atau "Habitat: Tidak Sesuai" dan petunjuk kebutuhan "Butuh: ..." |
-| 9 | Mandi hewan oleh player | BELUM | - | |
+| 9 | Mandi hewan oleh player | SELESAI | 2026-10-18 | Sistem mandi 2 tahap (watering can + brush): tag zootycoon:watering_cans (default water_bucket, mod cans opsional), durasi basah 600 tick, brush nambah kebersihan +35 (maks 100) kurangi durability 1, partikel busa kilau sabun & splash, actionbar warning jika belum basah, broom tidak lagi bersihkan badan satwa, auto-clean hujan dihapus, status (Basah) di hologram |
 | 10 | Mandi hewan oleh zookeeper | BELUM | - | |
 | 11 | Mood hewan | BELUM | - | |
 | 12 | Validasi akhir hologram | BELUM | - | |
@@ -40,29 +40,33 @@
 - Fase 7: Mengimplementasikan `FabricSeasonsCompat` via refleksi runtime ke `io.github.lucaargolo.seasons.FabricSeasons` (`getCurrentSeason` level & client, `injectBiomeTemperature`), memperbaiki bug T6 di mana iklim selalu macet di "SPRING". `SereneSeasonsCompat.getCurrentSeason` dan `isLoaded` secara otomatis mengarahkan panggilan ke `FabricSeasonsCompat` jika Serene Seasons tidak ada, menormalkan laju thirst satwa di musim kemarau/panas (`ZooAnimalHungerManager.tickServer`).
 - Fase 7: Kelas utilitas iklim `ZooClimate` menghitung suhu efektif aktual bioma pada posisi satwa (termasuk altitude lapse rate di atas Y=80) dan mengklasifikasikan ke dalam kategori resmi: Beku (< 0.15), Dingin (< 0.45), Sejuk / Sedang (< 0.85), Hangat (< 1.25), Panas Terik (>= 1.25).
 - Fase 7: Status musim dan kategori suhu dikirimkan secara periodik di `InspectionSnapshotPayload` oleh `ZooInspectionService`. `ZooAnimalHologramRenderer` menampilkan baris iklim: `Musim: [Nama Musim] | Suhu: [Kategori Suhu]` via translatable key `zootycoon.inspect.climate` tanpa angka Celsius palsu.
-
 - Fase 8: Arsitektur data-driven habitat mengadopsi pola Minecraft Data Pack dengan `SimpleJsonResourceReloadListener` di `HabitatProfileLoader` yang membaca template ekosistem dari `data/zootycoon/zoo_habitat/templates/*.json` dan mapping spesies dari `data/zootycoon/zoo_habitat/species/*.json`, teregistrasi melalui `ResourceManagerHelper.get(PackType.SERVER_DATA)`.
 - Fase 8: 9 template ekosistem baku (Savana, Hutan, Hutan Tropis, Kutub/Salju, Gurun, Padang Rumput, Perairan Tawar, Lautan, Rawa) mendefinisikan bioma yang cocok (tag `#minecraft:is_savanna`, dll serta list ID bioma), rentang temperatur ideal, serta blok ekosistem wajib di sekitar (radius 8 blok, maks 3 syarat, contoh: air >= 4 blok, pohon/daun >= 6 blok, salju/es >= 6 blok, pasir >= 8 blok). Seluruh satwa di `AnimalDietRegistry` memiliki pemetaan template dan fallback in-code.
 - Fase 8: Server-side evaluator `HabitatEvaluator.evaluate(ServerLevel level, LivingEntity animal)` memvalidasi bioma posisi satwa, temperatur efektif bioma (via `ZooClimate`), serta memindai blok sekitar dalam radius horizontal 8 dan vertikal -4..4 blok.
 - Fase 8: Sinkronisasi server ke client mengalir melalui `InspectionSnapshotPayload` (`habitatStatus` dan `habitatNeeds`) yang dikirim periodik tiap 10 tick dan dicache di `InspectionPayloads.LATEST_HABITAT`.
 - Fase 8: Visual hologram `ZooAnimalHologramRenderer` menampilkan baris status: `Habitat: Sesuai (Ideal)` (hijau soft 0xFF55FF55) atau `Habitat: Tidak Sesuai` (merah soft 0xFFFF5555). Jika ada kebutuhan yang kurang, ditampilkan baris petunjuk: `Butuh: Air, Savana`, `Bioma: Perlu Savana`, atau `Suhu: Terlalu Dingin` (kuning peringatan 0xFFFFAA00). Jika status sesuai/ideal, baris petunjuk otomatis dihilangkan agar tidak memadati layar.
+- Fase 9: Mod eksternal "Vanilla Watering Cans" diverifikasi tidak memiliki mod Fabric 1.21.1 (hanya resource pack pengganti tekstur CIT / mod NeoForge). Sesuai rekomendasi audit, diterapkan sistem soft dependency melalui item tag `zootycoon:watering_cans` yang secara bawaan mendukung `minecraft:water_bucket` dan item watering can mod eksternal dengan status `"required": false`.
+- Fase 9: Mekanik mandi satwa wajib 2 alat (`AnimalBathingManager`): satwa terdaftar yang disiram alat penyiram air masuk status `basah` selama 600 tick (30 detik), memunculkan efek suara `bucket_empty` & `generic_splash` serta partikel `splash` dan `dripping_water`.
+- Fase 9: Penggosokan dengan `minecraft:brush` pada satwa basah memulihkan kebersihan +35 poin (maks 100), mengurangi durability sikat sebesar 1 (kecuali mode creative), memainkan suara `brush_generic`, dan memunculkan partikel busa kilau sabun (`bubble_pop`, `wax_off`, `splash`).
+- Fase 9: Penggosokan dengan `brush` pada satwa yang BELUM basah memunculkan actionbar translatable `zootycoon.bathing.need_water` ("Basahi satwa terlebih dahulu dengan penyiram air!") dan kebersihan tidak bertambah.
+- Fase 9: Item sapu `BroomItem` dicabut dari event pembersihan satwa di `ZooTycoonMod.java`, murni dikhususkan untuk membersihkan sampah kandang (`ZooBlocks.TRASH`).
+- Fase 9: Pembersihan pasif otomatis dari air/hujan di `ZooAnimalHungerManager.tickServer` dihapus, penurunan kebersihan bertahap 1% tiap 240 tick tetap berjalan normal.
+- Fase 9: Payload `InspectionSnapshotPayload` membawa `boolean isWet`, `ZooInspectionService` memberitahukan status basah secara real-time via `notifyAnimalUpdated`, dan `ZooAnimalHologramRenderer` menampilkan status `(Basah)` / `(Wet)` di baris bar kebersihan.
 
-## Bukti Selesai (Fase 8)
-- Singa di kandang batu tanpa rumput/air: evaluasi server mendeteksi bioma bukan savana dan sumber air < 4 blok; hologram menampilkan `Habitat: Tidak Sesuai` dan `Butuh: Air, Savana`.
-- Pindahkan singa ke bioma savana dengan sumber air (kolam air >= 4 blok): seluruh syarat terpenuhi; status seketika berubah menjadi `Habitat: Sesuai (Ideal)` dan baris petunjuk kebutuhan otomatis hilang tanpa teks duplikat.
-- Seluruh 9 template ekosistem (`savanna.json`, `forest.json`, `jungle.json`, `snow.json`, `desert.json`, `plains.json`, `freshwater.json`, `ocean.json`, `swamp.json`) dan file profil spesies data pack terpasang lengkap.
-- `.\gradlew.bat build` berhasil sukses (`BUILD SUCCESSFUL in 48s`) dan file jar otomatis terpasang ke profil Modrinth.
+## Bukti Selesai (Fase 9)
+- Klik kanan brush langsung ke sapi kotor / belum basah: muncul peringatan actionbar "Basahi satwa terlebih dahulu dengan penyiram air!", kebersihan tidak bertambah.
+- Siram sapi dengan watering can (water_bucket) lalu gosok dengan brush: kebersihan naik +35 poin per gosok (maks 100), durability sikat berkurang 1, efek suara sikat dan partikel busa kilau sabun muncul, status di bar kebersihan hologram ter-update menampilkan status `(Basah)`.
+- Sapu (broom) tidak lagi membersihkan hewan saat diklik ke satwa.
+- `.\gradlew.bat build` sukses (BUILD SUCCESSFUL) dan file jar otomatis tersalin ke folder mods profil Modrinth.
 
 ## Blocker
-- Tidak ada.
+- Mod eksternal "Vanilla Watering Cans" tidak tersedia untuk Fabric 1.21.1 (hanya resource pack CIT / mod NeoForge). Saat ini sistem mandi mengandalkan soft dependency item tag `zootycoon:watering_cans` dengan fallback vanilla `minecraft:water_bucket`.
 
 ## File yang diubah
-- src/main/java/net/zootycoon/animal/habitat/HabitatProfile.java (BARU)
-- src/main/java/net/zootycoon/animal/habitat/HabitatProfileLoader.java (BARU)
-- src/main/java/net/zootycoon/animal/habitat/HabitatEvaluator.java (BARU)
-- src/main/resources/data/zootycoon/zoo_habitat/templates/*.json (BARU: savanna, forest, jungle, snow, desert, plains, freshwater, ocean, swamp)
-- src/main/resources/data/zootycoon/zoo_habitat/species/*.json (BARU: lion, elephant, giraffe, zebra, tiger, panda, polar_bear, goat, dll)
+- src/main/java/net/zootycoon/animal/AnimalBathingManager.java (BARU)
+- src/main/resources/data/zootycoon/tags/item/watering_cans.json (BARU)
 - src/main/java/net/zootycoon/ZooTycoonMod.java
+- src/main/java/net/zootycoon/animal/ZooAnimalHungerManager.java
 - src/main/java/net/zootycoon/network/InspectionPayloads.java
 - src/main/java/net/zootycoon/animal/ZooInspectionService.java
 - src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
@@ -71,8 +75,8 @@
 - docs/hologram/PROGRESS.md
 
 ## Butuh izin user
-- Tidak ada.
+- Permintaan izin untuk membuat implementasi alat siram internal mod Zoo Tycoon (`WateringCanItem`) jika pengguna menghendaki watering can kustom bawaan mod Zoo Tycoon selain ember air vanilla.
 
 ## Belum terverifikasi
-- Pengujian in-game untuk kandang campuran (multi-species) dengan kebutuhan ekosistem berbeda dalam satu enclosure bersama.
-- Efek perubahan musim ekstrem Fabric Seasons terhadap temperatur kandang di bioma batas (border biomes).
+- Pengujian interaksi mandi satwa oleh Zookeeper (dijadwalkan pada Fase 10).
+- Efek enchantment unbreaking/mending pada durability brush saat memandikan satwa.
