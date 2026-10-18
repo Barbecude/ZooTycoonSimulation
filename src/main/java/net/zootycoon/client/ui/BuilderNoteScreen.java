@@ -196,9 +196,19 @@ public class BuilderNoteScreen extends Screen {
     }
 
     @Override
+    protected void renderBlurredBackground(float delta) {
+        // Disabled 1.21 menu blur to keep notes screen crisp and clear
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
+
+    @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        // 1. Semi-transparent backdrop overlay
-        this.renderBackground(graphics, mouseX, mouseY, partialTick);
+        // 1. Darkened overlay backdrop without blur
+        graphics.fill(0, 0, this.width, this.height, 0x80000000);
 
         // 2. Render parchment texture from builder_note.png (scaled cleanly to panel dimensions)
         graphics.blit(NOTE_TEXTURE, startX, startY, panelWidth, panelHeight, 16.0f, 4.0f, 128, 168, 256, 256);
