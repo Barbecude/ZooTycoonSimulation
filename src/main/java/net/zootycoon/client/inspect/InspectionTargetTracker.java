@@ -91,6 +91,26 @@ public class InspectionTargetTracker {
         setTarget(validTarget);
     }
 
+    public static boolean isZooRegisteredAnimal(LivingEntity e) {
+        if (e == null || !e.isAlive()) return false;
+        if (!ZooAnimalHungerManager.isZooAnimalCandidate(e)) return false;
+
+        int id = e.getId();
+        // 1. Check clientAnimals list from server sync
+        for (net.zootycoon.network.ZooNetworkPayloads.AnimalSyncData a : net.zootycoon.client.ZooTycoonClient.clientAnimals) {
+            if (a.entityId() == id) return true;
+        }
+
+        // 2. Check snapshot cache
+        InspectionClientCache.Snapshot snap = InspectionClientCache.getSnapshot(id);
+        if (snap != null && snap.registered()) return true;
+
+        // 3. Check entity tags (singleplayer / integrated server)
+        if (e.getTags().contains("zoo_registered")) return true;
+
+        return false;
+    }
+
     private static LivingEntity findTarget(Minecraft mc, Player player, Level level) {
         Vec3 eyePos = player.getEyePosition(1.0F);
         Vec3 lookVec = player.getViewVector(1.0F);
@@ -103,8 +123,8 @@ public class InspectionTargetTracker {
             maxDistSqr = eyePos.distanceToSqr(blockHit.getLocation());
         }
 
-        // A. Direct check on vanilla crosshairPickEntity
-        if (mc.crosshairPickEntity instanceof LivingEntity living && living.isAlive() && ZooAnimalHungerManager.isZooAnimalCandidate(living)) {
+        // A. Direct check on vanilla crosshairPickEntity (strictly registered animals only)
+        if (mc.crosshairPickEntity instanceof LivingEntity living && living.isAlive() && isZooRegisteredAnimal(living)) {
             double distSqr = player.distanceToSqr(living);
             if (distSqr <= maxDistSqr) {
                 targetRetentionTicks = 15;
@@ -112,7 +132,7 @@ public class InspectionTargetTracker {
             }
         }
 
-        // B. Extended raycast up to 16 blocks for any valid zoo animal
+        // B. Extended raycast up to 16 blocks (strictly registered animals only)
         AABB searchBox = player.getBoundingBox().expandTowards(lookVec.scale(16.0)).inflate(1.0);
         EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(
                 player,
@@ -124,7 +144,7 @@ public class InspectionTargetTracker {
         );
 
         if (entityHit != null && entityHit.getEntity() instanceof LivingEntity living) {
-            if (ZooAnimalHungerManager.isZooAnimalCandidate(living)) {
+            if (isZooRegisteredAnimal(living)) {
                 targetRetentionTicks = 15;
                 return living;
             }
@@ -132,7 +152,7 @@ public class InspectionTargetTracker {
 
         // C. Hologram Card Volume Raycast:
         // When inspecting an animal, allow looking up at the hologram card floating above its head
-        if (currentTarget != null && currentTarget.isAlive()) {
+        if (currentTarget != null && currentTarget.isAlive() && isZooRegisteredAnimal(currentTarget)) {
             double targetDistSqr = player.distanceToSqr(currentTarget);
             if (targetDistSqr <= 16.0 * 16.0) {
                 // Expanded bounding box covering both the animal and the hologram floating above it

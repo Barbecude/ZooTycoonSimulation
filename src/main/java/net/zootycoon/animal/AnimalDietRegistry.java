@@ -6,12 +6,15 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class AnimalDietRegistry {
 
@@ -244,45 +247,93 @@ public class AnimalDietRegistry {
         return getDiet(entity).acceptedFoods;
     }
 
+    private static final Map<EntityType<?>, List<ItemStack>> FOOD_CACHE = new ConcurrentHashMap<>();
+
+    /**
+     * Retrieves all valid foods for an animal, dynamically including modded crops, seeds, and meats.
+     */
+    public static List<ItemStack> getFoodsForAnimal(LivingEntity entity) {
+        if (entity == null) return Collections.emptyList();
+        return FOOD_CACHE.computeIfAbsent(entity.getType(), type -> {
+            Set<Item> seen = new HashSet<>();
+            List<ItemStack> list = new ArrayList<>();
+
+            // 1. DIET_REGISTRY if explicitly defined
+            AnimalDiet diet = getDiet(entity);
+            if (diet != null && !diet.isFallback && diet.acceptedFoods != null) {
+                for (Item item : diet.acceptedFoods) {
+                    if (item != null && item != Items.AIR && seen.add(item)) {
+                        list.add(new ItemStack(item));
+                    }
+                }
+            }
+
+            // 2. Animal.isFood() probe on common candidates
+            if (entity instanceof Animal a) {
+                for (Item candidate : COMMON_ANIMAL_FOOD_CANDIDATES) {
+                    if (candidate != null && !seen.contains(candidate)) {
+                        try {
+                            if (a.isFood(new ItemStack(candidate)) && seen.add(candidate)) {
+                                list.add(new ItemStack(candidate));
+                            }
+                        } catch (Throwable ignored) {}
+                    }
+                }
+
+                // 3. Scan BuiltInRegistries.ITEM to include any mod foods (FarmersDelight, Farm & Charm, etc.)
+                for (Item item : BuiltInRegistries.ITEM) {
+                    if (item == null || item == Items.AIR || seen.contains(item)) continue;
+                    if (item.components().has(DataComponents.FOOD)
+                            || item.getDefaultInstance().is(net.minecraft.tags.ItemTags.VILLAGER_PLANTABLE_SEEDS)
+                            || isRawMeat(item.getDefaultInstance())
+                            || isRawFish(item.getDefaultInstance())) {
+                        try {
+                            ItemStack testStack = new ItemStack(item);
+                            if (a.isFood(testStack) && seen.add(item)) {
+                                list.add(testStack);
+                            }
+                        } catch (Throwable ignored) {}
+                    }
+                }
+            }
+
+            // 4. Raw meat / fish if carnivore or piscivore
+            if (diet != null) {
+                if (diet.acceptsRawMeat) {
+                    for (Item item : BuiltInRegistries.ITEM) {
+                        if (seen.contains(item)) continue;
+                        ItemStack st = new ItemStack(item);
+                        if (isRawMeat(st) && seen.add(item)) {
+                            list.add(st);
+                        }
+                    }
+                }
+                if (diet.acceptsRawFish) {
+                    for (Item item : BuiltInRegistries.ITEM) {
+                        if (seen.contains(item)) continue;
+                        ItemStack st = new ItemStack(item);
+                        if (isRawFish(st) && seen.add(item)) {
+                            list.add(st);
+                        }
+                    }
+                }
+            }
+
+            if (list.isEmpty()) {
+                list.add(new ItemStack(Items.WHEAT));
+            }
+
+            return Collections.unmodifiableList(list);
+        });
+    }
+
     /**
      * Client-safe method to retrieve a list of favorite food ItemStacks for an entity.
      */
     public static List<ItemStack> getFavoriteFoodStacks(Entity entity) {
-        if (entity == null) return Collections.emptyList();
-        AnimalDiet diet = getDiet(entity);
-        if (diet != null && !diet.isFallback && diet.acceptedFoods != null && !diet.acceptedFoods.isEmpty()) {
-            List<ItemStack> stacks = new ArrayList<>(diet.acceptedFoods.size());
-            for (Item item : diet.acceptedFoods) {
-                if (item != null && item != Items.AIR) {
-                    stacks.add(new ItemStack(item));
-                }
-            }
-            return stacks;
+        if (entity instanceof LivingEntity living) {
+            return getFoodsForAnimal(living);
         }
-
-        // Probe dynamically for any Animal instance
-        if (entity instanceof Animal a) {
-            List<ItemStack> probed = new ArrayList<>();
-            for (Item candidate : COMMON_ANIMAL_FOOD_CANDIDATES) {
-                if (a.isFood(new ItemStack(candidate))) {
-                    probed.add(new ItemStack(candidate));
-                }
-            }
-            if (!probed.isEmpty()) {
-                return probed;
-            }
-        }
-
-        if (diet != null && diet.acceptedFoods != null && !diet.acceptedFoods.isEmpty()) {
-            List<ItemStack> stacks = new ArrayList<>(diet.acceptedFoods.size());
-            for (Item item : diet.acceptedFoods) {
-                if (item != null && item != Items.AIR) {
-                    stacks.add(new ItemStack(item));
-                }
-            }
-            return stacks;
-        }
-
         return Collections.emptyList();
     }
 

@@ -56,18 +56,20 @@
 - Fase 10: Vertical anchoring disesuaikan ke `entY = entity.getY() + entity.getBbHeight() + 0.15f` (+0.25f jika custom name) dengan skala diperkecil ke `0.0135f` dan `maxY = 0.0f` serta `startY = maxY - totalBoxHeight`. Kartu hologram tumbuh ke atas dan mengapung proporsional persis di atas kepala satwa tanpa terpotong atau terlalu tinggi di langit.
 - Fase 10: Winding order pada `drawRect`, `drawTexturedIcon`, dan `drawAtlasSprite` di `HologramBarRenderer` diubah dari Clockwise (CW) ke Counter-Clockwise (CCW): `minX,minY -> maxX,minY -> maxX,maxY -> minX,maxY` untuk mencegah backface culling OpenGL.
 - Fase 10: Z-layering presisi ditetapkan dari belakang ke depan (background plate z=-0.02f, track/border z=-0.016f & -0.014f, fill z=-0.010f, highlight z=-0.008f, ikon z=-0.005f, font z=0.0f), `bs.endBatch(RenderType.textBackground())` di-flush tepat setelah bar, dan seluruh teks menggunakan `Font.DisplayMode.NORMAL` sehingga font dan bar tidak lagi tertutup oleh background plate.
-- Fase 10: Skala pakan 3D ditingkatkan menjadi proporsional `12.0f, -12.0f, 12.0f` dengan `ItemDisplayContext.GUI` pada slot 16px, dan `AnimalDietRegistry` menambahkan pengujian pakan dinamis via `Animal.isFood(ItemStack)` sehingga satwa hanya menampilkan pakan yang benar-benar bisa dimakan.
-- Fase 10: Deteksi target di `InspectionTargetTracker` diperkaya dengan raycast volume hologram di atas kepala hewan (`hologramBox` [head - 0.2] .. [head + 2.8]) dan buffer retensi 15 tick sehingga saat kamera digeser ke atas untuk membaca teks kartu hologram, target tidak hilang mendadak.
+- Fase 10: Horizontal scale X ditetapkan positif `scale(scale, -scale, scale)` memulihkan arah pengisian progress bar (mengisi dari kiri ke kanan, track gelap di kanan) dan memulihkan font rendering yang sebelumnya terbalik dan ter-cull GPU.
+- Fase 10: Magnifying glass difilter ketat (`isZooRegisteredAnimal`) baik pada client (`InspectionTargetTracker`) maupun server (`ZooInspectionService`) sehingga HANYA membidik dan menampilkan hologram untuk satwa yang telah terdaftar di zoo.
+- Fase 10: Label teks status ("Darah", "Lapar", "Haus", "Bersih") ditambahkan di samping kiri masing-masing bar indikator di samping ikon, dengan nilai teks di sebelah kanan.
+- Fase 10: Hologram pakan disederhanakan dari render 3D menjadi baris teks pakan yang dinamis memindai seluruh item mod terpasang via `Animal.isFood(ItemStack)` dan tag raw meat/fish (`AnimalDietRegistry.getFoodsForAnimal`).
 - Fase 10: Mekanik mandi oleh Zookeeper: NBT peralatan mandi (`HasWateringCan`, `WateringCanStack`, `BrushStack`), synched entity data `HAS_BATHING_TOOLS`, tombol "Serahkan Alat Mandi" di dialog (aktif jika pemain memiliki 1 watering can dan 1 brush), packet `ZookeeperBathingPayloads.GiveBathingToolsPayload`, dan AI Zookeeper memandikan satwa asuh (cleanliness <= 50%) dengan menyiram (status wet) lalu menyikat (kebersihan pulih 100%, durability brush berkurang 1).
 
 ## Bukti Selesai (Fase 10)
-- Posisi kartu hologram mengapung proporsional persis di atas kepala satwa (dasar kartu maxY=0 berada pada Y kepala + 0.15 blok, skala 0.0135f), tidak menusuk badan satwa dan tidak terlalu tinggi di langit.
-- Deteksi target tetap aktif saat crosshair digeser ke atas membaca teks kartu hologram berkat raycast hologram volume box dan 15 tick grace buffer.
-- Z-layering presisi (plate z=-0.02, bar z=-0.015..-0.010, ikon z=-0.005, font z=0.0 NORMAL) membuat background plate, bar, teks, dan ikon tampil tajam, berlapis rapi tanpa saling menutupi.
-- Item makanan 3D dirender tajam dengan skala 12 (GUI display context) dan pakan dinamis hewan terverifikasi via `Animal.isFood()`.
-- Zookeeper dialog menampilkan tombol "Serahkan Alat Mandi" (hanya aktif jika inventory pemain punya 1 watering can + 1 brush) dan menampilkan permintaan alat jika satwa asuh kebersihan <= 40%.
-- AI Zookeeper mendekati satwa kotor (cleanliness <= 50%), menyiram air (status wet aktif), lalu menyikat (kebersihan pulih ke 100%, durability sikat berkurang 1).
-- `.\gradlew.bat build` sukses (BUILD SUCCESSFUL in 39s) dan file jar `zootycoon-1.0.0.jar` otomatis tersalin ke folder mods profil Modrinth.
+- Posisi kartu hologram mengapung proporsional persis di atas kepala satwa (dasar kartu maxY=0 berada pada Y kepala + 0.15 blok, skala 0.0135f).
+- Progress bar mengisi dari kiri ke kanan (terang di kiri, track gelap di kanan), seluruh teks tajam dan tampil normal tanpa terpotong.
+- Kaca pembesar hanya berfungsi pada satwa yang sudah terdaftar di zoo.
+- Di sebelah kiri bar terdapat ikon dan label teks ("Darah", "Lapar", "Haus", "Bersih"), nilai teks di sebelah kanan.
+- Pakan favorit ditampilkan sebagai teks yang mendukung seluruh pakan dari mod lain secara dinamis.
+- Zookeeper dialog menampilkan tombol "Serahkan Alat Mandi" (hanya aktif jika inventory pemain punya 1 watering can/ember air + 1 brush) dan AI Zookeeper memandikan satwa asuh.
+- `.\gradlew.bat build` sukses (BUILD SUCCESSFUL) dan file jar `zootycoon-1.0.0.jar` otomatis tersalin ke folder mods profil Modrinth.
 
 ## Blocker
 - Tidak ada blocker.
@@ -77,6 +79,7 @@
 - src/main/java/net/zootycoon/client/inspect/HologramBarRenderer.java
 - src/main/java/net/zootycoon/client/inspect/InspectionTargetTracker.java
 - src/main/java/net/zootycoon/animal/AnimalDietRegistry.java
+- src/main/java/net/zootycoon/animal/ZooInspectionService.java
 - src/main/java/net/zootycoon/entity/ZooZookeeperEntity.java
 - src/main/java/net/zootycoon/client/ui/ZookeeperDialogScreen.java
 - src/main/java/net/zootycoon/network/ZookeeperBathingPayloads.java (BARU)

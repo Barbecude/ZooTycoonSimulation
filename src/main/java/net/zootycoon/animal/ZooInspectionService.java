@@ -47,7 +47,7 @@ public class ZooInspectionService {
             return;
         }
 
-        if (!ZooAnimalHungerManager.isZooAnimalCandidate(animal)) {
+        if (!ZooAnimalHungerManager.isZooAnimalCandidate(animal) || !ZooAnimalHungerManager.isTagged(animal)) {
             ACTIVE_INSPECTORS.remove(player.getUUID());
             return;
         }
@@ -106,7 +106,7 @@ public class ZooInspectionService {
                 continue;
             }
 
-            if (!ZooAnimalHungerManager.isZooAnimalCandidate(animal)) {
+            if (!ZooAnimalHungerManager.isZooAnimalCandidate(animal) || !ZooAnimalHungerManager.isTagged(animal)) {
                 iterator.remove();
                 continue;
             }
