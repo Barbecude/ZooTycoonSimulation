@@ -46,13 +46,19 @@ public class HabitatEvaluator {
             List<String> unmetNeeds
     ) {
         public String encodePayloadString() {
-            return "status=" + status.name()
-                    + ";eco=" + ecosystemName
-                    + ";biome=" + (biomeOk ? "OK" : "NO")
-                    + ";water=" + (waterRequired ? (waterOk ? "OK" : "NO") : "NA")
-                    + ";temp=" + (tempOk ? "OK" : (tooCold ? "HEATER" : "COOLER"))
-                    + ";ground=" + (groundOk ? "OK" : "NO")
-                    + ";mate=" + (companionRequired ? (companionOk ? "OK" : "NO") : "NA");
+            StringBuilder sb = new StringBuilder();
+            sb.append("status=").append(status.name())
+                    .append(";eco=").append(ecosystemName)
+                    .append(";biome=").append(biomeOk ? "OK" : "NO")
+                    .append(";water=").append(waterRequired ? (waterOk ? "OK" : "NO") : "NA")
+                    .append(";temp=").append(tempOk ? "OK" : (tooCold ? "HEATER" : "COOLER"))
+                    .append(";ground=").append(groundOk ? "OK" : "NO")
+                    .append(";mate=").append(companionRequired ? (companionOk ? "OK" : "NO") : "NA");
+
+            if (unmetNeeds != null && !unmetNeeds.isEmpty()) {
+                sb.append(";unmet=").append(String.join("|", unmetNeeds));
+            }
+            return sb.toString();
         }
 
         public String formatHint() {
@@ -100,9 +106,9 @@ public class HabitatEvaluator {
         // 1. Check surrounding blocks with extended range (radius 24, dy -6..6)
         Map<String, Integer> blockCounts = scanSurroundingBlocks(level, animal.blockPosition());
 
-        // 2. Check Natural Ground (coarse dirt, podzol, sand, gravel, etc.)
+        // 2. Check Natural Ground (dirt, podzol, coarse dirt, sand, gravel, mud, snow, etc.)
         int groundCount = blockCounts.getOrDefault("natural_ground", 0);
-        boolean groundOk = groundCount >= 8;
+        boolean groundOk = groundCount >= 4;
 
         // 3. Check Water: generous detection radius so animals in big enclosures don't lose water
         boolean waterRequired = profile.requiresWater();
@@ -123,26 +129,59 @@ public class HabitatEvaluator {
         boolean companionRequired = isSocialAnimal(animal, profile);
         boolean hasCompanion = !companionRequired || !level.getEntitiesOfClass(animal.getClass(), animal.getBoundingBox().inflate(24.0), e -> e != animal && e.isAlive()).isEmpty();
 
+        // 7. Check Required Blocks (Trees, Bamboo, Snow, Sand, etc.)
+        boolean extraBlocksOk = true;
         List<String> unmet = new ArrayList<>();
-        if (!biomeOk) {
-            unmet.add("Bioma: Perlu " + profile.displayName());
-        }
-        if (waterRequired && !waterOk) {
-            unmet.add("Air: Butuh Air");
-        }
-        if (tooCold) {
-            unmet.add("Suhu: Butuh Heater");
-        } else if (tooHot) {
-            unmet.add("Suhu: Butuh Cooler Box");
-        }
-        if (!groundOk) {
-            unmet.add("Tanah: Butuh Tanah Alami");
-        }
-        if (companionRequired && !hasCompanion) {
-            unmet.add("Pasangan: Butuh Teman");
+
+        if (profile.requiredBlocks() != null) {
+            for (HabitatProfile.BlockRequirement req : profile.requiredBlocks()) {
+                String type = req.type().toLowerCase(Locale.ROOT);
+                int count;
+                if ("water".equals(type)) {
+                    count = waterCount;
+                } else if ("trees".equals(type) || "tree".equals(type)) {
+                    count = blockCounts.getOrDefault("trees", 0);
+                } else if ("bamboo".equals(type)) {
+                    count = blockCounts.getOrDefault("bamboo", 0);
+                } else if ("sand".equals(type)) {
+                    count = blockCounts.getOrDefault("sand", 0);
+                } else if ("snow".equals(type)) {
+                    count = blockCounts.getOrDefault("snow", 0);
+                } else if ("grass".equals(type)) {
+                    count = blockCounts.getOrDefault("grass", 0);
+                } else {
+                    count = blockCounts.getOrDefault(type, 0);
+                }
+
+                if (count < req.minCount()) {
+                    extraBlocksOk = false;
+                    String label = (req.label() != null && !req.label().isEmpty()) ? req.label() : capitalize(type);
+                    if (!unmet.contains("Butuh " + label)) {
+                        unmet.add("Butuh " + label);
+                    }
+                }
+            }
         }
 
-        boolean isSuitable = biomeOk && tempOk && groundOk && waterOk && (!companionRequired || hasCompanion);
+        if (!biomeOk) {
+            unmet.add("Bioma: " + profile.displayName());
+        }
+        if (waterRequired && !waterOk && !unmet.contains("Butuh Air")) {
+            unmet.add("Butuh Air");
+        }
+        if (!groundOk && !unmet.contains("Butuh Tanah Alami")) {
+            unmet.add("Butuh Tanah Alami");
+        }
+        if (companionRequired && !hasCompanion && !unmet.contains("Butuh Pasangan")) {
+            unmet.add("Butuh Pasangan");
+        }
+        if (tooCold) {
+            unmet.add("Butuh Heater");
+        } else if (tooHot) {
+            unmet.add("Butuh Cooler Box");
+        }
+
+        boolean isSuitable = biomeOk && tempOk && groundOk && waterOk && extraBlocksOk && (!companionRequired || hasCompanion);
         HabitatStatus status = isSuitable ? HabitatStatus.SUITABLE : HabitatStatus.UNSUITABLE;
 
         return new HabitatResult(status, profile.displayName(), biomeOk, waterRequired, waterOk, tempOk, tooCold, groundOk, companionRequired, hasCompanion, unmet);
@@ -165,8 +204,12 @@ public class HabitatEvaluator {
                     BlockState state = level.getBlockState(pos);
                     if (state.isAir()) continue;
 
-                    // Natural Ground block tag (coarse dirt, podzol, sand, gravel, modded soil)
-                    if (state.is(NATURAL_GROUND)) {
+                    // Natural Ground: checks NATURAL_GROUND tag AND all common natural surface blocks
+                    if (state.is(NATURAL_GROUND) || state.is(BlockTags.DIRT) || state.is(BlockTags.SAND)
+                            || state.is(BlockTags.TERRACOTTA) || state.is(Blocks.GRAVEL)
+                            || state.is(Blocks.MUD) || state.is(Blocks.PACKED_MUD) || state.is(Blocks.CLAY)
+                            || state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.PODZOL) || state.is(Blocks.COARSE_DIRT)
+                            || state.is(Blocks.ROOTED_DIRT) || state.is(Blocks.MYCELIUM) || state.is(BlockTags.SNOW)) {
                         counts.merge("natural_ground", 1, Integer::sum);
                     }
 
@@ -215,5 +258,10 @@ public class HabitatEvaluator {
             }
         }
         return counts;
+    }
+
+    private static String capitalize(String str) {
+        if (str == null || str.isEmpty()) return "";
+        return Character.toUpperCase(str.charAt(0)) + str.substring(1);
     }
 }

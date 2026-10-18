@@ -26,6 +26,7 @@ import net.zootycoon.network.InspectionPayloads;
 import org.joml.Matrix4f;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
@@ -45,12 +46,13 @@ public class ZooAnimalHologramRenderer {
             String waterStatus, // "OK", "NO", "NA"
             String tempStatus,  // "OK", "HEATER", "COOLER"
             boolean groundOk,
-            boolean mateOk
+            boolean mateOk,
+            List<String> serverUnmet
     ) {
         public static HabitatParsedInfo parse(String raw, String defaultEco) {
             String fallbackEco = (defaultEco != null && !defaultEco.isEmpty() && !"-".equals(defaultEco)) ? defaultEco : "Savanna";
             if (raw == null || !raw.contains("status=")) {
-                return new HabitatParsedInfo("SUITABLE", fallbackEco, true, "OK", "OK", true, true);
+                return new HabitatParsedInfo("SUITABLE", fallbackEco, true, "OK", "OK", true, true, Collections.emptyList());
             }
             String status = "SUITABLE";
             String eco = fallbackEco;
@@ -59,6 +61,7 @@ public class ZooAnimalHologramRenderer {
             String temp = "OK";
             boolean ground = true;
             boolean mate = true;
+            List<String> serverUnmet = new ArrayList<>();
 
             for (String part : raw.split(";")) {
                 String[] kv = part.split("=", 2);
@@ -73,9 +76,19 @@ public class ZooAnimalHologramRenderer {
                     case "temp" -> temp = v.toUpperCase(Locale.ROOT);
                     case "ground" -> ground = "OK".equalsIgnoreCase(v);
                     case "mate" -> mate = !"NO".equalsIgnoreCase(v);
+                    case "unmet" -> {
+                        if (!v.isEmpty()) {
+                            for (String item : v.split("\\|")) {
+                                String trimmed = item.trim();
+                                if (!trimmed.isEmpty()) {
+                                    serverUnmet.add(trimmed);
+                                }
+                            }
+                        }
+                    }
                 }
             }
-            return new HabitatParsedInfo(status, eco, biomeOk, water, temp, ground, mate);
+            return new HabitatParsedInfo(status, eco, biomeOk, water, temp, ground, mate, serverUnmet);
         }
     }
 
@@ -227,20 +240,36 @@ public class ZooAnimalHologramRenderer {
         HabitatProfile profile = HabitatProfileLoader.getProfile(entity);
         List<Component> redNeeds = new ArrayList<>();
 
-        if ("NO".equalsIgnoreCase(habitatInfo.waterStatus())) {
-            redNeeds.add(Component.literal("• Butuh Air"));
+        if (!habitatInfo.serverUnmet().isEmpty()) {
+            for (String item : habitatInfo.serverUnmet()) {
+                if (item.startsWith("Bioma:")) {
+                    continue; // Biome is handled below with English bullet points
+                }
+                if (item.startsWith("Butuh Heater") || item.startsWith("Butuh Cooler Box")) {
+                    continue; // Temperature status is displayed in Suhu row
+                }
+                redNeeds.add(Component.literal("• " + item));
+            }
+        } else {
+            if ("NO".equalsIgnoreCase(habitatInfo.waterStatus())) {
+                redNeeds.add(Component.literal("• Butuh Air"));
+            }
+            if (!habitatInfo.groundOk()) {
+                redNeeds.add(Component.literal("• Butuh Tanah Alami"));
+            }
+            if (!habitatInfo.mateOk()) {
+                redNeeds.add(Component.literal("• Butuh Pasangan"));
+            }
         }
-        if (!habitatInfo.groundOk()) {
-            redNeeds.add(Component.literal("• Butuh Tanah Alami"));
-        }
-        if (!habitatInfo.mateOk()) {
-            redNeeds.add(Component.literal("• Butuh Pasangan"));
-        }
+
         if (!habitatInfo.biomeOk()) {
-            redNeeds.add(Component.literal("• Bioma yang cocok:"));
             List<String> biomes = getBiomeListEnglish(profile);
-            for (String b : biomes) {
-                redNeeds.add(Component.literal("  - " + b));
+            biomes.removeIf(b -> "Any".equalsIgnoreCase(b) || b.isBlank());
+            if (!biomes.isEmpty()) {
+                redNeeds.add(Component.literal("• Bioma yang cocok:"));
+                for (String b : biomes) {
+                    redNeeds.add(Component.literal("  - " + b));
+                }
             }
         }
 
@@ -398,7 +427,6 @@ public class ZooAnimalHologramRenderer {
     public static List<String> getBiomeListEnglish(HabitatProfile profile) {
         List<String> names = new ArrayList<>();
         if (profile == null) {
-            names.add("Any");
             return names;
         }
         if (profile.biomeIds() != null && !profile.biomeIds().isEmpty()) {
@@ -409,7 +437,7 @@ public class ZooAnimalHologramRenderer {
                 }
             }
         }
-        if (names.isEmpty()) {
+        if (names.isEmpty() && profile.name() != null && !profile.name().equalsIgnoreCase("any")) {
             names.add(toEnglishBiomeName(profile.name()));
         }
         return names;

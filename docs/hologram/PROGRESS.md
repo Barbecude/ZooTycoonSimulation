@@ -91,35 +91,31 @@
   5. Perhitungan suhu musiman Fabric Seasons diintegrasikan secara presisi: satwa savana/jungle nyaman di musim panas dan membutuhkan Heater saat suhu anjlok di musim dingin.
   6. Model 3D Heater dan Cooler Box diadopsi dari LSO Blockbench lengkap dengan pelat atas, dan didaftarkan ke BlockRenderLayerMap sebagai cutout sehingga transparansi kisi dan rongga blok tampil sempurna.
 
+- Perbaikan Komprehensif Kebutuhan Habitat & AI Minum Satwa (4 Poin):
+  1. Kebutuhan Pohon dan Air Satwa: `HabitatEvaluator` kini secara aktif mengevaluasi `profile.requiredBlocks()` (seperti Pepohonan, Air, Bambu, Pasir, Salju) dan menyinkronkan daftar kebutuhan yang belum terpenuhi (`unmet`) ke client melalui payload network `InspectionSnapshotPayload`. Hologram kini menampilkan baris merah (contoh: "• Butuh Pepohonan", "• Butuh Air", "• Butuh Bambu") saat kandang belum memiliki blok tersebut, dan otomatis hilang begitu blok diletakkan.
+  2. Eliminasi Teks Merah Bioma "Any": `HabitatProfileLoader` kini memiliki sistem klasifikasi fallback dinamis `getDynamicFallbackProfile` berbasis kata kunci ID entitas sehingga `getProfile(entity)` tidak pernah lagi bernilai `null`. Hewan yang cocok dengan semua bioma atau memiliki fallback universal otomatis berstatus `biomeOk = true`, dan teks "• Bioma yang cocok: - Any" tidak akan pernah lagi ditampilkan dalam warna merah.
+  3. Pemenuhan Tanah Alami ("Butuh Tanah Alami"): Pemindaian blok di `HabitatEvaluator.scanSurroundingBlocks` diperluas untuk mencakup tag `#zootycoon:natural_ground`, `#minecraft:dirt`, `#minecraft:sand`, `#minecraft:terracotta`, serta blok langsung seperti `dirt`, `podzol`, `coarse_dirt`, `grass_block`, `gravel`, `mud`, `clay`, dan `snow`. Ambang batas pemenuhan disesuaikan menjadi minimal 4 blok di dalam radius kandang.
+  4. AI Mandiri Satwa Mencari & Meminum Air: Batasan sepihak `requiresWater` pada `AnimalDrinkWaterGoal` dicabut sehingga seluruh satwa darat terdaftar (`PathfinderMob` non-akuatik) dapat secara mandiri mencari air ke kolam atau feeding trough berisi air saat tingkat kehausan turun (thirst <= 60). Radius pencarian 24 blok, jarak toleransi minum 2.5 blok, batas waktu gerak 10 detik, dan cooldown minum 5 menit mencegah satwa mengalami stuck atau loop navigasi.
+
 ## Bukti Selesai
-- Seluruh 4 poin permintaan pengguna telah terimplementasi dan terkompilasi bersih dengan .\gradlew.bat build (BUILD SUCCESSFUL in 54s).
-- File jar hasil build zootycoon-1.0.0.jar otomatis tersalin ke folder mods profil Modrinth.
-- Ikon termometer resmi LSO, teks align kiri, nama besar, makanan besar, bullet points bioma, dan forward offset aktif.
-- Cutout render layer aktif untuk Heater dan Cooler Box.
+- Seluruh 4 poin permintaan pengguna telah terimplementasi dan terkompilasi bersih dengan .\gradlew.bat build (BUILD SUCCESSFUL in 59s).
+- File jar hasil build zootycoon-1.0.0.jar otomatis tersalin ke folder mods profil Modrinth di `C:\Users\Zevaldo\AppData\Roaming\ModrinthApp\profiles\Fresh & Smooth\mods\zootycoon-1.0.0.jar`.
+- Dynamic fallback habitat profile aktif di `HabitatProfileLoader`.
+- Evaluasi pohon, bambu, dan blok habitat aktif di `HabitatEvaluator`.
+- AI minum satwa aktif untuk seluruh satwa darat di `AnimalDrinkWaterGoal`.
 
 ## Blocker
 - Tidak ada blocker.
 
 ## File yang diubah
-- src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
-- src/main/java/net/zootycoon/client/ZooTycoonClient.java
-- src/main/java/net/zootycoon/compat/FabricSeasonsCompat.java
+- src/main/java/net/zootycoon/animal/ai/AnimalDrinkWaterGoal.java
+- src/main/java/net/zootycoon/animal/habitat/HabitatEvaluator.java
 - src/main/java/net/zootycoon/animal/habitat/HabitatProfileLoader.java
-- src/main/java/net/zootycoon/block/ZooHeaterBlock.java
-- src/main/java/net/zootycoon/block/ZooCoolerBlock.java
-- src/main/resources/assets/zootycoon/textures/gui/inspect/thermometer.png
-- src/main/resources/assets/zootycoon/models/block/heater_off.json
-- src/main/resources/assets/zootycoon/models/block/heater_on.json
-- src/main/resources/assets/zootycoon/models/block/cooler_box_off.json
-- src/main/resources/assets/zootycoon/models/block/cooler_box_on.json
-- src/main/resources/assets/zootycoon/blockstates/heater.json
-- src/main/resources/assets/zootycoon/blockstates/cooler_box.json
-- src/main/resources/data/zootycoon/zoo_habitat/templates/*.json
-- docs/hologram/ASSETS.md
+- src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
 - docs/hologram/PROGRESS.md
 
 ## Butuh izin user
 - Tidak ada.
 
 ## Belum terverifikasi
-- Pengujian in-game langsung oleh pengguna untuk memeriksa visual pembesaran UI, bullet points bioma, oklusi mob besar, dan rendering blok heater/cooler di dunia.
+- Pengujian in-game langsung oleh pengguna untuk memeriksa satwa berjalan ke air/feeding trough, pemenuhan tanah alami dengan meletakkan dirt/podzol, dan kemunculan checklist pohon/air pada habitat satwa yang membutuhkan.

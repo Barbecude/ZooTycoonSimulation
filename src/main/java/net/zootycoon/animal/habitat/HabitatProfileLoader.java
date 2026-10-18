@@ -238,7 +238,10 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
         profile = DEFAULT_SPECIES.get(fullKey);
         if (profile != null) return profile;
 
-        return DEFAULT_SPECIES.get(pathKey);
+        profile = DEFAULT_SPECIES.get(pathKey);
+        if (profile != null) return profile;
+
+        return getDynamicFallbackProfile(id);
     }
 
     public static HabitatProfile getTemplate(ResourceLocation templateId) {
@@ -468,6 +471,78 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
         for (String id : entityIds) {
             DEFAULT_SPECIES.put(id.toLowerCase(Locale.ROOT), profile);
         }
+    }
+
+    public static HabitatProfile getDynamicFallbackProfile(ResourceLocation id) {
+        if (id == null) return TEMPLATES.get(ZooTycoonMod.id("plains"));
+        String path = id.getPath().toLowerCase(Locale.ROOT);
+
+        // 1. Jungle species
+        if (path.contains("tiger") || path.contains("panther") || path.contains("jaguar")
+                || path.contains("gorilla") || path.contains("monkey") || path.contains("chimpanzee")
+                || path.contains("parrot") || path.contains("toucan") || path.contains("ocelot")
+                || path.contains("leopard") || path.contains("hummingbird") || path.contains("canary")) {
+            HabitatProfile t = TEMPLATES.get(ZooTycoonMod.id("jungle"));
+            if (t != null) return t;
+        }
+
+        // 2. Savanna species
+        if (path.contains("lion") || path.contains("elephant") || path.contains("zebra")
+                || path.contains("rhino") || path.contains("giraffe") || path.contains("hyena")
+                || path.contains("gazelle") || path.contains("antelope") || path.contains("kangaroo")
+                || path.contains("ostrich") || path.contains("warthog") || path.contains("meerkat")
+                || path.contains("llama")) {
+            HabitatProfile t = TEMPLATES.get(ZooTycoonMod.id("savanna"));
+            if (t != null) return t;
+        }
+
+        // 3. Arctic / Snow species
+        if (path.contains("polar_bear") || path.contains("penguin") || path.contains("seal")
+                || path.contains("walrus") || path.contains("arctic") || path.contains("snow")
+                || path.contains("reindeer") || path.contains("yak") || path.contains("goat")) {
+            HabitatProfile t = TEMPLATES.get(ZooTycoonMod.id("snow"));
+            if (t != null) return t;
+        }
+
+        // 4. Desert species
+        if (path.contains("camel") || path.contains("rattlesnake") || path.contains("scorpion")
+                || path.contains("fennec") || path.contains("roadrunner") || path.contains("armadillo")
+                || path.contains("tortoise") || path.contains("komodo") || path.contains("lizard")
+                || path.contains("vulture") || path.contains("strider")) {
+            HabitatProfile t = TEMPLATES.get(ZooTycoonMod.id("desert"));
+            if (t != null) return t;
+        }
+
+        // 5. Freshwater & Swamp species
+        if (path.contains("hippo") || path.contains("crocodile") || path.contains("alligator")
+                || path.contains("duck") || path.contains("platypus") || path.contains("frog")
+                || path.contains("toad") || path.contains("turtle") || path.contains("beaver")
+                || path.contains("otter") || path.contains("mudskipper") || path.contains("caiman")) {
+            HabitatProfile t = TEMPLATES.get(ZooTycoonMod.id("swamp"));
+            if (t != null) return t;
+        }
+
+        // 6. Ocean species
+        if (path.contains("dolphin") || path.contains("orca") || path.contains("whale")
+                || path.contains("shark") || path.contains("seagull") || path.contains("squid")) {
+            HabitatProfile t = TEMPLATES.get(ZooTycoonMod.id("ocean"));
+            if (t != null) return t;
+        }
+
+        // 7. Forest species
+        if (path.contains("bison") || path.contains("deer") || path.contains("boar")
+                || path.contains("wolf") || path.contains("fox") || path.contains("bear")
+                || path.contains("moose") || path.contains("raccoon") || path.contains("badger")
+                || path.contains("squirrel") || path.contains("skunk") || path.contains("crow")
+                || path.contains("eagle") || path.contains("robin") || path.contains("cardinal")
+                || path.contains("bluejay") || path.contains("finch")) {
+            HabitatProfile t = TEMPLATES.get(ZooTycoonMod.id("forest"));
+            if (t != null) return t;
+        }
+
+        // 8. Default fallback: Plains (Padang Rumput)
+        HabitatProfile fallback = TEMPLATES.get(ZooTycoonMod.id("plains"));
+        return fallback != null ? fallback : TEMPLATES.values().stream().findFirst().orElse(null);
     }
 
     private static String capitalize(String str) {

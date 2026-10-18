@@ -42,20 +42,14 @@ public class AnimalDrinkWaterGoal extends MoveToBlockGoal {
         if (!mob.isAlive()) return false;
         if (!ZooAnimalHungerManager.isTagged(mob)) return false;
 
-        // ONLY animals whose habitat specifically requires water (Rule 7 & 9)
-        HabitatProfile profile = HabitatProfileLoader.getProfile(mob);
-        if (profile == null || !profile.requiresWater()) {
-            return false;
-        }
-
         if (this.cooldownTicks > 0) {
             this.cooldownTicks--;
             return false;
         }
 
         int thirst = ZooAnimalHungerManager.getThirst(mob);
-        // Triggers only when animal is actually thirsty (<= 40)
-        if (thirst > 40) {
+        // Triggers when animal is thirsty (<= 60)
+        if (thirst > 60) {
             return false;
         }
 
@@ -93,15 +87,15 @@ public class AnimalDrinkWaterGoal extends MoveToBlockGoal {
 
     @Override
     public double acceptedDistance() {
-        return Math.max(2.0, (this.mob.getBbWidth() * 0.5) + 1.2);
+        return Math.max(2.5, (this.mob.getBbWidth() * 0.5) + 1.5);
     }
 
     @Override
     public void tick() {
         super.tick();
 
-        // If mob is already submerged/swimming in water, consider reached
-        boolean reached = this.isReachedTarget() || this.mob.isInWater();
+        // If mob is already submerged/swimming in water, or close enough to target
+        boolean reached = this.isReachedTarget() || this.mob.isInWater() || this.mob.blockPosition().closerThan(this.blockPos, acceptedDistance());
         if (reached) {
             this.mob.getNavigation().stop();
             this.mob.getLookControl().setLookAt(
@@ -150,25 +144,24 @@ public class AnimalDrinkWaterGoal extends MoveToBlockGoal {
     }
 
     public static void attach(PathfinderMob mob) {
-        if (mob == null) return;
+        if (mob == null || !mob.isAlive()) return;
+        // Skip purely aquatic animals and vehicles
+        if (mob.canBreatheUnderwater() || mob instanceof net.minecraft.world.entity.animal.WaterAnimal) {
+            return;
+        }
+        if (mob.getTags().contains("phys_veh.seat") || mob.getTags().contains("phys_veh.spawn")) {
+            return;
+        }
+
         if (mob instanceof net.zootycoon.mixin.MobAccessor mobAccessor) {
             net.minecraft.world.entity.ai.goal.GoalSelector selector = mobAccessor.zootycoon$getGoalSelector();
             if (selector != null) {
-                HabitatProfile profile = HabitatProfileLoader.getProfile(mob);
-                boolean requiresWater = profile != null && profile.requiresWater();
-
                 for (var wrapped : selector.getAvailableGoals()) {
-                    if (wrapped.getGoal() instanceof AnimalDrinkWaterGoal goal) {
-                        if (!requiresWater) {
-                            selector.removeGoal(goal);
-                        }
-                        return;
+                    if (wrapped.getGoal() instanceof AnimalDrinkWaterGoal) {
+                        return; // Already attached
                     }
                 }
-
-                if (requiresWater) {
-                    selector.addGoal(3, new AnimalDrinkWaterGoal(mob, 1.1));
-                }
+                selector.addGoal(3, new AnimalDrinkWaterGoal(mob, 1.1));
             }
         }
     }
