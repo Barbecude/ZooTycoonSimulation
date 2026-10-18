@@ -565,7 +565,7 @@
   "zootycoon.inspect.stat.hunger": "Lapar:",
   "zootycoon.inspect.stat.thirst": "Haus:",
   "zootycoon.inspect.stat.cleanliness": "Kebersihan:",
-  "zootycoon.inspect.stat.temperature": "Temperature:",
+  "zootycoon.inspect.stat.temperature": "Suhu:",
   "zootycoon.inspect.habitat_needs_header": "Kebutuhan Habitat:",
   "zootycoon.inspect.checklist.water.ok": "1. Air: Sesuai [v]",
   "zootycoon.inspect.checklist.water.fail": "1. Air: Belum Terpenuhi [x]",
@@ -580,6 +580,6 @@
   "zootycoon.inspect.biome.ok": "Biome: %s [v]",
   "zootycoon.inspect.biome.fail": "Biome: Butuh %s [x]",
   "zootycoon.inspect.temp.comfortable": "Nyaman",
-  "zootycoon.inspect.temp.need_heater": "Dingin (Butuh Heater)",
-  "zootycoon.inspect.temp.need_cooler": "Panas (Butuh Cooler)"
+  "zootycoon.inspect.temp.need_heater": "Butuh Heater",
+  "zootycoon.inspect.temp.need_cooler": "Butuh Cooler Box"
 }

@@ -72,16 +72,20 @@
   8. Menambahkan blok Heater dan Cooler Box fungsional berbasis bahan bakar dengan tekstur, blockstate, model, resep crafting vanilla, dan pemancaran radius termal 12 blok (+0.6f / -0.6f) yang memengaruhi suhu efektif satwa dan evaluasi habitat.
   9. Menghadirkan AnimalDrinkWaterGoal (AI goal mandiri berbasis MoveToBlockGoal) yang terpasang pada seluruh satwa terdaftar via MobAccessor untuk mencari, mendekat, dan meminum air di sumber air atau feeding trough saat haus.
 
-- Perbaikan Crash Startup & Command Debug Satwa:
-  1. Fix InvalidAccessorException pada LivingEntityAccessor: method accessor diganti ke penamaan standar `isJumping()`, sehingga Fabric Loom berhasil me-remap ke `field_6282:Z` di refmap produksi dan game berjalan tanpa crash.
-  2. Menambahkan command debug `/satwa` dan `/zootycoon satwa` untuk mengatur dan mengurangi stat kebutuhan satwa (lapar, haus, bersih, darah/kesehatan, dan semua indikator sekaligus) baik pada satwa yang sedang dibidik (crosshair) maupun seluruh satwa zoo sekaligus.
+- Penyempurnaan Hologram & Perbaikan AI Minum Air (7 Poin):
+  1. Suhu/Temperature dihapus dari daftar Kebutuhan Habitat. Status suhu dipindahkan langsung ke baris Suhu ("Nyaman" warna hijau 0xFF55FF55, "Butuh Heater" / "Butuh Cooler Box" warna merah 0xFFFF5555).
+  2. Background hologram menggunakan styling kotak tooltip vanilla Minecraft lengkap dengan border gradient ungu-biru (0x505000FF -> 0x5028007F) dan background gelap (0xF0100010).
+  3. Kebutuhan Habitat & Bioma kini hanya menampilkan item yang tidak terpenuhi (merah). Bila semua kebutuhan terpenuhi, hanya menampilkan satu baris hijau "Kebutuhan Habitat: Terpenuhi".
+  4. Seluruh ikon stat (Heart, Hunger, Thirst, Cleanliness, Thermometer) diperbaiki dengan rendering dua sisi (two-sided quad) sehingga tidak lagi ter-cull oleh GPU, dan seluruh label stat menggunakan bahasa Indonesia murni (Kesehatan, Lapar, Haus, Kebersihan, Suhu).
+  5. Nama bioma disajikan dalam bahasa Inggris Title Case dan menyebutkan seluruh bioma yang cocok untuk spesies tersebut jika bioma belum cocok.
+  6. Perbaikan AI AnimalDrinkWaterGoal: hanya dipasang pada satwa yang habitatnya membutuhkan air (requiresWater), dilengkapi batas waktu navigasi (timeout 10 detik), cooldown minum 5 menit, dan deteksi instan saat berada di dalam air agar satwa tidak stuck.
+  7. Heater dan Cooler Box hanya berstatus dibutuhkan saat suhu musiman/lingkungan berada di luar rentang nyaman satwa.
 
 ## Bukti Selesai
-- Seluruh 9 poin UI dan gameplay telah terimplementasi dan terkompilasi bersih dengan .\gradlew.bat build (BUILD SUCCESSFUL).
+- Seluruh 7 poin permintaan pengguna telah terimplementasi dan terkompilasi bersih dengan .\gradlew.bat build (BUILD SUCCESSFUL).
 - File jar hasil build zootycoon-1.0.0.jar otomatis tersalin ke folder mods profil Modrinth.
-- Tata letak hologram in-world presisi mengikuti mockup wireframe pengguna.
-- Blok Heater dan Cooler Box siap dicrafting dan digunakan di dalam game.
-- Crash InvalidAccessorException teratasi tuntas dengan mapping resmi di zootycoon-refmap.json.
+- Background tooltip vanilla, ikon stat, label bahasa Indonesia, dan penyaringan item merah telah aktif.
+- AI minum air hanya terpasang pada satwa air dengan mekanisme anti-stuck.
 
 ## Blocker
 - Tidak ada blocker.

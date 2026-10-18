@@ -10,37 +10,29 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.zootycoon.animal.AnimalDietRegistry;
 import net.zootycoon.animal.ZooClimate;
+import net.zootycoon.animal.habitat.HabitatProfile;
+import net.zootycoon.animal.habitat.HabitatProfileLoader;
 import net.zootycoon.client.inspect.HologramBarRenderer;
 import net.zootycoon.client.inspect.InspectionClientCache;
 import net.zootycoon.client.inspect.InspectionTargetTracker;
 import net.zootycoon.network.InspectionPayloads;
 import org.joml.Matrix4f;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
 /**
  * World-space in-world billboarded inspection hologram renderer.
- * Formatted exactly according to the user wireframe mockup:
- * [Nama Hewan]
- * [Ikon Makanan 1] [Ikon Makanan 2] ...
- * Kesehatan: [heart] XX%
- * Lapar: [hunger] XX%
- * Haus: [thirst] XX%
- * Kebersihan: [clean] XX%
- * Temperature: [thermometer] XX°C (Status)
- * Kebutuhan Habitat:
- * 1. Air: Sesuai [v]
- * 2. Suhu: Sesuai [v]
- * 3. Tanah Alami: Sesuai [v]
- * 4. Pasangan: Ada [v]
- * Biome: ... [v]
+ * Formatted with authentic vanilla tooltip background, clean stat icons,
+ * Indonesian stat labels, English biome list, and red-only habitat unmet needs.
  */
 public class ZooAnimalHologramRenderer {
 
@@ -56,7 +48,7 @@ public class ZooAnimalHologramRenderer {
             boolean mateOk
     ) {
         public static HabitatParsedInfo parse(String raw, String defaultEco) {
-            String fallbackEco = (defaultEco != null && !defaultEco.isEmpty() && !"-".equals(defaultEco)) ? defaultEco : "Savana";
+            String fallbackEco = (defaultEco != null && !defaultEco.isEmpty() && !"-".equals(defaultEco)) ? defaultEco : "Savanna";
             if (raw == null || !raw.contains("status=")) {
                 return new HabitatParsedInfo("SUITABLE", fallbackEco, true, "OK", "OK", true, true);
             }
@@ -164,7 +156,7 @@ public class ZooAnimalHologramRenderer {
         boolean isWet = isRegistered && InspectionPayloads.isAnimalWet(entity.getId());
         if (isRegistered && snapshot.cleanliness() >= 0) {
             int cVal = snapshot.cleanliness();
-            cleanText = cVal + "%" + (isWet ? " " + Component.translatable("zootycoon.inspect.cleanliness.wet").getString() : "");
+            cleanText = cVal + "%" + (isWet ? " (Basah)" : "");
             cleanTextColor = HologramBarRenderer.getStatusColor((float) cVal);
         } else {
             cleanText = "-";
@@ -182,36 +174,38 @@ public class ZooAnimalHologramRenderer {
                 habitatData != null ? habitatData.status() : null
         );
 
-        String tempStatusText;
-        int tempTextColor;
+        // Temperature status formatting (Green if comfortable, Red if needs heater/cooler)
+        String tempStatusLabel;
+        int tempStatusColor;
         if ("HEATER".equalsIgnoreCase(habitatInfo.tempStatus())) {
-            tempStatusText = Component.translatable("zootycoon.inspect.temp.need_heater").getString();
-            tempTextColor = 0xFF55FFFF;
+            tempStatusLabel = " (Butuh Heater)";
+            tempStatusColor = 0xFFFF5555; // Red
         } else if ("COOLER".equalsIgnoreCase(habitatInfo.tempStatus())) {
-            tempStatusText = Component.translatable("zootycoon.inspect.temp.need_cooler").getString();
-            tempTextColor = 0xFFFFAA00;
+            tempStatusLabel = " (Butuh Cooler Box)";
+            tempStatusColor = 0xFFFF5555; // Red
         } else {
-            tempStatusText = Component.translatable("zootycoon.inspect.temp.comfortable").getString();
-            tempTextColor = 0xFFFFFFFF;
+            tempStatusLabel = " (Nyaman)";
+            tempStatusColor = 0xFF55FF55; // Green
         }
-        String tempValueText = celsius + "°C (" + tempStatusText + ")";
+        String tempBaseText = celsius + "°C";
 
-        // 5. Stat Components
-        Component hpLabel = Component.translatable("zootycoon.inspect.stat.health");
-        Component hungerLabel = Component.translatable("zootycoon.inspect.stat.hunger");
-        Component thirstLabel = Component.translatable("zootycoon.inspect.stat.thirst");
-        Component cleanLabel = Component.translatable("zootycoon.inspect.stat.cleanliness");
-        Component tempLabel = Component.translatable("zootycoon.inspect.stat.temperature");
+        // 5. Stat Labels (Indonesian)
+        Component hpLabel = Component.literal("Kesehatan:");
+        Component hungerLabel = Component.literal("Lapar:");
+        Component thirstLabel = Component.literal("Haus:");
+        Component cleanLabel = Component.literal("Kebersihan:");
+        Component tempLabel = Component.literal("Suhu:");
 
         int maxLabelWidth = Math.max(font.width(hpLabel),
                 Math.max(font.width(hungerLabel),
                 Math.max(font.width(thirstLabel),
                 Math.max(font.width(cleanLabel), font.width(tempLabel)))));
 
+        int tempTotalWidth = font.width(tempBaseText) + font.width(tempStatusLabel);
         int maxValueWidth = Math.max(font.width(hpText),
                 Math.max(font.width(hungerText),
                 Math.max(font.width(thirstText),
-                Math.max(font.width(cleanText), font.width(tempValueText)))));
+                Math.max(font.width(cleanText), tempTotalWidth))));
 
         // 6. Food items (icons only)
         List<ItemStack> foods = AnimalDietRegistry.getFoodsForAnimal(entity);
@@ -219,51 +213,25 @@ public class ZooAnimalHologramRenderer {
         float foodSpacing = 12.0f;
         float foodsRowWidth = foodCount * foodSpacing;
 
-        // 7. Habitat checklist items
-        Component habitatHeader = Component.translatable("zootycoon.inspect.habitat_needs_header");
+        // 7. Habitat Needs Checklist: ONLY RED / UNMET NEEDS (Point 1 & Point 3 & Point 5)
+        HabitatProfile profile = HabitatProfileLoader.getProfile(entity);
+        List<Component> redNeeds = new ArrayList<>();
 
-        Component waterCheckComp;
-        int waterCheckColor;
-        if ("OK".equalsIgnoreCase(habitatInfo.waterStatus())) {
-            waterCheckComp = Component.translatable("zootycoon.inspect.checklist.water.ok");
-            waterCheckColor = 0xFF55FF55;
-        } else if ("NO".equalsIgnoreCase(habitatInfo.waterStatus())) {
-            waterCheckComp = Component.translatable("zootycoon.inspect.checklist.water.fail");
-            waterCheckColor = 0xFFFF5555;
-        } else {
-            waterCheckComp = Component.translatable("zootycoon.inspect.checklist.water.na");
-            waterCheckColor = 0xFFAAAAAA;
+        if ("NO".equalsIgnoreCase(habitatInfo.waterStatus())) {
+            redNeeds.add(Component.literal("• Butuh Air"));
+        }
+        if (!habitatInfo.groundOk()) {
+            redNeeds.add(Component.literal("• Butuh Tanah Alami"));
+        }
+        if (!habitatInfo.mateOk()) {
+            redNeeds.add(Component.literal("• Butuh Pasangan"));
+        }
+        if (!habitatInfo.biomeOk()) {
+            String biomesEnglish = formatBiomeListEnglish(profile);
+            redNeeds.add(Component.literal("• Bioma: Perlu " + biomesEnglish));
         }
 
-        Component tempCheckComp;
-        int tempCheckColor;
-        if ("OK".equalsIgnoreCase(habitatInfo.tempStatus())) {
-            tempCheckComp = Component.translatable("zootycoon.inspect.checklist.temp.ok");
-            tempCheckColor = 0xFF55FF55;
-        } else if ("HEATER".equalsIgnoreCase(habitatInfo.tempStatus())) {
-            tempCheckComp = Component.translatable("zootycoon.inspect.checklist.temp.heater");
-            tempCheckColor = 0xFFFF5555;
-        } else {
-            tempCheckComp = Component.translatable("zootycoon.inspect.checklist.temp.cooler");
-            tempCheckColor = 0xFFFF5555;
-        }
-
-        Component groundCheckComp = habitatInfo.groundOk()
-                ? Component.translatable("zootycoon.inspect.checklist.ground.ok")
-                : Component.translatable("zootycoon.inspect.checklist.ground.fail");
-        int groundCheckColor = habitatInfo.groundOk() ? 0xFF55FF55 : 0xFFFF5555;
-
-        Component mateCheckComp = habitatInfo.mateOk()
-                ? Component.translatable("zootycoon.inspect.checklist.mate.ok")
-                : Component.translatable("zootycoon.inspect.checklist.mate.fail");
-        int mateCheckColor = habitatInfo.mateOk() ? 0xFF55FF55 : 0xFFFFAA00;
-
-        Component biomeLineComp = habitatInfo.biomeOk()
-                ? Component.translatable("zootycoon.inspect.biome.ok", habitatInfo.eco())
-                : Component.translatable("zootycoon.inspect.biome.fail", habitatInfo.eco());
-        int biomeLineColor = habitatInfo.biomeOk() ? 0xFF55FF55 : 0xFFFF5555;
-
-        // Calculate card layout geometry
+        // Layout measurements
         Component titleComp = entity.getDisplayName();
         int titleWidth = font.width(titleComp);
 
@@ -272,11 +240,15 @@ public class ZooAnimalHologramRenderer {
         float gapIconToValue = 4.0f;
         float statRowWidth = maxLabelWidth + gapLabelToIcon + iconWidth + gapIconToValue + maxValueWidth;
 
-        float maxHabitatTextWidth = Math.max(font.width(habitatHeader),
-                Math.max(font.width(waterCheckComp),
-                Math.max(font.width(tempCheckComp),
-                Math.max(font.width(groundCheckComp),
-                Math.max(font.width(mateCheckComp), font.width(biomeLineComp))))));
+        float maxHabitatTextWidth = 0.0f;
+        if (redNeeds.isEmpty()) {
+            maxHabitatTextWidth = font.width("Kebutuhan Habitat: Terpenuhi");
+        } else {
+            maxHabitatTextWidth = font.width("Kebutuhan Habitat:");
+            for (Component c : redNeeds) {
+                maxHabitatTextWidth = Math.max(maxHabitatTextWidth, font.width(c));
+            }
+        }
 
         float boxWidth = Math.max(statRowWidth + 16.0f,
                 Math.max(titleWidth + 18.0f,
@@ -286,11 +258,9 @@ public class ZooAnimalHologramRenderer {
         float headerHeight = 11.0f;
         float foodSectionHeight = (foodCount > 0) ? 14.0f : 0.0f;
         float statsSectionHeight = 5.0f * rowHeight;
-        float habitatHeaderHeight = 11.0f;
-        float checklistHeight = 4.0f * 10.0f;
-        float biomeHeight = 10.0f;
+        float habitatSectionHeight = redNeeds.isEmpty() ? 12.0f : (12.0f + (redNeeds.size() * 10.0f));
 
-        float contentHeight = headerHeight + foodSectionHeight + statsSectionHeight + 4.0f + habitatHeaderHeight + checklistHeight + 2.0f + biomeHeight;
+        float contentHeight = headerHeight + foodSectionHeight + statsSectionHeight + 4.0f + habitatSectionHeight;
         float totalBoxHeight = contentHeight + 10.0f; // 5px padding top & bottom
 
         float minX = -boxWidth / 2.0f;
@@ -302,8 +272,8 @@ public class ZooAnimalHologramRenderer {
         MultiBufferSource buffer = context.consumers();
 
         if (buffer != null) {
-            // 1. Draw rounded dark slate background plate (0xAA0B0E14)
-            HologramBarRenderer.drawBackgroundPlate(buffer, matrix, minX, startY, maxX, maxY, LightTexture.FULL_BRIGHT);
+            // 1. Draw authentic vanilla tooltip background
+            HologramBarRenderer.drawVanillaTooltipBackground(buffer, matrix, minX, startY, maxX, maxY, LightTexture.FULL_BRIGHT);
 
             if (buffer instanceof MultiBufferSource.BufferSource bs) {
                 bs.endBatch(RenderType.textBackground());
@@ -356,14 +326,18 @@ public class ZooAnimalHologramRenderer {
             float r5Y = curY + (rowHeight * 4.0f);
             curY += (rowHeight * 5.0f) + 4.0f;
 
-            // Render Stat Icons
+            // Render Stat Icons (Two-sided & depth-tested)
             HologramBarRenderer.drawVanillaHeartIcon(mc, font, buffer, matrix, iconX, r1Y + 1.0f, LightTexture.FULL_BRIGHT);
             HologramBarRenderer.drawVanillaHungerIcon(mc, buffer, matrix, iconX, r2Y + 1.0f, LightTexture.FULL_BRIGHT);
-            HologramBarRenderer.drawTexturedIcon(buffer, matrix, HologramBarRenderer.THIRST_ICON, iconX, r3Y + 1.0f, 9.0f, 9.0f, LightTexture.FULL_BRIGHT);
-            HologramBarRenderer.drawTexturedIcon(buffer, matrix, HologramBarRenderer.CLEANLINESS_ICON, iconX, r4Y + 1.0f, 9.0f, 9.0f, LightTexture.FULL_BRIGHT);
+            HologramBarRenderer.drawThirstIcon(buffer, matrix, iconX, r3Y + 1.0f, LightTexture.FULL_BRIGHT);
+            HologramBarRenderer.drawCleanlinessIcon(buffer, matrix, iconX, r4Y + 1.0f, LightTexture.FULL_BRIGHT);
             HologramBarRenderer.drawThermometerIcon(buffer, matrix, iconX, r5Y + 1.0f, LightTexture.FULL_BRIGHT);
 
-            // Render Stat Labels
+            if (buffer instanceof MultiBufferSource.BufferSource bs) {
+                bs.endBatch();
+            }
+
+            // Render Stat Labels (Indonesian)
             font.drawInBatch(hpLabel, labelX, r1Y + 1.0f, 0xFFDDDDDD, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             font.drawInBatch(hungerLabel, labelX, r2Y + 1.0f, 0xFFDDDDDD, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             font.drawInBatch(thirstLabel, labelX, r3Y + 1.0f, 0xFFDDDDDD, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
@@ -375,27 +349,26 @@ public class ZooAnimalHologramRenderer {
             font.drawInBatch(hungerText, valueX, r2Y + 1.0f, hungerTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             font.drawInBatch(thirstText, valueX, r3Y + 1.0f, thirstTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             font.drawInBatch(cleanText, valueX, r4Y + 1.0f, cleanTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(tempValueText, valueX, r5Y + 1.0f, tempTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 
-            // 5. Habitat Needs Section
+            // Temperature Value: Celsius (White) + Status (Green if comfortable, Red if needs heater/cooler)
+            font.drawInBatch(tempBaseText, valueX, r5Y + 1.0f, 0xFFFFFFFF, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            float statusX = valueX + font.width(tempBaseText);
+            font.drawInBatch(tempStatusLabel, statusX, r5Y + 1.0f, tempStatusColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+
+            // 5. Habitat Needs Section: ONLY RED ITEMS SHOWN (Point 3)
             float checklistStartX = minX + 8.0f;
-
-            font.drawInBatch(habitatHeader, checklistStartX, curY, 0xFFFFFF55, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            curY += habitatHeaderHeight;
-
-            font.drawInBatch(waterCheckComp, checklistStartX + 4.0f, curY, waterCheckColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            curY += 10.0f;
-
-            font.drawInBatch(tempCheckComp, checklistStartX + 4.0f, curY, tempCheckColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            curY += 10.0f;
-
-            font.drawInBatch(groundCheckComp, checklistStartX + 4.0f, curY, groundCheckColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            curY += 10.0f;
-
-            font.drawInBatch(mateCheckComp, checklistStartX + 4.0f, curY, mateCheckColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            curY += 12.0f;
-
-            font.drawInBatch(biomeLineComp, checklistStartX, curY, biomeLineColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            if (redNeeds.isEmpty()) {
+                // All needs satisfied: single green line
+                font.drawInBatch("Kebutuhan Habitat: Terpenuhi", checklistStartX, curY, 0xFF55FF55, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            } else {
+                // Some needs missing: yellow header and red itemized checklist
+                font.drawInBatch("Kebutuhan Habitat:", checklistStartX, curY, 0xFFFFFF55, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+                curY += 11.0f;
+                for (Component need : redNeeds) {
+                    font.drawInBatch(need, checklistStartX + 4.0f, curY, 0xFFFF5555, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+                    curY += 10.0f;
+                }
+            }
 
             if (buffer instanceof MultiBufferSource.BufferSource bs) {
                 bs.endBatch();
@@ -403,5 +376,34 @@ public class ZooAnimalHologramRenderer {
         }
 
         poseStack.popPose();
+    }
+
+    public static String formatBiomeListEnglish(HabitatProfile profile) {
+        if (profile == null) return "Any";
+        List<String> names = new ArrayList<>();
+        if (profile.biomeIds() != null && !profile.biomeIds().isEmpty()) {
+            for (ResourceLocation loc : profile.biomeIds()) {
+                String title = toEnglishBiomeName(loc.getPath());
+                if (!names.contains(title)) {
+                    names.add(title);
+                }
+            }
+        }
+        if (names.isEmpty()) {
+            return toEnglishBiomeName(profile.name());
+        }
+        return String.join(", ", names);
+    }
+
+    private static String toEnglishBiomeName(String raw) {
+        if (raw == null || raw.isEmpty()) return "";
+        String[] parts = raw.replace('_', ' ').split("\\s+");
+        StringBuilder sb = new StringBuilder();
+        for (String p : parts) {
+            if (p.isEmpty()) continue;
+            if (!sb.isEmpty()) sb.append(" ");
+            sb.append(Character.toUpperCase(p.charAt(0))).append(p.substring(1).toLowerCase(Locale.ROOT));
+        }
+        return sb.toString();
     }
 }

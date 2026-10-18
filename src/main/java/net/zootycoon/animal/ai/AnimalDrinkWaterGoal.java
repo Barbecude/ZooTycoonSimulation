@@ -13,19 +13,23 @@ import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.zootycoon.animal.ZooAnimalHungerManager;
+import net.zootycoon.animal.habitat.HabitatProfile;
+import net.zootycoon.animal.habitat.HabitatProfileLoader;
 import net.zootycoon.block.ZooFeedingTroughBlockEntity;
 
 import java.util.EnumSet;
 
 /**
- * AI Goal for animals requiring water or experiencing thirst to seek, navigate to, and drink from
- * the nearest water source (fluid water blocks or filled water troughs) autonomously.
- * Modeled after Naturalist and Alex's Mobs drinking routines without requiring mixins.
+ * AI Goal strictly for animals requiring water in their habitat to seek, navigate to,
+ * and drink from the nearest water source (fluid water blocks or filled water troughs).
+ * Includes strict timeout, thirst cooldown, and non-blocking recovery so mobs never get stuck.
  */
 public class AnimalDrinkWaterGoal extends MoveToBlockGoal {
 
     private final PathfinderMob mob;
     private int drinkTicks = 0;
+    private boolean finishedDrinking = false;
+    private int cooldownTicks = 0;
 
     public AnimalDrinkWaterGoal(PathfinderMob mob, double speedModifier) {
         super(mob, speedModifier, 16, 4);
@@ -38,18 +42,34 @@ public class AnimalDrinkWaterGoal extends MoveToBlockGoal {
         if (!mob.isAlive()) return false;
         if (!ZooAnimalHungerManager.isTagged(mob)) return false;
 
-        int thirst = ZooAnimalHungerManager.getThirst(mob);
-        // Triggers when animal is thirsty (<= 70)
-        if (thirst > 70) {
+        // ONLY animals whose habitat specifically requires water (Rule 7 & 9)
+        HabitatProfile profile = HabitatProfileLoader.getProfile(mob);
+        if (profile == null || !profile.requiresWater()) {
             return false;
         }
 
+        if (this.cooldownTicks > 0) {
+            this.cooldownTicks--;
+            return false;
+        }
+
+        int thirst = ZooAnimalHungerManager.getThirst(mob);
+        // Triggers only when animal is actually thirsty (<= 40)
+        if (thirst > 40) {
+            return false;
+        }
+
+        this.drinkTicks = 0;
+        this.finishedDrinking = false;
         return super.canUse();
     }
 
     @Override
     public boolean canContinueToUse() {
         if (!mob.isAlive()) return false;
+        if (this.finishedDrinking) return false;
+        // Navigation timeout: if unreachable within 10 seconds (200 ticks), abort so mob never gets stuck
+        if (this.tryTicks > 200) return false;
         if (this.drinkTicks > 60) return false;
         return super.canContinueToUse();
     }
@@ -58,12 +78,17 @@ public class AnimalDrinkWaterGoal extends MoveToBlockGoal {
     public void start() {
         super.start();
         this.drinkTicks = 0;
+        this.finishedDrinking = false;
     }
 
     @Override
     public void stop() {
         super.stop();
         this.drinkTicks = 0;
+        this.finishedDrinking = true;
+        // 5-minute cooldown (6000 ticks) before drinking again
+        this.cooldownTicks = 6000;
+        this.mob.getNavigation().stop();
     }
 
     @Override
@@ -74,7 +99,10 @@ public class AnimalDrinkWaterGoal extends MoveToBlockGoal {
     @Override
     public void tick() {
         super.tick();
-        if (this.isReachedTarget()) {
+
+        // If mob is already submerged/swimming in water, consider reached
+        boolean reached = this.isReachedTarget() || this.mob.isInWater();
+        if (reached) {
             this.mob.getNavigation().stop();
             this.mob.getLookControl().setLookAt(
                     this.blockPos.getX() + 0.5,
@@ -85,7 +113,7 @@ public class AnimalDrinkWaterGoal extends MoveToBlockGoal {
             this.drinkTicks++;
 
             if (this.mob.level() instanceof ServerLevel sl) {
-                // Play drinking effects every 10 ticks while at water
+                // Play drinking effects every 10 ticks while drinking
                 if (this.drinkTicks % 10 == 0) {
                     sl.playSound(null, this.mob.blockPosition(), SoundEvents.GENERIC_DRINK, SoundSource.NEUTRAL, 0.7f, 1.0f);
                     sl.sendParticles(ParticleTypes.SPLASH,
@@ -93,10 +121,11 @@ public class AnimalDrinkWaterGoal extends MoveToBlockGoal {
                             6, 0.25, 0.1, 0.25, 0.05);
                 }
 
-                // After drinking for 40 ticks (~2 seconds), restore thirst to max!
+                // After drinking for 40 ticks (~2 seconds), restore thirst to full and cleanly finish
                 if (this.drinkTicks >= 40) {
                     ZooAnimalHungerManager.setThirst(this.mob, ZooAnimalHungerManager.MAX_THIRST);
                     sl.playSound(null, this.mob.blockPosition(), SoundEvents.PLAYER_BURP, SoundSource.NEUTRAL, 0.5f, 1.2f);
+                    this.finishedDrinking = true;
                     this.stop();
                 }
             }
@@ -125,14 +154,22 @@ public class AnimalDrinkWaterGoal extends MoveToBlockGoal {
         if (mob instanceof net.zootycoon.mixin.MobAccessor mobAccessor) {
             net.minecraft.world.entity.ai.goal.GoalSelector selector = mobAccessor.zootycoon$getGoalSelector();
             if (selector != null) {
+                HabitatProfile profile = HabitatProfileLoader.getProfile(mob);
+                boolean requiresWater = profile != null && profile.requiresWater();
+
                 for (var wrapped : selector.getAvailableGoals()) {
-                    if (wrapped.getGoal() instanceof AnimalDrinkWaterGoal) {
+                    if (wrapped.getGoal() instanceof AnimalDrinkWaterGoal goal) {
+                        if (!requiresWater) {
+                            selector.removeGoal(goal);
+                        }
                         return;
                     }
                 }
-                selector.addGoal(3, new AnimalDrinkWaterGoal(mob, 1.1));
+
+                if (requiresWater) {
+                    selector.addGoal(3, new AnimalDrinkWaterGoal(mob, 1.1));
+                }
             }
         }
     }
 }
-
