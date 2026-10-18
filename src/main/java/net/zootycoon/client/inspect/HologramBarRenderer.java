@@ -71,10 +71,11 @@ public class HologramBarRenderer {
         int g = (argb >> 8) & 0xFF;
         int b = argb & 0xFF;
 
+        // Counter-Clockwise (CCW) quad winding to prevent backface culling in OpenGL
         consumer.addVertex(matrix, minX, minY, z).setColor(r, g, b, a).setLight(light);
-        consumer.addVertex(matrix, minX, maxY, z).setColor(r, g, b, a).setLight(light);
-        consumer.addVertex(matrix, maxX, maxY, z).setColor(r, g, b, a).setLight(light);
         consumer.addVertex(matrix, maxX, minY, z).setColor(r, g, b, a).setLight(light);
+        consumer.addVertex(matrix, maxX, maxY, z).setColor(r, g, b, a).setLight(light);
+        consumer.addVertex(matrix, minX, maxY, z).setColor(r, g, b, a).setLight(light);
     }
 
     /**
@@ -127,10 +128,11 @@ public class HologramBarRenderer {
         float z = 0.0f;
         int a = 255, r = 255, g = 255, b = 255;
 
+        // Counter-Clockwise (CCW) quad winding
         consumer.addVertex(matrix, x, y, z).setColor(r, g, b, a).setUv(0.0f, 0.0f).setLight(light);
-        consumer.addVertex(matrix, x, y + height, z).setColor(r, g, b, a).setUv(0.0f, 1.0f).setLight(light);
-        consumer.addVertex(matrix, x + width, y + height, z).setColor(r, g, b, a).setUv(1.0f, 1.0f).setLight(light);
         consumer.addVertex(matrix, x + width, y, z).setColor(r, g, b, a).setUv(1.0f, 0.0f).setLight(light);
+        consumer.addVertex(matrix, x + width, y + height, z).setColor(r, g, b, a).setUv(1.0f, 1.0f).setLight(light);
+        consumer.addVertex(matrix, x, y + height, z).setColor(r, g, b, a).setUv(0.0f, 1.0f).setLight(light);
     }
 
     /**
@@ -146,10 +148,11 @@ public class HologramBarRenderer {
         float z = 0.0f;
         int a = 255, r = 255, g = 255, b = 255;
 
+        // Counter-Clockwise (CCW) quad winding
         consumer.addVertex(matrix, x, y, z).setColor(r, g, b, a).setUv(u0, v0).setLight(light);
-        consumer.addVertex(matrix, x, y + height, z).setColor(r, g, b, a).setUv(u0, v1).setLight(light);
-        consumer.addVertex(matrix, x + width, y + height, z).setColor(r, g, b, a).setUv(u1, v1).setLight(light);
         consumer.addVertex(matrix, x + width, y, z).setColor(r, g, b, a).setUv(u1, v0).setLight(light);
+        consumer.addVertex(matrix, x + width, y + height, z).setColor(r, g, b, a).setUv(u1, v1).setLight(light);
+        consumer.addVertex(matrix, x, y + height, z).setColor(r, g, b, a).setUv(u0, v1).setLight(light);
     }
 
     /**
@@ -183,6 +186,6 @@ public class HologramBarRenderer {
      * Draws the authentic vanilla heart icon '❤' using the Minecraft font glyph renderer.
      */
     public static void drawHeartIcon(Font font, MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light) {
-        font.drawInBatch("❤", x, y, 0xFFFF3333, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, light);
+        font.drawInBatch("❤", x, y, 0xFFFF3333, false, matrix, buffer, Font.DisplayMode.POLYGON_OFFSET, 0, light);
     }
 }

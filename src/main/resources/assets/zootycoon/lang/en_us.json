@@ -537,5 +537,9 @@
   "zootycoon.temperature.hot": "Hot",
   "zootycoon.bathing.need_water": "Wet the animal first with a watering can!",
   "zootycoon.inspect.cleanliness.wet": "(Wet)",
-  "zootycoon.inspect.wet": "(Wet)"
+  "zootycoon.inspect.wet": "(Wet)",
+  "zootycoon.dialog.zookeeper.btn.give_bathing_tools": "Hand Over Bathing Tools",
+  "zootycoon.dialog.zookeeper.need_bathing_tools": "Hello Boss! My assigned animal %s is dirty and needs bathing. Could you hand over 1 watering can and 1 brush?",
+  "zootycoon.zookeeper.bathing_tools_given_toast": "Successfully gave bathing tools to %s!",
+  "zootycoon.zookeeper.no_bathing_tools_toast": "You need at least 1 watering can and 1 brush!"
 }

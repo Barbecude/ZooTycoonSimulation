@@ -12,7 +12,7 @@
 | 7 | Musim dan suhu (Fabric Seasons) | SELESAI | 2026-10-18 | Integrasi FabricSeasonsCompat dengan refleksi getCurrentSeason & suhu bioma musiman; SereneSeasonsCompat otomatis fallback ke Fabric Seasons; ZooClimate menghitung suhu efektif & kategori (Beku, Dingin, Sejuk/Sedang, Hangat, Panas Terik); InspectionSnapshotPayload & ZooInspectionService mengirim data iklim; ZooAnimalHologramRenderer menampilkan baris "Musim: [Nama Musim] | Suhu: [Kategori Suhu]" tanpa Celsius palsu; laju kehausan musim panas normal |
 | 8 | Habitat dan ekosistem | SELESAI | 2026-10-18 | Data-driven habitat suitability & ecosystem block requirements via JSON data packs; 9 template ekosistem (Savana, Hutan, Hutan Tropis, Kutub/Salju, Gurun, Padang Rumput, Perairan Tawar, Lautan, Rawa); evaluasi bioma, temperatur nyaman, dan blok sekitar radius 8; server snapshot sync; hologram menampilkan "Habitat: Sesuai (Ideal)" atau "Habitat: Tidak Sesuai" dan petunjuk kebutuhan "Butuh: ..." |
 | 9 | Mandi hewan oleh player | SELESAI | 2026-10-18 | Sistem mandi 2 tahap (watering can + brush): tag zootycoon:watering_cans (default water_bucket, mod cans opsional), durasi basah 600 tick, brush nambah kebersihan +35 (maks 100) kurangi durability 1, partikel busa kilau sabun & splash, actionbar warning jika belum basah, broom tidak lagi bersihkan badan satwa, auto-clean hujan dihapus, status (Basah) di hologram |
-| 10 | Mandi hewan oleh zookeeper | BELUM | - | |
+| 10 | Mandi hewan oleh zookeeper & Bedah Rendering Hologram | SELESAI | 2026-10-18 | Bedah total in-world hologram (vertical anchoring maxY=0 ke atas, quad winding CCW, Z-layering presisi, Font.DisplayMode.POLYGON_OFFSET, pakan 3D skala 7) & integrasi Zookeeper memandikan satwa asuh (GiveBathingToolsPayload, tombol dialog 3-button, AI mandi siram + sikat kebersihan 100%, durability brush berkurang 1) |
 | 11 | Mood hewan | BELUM | - | |
 | 12 | Validasi akhir hologram | BELUM | - | |
 | 13 | Audit feeding trough | BELUM | - | |
@@ -53,30 +53,37 @@
 - Fase 9: Pembersihan pasif otomatis dari air/hujan di `ZooAnimalHungerManager.tickServer` dihapus, penurunan kebersihan bertahap 1% tiap 240 tick tetap berjalan normal.
 - Fase 9: Payload `InspectionSnapshotPayload` membawa `boolean isWet`, `ZooInspectionService` memberitahukan status basah secara real-time via `notifyAnimalUpdated`, dan `ZooAnimalHologramRenderer` menampilkan status `(Basah)` / `(Wet)` di baris bar kebersihan.
 
-## Bukti Selesai (Fase 9)
-- Klik kanan brush langsung ke sapi kotor / belum basah: muncul peringatan actionbar "Basahi satwa terlebih dahulu dengan penyiram air!", kebersihan tidak bertambah.
-- Siram sapi dengan watering can (water_bucket) lalu gosok dengan brush: kebersihan naik +35 poin per gosok (maks 100), durability sikat berkurang 1, efek suara sikat dan partikel busa kilau sabun muncul, status di bar kebersihan hologram ter-update menampilkan status `(Basah)`.
-- Sapu (broom) tidak lagi membersihkan hewan saat diklik ke satwa.
-- `.\gradlew.bat build` sukses (BUILD SUCCESSFUL) dan file jar otomatis tersalin ke folder mods profil Modrinth.
+- Fase 10: Vertical anchoring dirombak ke `entY = entity.getY() + entity.getBbHeight() + 0.5f` (+0.3f jika custom name) dan `maxY = 0.0f` serta `startY = maxY - totalBoxHeight`. Kartu hologram tumbuh ke atas dan mengapung bebas di atas kepala satwa tanpa menembus torso/kaki.
+- Fase 10: Winding order pada `drawRect`, `drawTexturedIcon`, dan `drawAtlasSprite` di `HologramBarRenderer` diubah dari Clockwise (CW) ke Counter-Clockwise (CCW): `minX,minY -> maxX,minY -> maxX,maxY -> minX,maxY` untuk mencegah backface culling OpenGL.
+- Fase 10: Z-layering presisi ditetapkan (background plate z=0.02f, track/border z=0.015f, fill z=0.01f, ikon & font z=0.0f), `bs.endBatch(RenderType.textBackground())` di-flush tepat setelah bar, dan seluruh teks menggunakan `Font.DisplayMode.POLYGON_OFFSET` untuk mencegah Z-fighting dengan background plate.
+- Fase 10: Skala pakan 3D disesuaikan menjadi proporsional `7.0f, -7.0f, 7.0f` dengan Z-translate `-0.5f` pada baris makanan paling bawah.
+- Fase 10: Mekanik mandi oleh Zookeeper: NBT peralatan mandi (`HasWateringCan`, `WateringCanStack`, `BrushStack`), synched entity data `HAS_BATHING_TOOLS`, tombol "Serahkan Alat Mandi" di dialog (aktif jika pemain memiliki 1 watering can dan 1 brush), packet `ZookeeperBathingPayloads.GiveBathingToolsPayload`, dan AI Zookeeper memandikan satwa asuh (cleanliness <= 50%) dengan menyiram (status wet) lalu menyikat (kebersihan pulih 100%, durability brush berkurang 1).
+
+## Bukti Selesai (Fase 10)
+- Posisi kartu hologram mengapung bebas di atas kepala satwa (dasar kartu maxY=0 berada pada Y kepala + 0.5 blok) dan tumbuh ke atas, tidak menusuk badan satwa.
+- Urutan vertex quad diubah ke Counter-Clockwise (CCW) sehingga background plate gelap slate semi-transparan `0xAA0B0E14` dan visual bar dirender penuh tanpa di-cull oleh GPU.
+- Teks menggunakan `Font.DisplayMode.POLYGON_OFFSET` sehingga tajam dan bebas Z-fighting di atas background plate.
+- Item makanan 3D dirender rapi dengan skala 7 di samping header makanan.
+- Zookeeper dialog menampilkan tombol "Serahkan Alat Mandi" (hanya aktif jika inventory pemain punya 1 watering can + 1 brush) dan menampilkan permintaan alat jika satwa asuh kebersihan <= 40%.
+- AI Zookeeper mendekati satwa kotor (cleanliness <= 50%), menyiram air (status wet aktif), lalu menyikat (kebersihan pulih ke 100%, durability sikat berkurang 1).
+- `.\gradlew.bat build` sukses (BUILD SUCCESSFUL) dan file jar `zootycoon-1.0.0.jar` otomatis tersalin ke folder mods profil Modrinth.
 
 ## Blocker
-- Mod eksternal "Vanilla Watering Cans" tidak tersedia untuk Fabric 1.21.1 (hanya resource pack CIT / mod NeoForge). Saat ini sistem mandi mengandalkan soft dependency item tag `zootycoon:watering_cans` dengan fallback vanilla `minecraft:water_bucket`.
+- Tidak ada blocker.
 
 ## File yang diubah
-- src/main/java/net/zootycoon/animal/AnimalBathingManager.java (BARU)
-- src/main/resources/data/zootycoon/tags/item/watering_cans.json (BARU)
-- src/main/java/net/zootycoon/ZooTycoonMod.java
-- src/main/java/net/zootycoon/animal/ZooAnimalHungerManager.java
-- src/main/java/net/zootycoon/network/InspectionPayloads.java
-- src/main/java/net/zootycoon/animal/ZooInspectionService.java
 - src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
+- src/main/java/net/zootycoon/client/inspect/HologramBarRenderer.java
+- src/main/java/net/zootycoon/entity/ZooZookeeperEntity.java
+- src/main/java/net/zootycoon/client/ui/ZookeeperDialogScreen.java
+- src/main/java/net/zootycoon/network/ZookeeperBathingPayloads.java (BARU)
+- src/main/java/net/zootycoon/animal/AnimalBathingManager.java
 - src/main/resources/assets/zootycoon/lang/en_us.json
 - src/main/resources/assets/zootycoon/lang/id_id.json
 - docs/hologram/PROGRESS.md
 
 ## Butuh izin user
-- Permintaan izin untuk membuat implementasi alat siram internal mod Zoo Tycoon (`WateringCanItem`) jika pengguna menghendaki watering can kustom bawaan mod Zoo Tycoon selain ember air vanilla.
+- Tidak ada.
 
 ## Belum terverifikasi
-- Pengujian interaksi mandi satwa oleh Zookeeper (dijadwalkan pada Fase 10).
-- Efek enchantment unbreaking/mending pada durability brush saat memandikan satwa.
+- Pengujian interaksi mandi satwa oleh Zookeeper dan inspeksi visual in-world hologram secara langsung di dalam game Minecraft (wajib dijalankan user sebelum Fase 11).

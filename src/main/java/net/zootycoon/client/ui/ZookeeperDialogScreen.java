@@ -10,6 +10,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import net.zootycoon.client.ZooTycoonClient;
 import net.zootycoon.entity.ZooEntities;
 import net.zootycoon.network.ZooNetworkPayloads;
@@ -128,17 +129,49 @@ public class ZookeeperDialogScreen extends EasyNpcDialogScreen {
                 this.dropdownY = btnY - dropdownH - 4;
             }
         } else {
-            // When hasAnimal:
+            // When hasAnimal: 3-button layout
+            int tripleBtnW = (panelWidth - 24 - 12) / 3;
+
             // Action button 1: Serahkan Pakan (Beri pakan ke Zookeeper untuk satwa binaan)
-            ZooButton giveFoodBtn = new ZooButton(startX + 12, btnY, btnW, 22,
+            ZooButton giveFoodBtn = new ZooButton(startX + 12, btnY, tripleBtnW, 22,
                     ZooTranslations.component("zootycoon.dialog.zookeeper.btn.give_food"), b -> {
                 ClientPlayNetworking.send(new ZooNetworkPayloads.SupplyZookeeperFoodPayload(this.keeperUuid));
                 this.onClose();
             }).asPrimary();
             addRenderableWidget(giveFoodBtn);
 
-            // Action button 2: Semangat kerjanya!
-            ZooButton workBtn = new ZooButton(startX + 12 + btnW + 8, btnY, btnW, 22,
+            // Action button 2: Serahkan Alat Mandi (Watering can + brush)
+            Minecraft mc = Minecraft.getInstance();
+            boolean playerHasCan = false;
+            boolean playerHasBrush = false;
+            if (mc.player != null) {
+                for (int i = 0; i < mc.player.getInventory().getContainerSize(); i++) {
+                    ItemStack st = mc.player.getInventory().getItem(i);
+                    if (!st.isEmpty()) {
+                        if (net.zootycoon.animal.AnimalBathingManager.isWateringCan(st)) {
+                            playerHasCan = true;
+                        }
+                        if (st.is(net.minecraft.world.item.Items.BRUSH)) {
+                            playerHasBrush = true;
+                        }
+                    }
+                }
+            }
+            boolean keeperAlreadyHasTools = false;
+            if (this.previewEntity instanceof net.zootycoon.entity.ZooZookeeperEntity keeper) {
+                keeperAlreadyHasTools = keeper.hasBathingTools();
+            }
+
+            ZooButton giveToolsBtn = new ZooButton(startX + 12 + tripleBtnW + 6, btnY, tripleBtnW, 22,
+                    ZooTranslations.component("zootycoon.dialog.zookeeper.btn.give_bathing_tools"), b -> {
+                ClientPlayNetworking.send(new net.zootycoon.network.ZookeeperBathingPayloads.GiveBathingToolsPayload(this.keeperUuid));
+                this.onClose();
+            }).asPrimary();
+            giveToolsBtn.active = !keeperAlreadyHasTools && playerHasCan && playerHasBrush;
+            addRenderableWidget(giveToolsBtn);
+
+            // Action button 3: Semangat kerjanya!
+            ZooButton workBtn = new ZooButton(startX + 12 + (tripleBtnW + 6) * 2, btnY, tripleBtnW, 22,
                     ZooTranslations.component("zootycoon.dialog.zookeeper.btn.working_well"), b -> {
                 this.onClose();
             }).asPrimary();

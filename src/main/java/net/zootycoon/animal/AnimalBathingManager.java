@@ -27,6 +27,10 @@ public class AnimalBathingManager {
     public static final TagKey<Item> WATERING_CANS = TagKey.create(Registries.ITEM, ZooTycoonMod.id("watering_cans"));
     public static final int WET_DURATION_TICKS = 600; // 30 seconds (600 ticks)
 
+    static {
+        net.zootycoon.network.ZookeeperBathingPayloads.register();
+    }
+
     private static final Map<UUID, Long> WET_EXPIRY_MAP = new ConcurrentHashMap<>();
 
     public static boolean isWateringCan(ItemStack stack) {

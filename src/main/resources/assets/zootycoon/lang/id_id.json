@@ -546,5 +546,9 @@
   "zootycoon.temperature.hot": "Panas Terik",
   "zootycoon.bathing.need_water": "Basahi satwa terlebih dahulu dengan penyiram air!",
   "zootycoon.inspect.cleanliness.wet": "(Basah)",
-  "zootycoon.inspect.wet": "(Basah)"
+  "zootycoon.inspect.wet": "(Basah)",
+  "zootycoon.dialog.zookeeper.btn.give_bathing_tools": "Serahkan Alat Mandi",
+  "zootycoon.dialog.zookeeper.need_bathing_tools": "Halo Bos! Satwa binaan saya %s badannya kotor dan butuh dimandikan. Boleh serahkan 1 penyiram air dan 1 sikat?",
+  "zootycoon.zookeeper.bathing_tools_given_toast": "Berhasil menyerahkan alat mandi kepada %s!",
+  "zootycoon.zookeeper.no_bathing_tools_toast": "Kamu butuh minimal 1 penyiram air dan 1 sikat!"
 }
