@@ -30,6 +30,33 @@ public class BuilderNoteScreen extends Screen {
 
     private static final ResourceLocation NOTE_TEXTURE = ZooTycoonMod.id("textures/gui/builder_note.png");
 
+    // 10-Step progressive color gradient from Red to Green for material sufficiency
+    private static final int[] RATIO_COLORS = {
+            0xFFB21818, // 0%   Pure Crimson Red
+            0xFFC6281E, // 10%  Rust Red
+            0xFFD24114, // 20%  Red-Orange
+            0xFFCC5500, // 30%  Deep Orange
+            0xFFB96900, // 40%  Warm Amber
+            0xFF9B7300, // 50%  Golden Ochre
+            0xFF737D0A, // 60%  Olive Chartreuse
+            0xFF4B821E, // 70%  Olive Green
+            0xFF287D2D, // 80%  Medium Forest Green
+            0xFF166E23, // 90%  Deep Leaf Green
+            0xFF0F5F1E  // 100%+ Full Emerald Green
+    };
+
+    public static int getRatioColor(int inInv, int needed) {
+        if (needed <= 0 || inInv >= needed) {
+            return RATIO_COLORS[10];
+        }
+        if (inInv <= 0) {
+            return RATIO_COLORS[0];
+        }
+        float frac = (float) inInv / (float) needed;
+        int idx = Math.clamp((int) (frac * 10.0f), 1, 9);
+        return RATIO_COLORS[idx];
+    }
+
     private final ItemStack noteStack;
     private final InteractionHand hand;
 
@@ -291,8 +318,7 @@ public class BuilderNoteScreen extends Screen {
             int maxW = panelWidth - 56 - 22; // 146 px available
 
             int inInv = countPlayerItem(entry.item);
-            boolean isEnough = inInv >= entry.needed;
-            int invColor = isEnough ? 0xFF1B6B2B : 0xFFB71C1C;
+            int invColor = getRatioColor(inInv, entry.needed);
             int titleColor = entry.checked ? 0xFF8C7B6B : 0xFF2B1909;
 
             String countStr = inInv + "/" + entry.needed;
