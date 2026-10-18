@@ -67,8 +67,14 @@ public class GachaMachineDialogScreen extends Screen {
     }
 
     @Override
+    protected void renderBlurredBackground(float delta) {
+        // Disabled 1.21 menu blur to keep screen crisp and clear
+    }
+
+    @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        renderBackground(graphics, mouseX, mouseY, delta);
+        // Darkened overlay backdrop without blur
+        graphics.fill(0, 0, this.width, this.height, 0x80000000);
 
         // Panel Background
         graphics.fill(startX, startY, startX + panelWidth, startY + panelHeight, 0xF00F172A);
