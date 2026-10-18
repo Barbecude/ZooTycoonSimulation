@@ -1739,6 +1739,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         private final ZooVisitorEntity visitor;
         private Animal targetAnimal;
         private int watchTimer;
+        private int travelTimeout;
         private BlockPos watchPos;
 
         public WatchAnimalsGoal(ZooVisitorEntity visitor) {
@@ -1783,8 +1784,9 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         @Override
         public void start() {
-            int base = 140 + visitor.random.nextInt(100); // ~7-12 seconds
+            int base = 600 + visitor.random.nextInt(400); // ~30-50 seconds
             watchTimer = base;
+            travelTimeout = 400; // max 20 seconds to reach viewing range
             if (targetAnimal != null) {
                 visitor.watchingAnimalId = targetAnimal.getId();
                 visitor.watchingAnimalSize = determineAnimalSize(targetAnimal);
@@ -1817,9 +1819,11 @@ public class ZooVisitorEntity extends PathfinderMob {
                 watchPos = computeWatchPos(targetAnimal);
             }
 
+            boolean inViewingRange = false;
             if (watchPos != null) {
                 double dist = visitor.distanceToSqr(watchPos.getX() + 0.5, watchPos.getY(), watchPos.getZ() + 0.5);
-                if (dist <= 64.0D) {
+                if (dist <= 64.0D || visitor.distanceToSqr(targetAnimal) <= 100.0D) {
+                    inViewingRange = true;
                     visitor.hasWatchedAnimal = true;
                     visitor.lastWatchedAnimalId = targetAnimal.getId();
                     if (visitor.postPurchaseEatMode == EAT_MODE_WATCH_ANIMAL && !visitor.isConsuming()) {
@@ -1834,8 +1838,17 @@ public class ZooVisitorEntity extends PathfinderMob {
             visitor.getLookControl().setLookAt(targetAnimal, 30.0F, 30.0F);
             visitor.watchingAnimalSize = determineAnimalSize(targetAnimal);
 
-            if (watchTimer > 0) {
-                watchTimer--;
+            if (inViewingRange) {
+                if (watchTimer > 0) {
+                    watchTimer--;
+                }
+            } else {
+                if (travelTimeout > 0) {
+                    travelTimeout--;
+                    if (travelTimeout <= 0) {
+                        watchTimer = 0;
+                    }
+                }
             }
         }
 
