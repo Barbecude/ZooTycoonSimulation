@@ -39,9 +39,7 @@ public class MagnifyingGlassItem extends Item {
     public net.minecraft.world.InteractionResultHolder<ItemStack> use(net.minecraft.world.level.Level level, Player player, InteractionHand hand) {
         player.playSound(SoundEvents.SPYGLASS_USE, 1.0F, 1.0F);
         player.startUsingItem(hand);
-        if (level.isClientSide()) {
-            net.zootycoon.client.render.ZooAnimalHologramRenderer.triggerScanRaycast();
-        } else if (player instanceof ServerPlayer sp) {
+        if (!level.isClientSide() && player instanceof ServerPlayer sp) {
             performRaycastScan(sp);
         }
         return net.minecraft.world.item.ItemUtils.startUsingInstantly(level, player, hand);
@@ -91,7 +89,6 @@ public class MagnifyingGlassItem extends Item {
     public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
         if (ZooAnimalHungerManager.isZooAnimalCandidate(target)) {
             if (player.level().isClientSide()) {
-                net.zootycoon.client.render.ZooAnimalHologramRenderer.setInspectedAnimal(target);
                 net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new net.zootycoon.network.ZooNetworkPayloads.ScanAnimalPayload(target.getId()));
             } else if (player instanceof ServerPlayer sp) {
                 scanAndRegister(sp, target);

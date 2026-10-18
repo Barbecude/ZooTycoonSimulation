@@ -407,6 +407,7 @@ public class ZooTycoonClient implements ClientModInitializer {
             clientCashiers = 0;
             inStudio = false;
             net.zootycoon.client.render.ZooAnimalHologramRenderer.currentTargetedAnimal = null;
+            net.zootycoon.client.inspect.InspectionTargetTracker.reset();
         });
 
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
@@ -416,6 +417,7 @@ public class ZooTycoonClient implements ClientModInitializer {
             clientAnimalMap.clear();
             clientZookeeperList.clear();
             clientEmeraldBalance = 0;
+            net.zootycoon.client.inspect.InspectionTargetTracker.reset();
         });
 
         // 3b. Register Entity Renderer & Model Layer for Humanoid Builder NPC
@@ -506,6 +508,7 @@ public class ZooTycoonClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             ClaimBoundaryRenderer.clientTick(client);
             PlacementPreviewRenderer.clientTick(client);
+            net.zootycoon.client.inspect.InspectionTargetTracker.tick(client);
 
             // Open Zoo Management Menu on Right Shift (no stick required)
             boolean rShiftDown = (client.getWindow() != null) && InputConstants.isKeyDown(client.getWindow().getWindow(), InputConstants.KEY_RSHIFT);
