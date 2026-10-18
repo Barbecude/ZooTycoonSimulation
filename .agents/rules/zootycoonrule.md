@@ -36,3 +36,18 @@ fungsi yg akan ada tapi belum tampil di ui/atau belum punya perilaku ke sistem y
 4. hologram muncul ketika magnifying glass di arahkan ke hewan
 5. interaksi hewan dengan musim, feeding through dan pengunjung.
 6. Gudang
+
+Urutan pengerjaan kronologis (Dilarang mengerjakan tahap apa pun sebelum diminta secara eksplisit oleh pengguna):
+
+1. Hologram Magnifying Glass
+Perbaiki raycast agar responsif mendeteksi hewan, tidak menahan target lama saat crosshair lepas, tidak tembus pandang tembok/blok padat, serta pastikan sinkronisasi data kebutuhan satwa akurat dari server ke client.
+2. Interaksi Hewan dengan Musim, Feeding Trough, dan Pengunjung
+Terapkan dampak nyata iklim Serene Seasons pada fisik dan kenyamanan satwa, stabilkan rutinitas satwa makan di feeding trough, serta bangun interaksi timbal-balik dengan pengunjung di mana kondisi satwa mempengaruhi kepuasan pengunjung.
+3. Sistem Rating Zoo dan Integrasi UI
+Bangun formula perhitungan rating dinamis berdasarkan rata-rata kesehatan satwa, kebersihan kandang, kelengkapan fasilitas, dan kepuasan pengunjung, serta tampilkan indikator rating di UI/HUD.
+4. Kunjungan Pengunjung Mengikuti Rating dan Kualitas
+Perbarui spawner pengunjung agar kapasitas maksimal dan frekuensi kedatangan berskala dinamis mengikuti rating kebun binatang dan jumlah fasilitas/satwa aktif.
+5. Finansial dan Penetapan Harga (Tiket, Makanan, Gaji Pegawai)
+Sediakan pengaturan harga tiket dan makanan/minuman yang berdampak pada keputusan pengunjung, serta terapkan pemotongan gaji berkala (biaya operasional harian) untuk seluruh staf zoo.
+6. Gudang (Warehouse dan Rantai Pasok)
+Bangun sistem gudang sentral untuk menyimpan stok pakan dan suplai grosir, serta integrasikan zookeeper untuk mengambil jatah pakan dari gudang tanpa memberi pakan awal otomatis.
