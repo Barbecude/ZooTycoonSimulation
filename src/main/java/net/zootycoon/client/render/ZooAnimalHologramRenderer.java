@@ -1,22 +1,27 @@
 package net.zootycoon.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
+import net.zootycoon.client.inspect.HologramBarRenderer;
 import net.zootycoon.client.inspect.InspectionClientCache;
 import net.zootycoon.client.inspect.InspectionTargetTracker;
 import org.joml.Matrix4f;
 
-import java.util.ArrayList;
-import java.util.List;
-
+/**
+ * World-space in-world billboarded inspection hologram renderer.
+ * Displays species identity, visual health bar with vanilla heart icon, and
+ * visual hunger, thirst, and cleanliness status bars.
+ */
 public class ZooAnimalHologramRenderer {
 
     public static LivingEntity currentTargetedAnimal = null;
@@ -60,77 +65,157 @@ public class ZooAnimalHologramRenderer {
         poseStack.mulPose(camera.rotation());
         poseStack.scale(-0.022f, -0.022f, 0.022f);
 
-        List<Component> lines = new ArrayList<>();
-        // Title (Clean, NO BOLD)
-        lines.add(entity.getDisplayName());
+        // Retrieve actual entity health data
+        float currentHp = entity.getHealth();
+        float maxHp = entity.getMaxHealth();
+        int hpInt = (int) Math.ceil(currentHp);
+        int maxHpInt = (int) Math.ceil(maxHp);
+        String hpText = hpInt + "/" + maxHpInt;
+        float hpPct = (currentHp / Math.max(1.0f, maxHp)) * 100.0f;
+        int hpTextColor = HologramBarRenderer.getStatusColor(hpPct);
+        float hpProgress = Math.max(0.0f, Math.min(1.0f, currentHp / Math.max(1.0f, maxHp)));
 
-        // Health
-        int hp = (int) Math.ceil(entity.getHealth());
-        int maxHp = (int) Math.ceil(entity.getMaxHealth());
-        lines.add(Component.literal("Health: " + hp + "/" + maxHp));
-
-        // Read snapshot from InspectionClientCache
+        // Read snapshot from server sync cache
         InspectionClientCache.Snapshot snapshot = InspectionClientCache.getSnapshot(entity.getId());
-        if (snapshot == null || !snapshot.registered()) {
-            lines.add(Component.literal("§eBelum terdaftar"));
-            lines.add(Component.literal("Hunger: -"));
-            lines.add(Component.literal("Thirst: -"));
-            lines.add(Component.literal("Cleanliness: -"));
+        boolean isRegistered = snapshot != null && snapshot.registered();
+
+        // Prepare hunger status
+        String hungerText;
+        int hungerTextColor;
+        float hungerProgress;
+        if (isRegistered && snapshot.hunger() >= 0) {
+            int hVal = snapshot.hunger();
+            hungerText = hVal + "%";
+            hungerTextColor = HologramBarRenderer.getStatusColor((float) hVal);
+            hungerProgress = Math.max(0.0f, Math.min(1.0f, hVal / 100.0f));
         } else {
-            int hunger = snapshot.hunger();
-            if (hunger >= 0) {
-                String hungerCol = hunger <= 25 ? "§c" : (hunger <= 60 ? "§e" : "§f");
-                lines.add(Component.literal(hungerCol + "Hunger: " + getBar(hunger, 100, "█", "░") + " " + hunger + "%"));
-            } else {
-                lines.add(Component.literal("Hunger: -"));
-            }
-
-            int thirst = snapshot.thirst();
-            if (thirst >= 0) {
-                String thirstCol = thirst <= 25 ? "§c" : (thirst <= 60 ? "§e" : "§f");
-                lines.add(Component.literal(thirstCol + "Thirst: " + getBar(thirst, 100, "█", "░") + " " + thirst + "%"));
-            } else {
-                lines.add(Component.literal("Thirst: -"));
-            }
-
-            int cleanliness = snapshot.cleanliness();
-            if (cleanliness >= 0) {
-                String cleanCol = cleanliness <= 10 ? "§c" : (cleanliness <= 25 ? "§e" : "§f");
-                lines.add(Component.literal(cleanCol + "Cleanliness: " + getBar(cleanliness, 100, "█", "░") + " " + cleanliness + "%"));
-            } else {
-                lines.add(Component.literal("Cleanliness: -"));
-            }
+            hungerText = "-";
+            hungerTextColor = HologramBarRenderer.COLOR_MUTED;
+            hungerProgress = 0.0f;
         }
+
+        // Prepare thirst status
+        String thirstText;
+        int thirstTextColor;
+        float thirstProgress;
+        if (isRegistered && snapshot.thirst() >= 0) {
+            int tVal = snapshot.thirst();
+            thirstText = tVal + "%";
+            thirstTextColor = HologramBarRenderer.getStatusColor((float) tVal);
+            thirstProgress = Math.max(0.0f, Math.min(1.0f, tVal / 100.0f));
+        } else {
+            thirstText = "-";
+            thirstTextColor = HologramBarRenderer.COLOR_MUTED;
+            thirstProgress = 0.0f;
+        }
+
+        // Prepare cleanliness status
+        String cleanText;
+        int cleanTextColor;
+        float cleanProgress;
+        if (isRegistered && snapshot.cleanliness() >= 0) {
+            int cVal = snapshot.cleanliness();
+            cleanText = cVal + "%";
+            cleanTextColor = HologramBarRenderer.getStatusColor((float) cVal);
+            cleanProgress = Math.max(0.0f, Math.min(1.0f, cVal / 100.0f));
+        } else {
+            cleanText = "-";
+            cleanTextColor = HologramBarRenderer.COLOR_MUTED;
+            cleanProgress = 0.0f;
+        }
+
+        // Calculate layout geometry
+        Component titleComponent = entity.getDisplayName();
+        int titleWidth = font.width(titleComponent);
+        Component unregComponent = Component.translatable("zootycoon.inspect.unregistered");
+        int unregWidth = isRegistered ? 0 : font.width(unregComponent);
+        int maxHeaderWidth = Math.max(titleWidth, unregWidth);
+
+        float iconWidth = 9.0f;
+        float gapIconToBar = 4.0f;
+        float barWidth = 42.0f;
+        float barHeight = 4.0f;
+        float gapBarToText = 4.0f;
+
+        int maxTextWidth = Math.max(font.width(hpText),
+                Math.max(font.width(hungerText),
+                Math.max(font.width(thirstText), font.width(cleanText))));
+
+        float rowBlockWidth = iconWidth + gapIconToBar + barWidth + gapBarToText + Math.max(24.0f, (float) maxTextWidth);
+        float boxWidth = Math.max(rowBlockWidth + 12.0f, maxHeaderWidth + 14.0f);
+
+        float rowHeight = 11.0f;
+        float headerHeight = isRegistered ? 13.0f : 23.0f;
+        float contentHeight = headerHeight + (4.0f * rowHeight);
+        float totalBoxHeight = contentHeight + 8.0f; // 4px padding top, 4px padding bottom
+
+        float minX = -boxWidth / 2.0f;
+        float maxX = boxWidth / 2.0f;
+        float startY = -totalBoxHeight / 2.0f;
+        float maxY = startY + totalBoxHeight;
 
         Matrix4f matrix = poseStack.last().pose();
         MultiBufferSource buffer = context.consumers();
 
         if (buffer != null) {
-            float bgAlpha = 0.5f;
-            int bgCol = (int) (bgAlpha * 255) << 24;
+            // 1. Draw rounded dark background plate (semi-transparent 0xAA0B0E14)
+            HologramBarRenderer.drawBackgroundPlate(buffer, matrix, minX, startY, maxX, maxY, LightTexture.FULL_BRIGHT);
 
-            int lineSpacing = 10;
-            int startY = -(lines.size() * lineSpacing) / 2;
+            // 2. Draw visual bars (solid quads with border and track)
+            float rowStartX = -rowBlockWidth / 2.0f;
+            float iconX = rowStartX;
+            float barX = iconX + iconWidth + gapIconToBar;
+            float textX = barX + barWidth + gapBarToText;
+            float curY = startY + 4.0f;
 
-            for (int i = 0; i < lines.size(); i++) {
-                Component line = lines.get(i);
-                int width = font.width(line);
-                float x = -width / 2.0f;
-                float y = startY + (i * lineSpacing);
+            float titleX = -titleWidth / 2.0f;
+            float titleY = curY;
+            curY += 10.0f;
 
-                font.drawInBatch(
-                        line,
-                        x,
-                        y,
-                        0xFFFFFFFF,
-                        false,
-                        matrix,
-                        buffer,
-                        Font.DisplayMode.NORMAL,
-                        bgCol,
-                        LightTexture.FULL_BRIGHT
-                );
+            float unregX = 0;
+            float unregY = 0;
+            if (!isRegistered) {
+                unregX = -unregWidth / 2.0f;
+                unregY = curY;
+                curY += 10.0f;
             }
+
+            curY += 2.0f; // Gap between header and bar rows
+
+            float healthRowY = curY;
+            float hungerRowY = curY + rowHeight;
+            float thirstRowY = curY + (rowHeight * 2.0f);
+            float cleanRowY = curY + (rowHeight * 3.0f);
+
+            VertexConsumer barConsumer = buffer.getBuffer(RenderType.textBackground());
+            HologramBarRenderer.drawBar(barConsumer, matrix, barX, healthRowY + 3.5f, barWidth, barHeight, hpProgress, HologramBarRenderer.HEALTH_COLOR, HologramBarRenderer.HEALTH_TRACK, LightTexture.FULL_BRIGHT);
+            HologramBarRenderer.drawBar(barConsumer, matrix, barX, hungerRowY + 3.5f, barWidth, barHeight, hungerProgress, HologramBarRenderer.HUNGER_COLOR, HologramBarRenderer.HUNGER_TRACK, LightTexture.FULL_BRIGHT);
+            HologramBarRenderer.drawBar(barConsumer, matrix, barX, thirstRowY + 3.5f, barWidth, barHeight, thirstProgress, HologramBarRenderer.THIRST_COLOR, HologramBarRenderer.THIRST_TRACK, LightTexture.FULL_BRIGHT);
+            HologramBarRenderer.drawBar(barConsumer, matrix, barX, cleanRowY + 3.5f, barWidth, barHeight, cleanProgress, HologramBarRenderer.CLEANLINESS_COLOR, HologramBarRenderer.CLEANLINESS_TRACK, LightTexture.FULL_BRIGHT);
+
+            if (buffer instanceof MultiBufferSource.BufferSource bs) {
+                bs.endBatch(RenderType.textBackground());
+            }
+
+            // 3. Draw clean 9x9 textured status icons
+            HologramBarRenderer.drawTexturedIcon(buffer, matrix, HologramBarRenderer.HUNGER_ICON, iconX, hungerRowY + 1.0f, 9.0f, 9.0f, LightTexture.FULL_BRIGHT);
+            HologramBarRenderer.drawTexturedIcon(buffer, matrix, HologramBarRenderer.THIRST_ICON, iconX, thirstRowY + 1.0f, 9.0f, 9.0f, LightTexture.FULL_BRIGHT);
+            HologramBarRenderer.drawTexturedIcon(buffer, matrix, HologramBarRenderer.CLEANLINESS_ICON, iconX, cleanRowY + 1.0f, 9.0f, 9.0f, LightTexture.FULL_BRIGHT);
+
+            // 4. Draw vanilla heart icon '❤' for health
+            float heartWidth = font.width("❤");
+            float heartOffset = Math.max(0.0f, (9.0f - heartWidth) / 2.0f);
+            HologramBarRenderer.drawHeartIcon(font, buffer, matrix, iconX + heartOffset, healthRowY + 1.0f, LightTexture.FULL_BRIGHT);
+
+            // 5. Draw text components (clean font without shadow)
+            font.drawInBatch(titleComponent, titleX, titleY, 0xFFFFFFFF, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            if (!isRegistered) {
+                font.drawInBatch(unregComponent, unregX, unregY, HologramBarRenderer.COLOR_MUTED, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            }
+            font.drawInBatch(hpText, textX, healthRowY + 1.0f, hpTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(hungerText, textX, hungerRowY + 1.0f, hungerTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(thirstText, textX, thirstRowY + 1.0f, thirstTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(cleanText, textX, cleanRowY + 1.0f, cleanTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 
             if (buffer instanceof MultiBufferSource.BufferSource bs) {
                 bs.endBatch();
@@ -138,16 +223,5 @@ public class ZooAnimalHologramRenderer {
         }
 
         poseStack.popPose();
-    }
-
-    private static String getBar(int val, int max, String fullChar, String emptyChar) {
-        int segments = 10;
-        int filled = Math.max(0, Math.min(segments, Math.round((val / (float) max) * segments)));
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < segments; i++) {
-            if (i < filled) sb.append(fullChar);
-            else sb.append(emptyChar);
-        }
-        return sb.toString();
     }
 }

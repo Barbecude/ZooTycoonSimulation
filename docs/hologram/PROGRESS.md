@@ -7,7 +7,7 @@
 | 2 | Audit referensi eksternal | SELESAI | 2026-10-18 | Audit Farm & Charm (overlay 3D, billboarding, sync), Fabric Seasons (API musim & suhu), ThirstWasTaken2 (lisensi GPL, TODO-USER aset), Vanilla Watering Cans (resource pack, soft tag), tag makanan konvensi c:foods/raw_meat & raw_fish (02-audit-external.md) |
 | 3 | Deteksi target & Billboarding Hologram | SELESAI | 2026-10-18 | Adopsi pola Farm & Charm: InspectionTargetTracker dengan crosshair pick + raycast collider 16 blok, zero-delay release, billboard world-space di ZooAnimalHologramRenderer dengan Font.DisplayMode.NORMAL |
 | 4 | Sinkronisasi data | SELESAI | 2026-10-18 | Adopsi pola Farm & Charm: InspectionPayloads (InspectStart, InspectStop, InspectionSnapshot), ZooInspectionService (server manager, snapshot tiap 10 tick, validasi kaca pembesar/jarak/kandidat), InspectionClientCache (timeout 40 tick), ZooAnimalHologramRenderer membaca cache aktual dan menampilkan "-" untuk hewan belum terdaftar tanpa angka palsu |
-| 5 | Tampilan Hologram In-World & Bar Indikator | BELUM | - | |
+| 5 | Tampilan Hologram In-World & Bar Indikator | SELESAI | 2026-10-18 | In-world hologram dengan background plate rounded/dark 0xAA0B0E14 depth-tested, visual progress bar proporsional (health, hunger, thirst, cleanliness), border gelap, ikon 9x9 pixel art orisinal & font heart ❤, status warna (putih/kuning/merah), string lang zootycoon.inspect.*, tanpa nilai palsu |
 | 6 | Makanan favorit (Item Rendering 3D) | BELUM | - | |
 | 7 | Musim dan suhu (Fabric Seasons) | BELUM | - | |
 | 8 | Habitat dan ekosistem | BELUM | - | |
@@ -31,29 +31,37 @@
 - Fase 3: Deteksi target dirombak total menggunakan `InspectionTargetTracker` yang memadukan `mc.crosshairPickEntity` dengan raycast berbatas `ClipContext.Block.COLLIDER` maks 16 blok. Timer lama `inspectExpireTime` (8-10 detik) dan trigger scan lama dihapus total sehingga target terlepas secara instan (zero-delay) saat crosshair bergeser, membuka GUI, atau menekan F1.
 - Fase 3: `ZooAnimalHologramRenderer` diubah menjadi world-space in-world billboarded hologram melayang di atas kepala satwa menggunakan rotasi kamera (`poseStack.mulPose(camera.rotation())`) dan depth test aktif (`Font.DisplayMode.NORMAL`), tanpa emoji dan tanpa formatting § hardcoded.
 - Fase 4: Sinkronisasi data inspeksi mengadopsi pola Farm & Charm (`SyncSaturationPacket`): client mengirim `InspectStartPayload(entityId)` saat crosshair membidik target baru dan `InspectStopPayload()` saat crosshair lepas atau berganti target. Server-side manager `ZooInspectionService` memvalidasi kelayakan kandidat, status hidup entitas, batas jarak <= 20 blok, dan status pemain memegang kaca pembesar, lalu mengirimkan `InspectionSnapshotPayload` tiap 10 tick. Nilai kebutuhan satwa yang belum terdaftar dikirim eksplisit sebagai `-1` dan ditampilkan `-` di hologram tanpa angka rekayasa (80/80/100).
+- Fase 5: Membangun helper in-world `HologramBarRenderer` untuk background plate rounded chamfered semi-transparan `0xAA0B0E14` ber-depth test (terocclude dinding/blok), bar proporsional dengan 1px border gelap `0xFF05070A`, track latar, dan highlight 1px.
+- Fase 5: Merancang ikon pixel-art 9x9 orisinal (`thirst.png`, `cleanliness.png`, `hunger.png`, `heart.png`) di bawah lisensi MIT Zoo Tycoon dan mendokumentasikannya di `docs/hologram/ASSETS.md`, menuntaskan status TODO-USER izin aset.
+- Fase 5: Indikator status warna teks nilai: putih (> 50%), kuning peringatan (<= 50%), merah kritis (<= 15%). Jika hewan belum terdaftar, bar dikosongkan (0%), teks bertuliskan "-", dan baris kedua menampilkan teks "Belum Terdaftar" abu-abu via translation key `zootycoon.inspect.unregistered`.
 
-## Bukti Selesai (Fase 4)
-- Buka AnimalManagementTab, bandingkan nilai hewan terdaftar: nilai di hologram (hunger, thirst, cleanliness) bersumber dari `ZooAnimalHungerManager` aktual melalui `InspectionSnapshotPayload` dan sama persis dengan yang ada di tab manajemen.
-- Amati saat hunger berkurang 1: bar dan teks persentase di hologram ikut ter-update live tiap 10 tick tanpa perlu klik kanan atau membuka GUI menu.
-- Arahkan ke hewan liar belum terdaftar: hologram menampilkan status 'Belum terdaftar' dan nilai kebutuhan '-' secara jujur tanpa nilai default palsu (80/80/100).
-- Payload lama `ZooNetworkPayloads.java` tidak disentuh sama sekali sehingga integritas `AnimalSyncData`, GUI manajemen, dan dialog zookeeper tetap aman dan utuh.
-- Build gradle berhasil tanpa kesalahan dan file jar otomatis terpasang ke profil Modrinth.
+## Bukti Selesai (Fase 5)
+- Hologram melayang rapi di atas kepala satwa, teks tajam tanpa bold berlebihan dan background plate `0xAA0B0E14` terocclude blok dengan benar jika terhalang dinding.
+- Visual health bar dengan proporsi aktual `hp / maxHp`, ikon hati vanilla `❤`, teks status nilai "X/Y". Pukul hewan: bar health langsung berkurang secara visual dan akurat.
+- Hunger bar berwarna cokelat-oranye dengan proporsi `hunger / 100`, thirst bar biru laut `thirst / 100`, cleanliness bar biru muda `cleanliness / 100`.
+- Indikator status warna teks dinamis: putih jika normal (> 50%), kuning jika peringatan (<= 50%), merah jika kritis (<= 15%).
+- Satwa liar belum terdaftar: bar hunger/thirst/cleanliness dikosongkan (0%), teks kebutuhan menampilkan "-", baris kedua menampilkan teks "Belum Terdaftar" abu-abu via lang `zootycoon.inspect.unregistered`. Dilarang dan terbukti tidak menampilkan angka palsu 80/100.
+- String UI inspeksi terdaftar di `en_us.json` dan `id_id.json` di bawah key `zootycoon.inspect.*`.
+- Gradle build berhasil sempurna (`BUILD SUCCESSFUL in 38s`) dan file jar otomatis terpasang ke profil Modrinth.
 
 ## Blocker
 - Tidak ada.
 
 ## File yang diubah
-- src/main/java/net/zootycoon/network/InspectionPayloads.java (BARU)
-- src/main/java/net/zootycoon/animal/ZooInspectionService.java (BARU)
-- src/main/java/net/zootycoon/client/inspect/InspectionClientCache.java (BARU)
-- src/main/java/net/zootycoon/client/inspect/InspectionTargetTracker.java
 - src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
-- src/main/java/net/zootycoon/ZooTycoonMod.java
-- src/main/java/net/zootycoon/client/ZooTycoonClient.java
+- src/main/java/net/zootycoon/client/inspect/HologramBarRenderer.java (BARU)
+- src/main/resources/assets/zootycoon/lang/en_us.json
+- src/main/resources/assets/zootycoon/lang/id_id.json
+- src/main/resources/assets/zootycoon/textures/gui/inspect/thirst.png (BARU)
+- src/main/resources/assets/zootycoon/textures/gui/inspect/cleanliness.png (BARU)
+- src/main/resources/assets/zootycoon/textures/gui/inspect/hunger.png (BARU)
+- src/main/resources/assets/zootycoon/textures/gui/inspect/heart.png (BARU)
+- docs/hologram/ASSETS.md (BARU)
 - docs/hologram/PROGRESS.md
 
 ## Butuh izin user
-- TODO-USER: izin aset - Tekstur ikon thirst dari ThirstWasTaken2 berlisensi GPL-3.0 sehingga dilarang disalin langsung ke Zoo Tycoon (MIT). Solusi default adalah merancang ikon 9x9 pixel art tetes air orisinal gaya vanilla. Jika pengguna menginginkan aset spesifik lain, mohon berikan konfirmasi.
+- Tidak ada (isu izin aset ThirstWasTaken2 telah dituntaskan dengan aset orisinal 9x9 berlisensi MIT).
 
 ## Belum terverifikasi
 - Uji interaktif koneksi jaringan remote multiplayer multi-client untuk memverifikasi reliabilitas rate 10-tick snapshot pada kondisi latensi tinggi.
+- Verifikasi visual in-game pada berbagai mod shader (Iris/Sodium) untuk memastikan blend mode textBackground kompatibel penuh.

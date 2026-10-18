@@ -521,5 +521,10 @@
   "phys_veh.zaz-968a.skin.race_01": "Racing 01",
   "phys_veh.zaz-968a.skin.race_02": "Racing 02",
   "phys_veh.toolbox": "Kotak Perkakas",
-  "phys_veh.toolbox.lore": "Peralatan untuk merawat dan memperbaiki kendaraan"
+  "phys_veh.toolbox.lore": "Peralatan untuk merawat dan memperbaiki kendaraan",
+  "zootycoon.inspect.unregistered": "Belum Terdaftar",
+  "zootycoon.inspect.health": "Kesehatan",
+  "zootycoon.inspect.hunger": "Rasa Lapar",
+  "zootycoon.inspect.thirst": "Rasa Haus",
+  "zootycoon.inspect.cleanliness": "Kebersihan"
 }

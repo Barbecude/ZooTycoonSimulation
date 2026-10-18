@@ -512,5 +512,10 @@
   "phys_veh.zaz-968m.skin.race_02": "Racing 02",
   "phys_veh.zaz-968m.mode.tracks": "Tracks",
   "phys_veh.zaz-968a.skin.race_01": "Racing 01",
-  "phys_veh.zaz-968a.skin.race_02": "Racing 02"
+  "phys_veh.zaz-968a.skin.race_02": "Racing 02",
+  "zootycoon.inspect.unregistered": "Unregistered",
+  "zootycoon.inspect.health": "Health",
+  "zootycoon.inspect.hunger": "Hunger",
+  "zootycoon.inspect.thirst": "Thirst",
+  "zootycoon.inspect.cleanliness": "Cleanliness"
 }
