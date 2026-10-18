@@ -21,10 +21,18 @@ jangan pernah kasih zookeper awalan makanan, hanya player yang harus ngasih maka
 fungsi yg udah fix (tidak boleh sampe rusak karena mengubah kode):
 1. Logic builder dan ui dialog nya
 2. Logic pemilihan zookeper untuk hewan
+3. dialog zookeper dan ui nya
 3. Logic dan ui cashier
 4. logic antri
 5. pengunjung / visitor
 6. hunter
 7. ui feeding through       
-fungsi yg akan ada tapi belum tanpil di ui/atau belum punya perilaku ke sistem hanya static:
-1. rating
+8. builder notes & ui notes
+
+fungsi yg akan ada tapi belum tampil di ui/atau belum punya perilaku ke sistem yang baik masih banyak bug dan belum solid atau hanya static:
+1. rating zoo
+2. harga makanan & minuman, harga per 1 pengunjung, gaji pegawai.
+3. banyaknya pengunjung yg akan datang mengikuti kualitas zoo dan rating
+4. hologram muncul ketika magnifying glass di arahkan ke hewan
+5. interaksi hewan dengan musim, feeding through dan pengunjung.
+6. Gudang

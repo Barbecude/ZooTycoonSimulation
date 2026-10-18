@@ -42,6 +42,9 @@ import net.zootycoon.network.ZooNetworkPayloads;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.core.particles.BlockParticleOption;
 import net.zootycoon.animal.ZooAnimalHungerManager;
 import net.zootycoon.util.ZooTranslations;
 
@@ -66,6 +69,12 @@ public class ZooZookeeperEntity extends PathfinderMob {
     private UUID assignedAnimalUuid = null;
     private String currentDutyState = "IDLE"; // "REFILL", "NEED_FOOD", "SWEEPING", "IDLE"
     private int actionCooldown = 0;
+
+    private BlockPos currentTrashTarget = null;
+    private int trashStuckTicks = 0;
+    private BlockPos tempDirtPos = null;
+    private int tempDirtTimer = 0;
+    private BlockState previousBlockState = null;
 
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
@@ -188,6 +197,50 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
         if (actionCooldown > 0) actionCooldown--;
 
+        // Temporary dirt expiration countdown
+        if (tempDirtPos != null) {
+            tempDirtTimer--;
+            if (tempDirtTimer <= 0) {
+                removeTempDirt(sLevel);
+            }
+        }
+
+        // Active litter cleaning and stuck detection for unassigned zookeepers
+        if (this.assignedAnimalUuid == null && currentTrashTarget != null) {
+            if (!sLevel.getBlockState(currentTrashTarget).is(ZooBlocks.TRASH)) {
+                currentTrashTarget = null;
+                trashStuckTicks = 0;
+            } else {
+                double distSq = this.distanceToSqr(currentTrashTarget.getX() + 0.5, currentTrashTarget.getY() + 0.5, currentTrashTarget.getZ() + 0.5);
+                double reach = (tempDirtPos != null) ? 4.8 : 2.4;
+                if (distSq <= reach * reach) {
+                    sweepLitterAt(sLevel, currentTrashTarget);
+                } else if (tempDirtPos == null && distSq <= 4.8 * 4.8) {
+                    boolean navStuck = this.getNavigation().isDone() || this.getDeltaMovement().horizontalDistanceSqr() < 0.0008;
+                    if (navStuck) {
+                        trashStuckTicks++;
+                        if (trashStuckTicks >= 25) {
+                            tryPlaceTemporaryDirt(sLevel);
+                        }
+                    } else if (trashStuckTicks > 0) {
+                        trashStuckTicks--;
+                    }
+                }
+            }
+        } else if (this.assignedAnimalUuid != null && tempDirtPos != null) {
+            removeTempDirt(sLevel);
+            currentTrashTarget = null;
+            trashStuckTicks = 0;
+        }
+
+        // If elevated on temporary dirt, keep mob centered on dirt and look towards trash
+        if (tempDirtPos != null) {
+            this.getNavigation().stop();
+            if (currentTrashTarget != null) {
+                this.getLookControl().setLookAt(currentTrashTarget.getX() + 0.5, currentTrashTarget.getY() + 0.5, currentTrashTarget.getZ() + 0.5);
+            }
+        }
+
         // Sanitize legacy custom name if it contains " - Zookeeper" or "Zookeeper"
         Component cn = this.getCustomName();
         if (cn != null) {
@@ -284,9 +337,9 @@ public class ZooZookeeperEntity extends PathfinderMob {
             BlockPos nearestTrash = null;
             double minTrashDistSq = Double.MAX_VALUE;
 
-            for (int dx = -14; dx <= 14; dx += 2) {
-                for (int dz = -14; dz <= 14; dz += 2) {
-                    for (int dy = -2; dy <= 2; dy++) {
+            for (int dx = -14; dx <= 14; dx++) {
+                for (int dz = -14; dz <= 14; dz++) {
+                    for (int dy = -3; dy <= 3; dy++) {
                         BlockPos p = myPos.offset(dx, dy, dz);
                         if (sLevel.getBlockState(p).is(ZooBlocks.TRASH)) {
                             if (ownerUuid != null && !claimManager.isClaimedBy(p, ownerUuid)) continue;
@@ -301,6 +354,7 @@ public class ZooZookeeperEntity extends PathfinderMob {
             }
 
             if (nearestTrash != null) {
+                currentTrashTarget = nearestTrash;
                 currentDutyState = "SWEEPING";
                 this.entityData.set(SWEEPING, true);
                 // Hold broom in hand
@@ -308,21 +362,27 @@ public class ZooZookeeperEntity extends PathfinderMob {
                     this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ZooItems.BROOM));
                 }
 
-                double distSq = this.distanceToSqr(nearestTrash.getX() + 0.5, nearestTrash.getY(), nearestTrash.getZ() + 0.5);
-                if (distSq > 2.2 * 2.2) {
-                    this.getNavigation().moveTo(nearestTrash.getX() + 0.5, nearestTrash.getY(), nearestTrash.getZ() + 0.5, 1.15);
+                double distSq = this.distanceToSqr(nearestTrash.getX() + 0.5, nearestTrash.getY() + 0.5, nearestTrash.getZ() + 0.5);
+                double reach = (tempDirtPos != null) ? 4.8 : 2.4;
+                if (distSq <= reach * reach) {
+                    sweepLitterAt(sLevel, nearestTrash);
+                    return;
+                }
+
+                if (tempDirtPos == null) {
+                    this.getNavigation().moveTo(nearestTrash.getX() + 0.5, nearestTrash.getY() + 0.5, nearestTrash.getZ() + 0.5, 1.15);
                 } else {
-                    // Sweep litter!
-                    this.swing(InteractionHand.MAIN_HAND);
-                    sLevel.playSound(null, nearestTrash, SoundEvents.BRUSH_GENERIC, SoundSource.BLOCKS, 1.0f, 1.0f);
-                    sLevel.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, nearestTrash.getX() + 0.5, nearestTrash.getY() + 0.3, nearestTrash.getZ() + 0.5, 6, 0.2, 0.1, 0.2, 0.02);
-                    sLevel.destroyBlock(nearestTrash, false, this);
-                    actionCooldown = 30;
+                    this.getNavigation().stop();
                 }
                 return;
             }
 
             // Cleaned or no trash: remove broom and stay idle/strolling
+            currentTrashTarget = null;
+            trashStuckTicks = 0;
+            if (tempDirtPos != null) {
+                removeTempDirt(sLevel);
+            }
             if (this.getMainHandItem().is(ZooItems.BROOM)) {
                 this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
             }
@@ -568,6 +628,80 @@ public class ZooZookeeperEntity extends PathfinderMob {
         this.setFoodStock(this.getFoodStock() + amount);
     }
 
+    private void sweepLitterAt(ServerLevel sLevel, BlockPos trashPos) {
+        this.getLookControl().setLookAt(trashPos.getX() + 0.5, trashPos.getY() + 0.5, trashPos.getZ() + 0.5);
+        this.swing(InteractionHand.MAIN_HAND);
+        sLevel.playSound(null, trashPos, SoundEvents.BRUSH_GENERIC, SoundSource.BLOCKS, 1.0f, 1.0f);
+        sLevel.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, trashPos.getX() + 0.5, trashPos.getY() + 0.3, trashPos.getZ() + 0.5, 6, 0.2, 0.1, 0.2, 0.02);
+        sLevel.destroyBlock(trashPos, false, this);
+        this.actionCooldown = 30;
+        this.trashStuckTicks = 0;
+        this.currentTrashTarget = null;
+        if (this.tempDirtPos != null && this.tempDirtTimer > 30) {
+            this.tempDirtTimer = 30;
+        }
+    }
+
+    private boolean tryPlaceTemporaryDirt(ServerLevel sLevel) {
+        if (this.tempDirtPos != null) return false;
+
+        BlockPos groundPos = BlockPos.containing(this.getX(), this.getY() - 0.1, this.getZ());
+        BlockPos feetPos = groundPos.above();
+
+        BlockState stateAtFeet = sLevel.getBlockState(feetPos);
+        boolean feetOk = stateAtFeet.isAir() || stateAtFeet.canBeReplaced();
+        if (!feetOk) return false;
+
+        BlockPos headPos = feetPos.above();
+        BlockState stateAtHead = sLevel.getBlockState(headPos);
+        boolean headOk = stateAtHead.isAir() || stateAtHead.canBeReplaced();
+        if (!headOk) return false;
+
+        BlockPos newHeadPos = feetPos.above(2);
+        BlockState stateAbove = sLevel.getBlockState(newHeadPos);
+        boolean aboveOk = stateAbove.isAir() || stateAbove.canBeReplaced() || !stateAbove.isSolid();
+        if (!aboveOk) return false;
+
+        this.previousBlockState = stateAtFeet;
+        sLevel.setBlockAndUpdate(feetPos, net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState());
+        this.teleportTo(feetPos.getX() + 0.5, feetPos.getY() + 1.0, feetPos.getZ() + 0.5);
+        this.setDeltaMovement(0, 0.1, 0);
+        this.getNavigation().stop();
+
+        sLevel.playSound(null, feetPos, SoundEvents.GRAVEL_PLACE, SoundSource.BLOCKS, 1.0f, 0.8f);
+        sLevel.sendParticles(new net.minecraft.core.particles.BlockParticleOption(ParticleTypes.BLOCK, net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState()),
+                feetPos.getX() + 0.5, feetPos.getY() + 0.5, feetPos.getZ() + 0.5, 8, 0.2, 0.2, 0.2, 0.05);
+
+        this.tempDirtPos = feetPos.immutable();
+        this.tempDirtTimer = 80;
+        this.trashStuckTicks = 0;
+        return true;
+    }
+
+    private void removeTempDirt(ServerLevel sLevel) {
+        if (tempDirtPos != null) {
+            if (sLevel.getBlockState(tempDirtPos).is(net.minecraft.world.level.block.Blocks.DIRT)) {
+                BlockState toRestore = (previousBlockState != null && !previousBlockState.is(net.minecraft.world.level.block.Blocks.DIRT))
+                        ? previousBlockState
+                        : net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+                sLevel.setBlockAndUpdate(tempDirtPos, toRestore);
+                sLevel.playSound(null, tempDirtPos, SoundEvents.GRASS_BREAK, SoundSource.BLOCKS, 0.8f, 1.2f);
+                sLevel.sendParticles(ParticleTypes.POOF, tempDirtPos.getX() + 0.5, tempDirtPos.getY() + 0.5, tempDirtPos.getZ() + 0.5, 6, 0.2, 0.2, 0.2, 0.03);
+            }
+            tempDirtPos = null;
+            tempDirtTimer = 0;
+            previousBlockState = null;
+        }
+    }
+
+    @Override
+    public void remove(Entity.RemovalReason reason) {
+        if (tempDirtPos != null && this.level() instanceof ServerLevel sLevel) {
+            removeTempDirt(sLevel);
+        }
+        super.remove(reason);
+    }
+
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
@@ -575,6 +709,12 @@ public class ZooZookeeperEntity extends PathfinderMob {
         if (assignedAnimalUuid != null) tag.putString("AssignedAnimalUuid", assignedAnimalUuid.toString());
         tag.putInt("FoodStock", getFoodStock());
         tag.putString("DutyState", currentDutyState);
+        if (tempDirtPos != null) {
+            tag.putInt("TempDirtX", tempDirtPos.getX());
+            tag.putInt("TempDirtY", tempDirtPos.getY());
+            tag.putInt("TempDirtZ", tempDirtPos.getZ());
+            tag.putInt("TempDirtTimer", tempDirtTimer);
+        }
     }
 
     @Override
@@ -591,6 +731,10 @@ public class ZooZookeeperEntity extends PathfinderMob {
         this.setFoodStock(tag.getInt("FoodStock"));
         if (tag.contains("DutyState")) {
             this.currentDutyState = tag.getString("DutyState");
+        }
+        if (tag.contains("TempDirtTimer")) {
+            this.tempDirtTimer = tag.getInt("TempDirtTimer");
+            this.tempDirtPos = new BlockPos(tag.getInt("TempDirtX"), tag.getInt("TempDirtY"), tag.getInt("TempDirtZ"));
         }
     }
 }
