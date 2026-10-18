@@ -32,7 +32,7 @@ public class AnimalDrinkWaterGoal extends MoveToBlockGoal {
     private int cooldownTicks = 0;
 
     public AnimalDrinkWaterGoal(PathfinderMob mob, double speedModifier) {
-        super(mob, speedModifier, 16, 4);
+        super(mob, speedModifier, 24, 6);
         this.mob = mob;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
     }

@@ -80,12 +80,15 @@
   5. Nama bioma disajikan dalam bahasa Inggris Title Case dan menyebutkan seluruh bioma yang cocok untuk spesies tersebut jika bioma belum cocok.
   6. Perbaikan AI AnimalDrinkWaterGoal: hanya dipasang pada satwa yang habitatnya membutuhkan air (requiresWater), dilengkapi batas waktu navigasi (timeout 10 detik), cooldown minum 5 menit, dan deteksi instan saat berada di dalam air agar satwa tidak stuck.
   7. Heater dan Cooler Box hanya berstatus dibutuhkan saat suhu musiman/lingkungan berada di luar rentang nyaman satwa.
+  8. Jangkauan deteksi air diperluas dari 8 blok menjadi 24 blok (radius 24, vertikal -6..6) dan mencakup Feeding Trough yang terisi air, serta radius AI mencari air diperluas menjadi 24 blok agar tidak mudah "missing water".
+  9. Syarat pasangan (Companion) kini dikhususkan murni untuk hewan sosial/kawanan (singa, gajah, serigala, lumba-lumba, hewan ternak, dll). Hewan soliter (harimau, beruang, buaya, alligator snapping turtle, ular, platipus, komodo, dll) tidak lagi membutuhkan pasangan ("NA") dan tidak memunculkan indikator merah.
 
 ## Bukti Selesai
 - Seluruh 7 poin permintaan pengguna telah terimplementasi dan terkompilasi bersih dengan .\gradlew.bat build (BUILD SUCCESSFUL).
 - File jar hasil build zootycoon-1.0.0.jar otomatis tersalin ke folder mods profil Modrinth.
 - Background tooltip vanilla, ikon stat, label bahasa Indonesia, dan penyaringan item merah telah aktif.
 - AI minum air hanya terpasang pada satwa air dengan mekanisme anti-stuck.
+- Jangkauan air 24 blok aktif dan satwa soliter tidak lagi diwajibkan memiliki pasangan.
 
 ## Blocker
 - Tidak ada blocker.

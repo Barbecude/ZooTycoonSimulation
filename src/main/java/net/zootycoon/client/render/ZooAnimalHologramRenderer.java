@@ -72,7 +72,7 @@ public class ZooAnimalHologramRenderer {
                     case "water" -> water = v.toUpperCase(Locale.ROOT);
                     case "temp" -> temp = v.toUpperCase(Locale.ROOT);
                     case "ground" -> ground = "OK".equalsIgnoreCase(v);
-                    case "mate" -> mate = "OK".equalsIgnoreCase(v);
+                    case "mate" -> mate = !"NO".equalsIgnoreCase(v);
                 }
             }
             return new HabitatParsedInfo(status, eco, biomeOk, water, temp, ground, mate);

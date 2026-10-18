@@ -15,6 +15,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.zootycoon.animal.ZooClimate;
+import net.zootycoon.block.ZooFeedingTroughBlockEntity;
 
 import java.util.*;
 
@@ -40,6 +41,7 @@ public class HabitatEvaluator {
             boolean tempOk,
             boolean tooCold,
             boolean groundOk,
+            boolean companionRequired,
             boolean companionOk,
             List<String> unmetNeeds
     ) {
@@ -50,7 +52,7 @@ public class HabitatEvaluator {
                     + ";water=" + (waterRequired ? (waterOk ? "OK" : "NO") : "NA")
                     + ";temp=" + (tempOk ? "OK" : (tooCold ? "HEATER" : "COOLER"))
                     + ";ground=" + (groundOk ? "OK" : "NO")
-                    + ";mate=" + (companionOk ? "OK" : "NO");
+                    + ";mate=" + (companionRequired ? (companionOk ? "OK" : "NO") : "NA");
         }
 
         public String formatHint() {
@@ -65,42 +67,61 @@ public class HabitatEvaluator {
     }
 
     /**
+     * Determines whether an animal is social (needs a herd/partner) or solitary (lives independently).
+     * Solitary animals (like tigers, bears, crocodiles, snapping turtles, snakes) do not require a partner.
+     */
+    public static boolean isSocialAnimal(LivingEntity animal, HabitatProfile profile) {
+        if (animal == null) return false;
+        String typeStr = BuiltInRegistries.ENTITY_TYPE.getKey(animal.getType()).getPath().toLowerCase(Locale.ROOT);
+        // Solitary species that live independently
+        if (typeStr.contains("turtle") || typeStr.contains("alligator") || typeStr.contains("crocodile")
+                || typeStr.contains("tiger") || typeStr.contains("bear") || typeStr.contains("leopard")
+                || typeStr.contains("snake") || typeStr.contains("rattlesnake") || typeStr.contains("platypus")
+                || typeStr.contains("komodo") || typeStr.contains("tortoise") || typeStr.contains("rhino")
+                || typeStr.contains("moose")) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * Evaluates the current habitat suitability for an animal.
      */
     public static HabitatResult evaluate(ServerLevel level, LivingEntity animal) {
         if (level == null || animal == null || !animal.isAlive()) {
-            return new HabitatResult(HabitatStatus.NO_DATA, "-", false, false, false, false, false, false, false, Collections.emptyList());
+            return new HabitatResult(HabitatStatus.NO_DATA, "-", false, false, false, false, false, false, false, false, Collections.emptyList());
         }
 
         HabitatProfile profile = HabitatProfileLoader.getProfile(animal);
         if (profile == null) {
-            return new HabitatResult(HabitatStatus.NO_DATA, "-", false, false, false, false, false, false, false, Collections.emptyList());
+            return new HabitatResult(HabitatStatus.NO_DATA, "-", false, false, false, false, false, false, false, false, Collections.emptyList());
         }
 
-        // 1. Check surrounding blocks (radius 8, dy -4..4)
+        // 1. Check surrounding blocks with extended range (radius 24, dy -6..6)
         Map<String, Integer> blockCounts = scanSurroundingBlocks(level, animal.blockPosition());
 
-        // 2. Check Natural Ground (Point 6: coarse dirt, podzol, sand, etc.)
+        // 2. Check Natural Ground (coarse dirt, podzol, sand, gravel, etc.)
         int groundCount = blockCounts.getOrDefault("natural_ground", 0);
         boolean groundOk = groundCount >= 8;
 
-        // 3. Check Water (Point 7: Pengecualian air dicek terpisah, hanya untuk hewan yang butuh air)
+        // 3. Check Water: generous detection radius so animals in big enclosures don't lose water
         boolean waterRequired = profile.requiresWater();
         int waterCount = blockCounts.getOrDefault("water", 0);
-        boolean waterOk = !waterRequired || waterCount >= 4;
+        boolean waterOk = !waterRequired || waterCount >= 2;
 
-        // 4. Check Biome (Point 7: Biome terpenuhi = habitat terpenuhi)
+        // 4. Check Biome (Biome match)
         Holder<Biome> currentBiome = level.getBiome(animal.blockPosition());
         boolean biomeOk = profile.matchesBiome(currentBiome);
 
-        // 5. Check Effective Temperature & Thermal Blocks (Point 8: Heater & Cooler Box)
+        // 5. Check Effective Temperature & Thermal Blocks (Heater & Cooler Box only when season is unsuitable)
         float effectiveTemp = ZooClimate.getEffectiveTemperature(level, animal.blockPosition());
         boolean tooCold = effectiveTemp < profile.minTemperature();
         boolean tooHot = effectiveTemp > profile.maxTemperature();
         boolean tempOk = !tooCold && !tooHot;
 
-        // 6. Check Companion (living entity of same species in radius 16)
-        boolean hasCompanion = !level.getEntitiesOfClass(animal.getClass(), animal.getBoundingBox().inflate(16.0), e -> e != animal && e.isAlive()).isEmpty();
+        // 6. Check Companion (ONLY required for social animals, radius 24)
+        boolean companionRequired = isSocialAnimal(animal, profile);
+        boolean hasCompanion = !companionRequired || !level.getEntitiesOfClass(animal.getClass(), animal.getBoundingBox().inflate(24.0), e -> e != animal && e.isAlive()).isEmpty();
 
         List<String> unmet = new ArrayList<>();
         if (!biomeOk) {
@@ -117,24 +138,21 @@ public class HabitatEvaluator {
         if (!groundOk) {
             unmet.add("Tanah: Butuh Tanah Alami");
         }
-        if (!hasCompanion) {
+        if (companionRequired && !hasCompanion) {
             unmet.add("Pasangan: Butuh Teman");
         }
 
-        // Rule 7: Biome terpenuhi = habitat terpenuhi, dan sebaliknya.
-        // Pengecualian: air dicek terpisah, hanya untuk hewan yang butuh air.
-        // Jika air tidak ada di sekitar, habitat tetap belum terpenuhi walau biome cocok.
-        boolean isSuitable = biomeOk && tempOk && groundOk && waterOk;
+        boolean isSuitable = biomeOk && tempOk && groundOk && waterOk && (!companionRequired || hasCompanion);
         HabitatStatus status = isSuitable ? HabitatStatus.SUITABLE : HabitatStatus.UNSUITABLE;
 
-        return new HabitatResult(status, profile.displayName(), biomeOk, waterRequired, waterOk, tempOk, tooCold, groundOk, hasCompanion, unmet);
+        return new HabitatResult(status, profile.displayName(), biomeOk, waterRequired, waterOk, tempOk, tooCold, groundOk, companionRequired, hasCompanion, unmet);
     }
 
     private static Map<String, Integer> scanSurroundingBlocks(ServerLevel level, BlockPos center) {
         Map<String, Integer> counts = new HashMap<>();
-        int radius = 8;
-        int minDy = -4;
-        int maxDy = 4;
+        int radius = 24;
+        int minDy = -6;
+        int maxDy = 6;
 
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
         for (int dx = -radius; dx <= radius; dx++) {
@@ -152,9 +170,14 @@ public class HabitatEvaluator {
                         counts.merge("natural_ground", 1, Integer::sum);
                     }
 
-                    // Water
+                    // Water block
                     if (state.getFluidState().is(FluidTags.WATER) || state.is(Blocks.WATER)) {
                         counts.merge("water", 1, Integer::sum);
+                    }
+
+                    // Water in Feeding Trough
+                    if (level.getBlockEntity(pos) instanceof ZooFeedingTroughBlockEntity trough && trough.hasWater()) {
+                        counts.merge("water", 4, Integer::sum);
                     }
 
                     // Trees: Leaves & Logs
@@ -193,42 +216,4 @@ public class HabitatEvaluator {
         }
         return counts;
     }
-
-    private static int getRequirementCount(ServerLevel level, Map<String, Integer> scannedCounts, HabitatProfile.BlockRequirement req) {
-        if (req.type() != null) {
-            String type = req.type().toLowerCase(Locale.ROOT);
-            Integer count = scannedCounts.get(type);
-            if (count != null) {
-                return count;
-            }
-        }
-
-        // Custom tag or blocks fallback
-        if (req.tag() != null) {
-            String clean = req.tag().startsWith("#") ? req.tag().substring(1) : req.tag();
-            ResourceLocation tagLoc = ResourceLocation.tryParse(clean);
-            if (tagLoc != null) {
-                TagKey<Block> tagKey = TagKey.create(Registries.BLOCK, tagLoc);
-                return countBlocksMatching(level, tagKey);
-            }
-        }
-
-        if (req.blocks() != null && !req.blocks().isEmpty()) {
-            return countBlocksMatching(level, req.blocks());
-        }
-
-        return 0;
-    }
-
-    private static int countBlocksMatching(ServerLevel level, TagKey<Block> tagKey) {
-        int count = 0;
-        // Basic fallback count
-        return count;
-    }
-
-    private static int countBlocksMatching(ServerLevel level, List<ResourceLocation> blockIds) {
-        int count = 0;
-        return count;
-    }
 }
-
