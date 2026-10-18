@@ -197,15 +197,13 @@ public class ZooAnimalHologramRenderer {
                 bs.endBatch(RenderType.textBackground());
             }
 
-            // 3. Draw clean 9x9 textured status icons
-            HologramBarRenderer.drawTexturedIcon(buffer, matrix, HologramBarRenderer.HUNGER_ICON, iconX, hungerRowY + 1.0f, 9.0f, 9.0f, LightTexture.FULL_BRIGHT);
+            // 3. Draw vanilla heart and hunger icons (using Minecraft vanilla GUI sprites)
+            HologramBarRenderer.drawVanillaHeartIcon(mc, font, buffer, matrix, iconX, healthRowY + 1.0f, LightTexture.FULL_BRIGHT);
+            HologramBarRenderer.drawVanillaHungerIcon(mc, buffer, matrix, iconX, hungerRowY + 1.0f, LightTexture.FULL_BRIGHT);
+
+            // 4. Draw custom 9x9 status icons (thirst and cleanliness)
             HologramBarRenderer.drawTexturedIcon(buffer, matrix, HologramBarRenderer.THIRST_ICON, iconX, thirstRowY + 1.0f, 9.0f, 9.0f, LightTexture.FULL_BRIGHT);
             HologramBarRenderer.drawTexturedIcon(buffer, matrix, HologramBarRenderer.CLEANLINESS_ICON, iconX, cleanRowY + 1.0f, 9.0f, 9.0f, LightTexture.FULL_BRIGHT);
-
-            // 4. Draw vanilla heart icon '❤' for health
-            float heartWidth = font.width("❤");
-            float heartOffset = Math.max(0.0f, (9.0f - heartWidth) / 2.0f);
-            HologramBarRenderer.drawHeartIcon(font, buffer, matrix, iconX + heartOffset, healthRowY + 1.0f, LightTexture.FULL_BRIGHT);
 
             // 5. Draw text components (clean font without shadow)
             font.drawInBatch(titleComponent, titleX, titleY, 0xFFFFFFFF, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);

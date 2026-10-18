@@ -1,9 +1,11 @@
 package net.zootycoon.client.inspect;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.ResourceLocation;
 import org.joml.Matrix4f;
 
@@ -13,11 +15,13 @@ import org.joml.Matrix4f;
  */
 public class HologramBarRenderer {
 
-    // Status icon textures (clean 9x9 pixel-art icons)
+    // Vanilla Minecraft GUI sprites for heart and hunger
+    public static final ResourceLocation VANILLA_HEART_SPRITE = ResourceLocation.withDefaultNamespace("hud/heart/full");
+    public static final ResourceLocation VANILLA_HUNGER_SPRITE = ResourceLocation.withDefaultNamespace("hud/food_full");
+
+    // Custom Zoo Tycoon 9x9 pixel-art icons for mechanics not present in vanilla Minecraft
     public static final ResourceLocation THIRST_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/inspect/thirst.png");
     public static final ResourceLocation CLEANLINESS_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/inspect/cleanliness.png");
-    public static final ResourceLocation HUNGER_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/inspect/hunger.png");
-    public static final ResourceLocation HEART_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/inspect/heart.png");
 
     // Background plate color: semi-transparent dark slate (0xAA0B0E14)
     public static final int PLATE_BACKGROUND = 0xAA0B0E14;
@@ -130,10 +134,55 @@ public class HologramBarRenderer {
     }
 
     /**
+     * Draws a vanilla GUI atlas sprite (e.g. hud/heart/full, hud/food_full) in world-space with depth testing.
+     */
+    public static void drawAtlasSprite(MultiBufferSource buffer, Matrix4f matrix, TextureAtlasSprite sprite, float x, float y, float width, float height, int light) {
+        if (sprite == null) return;
+        VertexConsumer consumer = buffer.getBuffer(RenderType.text(sprite.atlasLocation()));
+        float u0 = sprite.getU0();
+        float u1 = sprite.getU1();
+        float v0 = sprite.getV0();
+        float v1 = sprite.getV1();
+        float z = 0.0f;
+        int a = 255, r = 255, g = 255, b = 255;
+
+        consumer.addVertex(matrix, x, y, z).setColor(r, g, b, a).setUv(u0, v0).setLight(light);
+        consumer.addVertex(matrix, x, y + height, z).setColor(r, g, b, a).setUv(u0, v1).setLight(light);
+        consumer.addVertex(matrix, x + width, y + height, z).setColor(r, g, b, a).setUv(u1, v1).setLight(light);
+        consumer.addVertex(matrix, x + width, y, z).setColor(r, g, b, a).setUv(u1, v0).setLight(light);
+    }
+
+    /**
+     * Draws the vanilla heart icon using the vanilla GUI sprite hud/heart/full,
+     * falling back to the font glyph '❤' if the sprite manager is unavailable.
+     */
+    public static void drawVanillaHeartIcon(Minecraft mc, Font font, MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light) {
+        if (mc != null && mc.getGuiSprites() != null) {
+            TextureAtlasSprite sprite = mc.getGuiSprites().getSprite(VANILLA_HEART_SPRITE);
+            if (sprite != null) {
+                drawAtlasSprite(buffer, matrix, sprite, x, y, 9.0f, 9.0f, light);
+                return;
+            }
+        }
+        drawHeartIcon(font, buffer, matrix, x, y, light);
+    }
+
+    /**
+     * Draws the vanilla hunger icon using the vanilla GUI sprite hud/food_full.
+     */
+    public static void drawVanillaHungerIcon(Minecraft mc, MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light) {
+        if (mc != null && mc.getGuiSprites() != null) {
+            TextureAtlasSprite sprite = mc.getGuiSprites().getSprite(VANILLA_HUNGER_SPRITE);
+            if (sprite != null) {
+                drawAtlasSprite(buffer, matrix, sprite, x, y, 9.0f, 9.0f, light);
+            }
+        }
+    }
+
+    /**
      * Draws the authentic vanilla heart icon '❤' using the Minecraft font glyph renderer.
      */
     public static void drawHeartIcon(Font font, MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light) {
         font.drawInBatch("❤", x, y, 0xFFFF3333, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, light);
     }
 }
-

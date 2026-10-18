@@ -32,13 +32,14 @@
 - Fase 3: `ZooAnimalHologramRenderer` diubah menjadi world-space in-world billboarded hologram melayang di atas kepala satwa menggunakan rotasi kamera (`poseStack.mulPose(camera.rotation())`) dan depth test aktif (`Font.DisplayMode.NORMAL`), tanpa emoji dan tanpa formatting § hardcoded.
 - Fase 4: Sinkronisasi data inspeksi mengadopsi pola Farm & Charm (`SyncSaturationPacket`): client mengirim `InspectStartPayload(entityId)` saat crosshair membidik target baru dan `InspectStopPayload()` saat crosshair lepas atau berganti target. Server-side manager `ZooInspectionService` memvalidasi kelayakan kandidat, status hidup entitas, batas jarak <= 20 blok, dan status pemain memegang kaca pembesar, lalu mengirimkan `InspectionSnapshotPayload` tiap 10 tick. Nilai kebutuhan satwa yang belum terdaftar dikirim eksplisit sebagai `-1` dan ditampilkan `-` di hologram tanpa angka rekayasa (80/80/100).
 - Fase 5: Membangun helper in-world `HologramBarRenderer` untuk background plate rounded chamfered semi-transparan `0xAA0B0E14` ber-depth test (terocclude dinding/blok), bar proporsional dengan 1px border gelap `0xFF05070A`, track latar, dan highlight 1px.
-- Fase 5: Merancang ikon pixel-art 9x9 orisinal (`thirst.png`, `cleanliness.png`, `hunger.png`, `heart.png`) di bawah lisensi MIT Zoo Tycoon dan mendokumentasikannya di `docs/hologram/ASSETS.md`, menuntaskan status TODO-USER izin aset.
+- Fase 5: Ralat ikon sesuai preferensi pengguna: ikon health dan hunger menggunakan sprite GUI resmi Minecraft vanilla (`minecraft:hud/heart/full` dan `minecraft:hud/food_full`) via `GuiSpriteManager`. Ikon thirst dan cleanliness menggunakan pixel art orisinal 9x9 (`thirst.png`, `cleanliness.png`) di bawah lisensi MIT Zoo Tycoon dan dicatat di `docs/hologram/ASSETS.md`.
 - Fase 5: Indikator status warna teks nilai: putih (> 50%), kuning peringatan (<= 50%), merah kritis (<= 15%). Jika hewan belum terdaftar, bar dikosongkan (0%), teks bertuliskan "-", dan baris kedua menampilkan teks "Belum Terdaftar" abu-abu via translation key `zootycoon.inspect.unregistered`.
 
 ## Bukti Selesai (Fase 5)
 - Hologram melayang rapi di atas kepala satwa, teks tajam tanpa bold berlebihan dan background plate `0xAA0B0E14` terocclude blok dengan benar jika terhalang dinding.
-- Visual health bar dengan proporsi aktual `hp / maxHp`, ikon hati vanilla `❤`, teks status nilai "X/Y". Pukul hewan: bar health langsung berkurang secara visual dan akurat.
-- Hunger bar berwarna cokelat-oranye dengan proporsi `hunger / 100`, thirst bar biru laut `thirst / 100`, cleanliness bar biru muda `cleanliness / 100`.
+- Visual health bar dengan proporsi aktual `hp / maxHp`, ikon hati resmi Minecraft vanilla (`hud/heart/full`), teks status nilai "X/Y". Pukul hewan: bar health langsung berkurang secara visual dan akurat.
+- Hunger bar berwarna cokelat-oranye dengan proporsi `hunger / 100`, ikon paha ayam resmi Minecraft vanilla (`hud/food_full`).
+- Thirst bar biru laut `thirst / 100` dengan ikon tetes air 9x9, cleanliness bar biru muda `cleanliness / 100` dengan ikon gelembung 9x9.
 - Indikator status warna teks dinamis: putih jika normal (> 50%), kuning jika peringatan (<= 50%), merah jika kritis (<= 15%).
 - Satwa liar belum terdaftar: bar hunger/thirst/cleanliness dikosongkan (0%), teks kebutuhan menampilkan "-", baris kedua menampilkan teks "Belum Terdaftar" abu-abu via lang `zootycoon.inspect.unregistered`. Dilarang dan terbukti tidak menampilkan angka palsu 80/100.
 - String UI inspeksi terdaftar di `en_us.json` dan `id_id.json` di bawah key `zootycoon.inspect.*`.
@@ -54,8 +55,6 @@
 - src/main/resources/assets/zootycoon/lang/id_id.json
 - src/main/resources/assets/zootycoon/textures/gui/inspect/thirst.png (BARU)
 - src/main/resources/assets/zootycoon/textures/gui/inspect/cleanliness.png (BARU)
-- src/main/resources/assets/zootycoon/textures/gui/inspect/hunger.png (BARU)
-- src/main/resources/assets/zootycoon/textures/gui/inspect/heart.png (BARU)
 - docs/hologram/ASSETS.md (BARU)
 - docs/hologram/PROGRESS.md
 
