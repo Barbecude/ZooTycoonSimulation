@@ -5,10 +5,12 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -17,7 +19,9 @@ import net.zootycoon.client.ZooTycoonClient;
 import net.zootycoon.network.ZooNetworkPayloads;
 import net.zootycoon.util.ZooTranslations;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class FeedingTroughDialogScreen extends Screen {
 
@@ -133,6 +137,36 @@ public class FeedingTroughDialogScreen extends Screen {
         return formatSpecies(foodKey);
     }
 
+    private static final Map<String, LivingEntity> dummyAnimalCache = new HashMap<>();
+
+    private LivingEntity resolveAnimalEntity(ZooNetworkPayloads.AnimalSyncData animal) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null) {
+            var ent = mc.level.getEntity(animal.entityId());
+            if (ent instanceof LivingEntity living) return living;
+        }
+        return resolveEntityBySpecies(animal.entityTypeId());
+    }
+
+    private LivingEntity resolveEntityBySpecies(String species) {
+        if (species == null || species.isEmpty()) return null;
+        if (dummyAnimalCache.containsKey(species)) {
+            return dummyAnimalCache.get(species);
+        }
+        Minecraft mc = Minecraft.getInstance();
+        try {
+            var type = BuiltInRegistries.ENTITY_TYPE.get(ResourceLocation.parse(species));
+            if (type != null && mc.level != null) {
+                var dummy = type.create(mc.level);
+                if (dummy instanceof LivingEntity living) {
+                    dummyAnimalCache.put(species, living);
+                    return living;
+                }
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
     private static Item getPrimaryFood(String entityTypeId) {
         var diet = AnimalDietRegistry.getDiet(entityTypeId);
         if (diet != null && !diet.acceptedFoods.isEmpty()) {
@@ -148,6 +182,8 @@ public class FeedingTroughDialogScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+        Component hoveredTooltip = null;
+
         // Darkened overlay backdrop without blur
         graphics.fill(0, 0, this.width, this.height, 0x80000000);
 
@@ -175,24 +211,62 @@ public class FeedingTroughDialogScreen extends Screen {
         graphics.fill(startX + panelWidth - 13, cardY, startX + panelWidth - 12, cardY + cardH, 0xFF2A3140);
 
         if (isAssigned()) {
+            LivingEntity assignedEnt = resolveEntityBySpecies(assignedAnimalSpecies);
+            if (assignedEnt != null) {
+                float bbH = Math.max(0.4f, assignedEnt.getBbHeight());
+                float bbW = Math.max(0.4f, assignedEnt.getBbWidth());
+                float maxDim = Math.max(bbH, bbW * 0.8f);
+                int scale = (int) Math.clamp(16.0f / maxDim, 8, 18);
+                InventoryScreen.renderEntityInInventoryFollowsMouse(
+                        graphics,
+                        startX + 16, cardY + 4, startX + 42, cardY + 40,
+                        scale, 0.0f, (float) mouseX, (float) mouseY, assignedEnt
+                );
+            }
+
             Item assignedFood = null;
             if (assignedFoodItemId != null && !assignedFoodItemId.isEmpty()) {
                 try {
                     assignedFood = BuiltInRegistries.ITEM.get(ResourceLocation.parse(assignedFoodItemId));
                 } catch (Exception ignored) {}
             }
-            if (assignedFood != null && assignedFood != Items.AIR) {
+            if (assignedEnt == null && assignedFood != null && assignedFood != Items.AIR) {
                 graphics.renderItem(new ItemStack(assignedFood), startX + 18, cardY + 14);
             }
 
-            int textLeft = (assignedFood != null && assignedFood != Items.AIR) ? startX + 38 : startX + 18;
+            int textLeft = (assignedEnt != null || (assignedFood != null && assignedFood != Items.AIR)) ? startX + 46 : startX + 18;
             String anName = assignedAnimalName != null && !assignedAnimalName.isEmpty() ? assignedAnimalName : formatSpecies(assignedAnimalSpecies);
             graphics.drawString(this.font, Component.literal("Satwa: " + anName).withStyle(ChatFormatting.AQUA),
                     textLeft, cardY + 6, 0xFF55FFFF, false);
 
-            String foodName = getFoodDisplayName(assignedFoodItemId);
-            graphics.drawString(this.font, Component.literal("Pakan: " + foodName).withStyle(ChatFormatting.YELLOW),
-                    textLeft, cardY + 18, 0xFFFFFF55, false);
+            int pakanY = cardY + 18;
+            graphics.drawString(this.font, Component.literal("Pakan:").withStyle(ChatFormatting.YELLOW),
+                    textLeft, pakanY, 0xFFFFFF55, false);
+
+            var diet = AnimalDietRegistry.getDiet(assignedAnimalSpecies);
+            List<Item> acceptedFoods = (diet != null && !diet.acceptedFoods.isEmpty())
+                    ? diet.acceptedFoods
+                    : (assignedFood != null && assignedFood != Items.AIR ? List.of(assignedFood) : List.of(Items.WHEAT));
+
+            int iconX = textLeft + this.font.width("Pakan:") + 4;
+            float iconScale = 0.65f;
+            int iconDisplaySize = 11;
+            for (Item foodItem : acceptedFoods) {
+                if (iconX + iconDisplaySize > startX + panelWidth - 115) break;
+
+                graphics.pose().pushPose();
+                graphics.pose().translate(iconX, pakanY - 1, 0);
+                graphics.pose().scale(iconScale, iconScale, 1.0f);
+                graphics.renderItem(new ItemStack(foodItem), 0, 0);
+                graphics.pose().popPose();
+
+                if (mouseX >= iconX && mouseX <= iconX + iconDisplaySize
+                        && mouseY >= pakanY - 1 && mouseY <= pakanY - 1 + iconDisplaySize) {
+                    hoveredTooltip = foodItem.getDescription();
+                }
+
+                iconX += iconDisplaySize + 2;
+            }
 
             graphics.drawString(this.font, Component.literal("Isi: " + foodCount + "/64").withStyle(ChatFormatting.GREEN),
                     textLeft, cardY + 30, 0xFF55FF55, false);
@@ -244,19 +318,55 @@ public class FeedingTroughDialogScreen extends Screen {
                         graphics.fill(listX + 2, curY, listX + listW - 8, curY + itemH, 0xFF1E2638);
                     }
 
-                    Item food = getPrimaryFood(animal.entityTypeId());
-                    graphics.renderItem(new ItemStack(food), listX + 6, curY + 6);
+                    // 3D Model of animal
+                    LivingEntity ent = resolveAnimalEntity(animal);
+                    if (ent != null) {
+                        float bbH = Math.max(0.4f, ent.getBbHeight());
+                        float bbW = Math.max(0.4f, ent.getBbWidth());
+                        float maxDim = Math.max(bbH, bbW * 0.8f);
+                        int scale = (int) Math.clamp(14.0f / maxDim, 6, 16);
+                        InventoryScreen.renderEntityInInventoryFollowsMouse(
+                                graphics,
+                                listX + 4, curY + 2, listX + 26, curY + 24,
+                                scale, 0.0f, (float) mouseX, (float) mouseY, ent
+                        );
+                    }
 
                     String anName = animal.customName().isEmpty() ? formatSpecies(animal.entityTypeId()) : animal.customName();
-                    String foodText = "Pakan: " + food.getDescription().getString();
-
                     graphics.drawString(this.font, Component.literal(anName).withStyle(isCurrentlyThis ? ChatFormatting.GREEN : ChatFormatting.WHITE),
-                            listX + 28, curY + 5, isCurrentlyThis ? 0xFF55FF55 : 0xFFFFFFFF, false);
-                    graphics.drawString(this.font, Component.literal(foodText).withStyle(ChatFormatting.YELLOW),
-                            listX + 28, curY + 16, 0xFFFFFF55, false);
+                            listX + 30, curY + 4, isCurrentlyThis ? 0xFF55FF55 : 0xFFFFFFFF, false);
+
+                    // Small food icons
+                    var diet = AnimalDietRegistry.getDiet(animal.entityTypeId());
+                    List<Item> acceptedFoods = (diet != null && !diet.acceptedFoods.isEmpty())
+                            ? diet.acceptedFoods
+                            : List.of(getPrimaryFood(animal.entityTypeId()));
+
+                    int btnX = listX + listW - 56;
+                    int iconX = listX + 30;
+                    int iconY = curY + 15;
+                    float iconScale = 0.65f;
+                    int iconDisplaySize = 11;
+
+                    for (Item foodItem : acceptedFoods) {
+                        if (iconX + iconDisplaySize > btnX - 4) break;
+
+                        graphics.pose().pushPose();
+                        graphics.pose().translate(iconX, iconY, 0);
+                        graphics.pose().scale(iconScale, iconScale, 1.0f);
+                        graphics.renderItem(new ItemStack(foodItem), 0, 0);
+                        graphics.pose().popPose();
+
+                        if (mouseX >= iconX && mouseX <= iconX + iconDisplaySize
+                                && mouseY >= iconY && mouseY <= iconY + iconDisplaySize
+                                && mouseY >= listY && mouseY <= listY + listH) {
+                            hoveredTooltip = foodItem.getDescription();
+                        }
+
+                        iconX += iconDisplaySize + 2;
+                    }
 
                     // Select button area
-                    int btnX = listX + listW - 56;
                     int btnY = curY + 5;
                     int btnW = 46;
                     int btnRowH = 18;
@@ -295,6 +405,10 @@ public class FeedingTroughDialogScreen extends Screen {
         }
 
         super.render(graphics, mouseX, mouseY, delta);
+
+        if (hoveredTooltip != null) {
+            graphics.renderTooltip(this.font, hoveredTooltip, mouseX, mouseY);
+        }
     }
 
     @Override
