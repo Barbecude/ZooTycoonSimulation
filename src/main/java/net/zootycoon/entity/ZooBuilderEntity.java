@@ -338,17 +338,22 @@ public class ZooBuilderEntity extends PathfinderMob {
             // Open Builder Dialogue Screen
             List<ZooNetworkPayloads.ItemEntry> missingList = new ArrayList<>();
             for (var entry : matchedSite.getMissingMaterials().entrySet()) {
-                ResourceLocation key = BuiltInRegistries.ITEM.getKey(entry.getKey());
-                missingList.add(new ZooNetworkPayloads.ItemEntry(key.toString(), entry.getValue()));
+                if (entry.getKey() != null) {
+                    ResourceLocation key = BuiltInRegistries.ITEM.getKey(entry.getKey());
+                    if (key != null) {
+                        missingList.add(new ZooNetworkPayloads.ItemEntry(key.toString(), entry.getValue()));
+                    }
+                }
             }
 
             String builderName = this.getCustomName() != null ? this.getCustomName().getString() : ZooTranslations.get("zootycoon.dialog.builder.default_name");
+            String schematicName = matchedSite.getSchematic() != null ? matchedSite.getSchematic().getName() : ZooTranslations.get("zootycoon.dialog.builder.default_project");
             int phase = matchedSite.isClearingPhase() ? 0 : 1;
             int obsCount = matchedSite.getObstructingBlocks().size();
 
             ServerPlayNetworking.send(serverPlayer, new ZooNetworkPayloads.OpenBuilderScreenPayload(
                     matchedSite.getSiteId(),
-                    matchedSite.getSchematic().getName(),
+                    schematicName,
                     matchedSite.getProgressPercentage(),
                     matchedSite.getPlacedBlocksCount(),
                     matchedSite.getTotalBlocks(),
