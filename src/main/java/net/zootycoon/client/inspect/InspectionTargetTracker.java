@@ -21,6 +21,7 @@ public class InspectionTargetTracker {
 
     private static LivingEntity currentTarget = null;
     private static BiConsumer<LivingEntity, LivingEntity> targetChangeListener = null;
+    private static int targetRetentionTicks = 0;
 
     public static LivingEntity getTarget() {
         return currentTarget;
@@ -53,6 +54,7 @@ public class InspectionTargetTracker {
     }
 
     public static void reset() {
+        targetRetentionTicks = 0;
         setTarget(null);
     }
 
@@ -92,45 +94,78 @@ public class InspectionTargetTracker {
     private static LivingEntity findTarget(Minecraft mc, Player player, Level level) {
         Vec3 eyePos = player.getEyePosition(1.0F);
         Vec3 lookVec = player.getViewVector(1.0F);
+        Vec3 reachVec = eyePos.add(lookVec.scale(16.0));
+
+        // 1. Calculate maximum reach distance before solid block collision
+        HitResult blockHit = level.clip(new ClipContext(eyePos, reachVec, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        double maxDistSqr = 16.0 * 16.0;
+        if (blockHit.getType() != HitResult.Type.MISS) {
+            maxDistSqr = eyePos.distanceToSqr(blockHit.getLocation());
+        }
 
         // A. Direct check on vanilla crosshairPickEntity
         if (mc.crosshairPickEntity instanceof LivingEntity living && living.isAlive() && ZooAnimalHungerManager.isZooAnimalCandidate(living)) {
             double distSqr = player.distanceToSqr(living);
-            if (distSqr <= 16.0 * 16.0) {
-                // Ensure line of sight is not occluded by a solid collider block
-                HitResult blockHit = level.clip(new ClipContext(eyePos, eyePos.add(lookVec.scale(Math.sqrt(distSqr))), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-                if (blockHit.getType() == HitResult.Type.MISS || eyePos.distanceToSqr(blockHit.getLocation()) >= distSqr) {
-                    return living;
+            if (distSqr <= maxDistSqr) {
+                targetRetentionTicks = 15;
+                return living;
+            }
+        }
+
+        // B. Extended raycast up to 16 blocks for any valid zoo animal
+        AABB searchBox = player.getBoundingBox().expandTowards(lookVec.scale(16.0)).inflate(1.0);
+        EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(
+                player,
+                eyePos,
+                reachVec,
+                searchBox,
+                e -> e instanceof LivingEntity l && l.isAlive() && !e.isSpectator(),
+                maxDistSqr
+        );
+
+        if (entityHit != null && entityHit.getEntity() instanceof LivingEntity living) {
+            if (ZooAnimalHungerManager.isZooAnimalCandidate(living)) {
+                targetRetentionTicks = 15;
+                return living;
+            }
+        }
+
+        // C. Hologram Card Volume Raycast:
+        // When inspecting an animal, allow looking up at the hologram card floating above its head
+        if (currentTarget != null && currentTarget.isAlive()) {
+            double targetDistSqr = player.distanceToSqr(currentTarget);
+            if (targetDistSqr <= 16.0 * 16.0) {
+                // Expanded bounding box covering both the animal and the hologram floating above it
+                double halfWidth = Math.max(0.9, currentTarget.getBbWidth() * 0.9);
+                AABB hologramBox = new AABB(
+                        currentTarget.getX() - halfWidth,
+                        currentTarget.getY(),
+                        currentTarget.getZ() - halfWidth,
+                        currentTarget.getX() + halfWidth,
+                        currentTarget.getY() + currentTarget.getBbHeight() + 2.8,
+                        currentTarget.getZ() + halfWidth
+                );
+
+                java.util.Optional<Vec3> clip = hologramBox.clip(eyePos, reachVec);
+                if (clip.isPresent()) {
+                    double clipDistSqr = eyePos.distanceToSqr(clip.get());
+                    if (clipDistSqr <= maxDistSqr) {
+                        targetRetentionTicks = 15;
+                        return currentTarget;
+                    }
                 }
             }
         }
 
-        // B. Extended raycast up to 16 blocks when crosshairPickEntity is null
-        if (mc.crosshairPickEntity == null) {
-            Vec3 reachVec = eyePos.add(lookVec.scale(16.0));
-            HitResult blockHit = level.clip(new ClipContext(eyePos, reachVec, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-            double maxDistSqr = 16.0 * 16.0;
-            if (blockHit.getType() != HitResult.Type.MISS) {
-                maxDistSqr = eyePos.distanceToSqr(blockHit.getLocation());
-            }
-
-            AABB searchBox = player.getBoundingBox().expandTowards(lookVec.scale(16.0)).inflate(1.0);
-            EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(
-                    player,
-                    eyePos,
-                    reachVec,
-                    searchBox,
-                    e -> e instanceof LivingEntity l && l.isAlive() && !e.isSpectator(),
-                    maxDistSqr
-            );
-
-            if (entityHit != null && entityHit.getEntity() instanceof LivingEntity living) {
-                if (ZooAnimalHungerManager.isZooAnimalCandidate(living)) {
-                    return living;
-                }
+        // D. Brief grace buffer (15 ticks = 0.75s) to avoid flickering when looking across the card
+        if (currentTarget != null && currentTarget.isAlive()) {
+            if (targetRetentionTicks > 0) {
+                targetRetentionTicks--;
+                return currentTarget;
             }
         }
 
+        targetRetentionTicks = 0;
         return null;
     }
 }

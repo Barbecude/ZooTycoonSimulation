@@ -63,9 +63,9 @@ public class ZooAnimalHologramRenderer {
         Font font = mc.font;
 
         double entX = entity.getX() - camPos.x;
-        double yOffset = entity.getBbHeight() + 0.5;
+        double yOffset = entity.getBbHeight() + 0.15;
         if (entity.hasCustomName()) {
-            yOffset += 0.3;
+            yOffset += 0.25;
         }
         double entY = entity.getY() + yOffset - camPos.y;
         double entZ = entity.getZ() - camPos.z;
@@ -73,7 +73,8 @@ public class ZooAnimalHologramRenderer {
         poseStack.pushPose();
         poseStack.translate(entX, entY, entZ);
         poseStack.mulPose(camera.rotation());
-        poseStack.scale(-0.022f, -0.022f, 0.022f);
+        float scale = 0.0135f;
+        poseStack.scale(-scale, -scale, scale);
 
         // Retrieve actual entity health data
         float currentHp = entity.getHealth();
@@ -156,7 +157,7 @@ public class ZooAnimalHologramRenderer {
         String extraFoodsText = extraFoods > 0 ? "+" + extraFoods : "";
         int extraFoodsWidth = extraFoods > 0 ? font.width(extraFoodsText) : 0;
 
-        float itemSlotWidth = 14.0f;
+        float itemSlotWidth = 16.0f;
         float itemsRowWidth = (renderedFoodCount * itemSlotWidth) + (extraFoods > 0 ? extraFoodsWidth + 3.0f : 0.0f);
         float foodSectionWidth = Math.max((float) foodHeaderWidth, itemsRowWidth);
 
@@ -241,7 +242,7 @@ public class ZooAnimalHologramRenderer {
         float climateHeight = 10.0f;
         float foodGap = 4.0f;
         float foodHeaderHeight = 10.0f;
-        float foodItemsHeight = renderedFoodCount > 0 ? 14.0f : 0.0f;
+        float foodItemsHeight = renderedFoodCount > 0 ? 16.0f : 0.0f;
         float foodSectionHeight = foodHeaderHeight + foodItemsHeight;
         float contentHeight = headerHeight + barsHeight + habitatGap + habitatSectionHeight + climateGap + climateHeight + foodGap + foodSectionHeight;
         float totalBoxHeight = contentHeight + 8.0f; // 4px padding top, 4px padding bottom
@@ -308,7 +309,7 @@ public class ZooAnimalHologramRenderer {
             float foodHeaderY = curY;
             curY += foodHeaderHeight;
 
-            float foodItemsY = curY + 6.0f; // center Y of 3D items
+            float foodItemsY = curY + 8.0f; // center Y of 3D items
             float itemsStartX = -(itemsRowWidth / 2.0f) + (itemSlotWidth / 2.0f);
 
             VertexConsumer barConsumer = buffer.getBuffer(RenderType.textBackground());
@@ -329,19 +330,19 @@ public class ZooAnimalHologramRenderer {
             HologramBarRenderer.drawTexturedIcon(buffer, matrix, HologramBarRenderer.THIRST_ICON, iconX, thirstRowY + 1.0f, 9.0f, 9.0f, LightTexture.FULL_BRIGHT);
             HologramBarRenderer.drawTexturedIcon(buffer, matrix, HologramBarRenderer.CLEANLINESS_ICON, iconX, cleanRowY + 1.0f, 9.0f, 9.0f, LightTexture.FULL_BRIGHT);
 
-            // 5. Render 3D favorite food item stacks with proportional scale
+            // 5. Render 3D favorite food item stacks with proportional scale (ItemDisplayContext.GUI)
             ItemRenderer itemRenderer = mc.getItemRenderer();
             for (int i = 0; i < renderedFoodCount; i++) {
                 ItemStack stack = favoriteStacks.get(i);
                 float itemX = itemsStartX + (i * itemSlotWidth);
 
                 poseStack.pushPose();
-                poseStack.translate(itemX, foodItemsY, -0.5f);
-                poseStack.scale(7.0f, -7.0f, 7.0f);
+                poseStack.translate(itemX, foodItemsY, 0.0f);
+                poseStack.scale(12.0f, -12.0f, 12.0f);
 
                 itemRenderer.renderStatic(
                         stack,
-                        ItemDisplayContext.GROUND,
+                        ItemDisplayContext.GUI,
                         LightTexture.FULL_BRIGHT,
                         OverlayTexture.NO_OVERLAY,
                         poseStack,
@@ -353,35 +354,39 @@ public class ZooAnimalHologramRenderer {
                 poseStack.popPose();
             }
 
-            // 6. Draw text components (sharp font using POLYGON_OFFSET to prevent Z-fighting)
-            font.drawInBatch(titleComponent, titleX, titleY, 0xFFFFFFFF, false, matrix, buffer, Font.DisplayMode.POLYGON_OFFSET, 0, LightTexture.FULL_BRIGHT);
-            if (!isRegistered) {
-                font.drawInBatch(unregComponent, unregX, unregY, HologramBarRenderer.COLOR_MUTED, false, matrix, buffer, Font.DisplayMode.POLYGON_OFFSET, 0, LightTexture.FULL_BRIGHT);
+            if (buffer instanceof MultiBufferSource.BufferSource bs) {
+                bs.endBatch();
             }
-            font.drawInBatch(hpText, textX, healthRowY + 1.0f, hpTextColor, false, matrix, buffer, Font.DisplayMode.POLYGON_OFFSET, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(hungerText, textX, hungerRowY + 1.0f, hungerTextColor, false, matrix, buffer, Font.DisplayMode.POLYGON_OFFSET, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(thirstText, textX, thirstRowY + 1.0f, thirstTextColor, false, matrix, buffer, Font.DisplayMode.POLYGON_OFFSET, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(cleanText, textX, cleanRowY + 1.0f, cleanTextColor, false, matrix, buffer, Font.DisplayMode.POLYGON_OFFSET, 0, LightTexture.FULL_BRIGHT);
+
+            // 6. Draw text components (sharp font using NORMAL display mode in front of background plate)
+            font.drawInBatch(titleComponent, titleX, titleY, 0xFFFFFFFF, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            if (!isRegistered) {
+                font.drawInBatch(unregComponent, unregX, unregY, HologramBarRenderer.COLOR_MUTED, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            }
+            font.drawInBatch(hpText, textX, healthRowY + 1.0f, hpTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(hungerText, textX, hungerRowY + 1.0f, hungerTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(thirstText, textX, thirstRowY + 1.0f, thirstTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(cleanText, textX, cleanRowY + 1.0f, cleanTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 
             // Draw habitat status line (e.g. "Habitat: Sesuai (Ideal)" or "Habitat: Tidak Sesuai")
-            font.drawInBatch(habitatStatusComp, habitatStatusX, habitatStatusY, habitatStatusColor, false, matrix, buffer, Font.DisplayMode.POLYGON_OFFSET, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(habitatStatusComp, habitatStatusX, habitatStatusY, habitatStatusColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 
             // Draw habitat hint line if unsuitable (e.g. "Butuh: Air, Savana")
             if (hasHabitatHint && habitatHintComp != null) {
-                font.drawInBatch(habitatHintComp, habitatHintX, habitatHintY, 0xFFFFAA00, false, matrix, buffer, Font.DisplayMode.POLYGON_OFFSET, 0, LightTexture.FULL_BRIGHT);
+                font.drawInBatch(habitatHintComp, habitatHintX, habitatHintY, 0xFFFFAA00, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             }
 
             // Draw climate line (e.g. "Musim: Musim Semi | Suhu: Sejuk / Sedang")
-            font.drawInBatch(climateComponent, climateX, climateY, HologramBarRenderer.COLOR_MUTED, false, matrix, buffer, Font.DisplayMode.POLYGON_OFFSET, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(climateComponent, climateX, climateY, HologramBarRenderer.COLOR_MUTED, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 
             // Draw Favorite Food header
-            font.drawInBatch(foodHeaderComponent, foodHeaderX, foodHeaderY, 0xFFFFFFFF, false, matrix, buffer, Font.DisplayMode.POLYGON_OFFSET, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(foodHeaderComponent, foodHeaderX, foodHeaderY, 0xFFFFFFFF, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 
             // Draw +N if more than 4 foods
             if (extraFoods > 0) {
                 float extraX = itemsStartX + (renderedFoodCount * itemSlotWidth) - (itemSlotWidth / 2.0f) + 3.0f;
                 float extraY = foodItemsY - 4.0f;
-                font.drawInBatch(extraFoodsText, extraX, extraY, 0xFFAAAAAA, false, matrix, buffer, Font.DisplayMode.POLYGON_OFFSET, 0, LightTexture.FULL_BRIGHT);
+                font.drawInBatch(extraFoodsText, extraX, extraY, 0xFFAAAAAA, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             }
 
             if (buffer instanceof MultiBufferSource.BufferSource bs) {

@@ -35,7 +35,7 @@ Urutan pengerjaan kronologis (Dilarang mengerjakan semua tahap ini sebelum dimin
 1. Hologram Magnifying Glass
 Perbaiki raycast agar responsif mendeteksi hewan, tidak menahan target lama saat crosshair lepas, tidak tembus pandang tembok/blok padat, serta pastikan sinkronisasi data kebutuhan satwa akurat dari server ke client.
 2. Interaksi Hewan dengan Musim, Feeding Trough, dan Pengunjung
-Terapkan dampak nyata iklim Serene Seasons pada fisik dan kenyamanan satwa, stabilkan rutinitas satwa makan di feeding trough, serta bangun interaksi timbal-balik dengan pengunjung di mana kondisi satwa mempengaruhi kepuasan pengunjung.
+Terapkan dampak nyata iklim Fabric Seasons pada fisik dan kenyamanan satwa, stabilkan rutinitas satwa makan di feeding trough, serta bangun interaksi timbal-balik dengan pengunjung di mana kondisi satwa mempengaruhi kepuasan pengunjung.
 3. Sistem Rating Zoo dan Integrasi UI
 Bangun formula perhitungan rating dinamis berdasarkan rata-rata kesehatan satwa, kebersihan kandang, kelengkapan fasilitas, dan kepuasan pengunjung, serta tampilkan indikator rating di UI/HUD.
 4. Kunjungan Pengunjung Mengikuti Rating dan Kualitas

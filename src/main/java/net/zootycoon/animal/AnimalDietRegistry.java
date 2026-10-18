@@ -202,10 +202,29 @@ public class AnimalDietRegistry {
         return getFallbackDiet(entity);
     }
 
+    public static final List<Item> COMMON_ANIMAL_FOOD_CANDIDATES = List.of(
+            Items.WHEAT, Items.HAY_BLOCK, Items.CARROT, Items.GOLDEN_CARROT,
+            Items.POTATO, Items.BEETROOT, Items.APPLE, Items.GOLDEN_APPLE,
+            Items.WHEAT_SEEDS, Items.BEETROOT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.TORCHFLOWER_SEEDS, Items.PITCHER_POD,
+            Items.SWEET_BERRIES, Items.GLOW_BERRIES, Items.BAMBOO, Items.CACTUS,
+            Items.DANDELION, Items.WARPED_FUNGUS,
+            Items.BEEF, Items.PORKCHOP, Items.CHICKEN, Items.MUTTON, Items.RABBIT, Items.ROTTEN_FLESH,
+            Items.COD, Items.SALMON, Items.TROPICAL_FISH
+    );
+
     private static AnimalDiet getFallbackDiet(Entity entity) {
-        if (entity instanceof Animal) {
-            // Default peaceful animal -> Trough with Wheat, Carrots, Seeds
-            return new AnimalDiet(FeedingType.TROUGH, "Herbivora Umum (Gandum & Sayur)", false, false, true, Items.WHEAT, Items.CARROT, Items.APPLE, Items.WHEAT_SEEDS);
+        if (entity instanceof Animal a) {
+            List<Item> probed = new ArrayList<>();
+            for (Item candidate : COMMON_ANIMAL_FOOD_CANDIDATES) {
+                if (a.isFood(new ItemStack(candidate))) {
+                    probed.add(candidate);
+                }
+            }
+            if (!probed.isEmpty()) {
+                return new AnimalDiet(FeedingType.TROUGH, "Pakan Alami", false, false, true, probed.toArray(new Item[0]));
+            }
+            // Default peaceful animal -> Trough with Wheat
+            return new AnimalDiet(FeedingType.TROUGH, "Herbivora Umum (Gandum)", false, false, true, Items.WHEAT);
         }
         // Hostile / Monster / Predator fallback -> Thrown Meat
         return new AnimalDiet(FeedingType.THROWN_MEAT, "Karnivora Umum (Daging Segar)", true, false, true, Items.BEEF, Items.PORKCHOP, Items.CHICKEN, Items.ROTTEN_FLESH);
@@ -231,16 +250,40 @@ public class AnimalDietRegistry {
     public static List<ItemStack> getFavoriteFoodStacks(Entity entity) {
         if (entity == null) return Collections.emptyList();
         AnimalDiet diet = getDiet(entity);
-        if (diet == null || diet.acceptedFoods == null || diet.acceptedFoods.isEmpty()) {
-            return Collections.emptyList();
+        if (diet != null && !diet.isFallback && diet.acceptedFoods != null && !diet.acceptedFoods.isEmpty()) {
+            List<ItemStack> stacks = new ArrayList<>(diet.acceptedFoods.size());
+            for (Item item : diet.acceptedFoods) {
+                if (item != null && item != Items.AIR) {
+                    stacks.add(new ItemStack(item));
+                }
+            }
+            return stacks;
         }
-        List<ItemStack> stacks = new ArrayList<>(diet.acceptedFoods.size());
-        for (Item item : diet.acceptedFoods) {
-            if (item != null && item != Items.AIR) {
-                stacks.add(new ItemStack(item));
+
+        // Probe dynamically for any Animal instance
+        if (entity instanceof Animal a) {
+            List<ItemStack> probed = new ArrayList<>();
+            for (Item candidate : COMMON_ANIMAL_FOOD_CANDIDATES) {
+                if (a.isFood(new ItemStack(candidate))) {
+                    probed.add(new ItemStack(candidate));
+                }
+            }
+            if (!probed.isEmpty()) {
+                return probed;
             }
         }
-        return stacks;
+
+        if (diet != null && diet.acceptedFoods != null && !diet.acceptedFoods.isEmpty()) {
+            List<ItemStack> stacks = new ArrayList<>(diet.acceptedFoods.size());
+            for (Item item : diet.acceptedFoods) {
+                if (item != null && item != Items.AIR) {
+                    stacks.add(new ItemStack(item));
+                }
+            }
+            return stacks;
+        }
+
+        return Collections.emptyList();
     }
 
     public static boolean isFoodValid(Entity entity, ItemStack stack) {

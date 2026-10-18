@@ -83,7 +83,8 @@ public class HologramBarRenderer {
      */
     public static void drawBackgroundPlate(MultiBufferSource buffer, Matrix4f matrix, float minX, float minY, float maxX, float maxY, int light) {
         VertexConsumer consumer = buffer.getBuffer(RenderType.textBackground());
-        float z = 0.02f;
+        // Furthest layer back (-0.02f)
+        float z = -0.02f;
 
         // Top horizontal strip (omits outer corner pixels)
         drawRect(consumer, matrix, minX + 1.0f, minY, maxX - 1.0f, minY + 1.0f, z, PLATE_BACKGROUND, light);
@@ -97,14 +98,17 @@ public class HologramBarRenderer {
      * Draws a status progress bar with a dark border, track background, filled region, and top highlight.
      */
     public static void drawBar(VertexConsumer consumer, Matrix4f matrix, float x, float y, float width, float height, float progress, int barColor, int trackColor, int light) {
-        float borderZ = 0.015f;
-        float fillZ = 0.01f;
+        // Strict back-to-front layering between plate (-0.02f) and icons (-0.005f)
+        float borderZ = -0.016f;
+        float trackZ = -0.014f;
+        float fillZ = -0.010f;
+        float highlightZ = -0.008f;
 
         // 1. Dark outer border (1px padding around bar)
         drawRect(consumer, matrix, x - 1.0f, y - 1.0f, x + width + 1.0f, y + height + 1.0f, borderZ, DARK_BORDER, light);
 
         // 2. Empty track background
-        drawRect(consumer, matrix, x, y, x + width, y + height, borderZ, trackColor, light);
+        drawRect(consumer, matrix, x, y, x + width, y + height, trackZ, trackColor, light);
 
         // 3. Filled bar area (only when progress > 0)
         if (progress > 0.0f) {
@@ -116,7 +120,7 @@ public class HologramBarRenderer {
             int g = Math.min(255, ((barColor >> 8) & 0xFF) + 40);
             int b = Math.min(255, (barColor & 0xFF) + 40);
             int highlightColor = (0xFF << 24) | (r << 16) | (g << 8) | b;
-            drawRect(consumer, matrix, x, y, x + filledWidth, y + 1.0f, fillZ, highlightColor, light);
+            drawRect(consumer, matrix, x, y, x + filledWidth, y + 1.0f, highlightZ, highlightColor, light);
         }
     }
 
@@ -125,7 +129,7 @@ public class HologramBarRenderer {
      */
     public static void drawTexturedIcon(MultiBufferSource buffer, Matrix4f matrix, ResourceLocation texture, float x, float y, float width, float height, int light) {
         VertexConsumer consumer = buffer.getBuffer(RenderType.text(texture));
-        float z = 0.0f;
+        float z = -0.005f;
         int a = 255, r = 255, g = 255, b = 255;
 
         // Counter-Clockwise (CCW) quad winding
@@ -145,7 +149,7 @@ public class HologramBarRenderer {
         float u1 = sprite.getU1();
         float v0 = sprite.getV0();
         float v1 = sprite.getV1();
-        float z = 0.0f;
+        float z = -0.005f;
         int a = 255, r = 255, g = 255, b = 255;
 
         // Counter-Clockwise (CCW) quad winding
@@ -186,6 +190,6 @@ public class HologramBarRenderer {
      * Draws the authentic vanilla heart icon '❤' using the Minecraft font glyph renderer.
      */
     public static void drawHeartIcon(Font font, MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light) {
-        font.drawInBatch("❤", x, y, 0xFFFF3333, false, matrix, buffer, Font.DisplayMode.POLYGON_OFFSET, 0, light);
+        font.drawInBatch("❤", x, y, 0xFFFF3333, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, light);
     }
 }
