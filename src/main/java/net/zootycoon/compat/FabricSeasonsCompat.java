@@ -26,7 +26,7 @@ public class FabricSeasonsCompat {
         if (checked) return;
         checked = true;
         try {
-            if (FabricLoader.getInstance().isModLoaded("seasons")) {
+            if (FabricLoader.getInstance().isModLoaded("seasons") || FabricLoader.getInstance().isModLoaded("fabric-seasons")) {
                 Class<?> seasonsClass = Class.forName("io.github.lucaargolo.seasons.FabricSeasons");
                 for (Method m : seasonsClass.getMethods()) {
                     if (m.getName().equals("getCurrentSeason")) {
@@ -91,8 +91,52 @@ public class FabricSeasonsCompat {
     }
 
     /**
+     * Calculates the seasonal temperature modifier based on Fabric Seasons official algorithm.
+     */
+    public static float calculateSeasonalTemperature(String season, float baseTemp) {
+        if (season == null) return baseTemp;
+        String s = season.toUpperCase(Locale.ROOT);
+        if (baseTemp <= -0.51f) {
+            // Permanently Frozen Biomes
+            return switch (s) {
+                case "SUMMER" -> baseTemp + 0.84f;
+                case "WINTER" -> baseTemp - 0.70f;
+                default -> baseTemp - 0.30f;
+            };
+        } else if (baseTemp <= 0.15f) {
+            // Usually Frozen Biomes (Snowy Plains, Ice Spikes, Frozen River)
+            return switch (s) {
+                case "SUMMER" -> baseTemp + 0.66f;
+                case "WINTER" -> baseTemp - 0.75f;
+                default -> baseTemp - 0.25f;
+            };
+        } else if (baseTemp <= 0.49f) {
+            // Temperate Biomes (Taiga, Old Growth Pine, Windswept Hills)
+            return switch (s) {
+                case "SUMMER" -> baseTemp + 0.66f;
+                case "WINTER" -> baseTemp - 0.80f;
+                default -> baseTemp - 0.16f;
+            };
+        } else if (baseTemp <= 0.79f) {
+            // Usually Ice Free Biomes (Forest, Birch Forest, Dark Forest, Meadow, Plains)
+            return switch (s) {
+                case "SUMMER" -> baseTemp + 0.46f;
+                case "WINTER" -> baseTemp - 0.56f;
+                default -> baseTemp - 0.34f;
+            };
+        } else {
+            // Ice Free Biomes (Savanna, Desert, Jungle, Badlands)
+            return switch (s) {
+                case "SUMMER" -> baseTemp + 0.40f;
+                case "WINTER" -> baseTemp - 0.64f;
+                default -> baseTemp - 0.34f;
+            };
+        }
+    }
+
+    /**
      * Retrieves the season-modified biome temperature at the given position.
-     * Fabric Seasons intercepts getBiome via WorldViewMixin and injects season offsets.
+     * Accurately reflects season temperature drops in Winter and rises in Summer.
      */
     public static float getEffectiveTemperature(Level level, BlockPos pos) {
         checkInit();
@@ -104,10 +148,13 @@ public class FabricSeasonsCompat {
             } catch (Throwable ignored) {}
         }
         float baseTemp = biomeHolder.value().getBaseTemperature();
+        String currentSeason = getCurrentSeason(level);
+        float effectiveTemp = calculateSeasonalTemperature(currentSeason, baseTemp);
+
         if (pos.getY() > 80) {
             float heightDrop = (pos.getY() - 80) * 0.05f / 40.0f;
-            return baseTemp - heightDrop;
+            effectiveTemp -= heightDrop;
         }
-        return baseTemp;
+        return effectiveTemp;
     }
 }

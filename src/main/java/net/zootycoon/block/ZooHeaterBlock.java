@@ -40,7 +40,7 @@ public class ZooHeaterBlock extends BaseEntityBlock {
     public static final BooleanProperty LIT = BlockStateProperties.LIT;
 
     public ZooHeaterBlock(Properties properties) {
-        super(properties.sound(SoundType.METAL).strength(3.5f).requiresCorrectToolForDrops());
+        super(properties.sound(SoundType.METAL).strength(3.5f).requiresCorrectToolForDrops().noOcclusion());
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
                 .setValue(LIT, false));

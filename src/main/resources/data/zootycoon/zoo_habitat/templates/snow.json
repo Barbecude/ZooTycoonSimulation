@@ -14,8 +14,8 @@
     "minecraft:frozen_ocean",
     "minecraft:deep_frozen_ocean"
   ],
-  "min_temperature": -0.5,
-  "max_temperature": 0.15,
+  "min_temperature": -10.0,
+  "max_temperature": 0.25,
   "required_blocks": [
     {
       "type": "snow",
@@ -24,4 +24,3 @@
     }
   ]
 }
-

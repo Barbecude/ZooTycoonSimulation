@@ -9,8 +9,8 @@
     "minecraft:dark_forest",
     "minecraft:old_growth_birch_forest"
   ],
-  "min_temperature": 0.45,
-  "max_temperature": 0.85,
+  "min_temperature": 0.25,
+  "max_temperature": 1.8,
   "required_blocks": [
     {
       "type": "trees",
@@ -19,4 +19,3 @@
     }
   ]
 }
-

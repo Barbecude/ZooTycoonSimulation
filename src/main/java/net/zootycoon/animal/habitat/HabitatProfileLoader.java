@@ -258,8 +258,8 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 "Savana",
                 List.of("#minecraft:is_savanna"),
                 List.of(ResourceLocation.parse("minecraft:savanna"), ResourceLocation.parse("minecraft:savanna_plateau"), ResourceLocation.parse("minecraft:windswept_savanna")),
-                0.85f,
-                1.6f,
+                0.70f,
+                2.5f,
                 List.of(new HabitatProfile.BlockRequirement("water", 4, "Air"))
         );
         TEMPLATES.put(ZooTycoonMod.id("savanna"), savanna);
@@ -272,8 +272,8 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 "Hutan",
                 List.of("#minecraft:is_forest"),
                 List.of(ResourceLocation.parse("minecraft:forest"), ResourceLocation.parse("minecraft:flower_forest"), ResourceLocation.parse("minecraft:birch_forest"), ResourceLocation.parse("minecraft:dark_forest")),
-                0.45f,
-                0.85f,
+                0.25f,
+                1.8f,
                 List.of(new HabitatProfile.BlockRequirement("trees", 6, "Pepohonan"))
         );
         TEMPLATES.put(ZooTycoonMod.id("forest"), forest);
@@ -286,8 +286,8 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 "Hutan Tropis",
                 List.of("#minecraft:is_jungle"),
                 List.of(ResourceLocation.parse("minecraft:jungle"), ResourceLocation.parse("minecraft:sparse_jungle"), ResourceLocation.parse("minecraft:bamboo_jungle")),
-                0.85f,
-                1.4f,
+                0.70f,
+                2.5f,
                 List.of(
                         new HabitatProfile.BlockRequirement("trees", 6, "Pepohonan"),
                         new HabitatProfile.BlockRequirement("water", 4, "Air")
@@ -303,8 +303,8 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 "Kutub/Salju",
                 List.of("#minecraft:spawns_snow_foxes", "#minecraft:spawns_white_rabbits"),
                 List.of(ResourceLocation.parse("minecraft:snowy_plains"), ResourceLocation.parse("minecraft:ice_spikes"), ResourceLocation.parse("minecraft:snowy_taiga"), ResourceLocation.parse("minecraft:snowy_slopes"), ResourceLocation.parse("minecraft:frozen_peaks"), ResourceLocation.parse("minecraft:jagged_peaks"), ResourceLocation.parse("minecraft:grove"), ResourceLocation.parse("minecraft:frozen_ocean"), ResourceLocation.parse("minecraft:deep_frozen_ocean")),
-                -0.5f,
-                0.15f,
+                -10.0f,
+                0.25f,
                 List.of(new HabitatProfile.BlockRequirement("snow", 6, "Salju/Es"))
         );
         TEMPLATES.put(ZooTycoonMod.id("snow"), snow);
@@ -317,7 +317,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 "Gurun",
                 List.of("#minecraft:is_badlands"),
                 List.of(ResourceLocation.parse("minecraft:desert"), ResourceLocation.parse("minecraft:badlands"), ResourceLocation.parse("minecraft:eroded_badlands"), ResourceLocation.parse("minecraft:wooded_badlands")),
-                1.25f,
+                1.1f,
                 2.5f,
                 List.of(new HabitatProfile.BlockRequirement("sand", 8, "Pasir"))
         );
@@ -331,8 +331,8 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 "Padang Rumput",
                 Collections.emptyList(),
                 List.of(ResourceLocation.parse("minecraft:plains"), ResourceLocation.parse("minecraft:sunflower_plains"), ResourceLocation.parse("minecraft:meadow"), ResourceLocation.parse("minecraft:cherry_grove")),
-                0.45f,
-                0.95f,
+                0.25f,
+                1.8f,
                 List.of(new HabitatProfile.BlockRequirement("grass", 8, "Rumput"))
         );
         TEMPLATES.put(ZooTycoonMod.id("plains"), plains);
@@ -345,8 +345,8 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 "Perairan Tawar",
                 List.of("#minecraft:is_river"),
                 List.of(ResourceLocation.parse("minecraft:river"), ResourceLocation.parse("minecraft:swamp"), ResourceLocation.parse("minecraft:mangrove_swamp")),
-                0.3f,
-                1.2f,
+                0.2f,
+                1.8f,
                 List.of(new HabitatProfile.BlockRequirement("water", 12, "Air"))
         );
         TEMPLATES.put(ZooTycoonMod.id("freshwater"), freshwater);
@@ -359,8 +359,8 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 "Lautan",
                 List.of("#minecraft:is_ocean", "#minecraft:is_deep_ocean"),
                 List.of(ResourceLocation.parse("minecraft:ocean"), ResourceLocation.parse("minecraft:deep_ocean"), ResourceLocation.parse("minecraft:warm_ocean"), ResourceLocation.parse("minecraft:lukewarm_ocean"), ResourceLocation.parse("minecraft:deep_lukewarm_ocean"), ResourceLocation.parse("minecraft:cold_ocean"), ResourceLocation.parse("minecraft:deep_cold_ocean"), ResourceLocation.parse("minecraft:frozen_ocean"), ResourceLocation.parse("minecraft:deep_frozen_ocean")),
-                0.0f,
-                1.5f,
+                -0.5f,
+                2.0f,
                 List.of(new HabitatProfile.BlockRequirement("water", 16, "Air"))
         );
         TEMPLATES.put(ZooTycoonMod.id("ocean"), ocean);

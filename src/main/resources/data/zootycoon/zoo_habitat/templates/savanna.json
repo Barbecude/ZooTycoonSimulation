@@ -7,8 +7,8 @@
     "minecraft:savanna_plateau",
     "minecraft:windswept_savanna"
   ],
-  "min_temperature": 0.85,
-  "max_temperature": 1.6,
+  "min_temperature": 0.70,
+  "max_temperature": 2.5,
   "required_blocks": [
     {
       "type": "water",
@@ -17,4 +17,3 @@
     }
   ]
 }
-

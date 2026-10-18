@@ -83,50 +83,43 @@
   8. Jangkauan deteksi air diperluas dari 8 blok menjadi 24 blok (radius 24, vertikal -6..6) dan mencakup Feeding Trough yang terisi air, serta radius AI mencari air diperluas menjadi 24 blok agar tidak mudah "missing water".
   9. Syarat pasangan (Companion) kini dikhususkan murni untuk hewan sosial/kawanan (singa, gajah, serigala, lumba-lumba, hewan ternak, dll). Hewan soliter (harimau, beruang, buaya, alligator snapping turtle, ular, platipus, komodo, dll) tidak lagi membutuhkan pasangan ("NA") dan tidak memunculkan indikator merah.
 
+- Perbaikan Hologram UI, Oklusi, Termal Musim, dan Model Blok 3D:
+  1. Ikon temperatur diganti dengan dial termometer resmi dari Legendary Survival Overhaul (16x16 pixel art circular thermometer).
+  2. Nama satwa diperbesar (skala 1.25f), ikon makanan favorit diperbesar (skala 12.0f, spasi 16.0f), dan seluruh teks/elemen hologram di-align ke kiri (leftX = minX + 8.0f).
+  3. Bioma yang cocok diformat sebagai bullet points menurun ke bawah saat bioma tidak terpenuhi.
+  4. Posisi hologram di-offset ke depan ke arah kamera (forward offset hingga bbWidth * 0.55) dan ketinggian dinaikkan sehingga tidak terpotong atau tertutup badan, belalai, maupun tanduk mob.
+  5. Perhitungan suhu musiman Fabric Seasons diintegrasikan secara presisi: satwa savana/jungle nyaman di musim panas dan membutuhkan Heater saat suhu anjlok di musim dingin.
+  6. Model 3D Heater dan Cooler Box diadopsi dari LSO Blockbench lengkap dengan pelat atas, dan didaftarkan ke BlockRenderLayerMap sebagai cutout sehingga transparansi kisi dan rongga blok tampil sempurna.
+
 ## Bukti Selesai
-- Seluruh 7 poin permintaan pengguna telah terimplementasi dan terkompilasi bersih dengan .\gradlew.bat build (BUILD SUCCESSFUL).
+- Seluruh 4 poin permintaan pengguna telah terimplementasi dan terkompilasi bersih dengan .\gradlew.bat build (BUILD SUCCESSFUL in 54s).
 - File jar hasil build zootycoon-1.0.0.jar otomatis tersalin ke folder mods profil Modrinth.
-- Background tooltip vanilla, ikon stat, label bahasa Indonesia, dan penyaringan item merah telah aktif.
-- AI minum air hanya terpasang pada satwa air dengan mekanisme anti-stuck.
-- Jangkauan air 24 blok aktif dan satwa soliter tidak lagi diwajibkan memiliki pasangan.
+- Ikon termometer resmi LSO, teks align kiri, nama besar, makanan besar, bullet points bioma, dan forward offset aktif.
+- Cutout render layer aktif untuk Heater dan Cooler Box.
 
 ## Blocker
 - Tidak ada blocker.
 
 ## File yang diubah
-- src/main/java/net/zootycoon/ZooTycoonMod.java
-- src/main/java/net/zootycoon/command/ZooCommands.java
-- src/main/java/net/zootycoon/mixin/LivingEntityAccessor.java
 - src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
-- src/main/java/net/zootycoon/client/inspect/HologramBarRenderer.java
-- src/main/java/net/zootycoon/client/inspect/InspectionClientCache.java
-- src/main/java/net/zootycoon/animal/ZooAnimalHungerManager.java
-- src/main/java/net/zootycoon/animal/ZooClimate.java
-- src/main/java/net/zootycoon/animal/ZooInspectionService.java
-- src/main/java/net/zootycoon/animal/habitat/HabitatEvaluator.java
-- src/main/java/net/zootycoon/animal/habitat/HabitatProfile.java
-- src/main/java/net/zootycoon/animal/ai/AnimalDrinkWaterGoal.java (BARU)
-- src/main/java/net/zootycoon/block/ZooBlocks.java
-- src/main/java/net/zootycoon/block/ZooHeaterBlock.java (BARU)
-- src/main/java/net/zootycoon/block/ZooCoolerBlock.java (BARU)
-- src/main/java/net/zootycoon/block/entity/ZooThermalBlockEntity.java (BARU)
-- src/main/java/net/zootycoon/mixin/MobAccessor.java (BARU)
-- src/main/resources/zootycoon.mixins.json
-- src/main/resources/assets/zootycoon/lang/en_us.json
-- src/main/resources/assets/zootycoon/lang/id_id.json
-- src/main/resources/assets/zootycoon/blockstates/heater.json (BARU)
-- src/main/resources/assets/zootycoon/blockstates/cooler_box.json (BARU)
-- src/main/resources/assets/zootycoon/models/block/*.json (BARU)
-- src/main/resources/assets/zootycoon/models/item/*.json (BARU)
-- src/main/resources/assets/zootycoon/textures/block/*.png (BARU)
-- src/main/resources/assets/zootycoon/textures/gui/inspect/thermometer.png (BARU)
-- src/main/resources/data/zootycoon/recipe/*.json (BARU)
-- src/main/resources/data/zootycoon/tags/block/natural_ground.json (BARU)
-- src/main/resources/data/c/tags/block/natural_ground.json (BARU)
+- src/main/java/net/zootycoon/client/ZooTycoonClient.java
+- src/main/java/net/zootycoon/compat/FabricSeasonsCompat.java
+- src/main/java/net/zootycoon/animal/habitat/HabitatProfileLoader.java
+- src/main/java/net/zootycoon/block/ZooHeaterBlock.java
+- src/main/java/net/zootycoon/block/ZooCoolerBlock.java
+- src/main/resources/assets/zootycoon/textures/gui/inspect/thermometer.png
+- src/main/resources/assets/zootycoon/models/block/heater_off.json
+- src/main/resources/assets/zootycoon/models/block/heater_on.json
+- src/main/resources/assets/zootycoon/models/block/cooler_box_off.json
+- src/main/resources/assets/zootycoon/models/block/cooler_box_on.json
+- src/main/resources/assets/zootycoon/blockstates/heater.json
+- src/main/resources/assets/zootycoon/blockstates/cooler_box.json
+- src/main/resources/data/zootycoon/zoo_habitat/templates/*.json
+- docs/hologram/ASSETS.md
 - docs/hologram/PROGRESS.md
 
 ## Butuh izin user
 - Tidak ada.
 
 ## Belum terverifikasi
-- Pengujian in-game langsung oleh pengguna untuk memeriksa visual hologram wireframe, interaksi blok Heater dan Cooler Box, serta AI satwa minum air.
+- Pengujian in-game langsung oleh pengguna untuk memeriksa visual pembesaran UI, bullet points bioma, oklusi mob besar, dan rendering blok heater/cooler di dunia.

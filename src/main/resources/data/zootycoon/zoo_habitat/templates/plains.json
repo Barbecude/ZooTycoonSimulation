@@ -7,8 +7,8 @@
     "minecraft:meadow",
     "minecraft:cherry_grove"
   ],
-  "min_temperature": 0.45,
-  "max_temperature": 0.95,
+  "min_temperature": 0.25,
+  "max_temperature": 1.8,
   "required_blocks": [
     {
       "type": "grass",
@@ -17,4 +17,3 @@
     }
   ]
 }
-

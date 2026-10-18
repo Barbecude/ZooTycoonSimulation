@@ -105,12 +105,22 @@ public class ZooAnimalHologramRenderer {
         Font font = mc.font;
 
         double entX = entity.getX() - camPos.x;
-        double yOffset = entity.getBbHeight() + 0.15;
+        double yOffset = entity.getBbHeight() + (entity.getBbHeight() > 2.0 ? 0.6 : 0.4);
         if (entity.hasCustomName()) {
             yOffset += 0.25;
         }
         double entY = entity.getY() + yOffset - camPos.y;
         double entZ = entity.getZ() - camPos.z;
+
+        // Offset forward towards camera so large bodies, horns, ears, snouts don't clip the hologram
+        double dx = camPos.x - entity.getX();
+        double dz = camPos.z - entity.getZ();
+        double distXZ = Math.sqrt(dx * dx + dz * dz);
+        if (distXZ > 0.001) {
+            double forwardOffset = Math.min(distXZ * 0.45, Math.max(0.35, entity.getBbWidth() * 0.55));
+            entX += (dx / distXZ) * forwardOffset;
+            entZ += (dz / distXZ) * forwardOffset;
+        }
 
         poseStack.pushPose();
         poseStack.translate(entX, entY, entZ);
@@ -210,10 +220,10 @@ public class ZooAnimalHologramRenderer {
         // 6. Food items (icons only)
         List<ItemStack> foods = AnimalDietRegistry.getFoodsForAnimal(entity);
         int foodCount = Math.min(5, foods.size());
-        float foodSpacing = 12.0f;
+        float foodSpacing = 16.0f;
         float foodsRowWidth = foodCount * foodSpacing;
 
-        // 7. Habitat Needs Checklist: ONLY RED / UNMET NEEDS (Point 1 & Point 3 & Point 5)
+        // 7. Habitat Needs Checklist: ONLY RED / UNMET NEEDS
         HabitatProfile profile = HabitatProfileLoader.getProfile(entity);
         List<Component> redNeeds = new ArrayList<>();
 
@@ -227,13 +237,17 @@ public class ZooAnimalHologramRenderer {
             redNeeds.add(Component.literal("• Butuh Pasangan"));
         }
         if (!habitatInfo.biomeOk()) {
-            String biomesEnglish = formatBiomeListEnglish(profile);
-            redNeeds.add(Component.literal("• Bioma: Perlu " + biomesEnglish));
+            redNeeds.add(Component.literal("• Bioma yang cocok:"));
+            List<String> biomes = getBiomeListEnglish(profile);
+            for (String b : biomes) {
+                redNeeds.add(Component.literal("  - " + b));
+            }
         }
 
         // Layout measurements
         Component titleComp = entity.getDisplayName();
-        int titleWidth = font.width(titleComp);
+        float titleScale = 1.25f;
+        float scaledTitleWidth = font.width(titleComp) * titleScale;
 
         float iconWidth = 9.0f;
         float gapLabelToIcon = 4.0f;
@@ -251,12 +265,12 @@ public class ZooAnimalHologramRenderer {
         }
 
         float boxWidth = Math.max(statRowWidth + 16.0f,
-                Math.max(titleWidth + 18.0f,
+                Math.max(scaledTitleWidth + 16.0f,
                 Math.max(foodsRowWidth + 16.0f, maxHabitatTextWidth + 18.0f)));
 
         float rowHeight = 11.0f;
-        float headerHeight = 11.0f;
-        float foodSectionHeight = (foodCount > 0) ? 14.0f : 0.0f;
+        float headerHeight = 13.0f;
+        float foodSectionHeight = (foodCount > 0) ? 18.0f : 0.0f;
         float statsSectionHeight = 5.0f * rowHeight;
         float habitatSectionHeight = redNeeds.isEmpty() ? 12.0f : (12.0f + (redNeeds.size() * 10.0f));
 
@@ -279,21 +293,25 @@ public class ZooAnimalHologramRenderer {
                 bs.endBatch(RenderType.textBackground());
             }
 
+            float leftX = minX + 8.0f;
             float curY = startY + 5.0f;
 
-            // 2. Animal Title
-            float titleX = -titleWidth / 2.0f;
-            font.drawInBatch(titleComp, titleX, curY, 0xFFFFFFFF, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            // 2. Animal Title (Enlarged & Left-aligned)
+            poseStack.pushPose();
+            poseStack.translate(leftX, curY, 0.0f);
+            poseStack.scale(titleScale, titleScale, 1.0f);
+            font.drawInBatch(titleComp, 0.0f, 0.0f, 0xFFFFFFFF, false, poseStack.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            poseStack.popPose();
             curY += headerHeight;
 
-            // 3. Favorite Food Icons (Icons only, no text labels)
+            // 3. Favorite Food Icons (Enlarged & Left-aligned)
             if (foodCount > 0) {
-                float foodStartX = -foodsRowWidth / 2.0f + (foodSpacing / 2.0f);
+                float foodStartX = leftX + (foodSpacing / 2.0f);
                 for (int i = 0; i < foodCount; i++) {
                     ItemStack foodStack = foods.get(i);
                     poseStack.pushPose();
-                    poseStack.translate(foodStartX + (i * foodSpacing), curY + 5.0f, -0.005f);
-                    poseStack.scale(8.0f, -8.0f, 8.0f);
+                    poseStack.translate(foodStartX + (i * foodSpacing), curY + 6.0f, -0.005f);
+                    poseStack.scale(12.0f, -12.0f, 12.0f);
                     mc.getItemRenderer().renderStatic(
                             foodStack,
                             ItemDisplayContext.GUI,
@@ -313,9 +331,8 @@ public class ZooAnimalHologramRenderer {
                 bs.endBatch();
             }
 
-            // 4. Stat rows layout
-            float statStartX = -statRowWidth / 2.0f;
-            float labelX = statStartX;
+            // 4. Stat rows layout (Left-aligned)
+            float labelX = leftX;
             float iconX = labelX + maxLabelWidth + gapLabelToIcon;
             float valueX = iconX + iconWidth + gapIconToValue;
 
@@ -337,7 +354,7 @@ public class ZooAnimalHologramRenderer {
                 bs.endBatch();
             }
 
-            // Render Stat Labels (Indonesian)
+            // Render Stat Labels (Indonesian, Left-aligned)
             font.drawInBatch(hpLabel, labelX, r1Y + 1.0f, 0xFFDDDDDD, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             font.drawInBatch(hungerLabel, labelX, r2Y + 1.0f, 0xFFDDDDDD, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             font.drawInBatch(thirstLabel, labelX, r3Y + 1.0f, 0xFFDDDDDD, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
@@ -355,8 +372,8 @@ public class ZooAnimalHologramRenderer {
             float statusX = valueX + font.width(tempBaseText);
             font.drawInBatch(tempStatusLabel, statusX, r5Y + 1.0f, tempStatusColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 
-            // 5. Habitat Needs Section: ONLY RED ITEMS SHOWN (Point 3)
-            float checklistStartX = minX + 8.0f;
+            // 5. Habitat Needs Section: ONLY RED ITEMS SHOWN (Left-aligned)
+            float checklistStartX = leftX;
             if (redNeeds.isEmpty()) {
                 // All needs satisfied: single green line
                 font.drawInBatch("Kebutuhan Habitat: Terpenuhi", checklistStartX, curY, 0xFF55FF55, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
@@ -378,9 +395,12 @@ public class ZooAnimalHologramRenderer {
         poseStack.popPose();
     }
 
-    public static String formatBiomeListEnglish(HabitatProfile profile) {
-        if (profile == null) return "Any";
+    public static List<String> getBiomeListEnglish(HabitatProfile profile) {
         List<String> names = new ArrayList<>();
+        if (profile == null) {
+            names.add("Any");
+            return names;
+        }
         if (profile.biomeIds() != null && !profile.biomeIds().isEmpty()) {
             for (ResourceLocation loc : profile.biomeIds()) {
                 String title = toEnglishBiomeName(loc.getPath());
@@ -390,9 +410,9 @@ public class ZooAnimalHologramRenderer {
             }
         }
         if (names.isEmpty()) {
-            return toEnglishBiomeName(profile.name());
+            names.add(toEnglishBiomeName(profile.name()));
         }
-        return String.join(", ", names);
+        return names;
     }
 
     private static String toEnglishBiomeName(String raw) {
