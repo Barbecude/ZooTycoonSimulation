@@ -40,6 +40,8 @@ public class ZooTycoonMod implements ModInitializer {
 
         // 3. Register server networking payloads & handlers
         ZooNetworkPayloads.registerServerReceivers();
+        net.zootycoon.network.InspectionPayloads.registerCommon();
+        net.zootycoon.animal.ZooInspectionService.registerServerReceivers();
 
         // 4. Initialize Claim Manager & Protection hooks
         ZooClaimManager.initProtectionHooks();
@@ -77,6 +79,7 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.block.ToiletBlockEntity.reset();
             net.zootycoon.hunter.ZooHunterManager.reset();
             net.zootycoon.visitor.ZooVisitorManager.reset();
+            net.zootycoon.animal.ZooInspectionService.reset();
         });
 
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTING.register(server -> {
@@ -90,6 +93,7 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.block.ToiletBlockEntity.reset();
             net.zootycoon.hunter.ZooHunterManager.reset();
             net.zootycoon.visitor.ZooVisitorManager.reset();
+            net.zootycoon.animal.ZooInspectionService.reset();
             net.zootycoon.construction.ConstructionManager.loadFromFile(server);
         });
 
@@ -202,6 +206,7 @@ public class ZooTycoonMod implements ModInitializer {
 
         // 6d. Bridge Player Vehicle Inputs in MC 1.21.1 to Physical Vehicles Scoreboard
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> {
+            net.zootycoon.animal.ZooInspectionService.tickServer(server);
             var scoreboard = server.getScoreboard();
             var mainScore = scoreboard.getObjective("main_score");
             if (mainScore == null) return;
@@ -266,6 +271,10 @@ public class ZooTycoonMod implements ModInitializer {
                 var funcOpt = server.getFunctions().get(ResourceLocation.fromNamespaceAndPath("jbt", "give_recipes"));
                 funcOpt.ifPresent(func -> server.getFunctions().execute(func, player.createCommandSourceStack().withSuppressedOutput().withPermission(2)));
             } catch (Exception ignored) {}
+        });
+
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+            net.zootycoon.animal.ZooInspectionService.onPlayerDisconnect(handler.getPlayer());
         });
 
         LOGGER.info("Zoo Tycoon Simulation initialized successfully.");

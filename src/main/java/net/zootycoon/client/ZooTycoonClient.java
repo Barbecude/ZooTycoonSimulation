@@ -391,6 +391,12 @@ public class ZooTycoonClient implements ClientModInitializer {
             });
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(net.zootycoon.network.InspectionPayloads.InspectionSnapshotPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                net.zootycoon.client.inspect.InspectionClientCache.update(payload);
+            });
+        });
+
         // Reset client static state when disconnecting from world or joining a new server
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             ClaimBoundaryRenderer.CLIENT_CLAIMS.clear();
@@ -408,6 +414,7 @@ public class ZooTycoonClient implements ClientModInitializer {
             inStudio = false;
             net.zootycoon.client.render.ZooAnimalHologramRenderer.currentTargetedAnimal = null;
             net.zootycoon.client.inspect.InspectionTargetTracker.reset();
+            net.zootycoon.client.inspect.InspectionClientCache.clear();
         });
 
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
@@ -418,6 +425,7 @@ public class ZooTycoonClient implements ClientModInitializer {
             clientZookeeperList.clear();
             clientEmeraldBalance = 0;
             net.zootycoon.client.inspect.InspectionTargetTracker.reset();
+            net.zootycoon.client.inspect.InspectionClientCache.clear();
         });
 
         // 3b. Register Entity Renderer & Model Layer for Humanoid Builder NPC

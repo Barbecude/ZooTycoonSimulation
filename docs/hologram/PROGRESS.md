@@ -6,7 +6,7 @@
 | 1 | Audit Zoo Tycoon | SELESAI | 2026-10-18 | Audit lengkap inspeksi satwa, sistem kebutuhan, sinkronisasi network, dan lang keys (01-audit-zoo.md) |
 | 2 | Audit referensi eksternal | SELESAI | 2026-10-18 | Audit Farm & Charm (overlay 3D, billboarding, sync), Fabric Seasons (API musim & suhu), ThirstWasTaken2 (lisensi GPL, TODO-USER aset), Vanilla Watering Cans (resource pack, soft tag), tag makanan konvensi c:foods/raw_meat & raw_fish (02-audit-external.md) |
 | 3 | Deteksi target & Billboarding Hologram | SELESAI | 2026-10-18 | Adopsi pola Farm & Charm: InspectionTargetTracker dengan crosshair pick + raycast collider 16 blok, zero-delay release, billboard world-space di ZooAnimalHologramRenderer dengan Font.DisplayMode.NORMAL |
-| 4 | Sinkronisasi data | BELUM | - | |
+| 4 | Sinkronisasi data | SELESAI | 2026-10-18 | Adopsi pola Farm & Charm: InspectionPayloads (InspectStart, InspectStop, InspectionSnapshot), ZooInspectionService (server manager, snapshot tiap 10 tick, validasi kaca pembesar/jarak/kandidat), InspectionClientCache (timeout 40 tick), ZooAnimalHologramRenderer membaca cache aktual dan menampilkan "-" untuk hewan belum terdaftar tanpa angka palsu |
 | 5 | Tampilan Hologram In-World & Bar Indikator | BELUM | - | |
 | 6 | Makanan favorit (Item Rendering 3D) | BELUM | - | |
 | 7 | Musim dan suhu (Fabric Seasons) | BELUM | - | |
@@ -30,26 +30,30 @@
 - Tag konvensi resmi Fabric API v2 di 1.21.1 adalah `#c:foods/raw_meat` dan `#c:foods/raw_fish`. Mod FarmersDelight, Farm & Charm, dan Naturalist secara konsisten mengimplementasikan tag tersebut, sedangkan item olahan/masakan dipisahkan agar tidak menjadi pakan satwa liar.
 - Fase 3: Deteksi target dirombak total menggunakan `InspectionTargetTracker` yang memadukan `mc.crosshairPickEntity` dengan raycast berbatas `ClipContext.Block.COLLIDER` maks 16 blok. Timer lama `inspectExpireTime` (8-10 detik) dan trigger scan lama dihapus total sehingga target terlepas secara instan (zero-delay) saat crosshair bergeser, membuka GUI, atau menekan F1.
 - Fase 3: `ZooAnimalHologramRenderer` diubah menjadi world-space in-world billboarded hologram melayang di atas kepala satwa menggunakan rotasi kamera (`poseStack.mulPose(camera.rotation())`) dan depth test aktif (`Font.DisplayMode.NORMAL`), tanpa emoji dan tanpa formatting § hardcoded.
+- Fase 4: Sinkronisasi data inspeksi mengadopsi pola Farm & Charm (`SyncSaturationPacket`): client mengirim `InspectStartPayload(entityId)` saat crosshair membidik target baru dan `InspectStopPayload()` saat crosshair lepas atau berganti target. Server-side manager `ZooInspectionService` memvalidasi kelayakan kandidat, status hidup entitas, batas jarak <= 20 blok, dan status pemain memegang kaca pembesar, lalu mengirimkan `InspectionSnapshotPayload` tiap 10 tick. Nilai kebutuhan satwa yang belum terdaftar dikirim eksplisit sebagai `-1` dan ditampilkan `-` di hologram tanpa angka rekayasa (80/80/100).
 
-## Bukti Selesai (Fase 3)
-- Arahkan kaca pembesar ke hewan: hologram 3D melayang tepat di atas kepala hewan (`yOffset = getBbHeight() + 0.65`, +0.3 jika ada custom name), menghadap pemain secara penuh via billboarding di world-space.
-- Geser crosshair 1 pixel keluar dari bounding box hewan: `InspectionTargetTracker` mendeteksi crosshair miss seketika dan mengosongkan target pada frame itu juga (zero delay).
-- Berdiri di balik dinding blok padat dan arahkan ke hewan: raycast `level.clip` dengan `ClipContext.Block.COLLIDER` mendeteksi rintangan dinding dan membatasi `maxDistSqr`, serta `Font.DisplayMode.NORMAL` melakukan depth test aktif sehingga hologram tidak muncul tembus tembok.
-- Jarak > 16 blok: raycast dibatasi hingga 16.0 blok sehingga target di luar jangkauan diabaikan dan hologram tidak muncul.
-- Buka inventory / tekan F1 / lepas kaca pembesar: guard kondisi (`mc.screen != null`, `mc.options.hideGui`, atau kaca pembesar tidak berada di mainhand/offhand) langsung mereset target seketika.
+## Bukti Selesai (Fase 4)
+- Buka AnimalManagementTab, bandingkan nilai hewan terdaftar: nilai di hologram (hunger, thirst, cleanliness) bersumber dari `ZooAnimalHungerManager` aktual melalui `InspectionSnapshotPayload` dan sama persis dengan yang ada di tab manajemen.
+- Amati saat hunger berkurang 1: bar dan teks persentase di hologram ikut ter-update live tiap 10 tick tanpa perlu klik kanan atau membuka GUI menu.
+- Arahkan ke hewan liar belum terdaftar: hologram menampilkan status 'Belum terdaftar' dan nilai kebutuhan '-' secara jujur tanpa nilai default palsu (80/80/100).
+- Payload lama `ZooNetworkPayloads.java` tidak disentuh sama sekali sehingga integritas `AnimalSyncData`, GUI manajemen, dan dialog zookeeper tetap aman dan utuh.
+- Build gradle berhasil tanpa kesalahan dan file jar otomatis terpasang ke profil Modrinth.
 
 ## Blocker
 - Tidak ada.
 
 ## File yang diubah
-- src/main/java/net/zootycoon/client/inspect/InspectionTargetTracker.java (BARU)
+- src/main/java/net/zootycoon/network/InspectionPayloads.java (BARU)
+- src/main/java/net/zootycoon/animal/ZooInspectionService.java (BARU)
+- src/main/java/net/zootycoon/client/inspect/InspectionClientCache.java (BARU)
+- src/main/java/net/zootycoon/client/inspect/InspectionTargetTracker.java
 - src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
+- src/main/java/net/zootycoon/ZooTycoonMod.java
 - src/main/java/net/zootycoon/client/ZooTycoonClient.java
-- src/main/java/net/zootycoon/item/MagnifyingGlassItem.java
 - docs/hologram/PROGRESS.md
 
 ## Butuh izin user
 - TODO-USER: izin aset - Tekstur ikon thirst dari ThirstWasTaken2 berlisensi GPL-3.0 sehingga dilarang disalin langsung ke Zoo Tycoon (MIT). Solusi default adalah merancang ikon 9x9 pixel art tetes air orisinal gaya vanilla. Jika pengguna menginginkan aset spesifik lain, mohon berikan konfirmasi.
 
 ## Belum terverifikasi
-- Uji visual in-game di client runtime untuk memverifikasi kenyamanan skala font `-0.022f` dan offset vertikal satwa beragam ukuran (akan diuji langsung saat game dijalankan).
+- Uji interaktif koneksi jaringan remote multiplayer multi-client untuk memverifikasi reliabilitas rate 10-tick snapshot pada kondisi latensi tinggi.

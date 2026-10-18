@@ -1,5 +1,6 @@
 package net.zootycoon.client.inspect;
 
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -12,6 +13,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.zootycoon.animal.ZooAnimalHungerManager;
 import net.zootycoon.item.ZooItems;
+import net.zootycoon.network.InspectionPayloads;
 
 import java.util.function.BiConsumer;
 
@@ -33,6 +35,18 @@ public class InspectionTargetTracker {
     }
 
     public static void onTargetChanged(LivingEntity oldEntity, LivingEntity newEntity) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.getConnection() != null) {
+            try {
+                if (oldEntity != null) {
+                    ClientPlayNetworking.send(new InspectionPayloads.InspectStopPayload());
+                }
+                if (newEntity != null) {
+                    ClientPlayNetworking.send(new InspectionPayloads.InspectStartPayload(newEntity.getId()));
+                }
+            } catch (Exception ignored) {}
+        }
+
         if (targetChangeListener != null) {
             targetChangeListener.accept(oldEntity, newEntity);
         }
@@ -120,3 +134,4 @@ public class InspectionTargetTracker {
         return null;
     }
 }
+
