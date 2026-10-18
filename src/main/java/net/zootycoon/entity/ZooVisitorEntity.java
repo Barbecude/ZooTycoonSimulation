@@ -144,6 +144,8 @@ public class ZooVisitorEntity extends PathfinderMob {
     private int postPurchaseEatMode = EAT_MODE_NONE;
     private int postPurchaseTimer = 0;
     private boolean isDrinkingItem = false;
+    private int consumeBitesRemaining = 0;
+    private int consumePauseTimer = 0;
 
     // Consumer preference: 0 = FOOD_ONLY (max 3 meals, never drinks), 1 = DRINK_ONLY (max 3 drinks, never eats)
     private int consumerType = 0;
@@ -779,65 +781,73 @@ public class ZooVisitorEntity extends PathfinderMob {
                 setHasTrash(true);
             }
 
-            // Authentic player-like eating / drinking animation & particle tick
-            if (eatTimer > 0) {
-                eatTimer--;
-                if (escapeTicks <= 0 && !this.isPassenger() && postPurchaseEatMode != EAT_MODE_WATCH_ANIMAL) {
-                    this.getNavigation().stop();
-                }
-                net.minecraft.world.item.ItemStack held = this.getMainHandItem();
-                if (!held.isEmpty() && this.level() instanceof net.minecraft.server.level.ServerLevel sLevel) {
-                    if (eatTimer % 4 == 0) {
-                        float pitch = 0.9F + this.random.nextFloat() * 0.2F;
-                        if (isDrinking()) {
-                            sLevel.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.GENERIC_DRINK, this.getSoundSource(), 0.85F, pitch);
-                        } else {
-                            sLevel.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.GENERIC_EAT, this.getSoundSource(), 0.85F, pitch);
-                        }
-                        Vec3 look = this.getLookAngle();
-                        double px = this.getX() + look.x * 0.35D;
-                        double py = this.getEyeY() - 0.15D;
-                        double pz = this.getZ() + look.z * 0.35D;
-                        sLevel.sendParticles(
-                                new net.minecraft.core.particles.ItemParticleOption(net.minecraft.core.particles.ParticleTypes.ITEM, held),
-                                px, py, pz,
-                                5, 0.08D, 0.08D, 0.08D, 0.03D
-                        );
-                    }
-                }
-                if (eatTimer == 0) {
-                    if (!isDrinking()) {
-                        this.level().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.PLAYER_BURP, this.getSoundSource(), 0.7F, 0.9F + this.random.nextFloat() * 0.2F);
-                    }
-                    this.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, net.minecraft.world.item.ItemStack.EMPTY);
-                    this.setItemInHand(InteractionHand.OFF_HAND, net.minecraft.world.item.ItemStack.EMPTY);
-                    this.entityData.set(IS_CONSUMING, false);
-                    this.entityData.set(IS_DRINKING, false);
-                    this.postPurchaseEatMode = EAT_MODE_NONE;
-                }
-            }
-
-            // Post-purchase food/drink behavior handling (Stand, Seat, or Watch Animal)
-            if (postPurchaseEatMode > EAT_MODE_NONE && !isConsuming()) {
+            // Authentic player-like eating / drinking with realistic pauses and strolls
+            net.minecraft.world.item.ItemStack heldFood = this.getMainHandItem();
+            if (postPurchaseEatMode > EAT_MODE_NONE && heldFood.isEmpty()) {
+                this.postPurchaseEatMode = EAT_MODE_NONE;
+                this.eatTimer = 0;
+                this.consumeBitesRemaining = 0;
+                this.consumePauseTimer = 0;
+                this.entityData.set(IS_CONSUMING, false);
+                this.entityData.set(IS_DRINKING, false);
+            } else if (postPurchaseEatMode > EAT_MODE_NONE) {
                 postPurchaseTimer++;
-                if (postPurchaseEatMode == EAT_MODE_STAND) {
-                    if (escapeTicks <= 0) {
-                        this.getNavigation().stop();
-                        startConsuming(this.getMainHandItem(), this.isDrinkingItem, 75);
+                if (consumeBitesRemaining <= 0 && eatTimer <= 0) {
+                    consumeBitesRemaining = 3 + this.random.nextInt(3); // 3 to 5 bites/sips total
+                    consumePauseTimer = 30 + this.random.nextInt(30);
+                }
+
+                if (eatTimer > 0) {
+                    eatTimer--;
+                    // Walk and eat naturally (never stop navigation)
+                    if (this.level() instanceof net.minecraft.server.level.ServerLevel sLevel) {
+                        if (eatTimer % 4 == 0) {
+                            float pitch = 0.9F + this.random.nextFloat() * 0.2F;
+                            if (isDrinking()) {
+                                sLevel.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.GENERIC_DRINK, this.getSoundSource(), 0.85F, pitch);
+                            } else {
+                                sLevel.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.GENERIC_EAT, this.getSoundSource(), 0.85F, pitch);
+                            }
+                            Vec3 look = this.getLookAngle();
+                            double px = this.getX() + look.x * 0.35D;
+                            double py = this.getEyeY() - 0.15D;
+                            double pz = this.getZ() + look.z * 0.35D;
+                            sLevel.sendParticles(
+                                    new net.minecraft.core.particles.ItemParticleOption(net.minecraft.core.particles.ParticleTypes.ITEM, heldFood),
+                                    px, py, pz,
+                                    5, 0.08D, 0.08D, 0.08D, 0.03D
+                            );
+                        }
                     }
-                } else if (postPurchaseEatMode == EAT_MODE_SEAT) {
-                    if (this.isPassenger()) {
-                        startConsuming(this.getMainHandItem(), this.isDrinkingItem, 95);
-                    } else if (postPurchaseTimer > 160) {
-                        this.getNavigation().stop();
-                        startConsuming(this.getMainHandItem(), this.isDrinkingItem, 75);
+
+                    if (eatTimer == 0) {
+                        this.entityData.set(IS_CONSUMING, false);
+                        this.consumeBitesRemaining--;
+                        if (this.consumeBitesRemaining > 0) {
+                            // Pause between bites/sips (3.5 to 7.0 seconds of walking, resting, or observing)
+                            this.consumePauseTimer = 70 + this.random.nextInt(70);
+                        } else {
+                            // Finished completely!
+                            if (!isDrinking()) {
+                                this.level().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.PLAYER_BURP, this.getSoundSource(), 0.7F, 0.9F + this.random.nextFloat() * 0.2F);
+                            }
+                            this.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, net.minecraft.world.item.ItemStack.EMPTY);
+                            this.setItemInHand(InteractionHand.OFF_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+                            this.entityData.set(IS_CONSUMING, false);
+                            this.entityData.set(IS_DRINKING, false);
+                            this.postPurchaseEatMode = EAT_MODE_NONE;
+                            this.setHasTrash(true);
+                        }
                     }
-                } else if (postPurchaseEatMode == EAT_MODE_WATCH_ANIMAL) {
-                    if (watchingAnimalId != -1) {
-                        startConsuming(this.getMainHandItem(), this.isDrinkingItem, 95);
-                    } else if (postPurchaseTimer > 160) {
-                        this.getNavigation().stop();
-                        startConsuming(this.getMainHandItem(), this.isDrinkingItem, 75);
+                } else if (escapeTicks <= 0) {
+                    // Not currently taking a bite: countdown the pause before the next bite/sip
+                    if (consumePauseTimer > 0) {
+                        consumePauseTimer--;
+                    } else if (consumeBitesRemaining > 0) {
+                        // Take the next bite / sip
+                        this.eatTimer = 26 + this.random.nextInt(10); // ~1.3-1.8s bite duration
+                        this.entityData.set(IS_CONSUMING, true);
+                        this.entityData.set(IS_DRINKING, this.isDrinkingItem);
                     }
                 }
             }
@@ -998,6 +1008,8 @@ public class ZooVisitorEntity extends PathfinderMob {
         tag.putInt("LastWatchedAnimalId", lastWatchedAnimalId);
         tag.putInt("EatMode", postPurchaseEatMode);
         tag.putBoolean("DrinkingItem", isDrinkingItem);
+        tag.putInt("BitesRemaining", consumeBitesRemaining);
+        tag.putInt("ConsumePause", consumePauseTimer);
         if (guidingPlayerUuid != null) {
             tag.putString("GuidingPlayerUuid", guidingPlayerUuid.toString());
         }
@@ -1042,6 +1054,12 @@ public class ZooVisitorEntity extends PathfinderMob {
         }
         if (tag.contains("DrinkingItem")) {
             isDrinkingItem = tag.getBoolean("DrinkingItem");
+        }
+        if (tag.contains("BitesRemaining")) {
+            consumeBitesRemaining = tag.getInt("BitesRemaining");
+        }
+        if (tag.contains("ConsumePause")) {
+            consumePauseTimer = tag.getInt("ConsumePause");
         }
         if (tag.contains("GuidingPlayerUuid")) {
             try {
@@ -1094,7 +1112,7 @@ public class ZooVisitorEntity extends PathfinderMob {
     }
 
     public void startConsuming(net.minecraft.world.item.ItemStack purchasedStack, boolean drink) {
-        startConsuming(purchasedStack, drink, 75);
+        startConsuming(purchasedStack, drink, 28);
     }
 
     public void startConsuming(net.minecraft.world.item.ItemStack purchasedStack, boolean drink, int duration) {
@@ -1102,12 +1120,17 @@ public class ZooVisitorEntity extends PathfinderMob {
         this.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, purchasedStack.copyWithCount(1));
         this.setDropChance(net.minecraft.world.entity.EquipmentSlot.MAINHAND, 0.0F);
         this.setItemInHand(InteractionHand.OFF_HAND, net.minecraft.world.item.ItemStack.EMPTY);
-        this.eatTimer = duration;
+        this.isDrinkingItem = drink;
+        if (this.consumeBitesRemaining <= 0) {
+            this.consumeBitesRemaining = 3 + this.random.nextInt(3);
+        }
+        if (this.postPurchaseEatMode == EAT_MODE_NONE) {
+            this.postPurchaseEatMode = EAT_MODE_STAND;
+        }
+        this.consumePauseTimer = 0;
+        this.eatTimer = Math.min(duration, 30);
         this.entityData.set(IS_CONSUMING, true);
         this.entityData.set(IS_DRINKING, drink);
-        if (!this.isPassenger() && postPurchaseEatMode != EAT_MODE_WATCH_ANIMAL) {
-            this.getNavigation().stop();
-        }
     }
 
     public void onTransactionComplete(BlockPos cashierPos, String role, net.minecraft.world.item.ItemStack purchasedItem, boolean isDrink) {
@@ -1132,6 +1155,11 @@ public class ZooVisitorEntity extends PathfinderMob {
                 this.setDropChance(net.minecraft.world.entity.EquipmentSlot.MAINHAND, 0.0F);
                 this.isDrinkingItem = isDrink;
                 this.postPurchaseTimer = 0;
+                this.consumeBitesRemaining = 3 + this.random.nextInt(3); // 3 to 5 bites/sips total
+                this.consumePauseTimer = 35 + this.random.nextInt(25); // ~1.5-3 seconds initial pause as they walk away from cashier
+                this.eatTimer = 0;
+                this.entityData.set(IS_CONSUMING, false);
+                this.entityData.set(IS_DRINKING, isDrink);
 
                 int choice = this.random.nextInt(3);
                 if (choice == 1 && !hasNearbySeat(24)) {
@@ -1826,8 +1854,8 @@ public class ZooVisitorEntity extends PathfinderMob {
                     inViewingRange = true;
                     visitor.hasWatchedAnimal = true;
                     visitor.lastWatchedAnimalId = targetAnimal.getId();
-                    if (visitor.postPurchaseEatMode == EAT_MODE_WATCH_ANIMAL && !visitor.isConsuming()) {
-                        visitor.startConsuming(visitor.getMainHandItem(), visitor.isDrinkingItem, 95);
+                    if (visitor.postPurchaseEatMode == EAT_MODE_WATCH_ANIMAL && visitor.consumeBitesRemaining <= 0 && !visitor.isConsuming()) {
+                        visitor.startConsuming(visitor.getMainHandItem(), visitor.isDrinkingItem, 28);
                     }
                 }
                 if (dist > 4.0D || visitor.getNavigation().isDone()) {
@@ -2492,8 +2520,8 @@ public class ZooVisitorEntity extends PathfinderMob {
                         this.isSeated = true;
                         this.sitTicks = 180 + visitor.getRandom().nextInt(240); // 9-21 seconds sitting
                         visitor.getNavigation().stop();
-                        if (visitor.postPurchaseEatMode == EAT_MODE_SEAT) {
-                            visitor.startConsuming(visitor.getMainHandItem(), visitor.isDrinkingItem, 95);
+                        if (visitor.postPurchaseEatMode == EAT_MODE_SEAT && visitor.consumeBitesRemaining <= 0) {
+                            visitor.startConsuming(visitor.getMainHandItem(), visitor.isDrinkingItem, 28);
                         }
                         return;
                     }

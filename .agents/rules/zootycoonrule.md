@@ -29,16 +29,8 @@ fungsi yg udah fix (tidak boleh sampe rusak karena mengubah kode):
 7. ui feeding through       
 8. builder notes & ui notes
 
-fungsi yg akan ada tapi belum tampil di ui/atau belum punya perilaku ke sistem yang baik masih banyak bug dan belum solid atau hanya static:
-1. rating zoo
-2. harga makanan & minuman, harga per 1 pengunjung, gaji pegawai.
-3. banyaknya pengunjung yg akan datang mengikuti kualitas zoo dan rating
-4. hologram muncul ketika magnifying glass di arahkan ke hewan
-5. interaksi hewan dengan musim, feeding through dan pengunjung.
-6. Gudang
 
-Urutan pengerjaan kronologis (Dilarang mengerjakan tahap apa pun sebelum diminta secara eksplisit oleh pengguna):
-
+Urutan pengerjaan kronologis (Dilarang mengerjakan semua tahap ini sebelum diminta secara eksplisit oleh pengguna):
 1. Hologram Magnifying Glass
 Perbaiki raycast agar responsif mendeteksi hewan, tidak menahan target lama saat crosshair lepas, tidak tembus pandang tembok/blok padat, serta pastikan sinkronisasi data kebutuhan satwa akurat dari server ke client.
 2. Interaksi Hewan dengan Musim, Feeding Trough, dan Pengunjung
