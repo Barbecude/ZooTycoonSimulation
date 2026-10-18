@@ -157,7 +157,7 @@ public class BuilderNoteScreen extends Screen {
         if (button == 0) {
             int listY = startY + 38;
             int listH = panelHeight - 66;
-            int rowH = 26;
+            int rowH = 22;
 
             if (maxScroll > 0 && mouseX >= startX + panelWidth - 22 && mouseX <= startX + panelWidth - 14 && mouseY >= listY && mouseY <= listY + listH) {
                 float rel = (float) (mouseY - listY) / (float) listH;
@@ -228,7 +228,7 @@ public class BuilderNoteScreen extends Screen {
         // 4. Checklist content area
         int listY = startY + 38;
         int listH = panelHeight - 66;
-        int rowH = 26;
+        int rowH = 22;
 
         int totalContentH = entries.size() * rowH;
         maxScroll = Math.max(0, totalContentH - listH);
@@ -254,12 +254,12 @@ public class BuilderNoteScreen extends Screen {
 
             boolean isHovered = mouseX >= startX + 16 && mouseX <= startX + panelWidth - 20 && mouseY >= rowY && mouseY <= rowY + rowH;
             if (isHovered) {
-                graphics.fill(startX + 18, rowY, startX + panelWidth - 22, rowY + rowH - 2, 0x14000000);
+                graphics.fill(startX + 18, rowY, startX + panelWidth - 22, rowY + rowH - 1, 0x14000000);
             }
 
             // A. Checkbox box
             int boxX = startX + 20;
-            int boxY = rowY + 6;
+            int boxY = rowY + 5;
             int boxSize = 12;
 
             graphics.fill(boxX, boxY, boxX + boxSize, boxY + boxSize, 0xFF5A432D);
@@ -276,7 +276,7 @@ public class BuilderNoteScreen extends Screen {
             // B. 3D Item / Block icon
             ItemStack iconStack = new ItemStack(entry.item);
             int iconX = startX + 36;
-            int iconY = rowY + 4;
+            int iconY = rowY + 3;
 
             graphics.renderFakeItem(iconStack, iconX, iconY);
             graphics.renderItemDecorations(this.font, iconStack, iconX, iconY, "");
@@ -285,20 +285,31 @@ public class BuilderNoteScreen extends Screen {
                 hoveredItem = iconStack;
             }
 
-            // C. Item Name & Target Count
+            // C. Item Name & Ratio (e.g. Oak Planks — 19/8)
             int textX = startX + 56;
-            String itemName = entry.item.getDescription().getString();
-            String nameAndTarget = itemName + " — " + entry.needed;
-            int titleColor = entry.checked ? 0xFF8C7B6B : 0xFF2B1909;
-            graphics.drawString(this.font, nameAndTarget, textX, rowY + 3, titleColor, false);
+            int textY = rowY + 7;
+            int maxW = panelWidth - 56 - 22; // 146 px available
 
-            // D. Dynamic Live Inventory availability indicator (Separate from checklist!)
             int inInv = countPlayerItem(entry.item);
             boolean isEnough = inInv >= entry.needed;
-            String statusLabel = isEnough ? ZooTranslations.get("zootycoon.note.status.enough") : ZooTranslations.get("zootycoon.note.status.lacking");
-            String invText = "Tersedia: " + inInv + "/" + entry.needed + " (" + statusLabel + ")";
-            int invColor = isEnough ? 0xFF1B6B2B : 0xFF9C2A2A;
-            graphics.drawString(this.font, invText, textX, rowY + 13, invColor, false);
+            int invColor = isEnough ? 0xFF1B6B2B : 0xFFB71C1C;
+            int titleColor = entry.checked ? 0xFF8C7B6B : 0xFF2B1909;
+
+            String countStr = inInv + "/" + entry.needed;
+            String dash = " — ";
+
+            int countW = this.font.width(countStr);
+            int dashW = this.font.width(dash);
+            int maxNameW = maxW - countW - dashW;
+
+            String displayName = entry.item.getDescription().getString();
+            if (this.font.width(displayName) > maxNameW) {
+                displayName = this.font.plainSubstrByWidth(displayName, maxNameW - this.font.width("...")) + "...";
+            }
+
+            graphics.drawString(this.font, displayName + dash, textX, textY, titleColor, false);
+            int countX = textX + this.font.width(displayName + dash);
+            graphics.drawString(this.font, countStr, countX, textY, invColor, false);
         }
 
         graphics.disableScissor();
