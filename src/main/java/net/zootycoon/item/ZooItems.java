@@ -103,6 +103,51 @@ public class ZooItems {
             new Item.Properties().stacksTo(1)
     );
 
+    public static final ResourceKey<Item> COPPER_WATERING_CAN_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("copper_watering_can")
+    );
+    public static final Item COPPER_WATERING_CAN = new WateringCanItem(
+            new Item.Properties().rarity(net.minecraft.world.item.Rarity.COMMON).durability(12),
+            60, 18, 0
+    );
+
+    public static final ResourceKey<Item> IRON_WATERING_CAN_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("iron_watering_can")
+    );
+    public static final Item IRON_WATERING_CAN = new WateringCanItem(
+            new Item.Properties().rarity(net.minecraft.world.item.Rarity.COMMON).durability(24),
+            45, 15, 1
+    );
+
+    public static final ResourceKey<Item> GOLD_WATERING_CAN_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("gold_watering_can")
+    );
+    public static final Item GOLD_WATERING_CAN = new WateringCanItem(
+            new Item.Properties().rarity(net.minecraft.world.item.Rarity.COMMON).durability(54),
+            45, 12, 2
+    );
+
+    public static final ResourceKey<Item> DIAMOND_WATERING_CAN_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("diamond_watering_can")
+    );
+    public static final Item DIAMOND_WATERING_CAN = new WateringCanItem(
+            new Item.Properties().rarity(net.minecraft.world.item.Rarity.COMMON).durability(90),
+            40, 12, 3
+    );
+
+    public static final ResourceKey<Item> NETHERITE_WATERING_CAN_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("netherite_watering_can")
+    );
+    public static final Item NETHERITE_WATERING_CAN = new WateringCanItem(
+            new Item.Properties().rarity(net.minecraft.world.item.Rarity.RARE).durability(120).fireResistant(),
+            40, 5, 4, true
+    );
+
     public static List<ItemStack> createJakesBuildToolsItems() {
         List<ItemStack> list = new ArrayList<>();
 
@@ -293,6 +338,11 @@ public class ZooItems {
         Registry.register(BuiltInRegistries.ITEM, MAGNIFYING_GLASS_KEY, MAGNIFYING_GLASS);
         Registry.register(BuiltInRegistries.ITEM, BROOM_KEY, BROOM);
         Registry.register(BuiltInRegistries.ITEM, BUILDER_NOTE_KEY, BUILDER_NOTE);
+        Registry.register(BuiltInRegistries.ITEM, COPPER_WATERING_CAN_KEY, COPPER_WATERING_CAN);
+        Registry.register(BuiltInRegistries.ITEM, IRON_WATERING_CAN_KEY, IRON_WATERING_CAN);
+        Registry.register(BuiltInRegistries.ITEM, GOLD_WATERING_CAN_KEY, GOLD_WATERING_CAN);
+        Registry.register(BuiltInRegistries.ITEM, DIAMOND_WATERING_CAN_KEY, DIAMOND_WATERING_CAN);
+        Registry.register(BuiltInRegistries.ITEM, NETHERITE_WATERING_CAN_KEY, NETHERITE_WATERING_CAN);
 
         ItemGroupEvents.modifyEntriesEvent(CREATIVE_TAB_KEY).register(entries -> {
             entries.accept(net.zootycoon.block.ZooBlocks.FEEDING_TROUGH_ITEM);
@@ -300,6 +350,11 @@ public class ZooItems {
             entries.accept(MAGNIFYING_GLASS);
             entries.accept(BROOM);
             entries.accept(BUILDER_NOTE);
+            entries.accept(COPPER_WATERING_CAN);
+            entries.accept(IRON_WATERING_CAN);
+            entries.accept(GOLD_WATERING_CAN);
+            entries.accept(DIAMOND_WATERING_CAN);
+            entries.accept(NETHERITE_WATERING_CAN);
             entries.accept(net.zootycoon.block.ZooBlocks.TOILET_ITEM);
             entries.accept(net.zootycoon.block.ZooBlocks.TRASH_CAN_ITEM);
             entries.accept(net.zootycoon.block.ZooBlocks.TRASH_ITEM);
@@ -316,6 +371,11 @@ public class ZooItems {
         });
 
         ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(entries -> {
+            entries.accept(COPPER_WATERING_CAN);
+            entries.accept(IRON_WATERING_CAN);
+            entries.accept(GOLD_WATERING_CAN);
+            entries.accept(DIAMOND_WATERING_CAN);
+            entries.accept(NETHERITE_WATERING_CAN);
             for (ItemStack jbtStack : createJakesBuildToolsItems()) {
                 entries.accept(jbtStack);
             }

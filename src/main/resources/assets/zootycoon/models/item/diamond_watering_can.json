@@ -1,0 +1,7 @@
+{
+  "parent": "zootycoon:item/watering_can_3d",
+  "textures": {
+    "0": "zootycoon:item/diamond_watering_can_full",
+    "particle": "zootycoon:item/diamond_watering_can_full"
+  }
+}

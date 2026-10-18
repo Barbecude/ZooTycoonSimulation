@@ -2,6 +2,11 @@
   "replace": false,
   "values": [
     "minecraft:water_bucket",
+    "zootycoon:copper_watering_can",
+    "zootycoon:iron_watering_can",
+    "zootycoon:gold_watering_can",
+    "zootycoon:diamond_watering_can",
+    "zootycoon:netherite_watering_can",
     { "id": "dewdrop:copper_watering_can", "required": false },
     { "id": "dewdrop:iron_watering_can", "required": false },
     { "id": "dewdrop:gold_watering_can", "required": false },
@@ -10,4 +15,3 @@
     { "id": "farm_and_charm:watering_can", "required": false }
   ]
 }
-
