@@ -212,13 +212,20 @@ public class BuilderInspectionScreen extends EasyNpcDialogScreen {
                 }).asPrimary();
                 addRenderableWidget(workBtn);
             } else {
-                var depositBtn = new ZooButton(startX + 12, btnY, btnW, 22, ZooTranslations.component("zootycoon.dialog.builder.btn.give_materials"), b -> {
+                int btn3W = (panelWidth - 24 - 12) / 3;
+                var noteBtn = new ZooButton(startX + 12, btnY, btn3W, 22, ZooTranslations.component("zootycoon.dialog.builder.btn.take_notes"), b -> {
+                    ClientPlayNetworking.send(new ZooNetworkPayloads.TakeBuilderNotePayload(siteId));
+                    this.onClose();
+                }).setItemIcon(new ItemStack(net.zootycoon.item.ZooItems.BUILDER_NOTE)).asPrimary();
+                addRenderableWidget(noteBtn);
+
+                var depositBtn = new ZooButton(startX + 12 + btn3W + 6, btnY, btn3W, 22, ZooTranslations.component("zootycoon.dialog.builder.btn.give_materials"), b -> {
                     ClientPlayNetworking.send(new ZooNetworkPayloads.DepositMaterialsPayload(siteId));
                     this.onClose();
                 }).asPrimary();
                 addRenderableWidget(depositBtn);
 
-                var closeBtn = new ZooButton(startX + 12 + btnW + 8, btnY, btnW, 22, ZooTranslations.component("zootycoon.dialog.builder.btn.later"), b -> {
+                var closeBtn = new ZooButton(startX + 12 + (btn3W * 2) + 12, btnY, panelWidth - 24 - (btn3W * 2) - 12, 22, ZooTranslations.component("zootycoon.dialog.builder.btn.later"), b -> {
                     this.onClose();
                 }).asPrimary();
                 addRenderableWidget(closeBtn);

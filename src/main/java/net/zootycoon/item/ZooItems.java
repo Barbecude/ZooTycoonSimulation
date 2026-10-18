@@ -94,6 +94,15 @@ public class ZooItems {
             new Item.Properties()
     );
 
+    public static final ResourceKey<Item> BUILDER_NOTE_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("builder_note")
+    );
+
+    public static final Item BUILDER_NOTE = new BuilderNoteItem(
+            new Item.Properties().stacksTo(1)
+    );
+
     public static List<ItemStack> createJakesBuildToolsItems() {
         List<ItemStack> list = new ArrayList<>();
 
@@ -283,12 +292,14 @@ public class ZooItems {
         Registry.register(BuiltInRegistries.ITEM, HUNTER_SPAWN_EGG_KEY, HUNTER_SPAWN_EGG);
         Registry.register(BuiltInRegistries.ITEM, MAGNIFYING_GLASS_KEY, MAGNIFYING_GLASS);
         Registry.register(BuiltInRegistries.ITEM, BROOM_KEY, BROOM);
+        Registry.register(BuiltInRegistries.ITEM, BUILDER_NOTE_KEY, BUILDER_NOTE);
 
         ItemGroupEvents.modifyEntriesEvent(CREATIVE_TAB_KEY).register(entries -> {
             entries.accept(net.zootycoon.block.ZooBlocks.FEEDING_TROUGH_ITEM);
             entries.accept(net.zootycoon.block.ZooBlocks.GACHA_MACHINE_ITEM);
             entries.accept(MAGNIFYING_GLASS);
             entries.accept(BROOM);
+            entries.accept(BUILDER_NOTE);
             entries.accept(net.zootycoon.block.ZooBlocks.TOILET_ITEM);
             entries.accept(net.zootycoon.block.ZooBlocks.TRASH_CAN_ITEM);
             entries.accept(net.zootycoon.block.ZooBlocks.TRASH_ITEM);

@@ -4,6 +4,10 @@ import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
@@ -13,6 +17,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.zootycoon.ZooTycoonMod;
 import net.zootycoon.claim.ClaimTier;
@@ -211,6 +216,30 @@ public class ZooNetworkPayloads {
         public static final StreamCodec<FriendlyByteBuf, DepositToolsPayload> CODEC = CustomPacketPayload.codec(
                 (payload, buf) -> buf.writeUUID(payload.siteId),
                 buf -> new DepositToolsPayload(buf.readUUID())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 10c. Take Builder Note Payload (C2S)
+    public record TakeBuilderNotePayload(UUID siteId) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<TakeBuilderNotePayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("take_builder_note"));
+        public static final StreamCodec<FriendlyByteBuf, TakeBuilderNotePayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> buf.writeUUID(payload.siteId),
+                buf -> new TakeBuilderNotePayload(buf.readUUID())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 10c2. Update Note Checklist Payload (C2S)
+    public record UpdateNoteChecklistPayload(boolean isMainHand, int entryIndex, boolean checked) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<UpdateNoteChecklistPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("update_note_checklist"));
+        public static final StreamCodec<FriendlyByteBuf, UpdateNoteChecklistPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeBoolean(payload.isMainHand);
+                    buf.writeInt(payload.entryIndex);
+                    buf.writeBoolean(payload.checked);
+                },
+                buf -> new UpdateNoteChecklistPayload(buf.readBoolean(), buf.readInt(), buf.readBoolean())
         );
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
@@ -999,6 +1028,8 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playC2S().register(RequestBuildPayload.TYPE, RequestBuildPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(DepositMaterialsPayload.TYPE, DepositMaterialsPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(DepositToolsPayload.TYPE, DepositToolsPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(TakeBuilderNotePayload.TYPE, TakeBuilderNotePayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(UpdateNoteChecklistPayload.TYPE, UpdateNoteChecklistPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(HireStaffPayload.TYPE, HireStaffPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestStaffSyncPayload.TYPE, RequestStaffSyncPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(PayBuilderWagePayload.TYPE, PayBuilderWagePayload.CODEC);
@@ -1169,6 +1200,113 @@ public class ZooNetworkPayloads {
                         sendToast(player, "zootycoon.toast.title.builder", "zootycoon.builder.no_tools_in_hand", 2);
                     }
                 });
+            });
+        });
+
+        // Handler: Take Builder Note
+        ServerPlayNetworking.registerGlobalReceiver(TakeBuilderNotePayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                ConstructionManager.getSite(payload.siteId).ifPresent(site -> {
+                    var missing = site.getMissingMaterials();
+                    if (missing.isEmpty()) {
+                        return;
+                    }
+
+                    // Check if player already has a note for this site
+                    ItemStack existingNote = ItemStack.EMPTY;
+                    for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                        ItemStack st = player.getInventory().getItem(i);
+                        if (st.is(net.zootycoon.item.ZooItems.BUILDER_NOTE)) {
+                            CustomData cd = st.get(DataComponents.CUSTOM_DATA);
+                            if (cd != null && cd.copyTag().contains("SiteId")) {
+                                if (payload.siteId().toString().equals(cd.copyTag().getString("SiteId"))) {
+                                    existingNote = st;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // Preserve existing checked states by itemId
+                    java.util.Map<String, Boolean> checkedMap = new java.util.HashMap<>();
+                    if (!existingNote.isEmpty()) {
+                        CustomData cd = existingNote.get(DataComponents.CUSTOM_DATA);
+                        if (cd != null && cd.copyTag().contains("Materials", 9)) {
+                            ListTag list = cd.copyTag().getList("Materials", 10);
+                            for (int i = 0; i < list.size(); i++) {
+                                CompoundTag ct = list.getCompound(i);
+                                checkedMap.put(ct.getString("id"), ct.getBoolean("checked"));
+                            }
+                        }
+                    }
+
+                    CompoundTag tag = new CompoundTag();
+                    tag.putString("SiteId", payload.siteId().toString());
+                    tag.putString("SchematicName", site.getSchematic() != null ? site.getSchematic().getName() : "Proyek Konstruksi");
+                    if (site.getBuilderUuid() != null) {
+                        var ent = ((ServerLevel) player.level()).getEntity(site.getBuilderUuid());
+                        if (ent != null) {
+                            tag.putString("BuilderName", ent.getName().getString());
+                        } else {
+                            tag.putString("BuilderName", "Kuli Bangunan");
+                        }
+                    } else {
+                        tag.putString("BuilderName", "Kuli Bangunan");
+                    }
+
+                    ListTag matList = new ListTag();
+                    for (var entry : missing.entrySet()) {
+                        CompoundTag itemTag = new CompoundTag();
+                        String itemId = BuiltInRegistries.ITEM.getKey(entry.getKey()).toString();
+                        itemTag.putString("id", itemId);
+                        itemTag.putInt("needed", entry.getValue());
+                        itemTag.putBoolean("checked", checkedMap.getOrDefault(itemId, false));
+                        matList.add(itemTag);
+                    }
+                    tag.put("Materials", matList);
+
+                    if (!existingNote.isEmpty()) {
+                        existingNote.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+                        player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.BOOK_PAGE_TURN, net.minecraft.sounds.SoundSource.PLAYERS, 1.0f, 1.0f);
+                        sendToast(player, "zootycoon.toast.title.builder", "zootycoon.dialog.builder.note_updated", 1);
+                    } else {
+                        ItemStack newNote = new ItemStack(net.zootycoon.item.ZooItems.BUILDER_NOTE);
+                        newNote.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+                        if (!player.getInventory().add(newNote)) {
+                            player.drop(newNote, false);
+                        }
+                        player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.ITEM_PICKUP, net.minecraft.sounds.SoundSource.PLAYERS, 1.0f, 1.0f);
+                        sendToast(player, "zootycoon.toast.title.builder", "zootycoon.dialog.builder.note_taken", 1);
+                    }
+                });
+            });
+        });
+
+        // Handler: Update Note Checklist
+        ServerPlayNetworking.registerGlobalReceiver(UpdateNoteChecklistPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                ItemStack stack = payload.isMainHand() ? player.getMainHandItem() : player.getOffhandItem();
+                if (!stack.is(net.zootycoon.item.ZooItems.BUILDER_NOTE)) {
+                    if (player.getOffhandItem().is(net.zootycoon.item.ZooItems.BUILDER_NOTE)) {
+                        stack = player.getOffhandItem();
+                    } else if (player.getMainHandItem().is(net.zootycoon.item.ZooItems.BUILDER_NOTE)) {
+                        stack = player.getMainHandItem();
+                    }
+                }
+                if (stack.is(net.zootycoon.item.ZooItems.BUILDER_NOTE)) {
+                    CustomData cd = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
+                    CompoundTag tag = cd.copyTag();
+                    if (tag.contains("Materials", 9)) {
+                        ListTag list = tag.getList("Materials", 10);
+                        if (payload.entryIndex() >= 0 && payload.entryIndex() < list.size()) {
+                            CompoundTag itemTag = list.getCompound(payload.entryIndex());
+                            itemTag.putBoolean("checked", payload.checked());
+                            stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+                        }
+                    }
+                }
             });
         });
 
