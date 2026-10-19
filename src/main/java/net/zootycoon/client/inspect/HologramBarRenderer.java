@@ -24,10 +24,10 @@ public class HologramBarRenderer {
     public static final ResourceLocation CLEANLINESS_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/inspect/cleanliness.png");
     public static final ResourceLocation THERMOMETER_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/inspect/thermometer.png");
 
-    // Vanilla Tooltip Colors: dark translucent background and gradient border (Top 0x505000FF to Bottom 0x5028007F)
+    // Vanilla Tooltip Colors: dark translucent background and gradient border (Top 0xF05000FF to Bottom 0xF028007F)
     public static final int TOOLTIP_BG = 0xF0100010;
-    public static final int TOOLTIP_BORDER_TOP = 0x505000FF;
-    public static final int TOOLTIP_BORDER_BOTTOM = 0x5028007F;
+    public static final int TOOLTIP_BORDER_TOP = 0xF05000FF;
+    public static final int TOOLTIP_BORDER_BOTTOM = 0xF028007F;
 
     // Value text threshold colors
     public static final int COLOR_NORMAL = 0xFFFFFFFF;   // > 50%
@@ -114,7 +114,7 @@ public class HologramBarRenderer {
     }
 
     public static void drawVanillaTooltipBackground(MultiBufferSource buffer, Matrix4f matrix, float minX, float minY, float maxX, float maxY, int light, float alphaFactor) {
-        VertexConsumer consumer = buffer.getBuffer(RenderType.textBackgroundSeeThrough());
+        VertexConsumer consumer = buffer.getBuffer(RenderType.textBackground());
         float z = -0.02f;
 
         int bg = applyAlpha(TOOLTIP_BG, alphaFactor);
@@ -129,8 +129,8 @@ public class HologramBarRenderer {
         drawRect(consumer, matrix, minX, minY + 2.0f, minX + 1.0f, maxY - 2.0f, z, bg, light);
         drawRect(consumer, matrix, maxX - 1.0f, minY + 2.0f, maxX, maxY - 2.0f, z, bg, light);
 
-        // 2. Vanilla tooltip border frame (Top 0x505000FF to Bottom 0x5028007F)
-        float borderZ = z + 0.002f;
+        // 2. Vanilla tooltip border frame (Top 0xF05000FF to Bottom 0xF028007F)
+        float borderZ = z + 0.005f;
         drawRect(consumer, matrix, minX + 1.0f, minY + 1.0f, maxX - 1.0f, minY + 2.0f, borderZ, borderTop, light);
         drawRect(consumer, matrix, minX + 1.0f, maxY - 2.0f, maxX - 1.0f, maxY - 1.0f, borderZ, borderBottom, light);
         drawVerticalGradientRect(consumer, matrix, minX + 1.0f, minY + 2.0f, minX + 2.0f, maxY - 2.0f, borderZ, borderTop, borderBottom, light);
@@ -145,7 +145,7 @@ public class HologramBarRenderer {
     }
 
     public static void drawTexturedIcon(MultiBufferSource buffer, Matrix4f matrix, ResourceLocation texture, float x, float y, float width, float height, int light, float alphaFactor) {
-        VertexConsumer consumer = buffer.getBuffer(RenderType.textSeeThrough(texture));
+        VertexConsumer consumer = buffer.getBuffer(RenderType.text(texture));
         float z = -0.005f;
         int a = Math.max(0, Math.min(255, Math.round(255 * Math.max(0.0f, Math.min(1.0f, alphaFactor)))));
         int r = 255, g = 255, b = 255;
@@ -172,7 +172,7 @@ public class HologramBarRenderer {
 
     public static void drawAtlasSprite(MultiBufferSource buffer, Matrix4f matrix, TextureAtlasSprite sprite, float x, float y, float width, float height, int light, float alphaFactor) {
         if (sprite == null) return;
-        VertexConsumer consumer = buffer.getBuffer(RenderType.textSeeThrough(sprite.atlasLocation()));
+        VertexConsumer consumer = buffer.getBuffer(RenderType.text(sprite.atlasLocation()));
         float u0 = sprite.getU0();
         float u1 = sprite.getU1();
         float v0 = sprite.getV0();
@@ -202,7 +202,7 @@ public class HologramBarRenderer {
     }
 
     public static void drawVanillaHeartIcon(Minecraft mc, Font font, MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light, float alphaFactor) {
-        font.drawInBatch("❤", x + 1.0f, y, applyAlpha(0xFFFF2222, alphaFactor), false, matrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, light);
+        font.drawInBatch("❤", x + 1.0f, y, applyAlpha(0xFFFF2222, alphaFactor), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, light);
     }
 
     /**
@@ -221,7 +221,7 @@ public class HologramBarRenderer {
             }
         }
         // Fallback: draw textured icon or colored square
-        drawRect(buffer.getBuffer(RenderType.textBackgroundSeeThrough()), matrix, x, y, x + 8.0f, y + 8.0f, -0.005f, applyAlpha(0xFFD47A22, alphaFactor), light);
+        drawRect(buffer.getBuffer(RenderType.textBackground()), matrix, x, y, x + 8.0f, y + 8.0f, -0.005f, applyAlpha(0xFFD47A22, alphaFactor), light);
     }
 
     /**

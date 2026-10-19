@@ -200,9 +200,9 @@ public class ZooAnimalHologramRenderer {
         Vec3 camPos = camera.getPosition();
         Font font = mc.font;
 
-        // 1. Natural eye-level vertical positioning (fixes issue #1: hologram previously too high)
+        // 1. Natural vertical positioning anchored directly above mob's bounding box
         double eyeHeight = entity.getEyeHeight();
-        double yOffset = Math.max(0.65, eyeHeight + 0.15);
+        double yOffset = Math.max(entity.getBbHeight() + 0.08, eyeHeight + 0.15);
         if (entity.hasCustomName()) {
             yOffset += 0.25;
         }
@@ -222,19 +222,6 @@ public class ZooAnimalHologramRenderer {
         }
 
         float eased = smoothEase(lockProgress);
-
-        // Smoothly interpolate between in-world mob position and screen-center locked position (0, 0, -1.35)
-        float transX = localPos.x + (0.0f - localPos.x) * eased;
-        float transY = localPos.y + (0.0f - localPos.y) * eased;
-        float transZ = localPos.z + (-1.35f - localPos.z) * eased;
-
-        // Smoothly interpolate scale: world scale (0.0110f) -> screen locked scale (0.0068f)
-        float curScale = 0.0110f + (0.0068f - 0.0110f) * eased;
-
-        poseStack.pushPose();
-        poseStack.mulPose(camera.rotation());
-        poseStack.translate(transX, transY, transZ);
-        poseStack.scale(curScale, -curScale, curScale);
 
         // 1. Entity Health
         float currentHp = entity.getHealth();
@@ -403,9 +390,25 @@ public class ZooAnimalHologramRenderer {
 
         float minX = -boxWidth / 2.0f;
         float maxX = boxWidth / 2.0f;
-        float halfH = totalBoxHeight / 2.0f;
-        float startY = -halfH;
-        float maxY = halfH;
+        // Bottom-anchored card: startY = -totalBoxHeight (top), maxY = 0.0f (bottom)
+        // With -curScale along Y, local Y = 0 sits at yOffset, and local Y = -totalBoxHeight extends upwards above mob!
+        float startY = -totalBoxHeight;
+        float maxY = 0.0f;
+
+        // Smoothly interpolate scale: world scale (0.0110f) -> screen locked scale (0.0068f)
+        float curScale = 0.0110f + (0.0068f - 0.0110f) * eased;
+        float halfHWorld = (totalBoxHeight / 2.0f) * curScale;
+        float targetTransY = -halfHWorld; // Screen-center vertical alignment when locked
+
+        // Smoothly interpolate between in-world mob position and screen-center locked position
+        float transX = localPos.x + (0.0f - localPos.x) * eased;
+        float transY = localPos.y + (targetTransY - localPos.y) * eased;
+        float transZ = localPos.z + (-1.35f - localPos.z) * eased;
+
+        poseStack.pushPose();
+        poseStack.mulPose(camera.rotation());
+        poseStack.translate(transX, transY, transZ);
+        poseStack.scale(curScale, -curScale, curScale);
 
         Matrix4f matrix = poseStack.last().pose();
         MultiBufferSource buffer = context.consumers();
@@ -415,7 +418,7 @@ public class ZooAnimalHologramRenderer {
             HologramBarRenderer.drawVanillaTooltipBackground(buffer, matrix, minX, startY, maxX, maxY, LightTexture.FULL_BRIGHT, fadeAlpha);
 
             if (buffer instanceof MultiBufferSource.BufferSource bs) {
-                bs.endBatch(RenderType.textBackgroundSeeThrough());
+                bs.endBatch(RenderType.textBackground());
             }
 
             float leftX = minX + 8.0f;
@@ -425,7 +428,7 @@ public class ZooAnimalHologramRenderer {
             poseStack.pushPose();
             poseStack.translate(leftX, curY, 0.0f);
             poseStack.scale(titleScale, titleScale, 1.0f);
-            font.drawInBatch(titleComp, 0.0f, 0.0f, HologramBarRenderer.applyAlpha(0xFFFFFFFF, fadeAlpha), false, poseStack.last().pose(), buffer, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(titleComp, 0.0f, 0.0f, HologramBarRenderer.applyAlpha(0xFFFFFFFF, fadeAlpha), false, poseStack.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             poseStack.popPose();
             curY += headerHeight;
 
@@ -481,34 +484,34 @@ public class ZooAnimalHologramRenderer {
             }
 
             // Render Stat Labels (Indonesian, Left-aligned with fadeAlpha)
-            font.drawInBatch(hpLabel, labelX, r1Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(hungerLabel, labelX, r2Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(thirstLabel, labelX, r3Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(cleanLabel, labelX, r4Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(tempLabel, labelX, r5Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(hpLabel, labelX, r1Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(hungerLabel, labelX, r2Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(thirstLabel, labelX, r3Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(cleanLabel, labelX, r4Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(tempLabel, labelX, r5Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 
             // Render Stat Values with fadeAlpha
-            font.drawInBatch(hpText, valueX, r1Y + 1.0f, HologramBarRenderer.applyAlpha(hpTextColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(hungerText, valueX, r2Y + 1.0f, HologramBarRenderer.applyAlpha(hungerTextColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(thirstText, valueX, r3Y + 1.0f, HologramBarRenderer.applyAlpha(thirstTextColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(cleanText, valueX, r4Y + 1.0f, HologramBarRenderer.applyAlpha(cleanTextColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(hpText, valueX, r1Y + 1.0f, HologramBarRenderer.applyAlpha(hpTextColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(hungerText, valueX, r2Y + 1.0f, HologramBarRenderer.applyAlpha(hungerTextColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(thirstText, valueX, r3Y + 1.0f, HologramBarRenderer.applyAlpha(thirstTextColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(cleanText, valueX, r4Y + 1.0f, HologramBarRenderer.applyAlpha(cleanTextColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 
             // Temperature Value: Celsius (White) + Status (Green if comfortable, Red if needs heater/cooler)
-            font.drawInBatch(tempBaseText, valueX, r5Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFFFFFFF, fadeAlpha), false, matrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(tempBaseText, valueX, r5Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFFFFFFF, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             float statusX = valueX + font.width(tempBaseText);
-            font.drawInBatch(tempStatusLabel, statusX, r5Y + 1.0f, HologramBarRenderer.applyAlpha(tempStatusColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(tempStatusLabel, statusX, r5Y + 1.0f, HologramBarRenderer.applyAlpha(tempStatusColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 
             // 5. Habitat Needs Section: ONLY RED ITEMS SHOWN (Left-aligned with fadeAlpha)
             float checklistStartX = leftX;
             if (redNeeds.isEmpty()) {
                 // All needs satisfied: single green line
-                font.drawInBatch("Kebutuhan Habitat: Terpenuhi", checklistStartX, curY, HologramBarRenderer.applyAlpha(0xFF55FF55, fadeAlpha), false, matrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);
+                font.drawInBatch("Kebutuhan Habitat: Terpenuhi", checklistStartX, curY, HologramBarRenderer.applyAlpha(0xFF55FF55, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             } else {
                 // Some needs missing: yellow header and red itemized checklist
-                font.drawInBatch("Kebutuhan Habitat:", checklistStartX, curY, HologramBarRenderer.applyAlpha(0xFFFFFF55, fadeAlpha), false, matrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);
+                font.drawInBatch("Kebutuhan Habitat:", checklistStartX, curY, HologramBarRenderer.applyAlpha(0xFFFFFF55, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
                 curY += 11.0f;
                 for (Component need : redNeeds) {
-                    font.drawInBatch(need, checklistStartX + 4.0f, curY, HologramBarRenderer.applyAlpha(0xFFFF5555, fadeAlpha), false, matrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);
+                    font.drawInBatch(need, checklistStartX + 4.0f, curY, HologramBarRenderer.applyAlpha(0xFFFF5555, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
                     curY += 10.0f;
                 }
             }

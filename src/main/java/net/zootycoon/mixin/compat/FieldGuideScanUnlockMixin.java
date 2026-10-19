@@ -18,13 +18,13 @@ public abstract class FieldGuideScanUnlockMixin {
     @Shadow(remap = false)
     private int targetEntityId;
 
-    @Inject(method = "handleServer", at = @At("TAIL"), remap = false, require = 0)
+    @Inject(method = "handleServer", at = @At("HEAD"), remap = false, require = 0)
     private void zootycoon$onFieldGuideScanServer(ServerPlayer player, CallbackInfo ci) {
         if (player == null || player.level() == null) return;
         if (this.targetEntityId <= 0) return;
 
         Entity entity = player.level().getEntity(this.targetEntityId);
-        if (entity instanceof LivingEntity living) {
+        if (entity instanceof LivingEntity living && living.isAlive()) {
             ZooAnimalHungerManager.registerAnimalFromSpyglass(player, living);
         }
     }

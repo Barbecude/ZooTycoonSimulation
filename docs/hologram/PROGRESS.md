@@ -122,21 +122,39 @@
   2. Penghapusan Efek Partikel & Suara: Suara `SoundEvents.EXPERIENCE_ORB_PICKUP` dan partikel `ParticleTypes.HAPPY_VILLAGER` saat memindai satwa telah dihapus.
   3. Scope Terisolasi Ketat: Perubahan diisolasi murni pada `MagnifyingGlassItem.java` tanpa mengubah fungsionalitas lain.
 
+- Pendaftaran Otomatis Field Guide & Pemulihan Depth Testing Hologram (Bottom-Anchored):
+  1. Pendaftaran Otomatis Field Guide ke Zoo:
+     - Mengubah injeksi paket `FieldGuideScanUnlockMixin.handleServer` dari `@At("TAIL")` ke `@At("HEAD")`, memastikan pendaftaran satwa ke kebun binatang dieksekusi seketika paket tiba di server tanpa terhambat verifikasi scan eksternal.
+     - Meningkatkan `FieldGuideScanManagerMixin.completeScan` di sisi client untuk segera mengirimkan `ScanAnimalPayload`, menambahkan tag `zoo_registered`, dan menandai target lokal pada `InspectionTargetTracker`.
+     - Kode `MagnifyingGlassItem.java` sama sekali tidak disentuh untuk menjaga pemisahan fungsi.
+  2. Pemulihan Border Ungu Gradien Tooltip & Depth Testing:
+     - Memulihkan warna border tooltip vanilla pada `HologramBarRenderer` dengan gradien ungu-ke-nila yang tegas (`TOOLTIP_BORDER_TOP = 0xF05000FF` dan `TOOLTIP_BORDER_BOTTOM = 0xF028007F`).
+     - Mengembalikan render type dan font display mode dari `SEE_THROUGH` kembali ke `NORMAL` dan `RenderType.textBackground()` / `RenderType.text(...)`. Dengan ini, hologram tidak lagi menembus langit, dinding/balok, maupun mob lain di sekitarnya.
+  3. Eliminasi Oklusi Tubuh Mob dengan Bottom-Anchored Hologram:
+     - Mengubah titik jangkar vertikal kartu hologram dari semula centered (`-halfH` ke `+halfH`) menjadi bottom-anchored (`startY = -totalBoxHeight`, `maxY = 0.0f`).
+     - Mengatur ketinggian jangkar dasar (`yOffset = Math.max(entity.getBbHeight() + 0.08, eyeHeight + 0.15)`). Bagian bawah kartu berada tepat 8 cm di atas titik tertinggi bounding box satwa dan seluruh badan kartu menjulang ke atas ke ruang kosong.
+     - Geometri tubuh, leher, dada, maupun moncong satwa secara matematis tidak pernah memotong bidang kartu hologram, dan posisinya tetap dekat dan pas tepat di atas satwa ("tidak terlalu atas").
+     - Penyesuaian animasi zoom ease: saat klik kanan ditahan (`lockProgress` menuju 1.0f), kartu secara otomatis menginterpolasi translasi vertikal (`transY`) ke `-halfHWorld`, menempatkan kartu tepat di tengah layar kamera.
+
 ## Bukti Selesai
 - Seluruh permintaan pengguna telah terimplementasi dan terkompilasi bersih dengan .\gradlew.bat build.
 - File jar hasil build zootycoon-1.0.0.jar otomatis tersalin ke folder mods profil Modrinth di `C:\Users\Zevaldo\AppData\Roaming\ModrinthApp\profiles\Fresh & Smooth\mods\zootycoon-1.0.0.jar`.
-- Toast pemindaian satwa, partikel hijau, dan suara xp pickup telah dihapus saat klik kanan kaca pembesar.
-- Scope guard dipatuhi ketat tanpa merubah kode di luar `MagnifyingGlassItem.java`.
+- Selesai memindai dengan Field Guide langsung mendaftarkan satwa ke kebun binatang.
+- Border ungu gradien tooltip pulih, depth testing aktif (tidak tembus langit/balok/mob), dan kartu hologram tidak tertutup tubuh satwa.
 
 ## Blocker
 - Tidak ada blocker.
 
 ## File yang diubah
-- src/main/java/net/zootycoon/item/MagnifyingGlassItem.java
+- src/main/java/net/zootycoon/mixin/compat/FieldGuideScanUnlockMixin.java
+- src/main/java/net/zootycoon/mixin/compat/FieldGuideScanManagerMixin.java
+- src/main/java/net/zootycoon/client/inspect/HologramBarRenderer.java
+- src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
 - docs/hologram/PROGRESS.md
 
 ## Butuh izin user
 - Tidak ada.
 
 ## Belum terverifikasi
-- Pengujian in-game langsung oleh pengguna untuk memastikan tidak ada toast, suara, maupun partikel yang muncul saat klik kanan kaca pembesar pada satwa.
+- Pengujian langsung di dalam game untuk mengonfirmasi registrasi otomatis lewat Field Guide dan tampilan visual border serta posisi hologram terhadap satwa.
+
