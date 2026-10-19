@@ -26,6 +26,8 @@ public class ZooWorldIndicatorRenderer {
     private static final ResourceLocation EXCLAMATION_TEXTURE =
             ZooTycoonMod.id("textures/gui/icons/exclamation_point.png");
 
+    private static final double MAX_INDICATOR_DISTANCE = 48.0;
+
     public static void render(WorldRenderContext context) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
@@ -37,25 +39,33 @@ public class ZooWorldIndicatorRenderer {
         MultiBufferSource buffer = context.consumers();
         if (buffer == null) return;
 
+        double maxRenderDist = mc.options.getEffectiveRenderDistance() * 16.0;
+        double maxDist = Math.min(MAX_INDICATOR_DISTANCE, maxRenderDist);
+        double maxDistSqr = maxDist * maxDist;
+
         double now = System.currentTimeMillis();
         double bob = Math.sin(now / 300.0) * 0.04;
 
         for (Entity entity : mc.level.entitiesForRendering()) {
-            if (!entity.isAlive()) continue;
+            if (!(entity instanceof LivingEntity living) || living instanceof Player || !living.isAlive()) {
+                continue;
+            }
 
-            Vec3 pos = entity.position();
-            double dx = pos.x - camPos.x;
-            double dy = (pos.y + entity.getBbHeight()) - camPos.y;
-            double dz = pos.z - camPos.z;
+            double ex = living.getX();
+            double ey = living.getY();
+            double ez = living.getZ();
+            double dx = ex - camPos.x;
+            double dy = (ey + living.getBbHeight()) - camPos.y;
+            double dz = ez - camPos.z;
             double distSqr = dx * dx + dy * dy + dz * dz;
 
-            // Distance culling (48 blocks)
-            if (distSqr > 48.0 * 48.0) continue;
+            // Early distance culling before PoseStack or sync data lookup
+            if (distSqr > maxDistSqr) continue;
 
             // 1. Zookeeper indicator: orange exclamation mark if out of food stock
-            if (entity instanceof ZooZookeeperEntity keeper) {
+            if (living instanceof ZooZookeeperEntity keeper) {
                 if (keeper.getFoodStock() <= 0) {
-                    double renderY = (pos.y + keeper.getBbHeight() + 1.25D + bob) - camPos.y;
+                    double renderY = (ey + keeper.getBbHeight() + 1.25D + bob) - camPos.y;
                     renderBillboard(
                             buffer, poseStack, RenderType.entityCutout(EXCLAMATION_TEXTURE),
                             dx, renderY, dz,
@@ -68,9 +78,9 @@ public class ZooWorldIndicatorRenderer {
             }
 
             // 1b. Builder indicator: orange exclamation mark if needing tools, materials, or wage payment
-            if (entity instanceof net.zootycoon.entity.ZooBuilderEntity builder) {
+            if (living instanceof net.zootycoon.entity.ZooBuilderEntity builder) {
                 if (builder.needsSomething()) {
-                    double renderY = (pos.y + builder.getBbHeight() + 1.25D + bob) - camPos.y;
+                    double renderY = (ey + builder.getBbHeight() + 1.25D + bob) - camPos.y;
                     renderBillboard(
                             buffer, poseStack, RenderType.entityCutout(EXCLAMATION_TEXTURE),
                             dx, renderY, dz,
@@ -83,9 +93,9 @@ public class ZooWorldIndicatorRenderer {
             }
 
             // 1b-2. Cashier indicator: exclamation mark if stock is empty
-            if (entity instanceof net.zootycoon.entity.ZooCashierEntity cashier) {
+            if (living instanceof net.zootycoon.entity.ZooCashierEntity cashier) {
                 if (cashier.isOutOfStock()) {
-                    double renderY = (pos.y + cashier.getBbHeight() + 1.25D + bob) - camPos.y;
+                    double renderY = (ey + cashier.getBbHeight() + 1.25D + bob) - camPos.y;
                     renderBillboard(
                             buffer, poseStack, RenderType.entityCutout(EXCLAMATION_TEXTURE),
                             dx, renderY, dz,
@@ -98,7 +108,7 @@ public class ZooWorldIndicatorRenderer {
             }
 
             // 1c. Visitor mood icon: cleanly billboarded to camera at natural height just above head (hidden when leaving)
-            if (entity instanceof net.zootycoon.entity.ZooVisitorEntity visitor) {
+            if (living instanceof net.zootycoon.entity.ZooVisitorEntity visitor) {
                 if (visitor.isLeaving() || visitor.isTimeToLeave()) {
                     continue;
                 }
@@ -114,7 +124,7 @@ public class ZooWorldIndicatorRenderer {
                     };
                     if (tex != null) {
                         double hatOffset = visitor.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).isEmpty() ? 0.65D : 1.05D;
-                        double renderY = (pos.y + visitor.getBbHeight() + hatOffset + bob) - camPos.y;
+                        double renderY = (ey + visitor.getBbHeight() + hatOffset + bob) - camPos.y;
                         renderBillboard(
                                 buffer, poseStack, RenderType.entityCutout(tex),
                                 dx, renderY, dz,
@@ -128,11 +138,11 @@ public class ZooWorldIndicatorRenderer {
             }
 
             // 2. Animal indicator: hunger bar with down arrow if hunger <= 50
-            if (entity instanceof LivingEntity living && !(entity instanceof Player)) {
-                ZooNetworkPayloads.AnimalSyncData syncData = ZooTycoonClient.getAnimalData(entity.getId());
+            if (!ZooTycoonClient.clientAnimalMap.isEmpty()) {
+                ZooNetworkPayloads.AnimalSyncData syncData = ZooTycoonClient.getAnimalData(living.getId());
                 if (syncData != null && syncData.hunger() <= 50) {
                     double heightOffset = living.hasCustomName() ? 0.75D : 0.45D;
-                    double renderY = (pos.y + living.getBbHeight() + heightOffset + bob) - camPos.y;
+                    double renderY = (ey + living.getBbHeight() + heightOffset + bob) - camPos.y;
 
                     float halfSize = 0.22f;
                     int r = 255, g = 255, b = 255;
