@@ -8,6 +8,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
@@ -738,13 +739,19 @@ public class ZooAnimalHologramRenderer {
             poseStack.popPose();
             curY += cached.headerHeight;
 
-            // 3. Favorite Food Icons (2D Flat, Unshaded, Never Cropped)
+            // 3. Favorite Food Icons (3D Vanilla for Blocks, 2D Flat for Items)
             if (cached.foodCount > 0) {
                 for (int i = 0; i < cached.foodCount; i++) {
                     ItemStack foodStack = cached.foods.get(i);
                     float foodX = leftX + (i * FOOD_SPACING);
                     float foodY = curY + 2.0f;
-                    HologramBarRenderer.drawItemIcon2D(mc, buffer, matrix, foodStack, foodX, foodY, FOOD_SIZE, LightTexture.FULL_BRIGHT, fadeAlpha);
+
+                    BakedModel model = mc.getItemRenderer().getModel(foodStack, mc.level, null, 0);
+                    if (model != null && model.isGui3d()) {
+                        HologramBarRenderer.drawBlockIcon3D(mc, buffer, poseStack, foodStack, foodX, foodY, FOOD_SIZE, LightTexture.FULL_BRIGHT, fadeAlpha);
+                    } else {
+                        HologramBarRenderer.drawItemIcon2D(mc, buffer, matrix, foodStack, foodX, foodY, FOOD_SIZE, LightTexture.FULL_BRIGHT, fadeAlpha);
+                    }
                 }
                 curY += cached.foodSectionHeight;
             }

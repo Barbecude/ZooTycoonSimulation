@@ -171,17 +171,26 @@
      - Jika pemain tidak memegang `Magnifying Glass`, tracker langsung mengembalikan `null` seketika tanpa melakukan komputasi raycast apa pun.
      - Toleransi grace buffer 15 tick (`targetRetentionTicks = 15`) tetap dipertahankan agar kartu hologram stabil dan tidak berkedip saat crosshair membidik sedikit meleset dari model satwa.
 
+- Pemulihan Sprite Heart Vanilla 2D & Rendering 3D Block Makanan (Hay Bale):
+  1. Sprite Heart Vanilla 2D:
+     - Mengubah `HologramBarRenderer.drawVanillaHeartIcon` untuk menggunakan sprite resmi GUI vanilla Minecraft `minecraft:hud/heart/full` via `drawAtlasSprite` dengan alpha blending, menggantikan font glyph text "❤".
+     - Ikon stat kini seragam dan konsisten sebagai pixel art resmi Minecraft vanilla 9x9.
+  2. Rendering Makanan 3D Vanilla untuk Blok & 2D Flat untuk Item:
+     - Pada `ZooAnimalHologramRenderer.java`, menambahkan pengecekan `model.isGui3d()` pada setiap item pakan di baris makanan favorit.
+     - Untuk makanan tipe blok (seperti Hay Bale pada kuda, melon, labu), digunakan `HologramBarRenderer.drawBlockIcon3D` yang memanfaatkan `ItemRenderer.renderStatic(..., ItemDisplayContext.GUI, ...)` vanilla dengan offset kedalaman Z (+8.0f) agar model 3D tidak menembus atau terpotong oleh pelat background tooltip.
+     - Untuk makanan tipe item biasa (seperti apel, gandum, wortel, daging/ikan mentah), tetap menggunakan `HologramBarRenderer.drawItemIcon2D` berbasis quad flat partikel 2D sehingga sangat ringan dan hemat kinerja GPU.
+
 ## Bukti Selesai
-- Seluruh permintaan Prompt 2 telah terimplementasi dan terkompilasi bersih dengan `compileJava` dan `build`.
-- File jar `zootycoon-1.0.0.jar` telah tersalin ke folder mods profil Modrinth.
-- Tidak ada panggilan `font.width` maupun `AnimalDietRegistry.getFoodsForAnimal` yang berjalan di dalam per-frame render loop.
-- Guard check di `findTarget` memblokir `level.clip` dan `getEntityHitResult` jika pemain tidak memegang Magnifying Glass.
+- Seluruh kode terkompilasi bersih tanpa error dengan `compileJava` dan `build`.
+- File jar `zootycoon-1.0.0.jar` telah tersalin ke direktori mods profil Modrinth.
+- Ikon heart pada status kesehatan satwa menggunakan sprite vanilla `hud/heart/full`.
+- Ikon makanan tipe blok (seperti Hay Bale) tampil sebagai balok 3D isometric vanilla, sedangkan tipe item tetap 2D flat unshaded.
 
 ## Blocker
 - Tidak ada blocker.
 
 ## File yang diubah
-- src/main/java/net/zootycoon/client/inspect/InspectionTargetTracker.java
+- src/main/java/net/zootycoon/client/inspect/HologramBarRenderer.java
 - src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
 - docs/hologram/PROGRESS.md
 
@@ -189,8 +198,4 @@
 - Tidak ada.
 
 ## Belum terverifikasi
-- Pengujian in-game langsung oleh pengguna untuk memeriksa grafik frame time Alt + F3 dan kestabilan kartu hologram saat crosshair digeser tipis.
-
-
-
-
+- Pengujian in-game langsung oleh pengguna untuk memeriksa visualisasi icon heart dan icon haybale pada satwa kuda.

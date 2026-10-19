@@ -29,6 +29,7 @@ fungsi yg udah fix (tidak boleh sampe rusak karena mengubah kode):
 6. hunter
 7. ui feeding through       
 8. builder notes & ui notes
+9. logika magnifying glass, animasi hologram
 
 
 Urutan pengerjaan kronologis (Dilarang mengerjakan semua tahap ini sebelum diminta secara eksplisit oleh pengguna):

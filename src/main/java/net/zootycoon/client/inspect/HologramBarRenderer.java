@@ -1,13 +1,16 @@
 package net.zootycoon.client.inspect;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.joml.Matrix4f;
 
@@ -197,13 +200,21 @@ public class HologramBarRenderer {
     }
 
     /**
-     * Draws the vanilla heart icon using font glyph '❤' (always renders cleanly without missing atlas issues).
+     * Draws the vanilla heart icon using the official vanilla GUI sprite hud/heart/full,
+     * falling back to the font glyph '❤' if the sprite manager is unavailable.
      */
     public static void drawVanillaHeartIcon(Minecraft mc, Font font, MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light) {
         drawVanillaHeartIcon(mc, font, buffer, matrix, x, y, light, 1.0f);
     }
 
     public static void drawVanillaHeartIcon(Minecraft mc, Font font, MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light, float alphaFactor) {
+        if (mc != null && mc.getGuiSprites() != null) {
+            TextureAtlasSprite sprite = mc.getGuiSprites().getSprite(VANILLA_HEART_SPRITE);
+            if (sprite != null) {
+                drawAtlasSprite(buffer, matrix, sprite, x, y, 9.0f, 9.0f, light, alphaFactor);
+                return;
+            }
+        }
         font.drawInBatch("❤", x + 1.0f, y, applyAlpha(0xFFFF2222, alphaFactor), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, light);
     }
 
@@ -290,5 +301,32 @@ public class HologramBarRenderer {
         consumer.addVertex(matrix, x + size, y, z).setColor(r, g, b, a).setUv(u1, v0).setLight(light);
         consumer.addVertex(matrix, x + size, y + size, z).setColor(r, g, b, a).setUv(u1, v1).setLight(light);
         consumer.addVertex(matrix, x, y + size, z).setColor(r, g, b, a).setUv(u0, v1).setLight(light);
+    }
+
+    /**
+     * Draws a 3D isometric block icon using vanilla Minecraft ItemRenderer for blocks (like Hay Bale)
+     * positioned cleanly in front of the hologram background with no clipping.
+     */
+    public static void drawBlockIcon3D(Minecraft mc, MultiBufferSource buffer, PoseStack poseStack, ItemStack stack, float x, float y, float size, int light, float alphaFactor) {
+        if (stack == null || stack.isEmpty() || mc == null) return;
+        if (alphaFactor <= 0.05f) return;
+
+        poseStack.pushPose();
+        // Translate to icon center and bring forward on Z (+8.0f) so 3D depth never clips behind background plate
+        poseStack.translate(x + (size / 2.0f), y + (size / 2.0f), 8.0f);
+        float renderScale = size * Math.min(1.0f, Math.max(0.01f, alphaFactor));
+        poseStack.scale(renderScale, -renderScale, renderScale);
+
+        mc.getItemRenderer().renderStatic(
+                stack,
+                ItemDisplayContext.GUI,
+                light,
+                OverlayTexture.NO_OVERLAY,
+                poseStack,
+                buffer,
+                mc.level,
+                0
+        );
+        poseStack.popPose();
     }
 }
