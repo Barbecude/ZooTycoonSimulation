@@ -1,10 +1,8 @@
 package net.zootycoon.item;
 
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
@@ -13,7 +11,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.zootycoon.animal.ZooAnimalHungerManager;
-import net.zootycoon.compat.SereneSeasonsCompat;
 import net.zootycoon.network.ZooNetworkPayloads;
 import net.zootycoon.util.ZooTranslations;
 
@@ -69,20 +66,10 @@ public class MagnifyingGlassItem extends Item {
     }
 
     private static void scanAndRegister(ServerPlayer sp, LivingEntity target) {
-        boolean newlyRegistered = ZooAnimalHungerManager.registerAnimalFromSpyglass(sp, target, true);
-        var env = SereneSeasonsCompat.evaluateEnvironment(target);
-
-        sp.playNotifySound(SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 0.8f, 1.4f);
-        sp.serverLevel().sendParticles(ParticleTypes.HAPPY_VILLAGER, target.getX(), target.getY() + target.getBbHeight() + 0.3, target.getZ(), 8, 0.2, 0.2, 0.2, 0.02);
+        ZooAnimalHungerManager.registerAnimalFromSpyglass(sp, target, true);
 
         // Always send animal sync to client so the hologram has fresh data immediately
         ZooNetworkPayloads.sendAnimalSync(sp);
-
-        if (!newlyRegistered) {
-            String name = target.hasCustomName() ? target.getCustomName().getString() : target.getType().getDescription().getString();
-            ZooNetworkPayloads.sendToast(sp, "item.zootycoon.magnifying_glass",
-                    "zootycoon.animal.scan_toast", 1, name, env.tempCategory(), env.seasonName());
-        }
     }
 
     @Override

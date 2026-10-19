@@ -117,23 +117,21 @@
      - Seluruh teks & label: `Font.DisplayMode.SEE_THROUGH`
   3. Jaminan Layering (Z-Index): Karena OpenGL depth testing dinonaktifkan, urutan render (`draw order`) menjamin kartu hologram selalu tampil di lapisan paling depan (di atas tubuh, belalai, moncong, maupun tanduk satwa) tanpa ada bagian kartu yang terpotong atau tertutup geometri mob.
 
+- Penghapusan Toast Pindai, Partikel, dan Efek Suara Kaca Pembesar:
+  1. Penghapusan Toast Pemindaian: Pemanggilan toast `zootycoon.animal.scan_toast` ("Berhasil memindai %s!") pada `MagnifyingGlassItem.scanAndRegister` telah dihapus.
+  2. Penghapusan Efek Partikel & Suara: Suara `SoundEvents.EXPERIENCE_ORB_PICKUP` dan partikel `ParticleTypes.HAPPY_VILLAGER` saat memindai satwa telah dihapus.
+  3. Scope Terisolasi Ketat: Perubahan diisolasi murni pada `MagnifyingGlassItem.java` tanpa mengubah fungsionalitas lain.
+
 ## Bukti Selesai
 - Seluruh permintaan pengguna telah terimplementasi dan terkompilasi bersih dengan .\gradlew.bat build.
 - File jar hasil build zootycoon-1.0.0.jar otomatis tersalin ke folder mods profil Modrinth di `C:\Users\Zevaldo\AppData\Roaming\ModrinthApp\profiles\Fresh & Smooth\mods\zootycoon-1.0.0.jar`.
-- Animasi fade out halus dan singkat tetap aktif saat hologram hilang.
-- Toast pemindaian dan pendaftaran satwa telah dipulihkan.
-- Klik kanan kaca pembesar pada mob tidak lagi memukul/mengayunkan tangan, melainkan langsung melakukan zoom ease hologram ke tengah layar.
-- Oklusi badan mob diatasi murni menggunakan Z-index / see-through render layers tanpa menggeser posisi koordinat hologram.
+- Toast pemindaian satwa, partikel hijau, dan suara xp pickup telah dihapus saat klik kanan kaca pembesar.
+- Scope guard dipatuhi ketat tanpa merubah kode di luar `MagnifyingGlassItem.java`.
 
 ## Blocker
 - Tidak ada blocker.
 
 ## File yang diubah
-- src/main/java/net/zootycoon/ZooTycoonMod.java
-- src/main/java/net/zootycoon/animal/ZooAnimalHungerManager.java
-- src/main/java/net/zootycoon/client/inspect/HologramBarRenderer.java
-- src/main/java/net/zootycoon/client/inspect/InspectionTargetTracker.java
-- src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
 - src/main/java/net/zootycoon/item/MagnifyingGlassItem.java
 - docs/hologram/PROGRESS.md
 
@@ -141,4 +139,4 @@
 - Tidak ada.
 
 ## Belum terverifikasi
-- Pengujian in-game langsung oleh pengguna untuk memeriksa tampilan hologram yang tidak tertutup badan mob dengan posisi tetap stabil di atas satwa.
+- Pengujian in-game langsung oleh pengguna untuk memastikan tidak ada toast, suara, maupun partikel yang muncul saat klik kanan kaca pembesar pada satwa.
