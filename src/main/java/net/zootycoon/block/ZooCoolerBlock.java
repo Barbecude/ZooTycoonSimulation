@@ -86,7 +86,7 @@ public class ZooCoolerBlock extends BaseEntityBlock {
                         }
                     }
                     level.playSound(null, pos, SoundEvents.SNOW_BREAK, SoundSource.BLOCKS, 1.0f, 1.2f);
-                    player.displayClientMessage(Component.translatable("zootycoon.cooler.fueled", thermal.getFuelTime() / 20), true);
+                    player.displayClientMessage(Component.translatable("zootycoon.cooler.fueled", formatDuration(thermal.getFuelTime() / 20)), true);
                 }
                 return ItemInteractionResult.SUCCESS;
             }
@@ -100,13 +100,25 @@ public class ZooCoolerBlock extends BaseEntityBlock {
             if (level.getBlockEntity(pos) instanceof ZooThermalBlockEntity thermal) {
                 int seconds = thermal.getFuelTime() / 20;
                 if (seconds > 0) {
-                    player.displayClientMessage(Component.translatable("zootycoon.cooler.time_remaining", seconds), true);
+                    player.displayClientMessage(Component.translatable("zootycoon.cooler.time_remaining", formatDuration(seconds)), true);
                 } else {
                     player.displayClientMessage(Component.translatable("zootycoon.cooler.empty"), true);
                 }
             }
         }
         return InteractionResult.SUCCESS;
+    }
+
+    public static String formatDuration(int totalSeconds) {
+        int minutes = totalSeconds / 60;
+        int seconds = totalSeconds % 60;
+        if (minutes > 0) {
+            if (seconds > 0) {
+                return minutes + " menit " + seconds + " detik";
+            }
+            return minutes + " menit";
+        }
+        return totalSeconds + " detik";
     }
 
     public static int getCoolingTicks(ItemStack stack) {

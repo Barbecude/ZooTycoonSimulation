@@ -180,22 +180,38 @@
      - Untuk makanan tipe blok (seperti Hay Bale pada kuda, melon, labu), digunakan `HologramBarRenderer.drawBlockIcon3D` yang memanfaatkan `ItemRenderer.renderStatic(..., ItemDisplayContext.GUI, ...)` vanilla dengan offset kedalaman Z (+8.0f) agar model 3D tidak menembus atau terpotong oleh pelat background tooltip.
      - Untuk makanan tipe item biasa (seperti apel, gandum, wortel, daging/ikan mentah), tetap menggunakan `HologramBarRenderer.drawItemIcon2D` berbasis quad flat partikel 2D sehingga sangat ringan dan hemat kinerja GPU.
 
+- Penambahan Cerobong Asap Heater & Format Durasi Bahasa Indonesia (Menit/Detik):
+  1. Model 3D Cerobong Asap Terintegrasi 1-Blok:
+     - Menggabungkan 6 elemen cerobong asap (chimney tube Y:16..24, 4 pilar sudut Y:24..28, dan topi pelat Y:28..30) langsung ke dalam model 1-blok `heater_off.json` dan `heater_on.json` tanpa memerlukan blok atas tambahan.
+     - Menyesuaikan transformasi display GUI (`translation: [0, -3.5, 0]`, `scale: [0.45, 0.45, 0.45]`) dan ground agar model utuh beserta cerobongnya tampil proporsional di slot inventory.
+     - Memperbarui VoxelShape di `ZooHeaterBlock.java` dengan penggabungan bentuk cerobong (`Block.box(3, 16, 3, 13, 30, 13)`) sehingga hitbox dan seleksi blok akurat hingga ujung cerobong.
+     - Menambahkan partikel asap cerobong `CAMPFIRE_COSY_SMOKE` pada ketinggian cerobong `pos.getY() + 1.9` saat heater menyala (LIT).
+  2. Format Durasi Bahasa Indonesia (Menit & Detik):
+     - Mengimplementasikan helper `formatDuration(int totalSeconds)` pada `ZooHeaterBlock.java` dan `ZooCoolerBlock.java`.
+     - Teks actionbar / popup saat pengisian bahan bakar atau pengecekan sisa waktu kini diformat ramah pengguna dalam satuan menit dan detik (contoh: "2 menit", "4 menit 30 detik", atau "45 detik") alih-alih angka detik mentah.
+     - Menyesuaikan string terjemahan `id_id.json` dan `en_us.json` agar placeholder `%s` langsung menampilkan teks durasi lengkap.
+
 ## Bukti Selesai
 - Seluruh kode terkompilasi bersih tanpa error dengan `compileJava` dan `build`.
 - File jar `zootycoon-1.0.0.jar` telah tersalin ke direktori mods profil Modrinth.
-- Ikon heart pada status kesehatan satwa menggunakan sprite vanilla `hud/heart/full`.
-- Ikon makanan tipe blok (seperti Hay Bale) tampil sebagai balok 3D isometric vanilla, sedangkan tipe item tetap 2D flat unshaded.
+- Model `heater_off.json` dan `heater_on.json` memiliki cerobong asap lengkap (13 elemen).
+- VoxelShape `ZooHeaterBlock` dan partikel asap cerobong telah aktif.
+- Format durasi Heater dan Cooler Box menyajikan menit dan detik dalam bahasa Indonesia.
 
 ## Blocker
 - Tidak ada blocker.
 
 ## File yang diubah
-- src/main/java/net/zootycoon/client/inspect/HologramBarRenderer.java
-- src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
+- src/main/resources/assets/zootycoon/models/block/heater_off.json
+- src/main/resources/assets/zootycoon/models/block/heater_on.json
+- src/main/java/net/zootycoon/block/ZooHeaterBlock.java
+- src/main/java/net/zootycoon/block/ZooCoolerBlock.java
+- src/main/resources/assets/zootycoon/lang/id_id.json
+- src/main/resources/assets/zootycoon/lang/en_us.json
 - docs/hologram/PROGRESS.md
 
 ## Butuh izin user
 - Tidak ada.
 
 ## Belum terverifikasi
-- Pengujian in-game langsung oleh pengguna untuk memeriksa visualisasi icon heart dan icon haybale pada satwa kuda.
+- Pengujian in-game langsung oleh pengguna untuk memeriksa visual model cerobong heater, partikel asap cerobong, dan popup durasi bahan bakar dalam menit.
