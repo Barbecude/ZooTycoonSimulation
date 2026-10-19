@@ -42,7 +42,18 @@ public class ZooAnimalHologramRenderer {
     public static LivingEntity currentTargetedAnimal = null;
     private static float lockProgress = 0.0f;
     private static LivingEntity lockedAnimal = null;
+    private static float fadeAlpha = 0.0f;
+    private static LivingEntity lastValidAnimal = null;
     private static long lastFrameTimeNano = 0L;
+
+    public static void reset() {
+        currentTargetedAnimal = null;
+        lockedAnimal = null;
+        lastValidAnimal = null;
+        lockProgress = 0.0f;
+        fadeAlpha = 0.0f;
+        lastFrameTimeNano = 0L;
+    }
 
     public static float smoothEase(float t) {
         return t * t * (3.0f - 2.0f * t);
@@ -104,10 +115,7 @@ public class ZooAnimalHologramRenderer {
     public static void render(WorldRenderContext context) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) {
-            currentTargetedAnimal = null;
-            lockedAnimal = null;
-            lockProgress = 0.0f;
-            lastFrameTimeNano = 0L;
+            reset();
             return;
         }
 
@@ -137,14 +145,15 @@ public class ZooAnimalHologramRenderer {
             }
         }
 
-        // Entity to render: locked animal if still active, otherwise currently hovered target
-        LivingEntity entityToRender = (lockedAnimal != null && lockedAnimal.isAlive()) ? lockedAnimal : activeTarget;
-        currentTargetedAnimal = entityToRender;
+        LivingEntity candidate = (lockedAnimal != null && lockedAnimal.isAlive()) ? lockedAnimal : activeTarget;
+        boolean candidateValid = candidate != null && candidate.isAlive() && InspectionTargetTracker.isZooRegisteredAnimal(candidate);
 
-        boolean shouldDisplay = entityToRender != null && entityToRender.isAlive() && InspectionTargetTracker.isZooRegisteredAnimal(entityToRender);
+        if (candidateValid) {
+            lastValidAnimal = candidate;
+        }
 
         // Target lock progress: 1.0f when locked in center, 0.0f when free in-world
-        float targetProgress = (isRightClickHeld && shouldDisplay) ? 1.0f : 0.0f;
+        float targetProgress = (isRightClickHeld && candidateValid) ? 1.0f : 0.0f;
 
         // Smooth ease transition rate (~0.25 seconds for full ease)
         float transitionSpeed = 4.0f;
@@ -154,14 +163,34 @@ public class ZooAnimalHologramRenderer {
             lockProgress = Math.max(targetProgress, lockProgress - dt * transitionSpeed);
         }
 
-        if (!shouldDisplay && lockProgress <= 0.001f) {
+        // Fade animation: 1.0f when inspecting, snappy fade-out (~0.18s) when lost
+        float targetFade = candidateValid ? 1.0f : 0.0f;
+        if (fadeAlpha < targetFade) {
+            fadeAlpha = Math.min(targetFade, fadeAlpha + dt * 8.0f);
+        } else if (fadeAlpha > targetFade) {
+            fadeAlpha = Math.max(targetFade, fadeAlpha - dt * 5.5f);
+        }
+
+        if (fadeAlpha <= 0.001f && !candidateValid) {
+            currentTargetedAnimal = null;
+            lockedAnimal = null;
+            lastValidAnimal = null;
+            lockProgress = 0.0f;
             return;
         }
 
-        renderHologram(context, mc, entityToRender, lockProgress);
+        LivingEntity entityToRender = candidateValid ? candidate : lastValidAnimal;
+        if (entityToRender == null || !entityToRender.isAlive() || entityToRender.isRemoved()) {
+            reset();
+            return;
+        }
+
+        currentTargetedAnimal = candidateValid ? entityToRender : null;
+
+        renderHologram(context, mc, entityToRender, lockProgress, fadeAlpha);
     }
 
-    private static void renderHologram(WorldRenderContext context, Minecraft mc, LivingEntity entity, float lockProgress) {
+    private static void renderHologram(WorldRenderContext context, Minecraft mc, LivingEntity entity, float lockProgress, float fadeAlpha) {
         PoseStack poseStack = context.matrixStack();
         Camera camera = context.camera();
         Vec3 camPos = camera.getPosition();
@@ -388,8 +417,8 @@ public class ZooAnimalHologramRenderer {
         MultiBufferSource buffer = context.consumers();
 
         if (buffer != null) {
-            // 1. Draw authentic vanilla tooltip background
-            HologramBarRenderer.drawVanillaTooltipBackground(buffer, matrix, minX, startY, maxX, maxY, LightTexture.FULL_BRIGHT);
+            // 1. Draw authentic vanilla tooltip background with fadeAlpha
+            HologramBarRenderer.drawVanillaTooltipBackground(buffer, matrix, minX, startY, maxX, maxY, LightTexture.FULL_BRIGHT, fadeAlpha);
 
             if (buffer instanceof MultiBufferSource.BufferSource bs) {
                 bs.endBatch(RenderType.textBackground());
@@ -402,18 +431,19 @@ public class ZooAnimalHologramRenderer {
             poseStack.pushPose();
             poseStack.translate(leftX, curY, 0.0f);
             poseStack.scale(titleScale, titleScale, 1.0f);
-            font.drawInBatch(titleComp, 0.0f, 0.0f, 0xFFFFFFFF, false, poseStack.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(titleComp, 0.0f, 0.0f, HologramBarRenderer.applyAlpha(0xFFFFFFFF, fadeAlpha), false, poseStack.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             poseStack.popPose();
             curY += headerHeight;
 
-            // 3. Favorite Food Icons (Enlarged & Left-aligned)
+            // 3. Favorite Food Icons (Enlarged & Left-aligned with subtle shrink on fade)
             if (foodCount > 0) {
                 float foodStartX = leftX + (foodSpacing / 2.0f);
+                float itemScale = 12.0f * Math.min(1.0f, fadeAlpha * 1.25f);
                 for (int i = 0; i < foodCount; i++) {
                     ItemStack foodStack = foods.get(i);
                     poseStack.pushPose();
                     poseStack.translate(foodStartX + (i * foodSpacing), curY + 6.0f, -0.005f);
-                    poseStack.scale(12.0f, -12.0f, 12.0f);
+                    poseStack.scale(itemScale, -itemScale, itemScale);
                     mc.getItemRenderer().renderStatic(
                             foodStack,
                             ItemDisplayContext.GUI,
@@ -445,46 +475,46 @@ public class ZooAnimalHologramRenderer {
             float r5Y = curY + (rowHeight * 4.0f);
             curY += (rowHeight * 5.0f) + 4.0f;
 
-            // Render Stat Icons (Two-sided & depth-tested)
-            HologramBarRenderer.drawVanillaHeartIcon(mc, font, buffer, matrix, iconX, r1Y + 1.0f, LightTexture.FULL_BRIGHT);
-            HologramBarRenderer.drawVanillaHungerIcon(mc, buffer, matrix, iconX, r2Y + 1.0f, LightTexture.FULL_BRIGHT);
-            HologramBarRenderer.drawThirstIcon(buffer, matrix, iconX, r3Y + 1.0f, LightTexture.FULL_BRIGHT);
-            HologramBarRenderer.drawCleanlinessIcon(buffer, matrix, iconX, r4Y + 1.0f, LightTexture.FULL_BRIGHT);
-            HologramBarRenderer.drawThermometerIcon(buffer, matrix, iconX, r5Y + 1.0f, LightTexture.FULL_BRIGHT);
+            // Render Stat Icons (Two-sided & depth-tested with fadeAlpha)
+            HologramBarRenderer.drawVanillaHeartIcon(mc, font, buffer, matrix, iconX, r1Y + 1.0f, LightTexture.FULL_BRIGHT, fadeAlpha);
+            HologramBarRenderer.drawVanillaHungerIcon(mc, buffer, matrix, iconX, r2Y + 1.0f, LightTexture.FULL_BRIGHT, fadeAlpha);
+            HologramBarRenderer.drawThirstIcon(buffer, matrix, iconX, r3Y + 1.0f, LightTexture.FULL_BRIGHT, fadeAlpha);
+            HologramBarRenderer.drawCleanlinessIcon(buffer, matrix, iconX, r4Y + 1.0f, LightTexture.FULL_BRIGHT, fadeAlpha);
+            HologramBarRenderer.drawThermometerIcon(buffer, matrix, iconX, r5Y + 1.0f, LightTexture.FULL_BRIGHT, fadeAlpha);
 
             if (buffer instanceof MultiBufferSource.BufferSource bs) {
                 bs.endBatch();
             }
 
-            // Render Stat Labels (Indonesian, Left-aligned)
-            font.drawInBatch(hpLabel, labelX, r1Y + 1.0f, 0xFFDDDDDD, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(hungerLabel, labelX, r2Y + 1.0f, 0xFFDDDDDD, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(thirstLabel, labelX, r3Y + 1.0f, 0xFFDDDDDD, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(cleanLabel, labelX, r4Y + 1.0f, 0xFFDDDDDD, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(tempLabel, labelX, r5Y + 1.0f, 0xFFDDDDDD, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            // Render Stat Labels (Indonesian, Left-aligned with fadeAlpha)
+            font.drawInBatch(hpLabel, labelX, r1Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(hungerLabel, labelX, r2Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(thirstLabel, labelX, r3Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(cleanLabel, labelX, r4Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(tempLabel, labelX, r5Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 
-            // Render Stat Values
-            font.drawInBatch(hpText, valueX, r1Y + 1.0f, hpTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(hungerText, valueX, r2Y + 1.0f, hungerTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(thirstText, valueX, r3Y + 1.0f, thirstTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(cleanText, valueX, r4Y + 1.0f, cleanTextColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            // Render Stat Values with fadeAlpha
+            font.drawInBatch(hpText, valueX, r1Y + 1.0f, HologramBarRenderer.applyAlpha(hpTextColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(hungerText, valueX, r2Y + 1.0f, HologramBarRenderer.applyAlpha(hungerTextColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(thirstText, valueX, r3Y + 1.0f, HologramBarRenderer.applyAlpha(thirstTextColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(cleanText, valueX, r4Y + 1.0f, HologramBarRenderer.applyAlpha(cleanTextColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 
             // Temperature Value: Celsius (White) + Status (Green if comfortable, Red if needs heater/cooler)
-            font.drawInBatch(tempBaseText, valueX, r5Y + 1.0f, 0xFFFFFFFF, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(tempBaseText, valueX, r5Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFFFFFFF, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             float statusX = valueX + font.width(tempBaseText);
-            font.drawInBatch(tempStatusLabel, statusX, r5Y + 1.0f, tempStatusColor, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(tempStatusLabel, statusX, r5Y + 1.0f, HologramBarRenderer.applyAlpha(tempStatusColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 
-            // 5. Habitat Needs Section: ONLY RED ITEMS SHOWN (Left-aligned)
+            // 5. Habitat Needs Section: ONLY RED ITEMS SHOWN (Left-aligned with fadeAlpha)
             float checklistStartX = leftX;
             if (redNeeds.isEmpty()) {
                 // All needs satisfied: single green line
-                font.drawInBatch("Kebutuhan Habitat: Terpenuhi", checklistStartX, curY, 0xFF55FF55, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+                font.drawInBatch("Kebutuhan Habitat: Terpenuhi", checklistStartX, curY, HologramBarRenderer.applyAlpha(0xFF55FF55, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             } else {
                 // Some needs missing: yellow header and red itemized checklist
-                font.drawInBatch("Kebutuhan Habitat:", checklistStartX, curY, 0xFFFFFF55, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+                font.drawInBatch("Kebutuhan Habitat:", checklistStartX, curY, HologramBarRenderer.applyAlpha(0xFFFFFF55, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
                 curY += 11.0f;
                 for (Component need : redNeeds) {
-                    font.drawInBatch(need, checklistStartX + 4.0f, curY, 0xFFFF5555, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+                    font.drawInBatch(need, checklistStartX + 4.0f, curY, HologramBarRenderer.applyAlpha(0xFFFF5555, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
                     curY += 10.0f;
                 }
             }

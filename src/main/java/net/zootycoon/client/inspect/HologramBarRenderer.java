@@ -95,35 +95,60 @@ public class HologramBarRenderer {
     }
 
     /**
+     * Helper to multiply an ARGB color's alpha channel by an alphaFactor [0.0f, 1.0f].
+     */
+    public static int applyAlpha(int argb, float alphaFactor) {
+        int origAlpha = (argb >> 24) & 0xFF;
+        if (origAlpha == 0) {
+            origAlpha = 255;
+        }
+        int newAlpha = Math.max(0, Math.min(255, Math.round(origAlpha * Math.max(0.0f, Math.min(1.0f, alphaFactor)))));
+        return (newAlpha << 24) | (argb & 0x00FFFFFF);
+    }
+
+    /**
      * Draws an authentic vanilla Minecraft tooltip background box with the iconic purple gradient border.
      */
     public static void drawVanillaTooltipBackground(MultiBufferSource buffer, Matrix4f matrix, float minX, float minY, float maxX, float maxY, int light) {
+        drawVanillaTooltipBackground(buffer, matrix, minX, minY, maxX, maxY, light, 1.0f);
+    }
+
+    public static void drawVanillaTooltipBackground(MultiBufferSource buffer, Matrix4f matrix, float minX, float minY, float maxX, float maxY, int light, float alphaFactor) {
         VertexConsumer consumer = buffer.getBuffer(RenderType.textBackground());
         float z = -0.02f;
 
+        int bg = applyAlpha(TOOLTIP_BG, alphaFactor);
+        int borderTop = applyAlpha(TOOLTIP_BORDER_TOP, alphaFactor);
+        int borderBottom = applyAlpha(TOOLTIP_BORDER_BOTTOM, alphaFactor);
+
         // 1. Center background fill
-        drawRect(consumer, matrix, minX + 1.0f, minY + 1.0f, maxX - 1.0f, maxY - 1.0f, z, TOOLTIP_BG, light);
+        drawRect(consumer, matrix, minX + 1.0f, minY + 1.0f, maxX - 1.0f, maxY - 1.0f, z, bg, light);
         // Outer 1-pixel chamfered extensions
-        drawRect(consumer, matrix, minX + 2.0f, minY, maxX - 2.0f, minY + 1.0f, z, TOOLTIP_BG, light);
-        drawRect(consumer, matrix, minX + 2.0f, maxY - 1.0f, maxX - 2.0f, maxY, z, TOOLTIP_BG, light);
-        drawRect(consumer, matrix, minX, minY + 2.0f, minX + 1.0f, maxY - 2.0f, z, TOOLTIP_BG, light);
-        drawRect(consumer, matrix, maxX - 1.0f, minY + 2.0f, maxX, maxY - 2.0f, z, TOOLTIP_BG, light);
+        drawRect(consumer, matrix, minX + 2.0f, minY, maxX - 2.0f, minY + 1.0f, z, bg, light);
+        drawRect(consumer, matrix, minX + 2.0f, maxY - 1.0f, maxX - 2.0f, maxY, z, bg, light);
+        drawRect(consumer, matrix, minX, minY + 2.0f, minX + 1.0f, maxY - 2.0f, z, bg, light);
+        drawRect(consumer, matrix, maxX - 1.0f, minY + 2.0f, maxX, maxY - 2.0f, z, bg, light);
 
         // 2. Vanilla tooltip border frame (Top 0x505000FF to Bottom 0x5028007F)
         float borderZ = z + 0.002f;
-        drawRect(consumer, matrix, minX + 1.0f, minY + 1.0f, maxX - 1.0f, minY + 2.0f, borderZ, TOOLTIP_BORDER_TOP, light);
-        drawRect(consumer, matrix, minX + 1.0f, maxY - 2.0f, maxX - 1.0f, maxY - 1.0f, borderZ, TOOLTIP_BORDER_BOTTOM, light);
-        drawVerticalGradientRect(consumer, matrix, minX + 1.0f, minY + 2.0f, minX + 2.0f, maxY - 2.0f, borderZ, TOOLTIP_BORDER_TOP, TOOLTIP_BORDER_BOTTOM, light);
-        drawVerticalGradientRect(consumer, matrix, maxX - 2.0f, minY + 2.0f, maxX - 1.0f, maxY - 2.0f, borderZ, TOOLTIP_BORDER_TOP, TOOLTIP_BORDER_BOTTOM, light);
+        drawRect(consumer, matrix, minX + 1.0f, minY + 1.0f, maxX - 1.0f, minY + 2.0f, borderZ, borderTop, light);
+        drawRect(consumer, matrix, minX + 1.0f, maxY - 2.0f, maxX - 1.0f, maxY - 1.0f, borderZ, borderBottom, light);
+        drawVerticalGradientRect(consumer, matrix, minX + 1.0f, minY + 2.0f, minX + 2.0f, maxY - 2.0f, borderZ, borderTop, borderBottom, light);
+        drawVerticalGradientRect(consumer, matrix, maxX - 2.0f, minY + 2.0f, maxX - 1.0f, maxY - 2.0f, borderZ, borderTop, borderBottom, light);
     }
 
     /**
      * Draws a textured 9x9 icon using RenderType.text with two-sided quads so it is always visible.
      */
     public static void drawTexturedIcon(MultiBufferSource buffer, Matrix4f matrix, ResourceLocation texture, float x, float y, float width, float height, int light) {
+        drawTexturedIcon(buffer, matrix, texture, x, y, width, height, light, 1.0f);
+    }
+
+    public static void drawTexturedIcon(MultiBufferSource buffer, Matrix4f matrix, ResourceLocation texture, float x, float y, float width, float height, int light, float alphaFactor) {
         VertexConsumer consumer = buffer.getBuffer(RenderType.text(texture));
         float z = -0.005f;
-        int a = 255, r = 255, g = 255, b = 255;
+        int a = Math.max(0, Math.min(255, Math.round(255 * Math.max(0.0f, Math.min(1.0f, alphaFactor)))));
+        int r = 255, g = 255, b = 255;
 
         // Front face (negative Y scale compliant)
         consumer.addVertex(matrix, x, y, z).setColor(r, g, b, a).setUv(0.0f, 0.0f).setLight(light);
@@ -142,6 +167,10 @@ public class HologramBarRenderer {
      * Draws a vanilla GUI atlas sprite with two-sided quads.
      */
     public static void drawAtlasSprite(MultiBufferSource buffer, Matrix4f matrix, TextureAtlasSprite sprite, float x, float y, float width, float height, int light) {
+        drawAtlasSprite(buffer, matrix, sprite, x, y, width, height, light, 1.0f);
+    }
+
+    public static void drawAtlasSprite(MultiBufferSource buffer, Matrix4f matrix, TextureAtlasSprite sprite, float x, float y, float width, float height, int light, float alphaFactor) {
         if (sprite == null) return;
         VertexConsumer consumer = buffer.getBuffer(RenderType.text(sprite.atlasLocation()));
         float u0 = sprite.getU0();
@@ -149,7 +178,8 @@ public class HologramBarRenderer {
         float v0 = sprite.getV0();
         float v1 = sprite.getV1();
         float z = -0.005f;
-        int a = 255, r = 255, g = 255, b = 255;
+        int a = Math.max(0, Math.min(255, Math.round(255 * Math.max(0.0f, Math.min(1.0f, alphaFactor)))));
+        int r = 255, g = 255, b = 255;
 
         // Front face
         consumer.addVertex(matrix, x, y, z).setColor(r, g, b, a).setUv(u0, v0).setLight(light);
@@ -168,42 +198,62 @@ public class HologramBarRenderer {
      * Draws the vanilla heart icon using font glyph '❤' (always renders cleanly without missing atlas issues).
      */
     public static void drawVanillaHeartIcon(Minecraft mc, Font font, MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light) {
-        font.drawInBatch("❤", x + 1.0f, y, 0xFFFF2222, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, light);
+        drawVanillaHeartIcon(mc, font, buffer, matrix, x, y, light, 1.0f);
+    }
+
+    public static void drawVanillaHeartIcon(Minecraft mc, Font font, MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light, float alphaFactor) {
+        font.drawInBatch("❤", x + 1.0f, y, applyAlpha(0xFFFF2222, alphaFactor), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, light);
     }
 
     /**
      * Draws the vanilla hunger icon.
      */
     public static void drawVanillaHungerIcon(Minecraft mc, MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light) {
+        drawVanillaHungerIcon(mc, buffer, matrix, x, y, light, 1.0f);
+    }
+
+    public static void drawVanillaHungerIcon(Minecraft mc, MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light, float alphaFactor) {
         if (mc != null && mc.getGuiSprites() != null) {
             TextureAtlasSprite sprite = mc.getGuiSprites().getSprite(VANILLA_HUNGER_SPRITE);
             if (sprite != null) {
-                drawAtlasSprite(buffer, matrix, sprite, x, y, 9.0f, 9.0f, light);
+                drawAtlasSprite(buffer, matrix, sprite, x, y, 9.0f, 9.0f, light, alphaFactor);
                 return;
             }
         }
         // Fallback: draw textured icon or colored square
-        drawRect(buffer.getBuffer(RenderType.textBackground()), matrix, x, y, x + 8.0f, y + 8.0f, -0.005f, 0xFFD47A22, light);
+        drawRect(buffer.getBuffer(RenderType.textBackground()), matrix, x, y, x + 8.0f, y + 8.0f, -0.005f, applyAlpha(0xFFD47A22, alphaFactor), light);
     }
 
     /**
      * Draws the custom water droplet thirst icon.
      */
     public static void drawThirstIcon(MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light) {
-        drawTexturedIcon(buffer, matrix, THIRST_ICON, x, y, 9.0f, 9.0f, light);
+        drawThirstIcon(buffer, matrix, x, y, light, 1.0f);
+    }
+
+    public static void drawThirstIcon(MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light, float alphaFactor) {
+        drawTexturedIcon(buffer, matrix, THIRST_ICON, x, y, 9.0f, 9.0f, light, alphaFactor);
     }
 
     /**
      * Draws the custom sponge/bubble cleanliness icon.
      */
     public static void drawCleanlinessIcon(MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light) {
-        drawTexturedIcon(buffer, matrix, CLEANLINESS_ICON, x, y, 9.0f, 9.0f, light);
+        drawCleanlinessIcon(buffer, matrix, x, y, light, 1.0f);
+    }
+
+    public static void drawCleanlinessIcon(MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light, float alphaFactor) {
+        drawTexturedIcon(buffer, matrix, CLEANLINESS_ICON, x, y, 9.0f, 9.0f, light, alphaFactor);
     }
 
     /**
      * Draws the Legendary Survival Overhaul thermometer icon for temperature status.
      */
     public static void drawThermometerIcon(MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light) {
-        drawTexturedIcon(buffer, matrix, THERMOMETER_ICON, x, y, 9.0f, 9.0f, light);
+        drawThermometerIcon(buffer, matrix, x, y, light, 1.0f);
+    }
+
+    public static void drawThermometerIcon(MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light, float alphaFactor) {
+        drawTexturedIcon(buffer, matrix, THERMOMETER_ICON, x, y, 9.0f, 9.0f, light, alphaFactor);
     }
 }

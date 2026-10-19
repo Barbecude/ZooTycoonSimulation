@@ -412,7 +412,7 @@ public class ZooTycoonClient implements ClientModInitializer {
             clientSecurity = 0;
             clientCashiers = 0;
             inStudio = false;
-            net.zootycoon.client.render.ZooAnimalHologramRenderer.currentTargetedAnimal = null;
+            net.zootycoon.client.render.ZooAnimalHologramRenderer.reset();
             net.zootycoon.client.inspect.InspectionTargetTracker.reset();
             net.zootycoon.client.inspect.InspectionClientCache.clear();
         });

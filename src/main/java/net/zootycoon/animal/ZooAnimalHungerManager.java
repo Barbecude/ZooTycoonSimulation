@@ -107,6 +107,10 @@ public class ZooAnimalHungerManager {
     }
 
     public static boolean registerAnimalFromSpyglass(ServerPlayer player, LivingEntity animal) {
+        return registerAnimalFromSpyglass(player, animal, false);
+    }
+
+    public static boolean registerAnimalFromSpyglass(ServerPlayer player, LivingEntity animal, boolean sendToast) {
         if (player == null || animal == null || !animal.isAlive()) return false;
         if (!isZooAnimalCandidate(animal)) return false;
 
@@ -136,8 +140,10 @@ public class ZooAnimalHungerManager {
         level.playSound(null, animal.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0f, 1.2f);
         level.sendParticles(ParticleTypes.HAPPY_VILLAGER, animal.getX(), animal.getY() + animal.getBbHeight() * 0.5, animal.getZ(), 20, 0.4, 0.4, 0.4, 0.05);
 
-        String animalName = animal.hasCustomName() ? animal.getCustomName().getString() : animal.getType().getDescription().getString();
-        ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.animal", "zootycoon.animal.registered", 1, animalName);
+        if (sendToast) {
+            String animalName = animal.hasCustomName() ? animal.getCustomName().getString() : animal.getType().getDescription().getString();
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.animal", "zootycoon.animal.registered", 1, animalName);
+        }
 
         ZooNetworkPayloads.sendAnimalSync(player);
         return true;
