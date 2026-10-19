@@ -90,6 +90,22 @@ public class HabitatEvaluator {
         return true;
     }
 
+    private record CachedScan(
+            long tick,
+            ResourceLocation dimension,
+            double x,
+            double y,
+            double z,
+            BlockPos pos,
+            Map<String, Integer> counts
+    ) {}
+
+    private static final Map<Integer, CachedScan> SCAN_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static void reset() {
+        SCAN_CACHE.clear();
+    }
+
     /**
      * Evaluates the current habitat suitability for an animal.
      */
@@ -103,8 +119,30 @@ public class HabitatEvaluator {
             return new HabitatResult(HabitatStatus.NO_DATA, "-", false, false, false, false, false, false, false, false, Collections.emptyList());
         }
 
-        // 1. Check surrounding blocks with extended range (radius 24, dy -6..6)
-        Map<String, Integer> blockCounts = scanSurroundingBlocks(level, animal.blockPosition());
+        // 1. Check surrounding blocks with extended range (radius 24, dy -6..6) with memoization cache
+        long currentTick = level.getGameTime();
+        BlockPos currentPos = animal.blockPosition();
+        CachedScan cached = SCAN_CACHE.get(animal.getId());
+
+        Map<String, Integer> blockCounts;
+        if (cached != null
+                && cached.dimension.equals(level.dimension().location())
+                && (currentTick >= cached.tick)
+                && (currentTick - cached.tick <= 40)
+                && (animal.distanceToSqr(cached.x, cached.y, cached.z) <= 4.0 || currentPos.closerThan(cached.pos, 2.01))) {
+            blockCounts = cached.counts;
+        } else {
+            blockCounts = scanSurroundingBlocks(level, currentPos);
+            SCAN_CACHE.put(animal.getId(), new CachedScan(
+                    currentTick,
+                    level.dimension().location(),
+                    animal.getX(),
+                    animal.getY(),
+                    animal.getZ(),
+                    currentPos.immutable(),
+                    blockCounts
+            ));
+        }
 
         // 2. Check Natural Ground (dirt, podzol, coarse dirt, sand, gravel, mud, snow, etc.)
         int groundCount = blockCounts.getOrDefault("natural_ground", 0);

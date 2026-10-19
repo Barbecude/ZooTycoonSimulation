@@ -58,10 +58,12 @@ public class ZooTycoonMod implements ModInitializer {
 
         // 5b. Initialize Zoo Animal Hunger, Hunter incursions, Visitor arrivals, Hostile Mob Claims Barrier, and Economy absorption
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_WORLD_TICK.register(level -> {
-            net.zootycoon.claim.ZooClaimManager.tickServer(level);
+            if (level.getServer() != null && level == level.getServer().overworld()) {
+                net.zootycoon.claim.ZooClaimManager.tickServer(level);
+                net.zootycoon.hunter.ZooHunterManager.tickServer(level);
+                net.zootycoon.visitor.ZooVisitorManager.tickServer(level);
+            }
             net.zootycoon.animal.ZooAnimalHungerManager.tickServer(level);
-            net.zootycoon.hunter.ZooHunterManager.tickServer(level);
-            net.zootycoon.visitor.ZooVisitorManager.tickServer(level);
             if (level.getServer() != null) {
                 var eco = net.zootycoon.economy.ZooEconomyManager.get(level.getServer());
                 for (var player : level.players()) {
@@ -85,6 +87,7 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.visitor.ZooVisitorManager.reset();
             net.zootycoon.animal.ZooInspectionService.reset();
             net.zootycoon.animal.AnimalBathingManager.reset();
+            net.zootycoon.animal.habitat.HabitatEvaluator.reset();
         });
 
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTING.register(server -> {
@@ -100,6 +103,7 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.visitor.ZooVisitorManager.reset();
             net.zootycoon.animal.ZooInspectionService.reset();
             net.zootycoon.animal.AnimalBathingManager.reset();
+            net.zootycoon.animal.habitat.HabitatEvaluator.reset();
             net.zootycoon.construction.ConstructionManager.loadFromFile(server);
         });
 

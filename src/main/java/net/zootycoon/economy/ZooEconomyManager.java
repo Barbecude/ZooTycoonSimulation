@@ -23,6 +23,7 @@ public class ZooEconomyManager {
 
     private final MinecraftServer server;
     private final Map<UUID, Integer> balances = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> lastAbsorbTicks = new ConcurrentHashMap<>();
 
     private static int clientEmeraldBalance = 0;
 
@@ -47,6 +48,9 @@ public class ZooEconomyManager {
     }
 
     public static synchronized void reset() {
+        if (instance != null) {
+            instance.lastAbsorbTicks.clear();
+        }
         instance = null;
         clientEmeraldBalance = 0;
     }
@@ -146,9 +150,18 @@ public class ZooEconomyManager {
     /**
      * Automatically absorbs any Emerald items or Emerald Blocks from player's inventory
      * directly into their registered Zoo Wallet balance!
+     * Throttled to scan inventory only once every 20 ticks (1 second) per player.
      */
     public void absorbPlayerEmeralds(ServerPlayer player) {
         if (player == null || player.isCreative()) return;
+
+        long currentTick = (this.server != null) ? this.server.getTickCount() : player.level().getGameTime();
+        Long lastTick = lastAbsorbTicks.get(player.getUUID());
+        if (lastTick != null && currentTick >= lastTick && (currentTick - lastTick < 20)) {
+            return;
+        }
+        lastAbsorbTicks.put(player.getUUID(), currentTick);
+
         int gained = 0;
         int size = player.getInventory().getContainerSize();
         for (int i = 0; i < size; i++) {
