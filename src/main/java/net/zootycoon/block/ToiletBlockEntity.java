@@ -49,6 +49,12 @@ public class ToiletBlockEntity extends BlockEntity {
     }
 
     @Override
+    public void clearRemoved() {
+        super.clearRemoved();
+        KNOWN_TOILETS.add(this.worldPosition.immutable());
+    }
+
+    @Override
     public void setRemoved() {
         KNOWN_TOILETS.remove(this.worldPosition);
         super.setRemoved();

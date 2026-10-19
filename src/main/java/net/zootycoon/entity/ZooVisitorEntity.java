@@ -1974,13 +1974,27 @@ public class ZooVisitorEntity extends PathfinderMob {
         public boolean canUse() {
             if (!visitor.hasTrash() || visitor.isTimeToLeave()) return false;
 
-            BlockPos p = visitor.blockPosition();
-            for (BlockPos pos : BlockPos.betweenClosed(p.offset(-16, -3, -16), p.offset(16, 3, 16))) {
-                if (visitor.level().getBlockState(pos).is(net.zootycoon.block.ZooBlocks.TRASH_CAN)) {
-                    this.targetPos = pos.immutable();
-                    this.searchTimer = 0;
-                    return true;
+            BlockPos bestPos = null;
+            double bestDistSq = 16.0D * 16.0D;
+
+            for (BlockPos pos : net.zootycoon.block.TrashCanBlock.KNOWN_TRASH_CANS) {
+                if (visitor.level().isLoaded(pos)) {
+                    if (!visitor.level().getBlockState(pos).is(net.zootycoon.block.ZooBlocks.TRASH_CAN)) {
+                        net.zootycoon.block.TrashCanBlock.KNOWN_TRASH_CANS.remove(pos);
+                        continue;
+                    }
                 }
+                double distSq = visitor.distanceToSqr(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D);
+                if (distSq <= 16.0D * 16.0D && distSq < bestDistSq) {
+                    bestDistSq = distSq;
+                    bestPos = pos;
+                }
+            }
+
+            if (bestPos != null) {
+                this.targetPos = bestPos;
+                this.searchTimer = 0;
+                return true;
             }
 
             this.searchTimer++;
@@ -2081,18 +2095,14 @@ public class ZooVisitorEntity extends PathfinderMob {
         private List<BlockPos> collectAllZooToilets() {
             List<BlockPos> list = new java.util.ArrayList<>();
             for (BlockPos known : ToiletBlockEntity.KNOWN_TOILETS) {
-                if (visitor.level().getBlockState(known).is(net.zootycoon.block.ZooBlocks.TOILET)) {
-                    list.add(known);
-                }
-            }
-            if (list.isEmpty()) {
-                BlockPos p = visitor.blockPosition();
-                for (BlockPos pos : BlockPos.betweenClosed(p.offset(-32, -4, -32), p.offset(32, 4, 32))) {
-                    if (visitor.level().getBlockState(pos).is(net.zootycoon.block.ZooBlocks.TOILET)) {
-                        BlockPos imm = pos.immutable();
-                        ToiletBlockEntity.KNOWN_TOILETS.add(imm);
-                        list.add(imm);
+                if (visitor.level().isLoaded(known)) {
+                    if (visitor.level().getBlockState(known).is(net.zootycoon.block.ZooBlocks.TOILET)) {
+                        list.add(known);
+                    } else {
+                        ToiletBlockEntity.KNOWN_TOILETS.remove(known);
                     }
+                } else {
+                    list.add(known);
                 }
             }
             return list;

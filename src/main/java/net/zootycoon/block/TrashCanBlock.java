@@ -28,7 +28,21 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.zootycoon.ZooTycoonMod;
 
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 public class TrashCanBlock extends Block {
+    public static final Set<BlockPos> KNOWN_TRASH_CANS = ConcurrentHashMap.newKeySet();
+
+    public static void reset() {
+        KNOWN_TRASH_CANS.clear();
+    }
+
+    static {
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPING.register(server -> reset());
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTING.register(server -> reset());
+    }
+
     public static final ResourceKey<Block> BLOCK_KEY = ResourceKey.create(
             Registries.BLOCK,
             ZooTycoonMod.id("trash_can")
@@ -47,6 +61,20 @@ public class TrashCanBlock extends Block {
                 .noOcclusion()
         );
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(OPEN, false));
+    }
+
+    @Override
+    public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean isMoving) {
+        super.onPlace(state, level, pos, oldState, isMoving);
+        KNOWN_TRASH_CANS.add(pos.immutable());
+    }
+
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+        if (!state.is(newState.getBlock())) {
+            KNOWN_TRASH_CANS.remove(pos);
+        }
+        super.onRemove(state, level, pos, newState, isMoving);
     }
 
     @Override
@@ -76,6 +104,7 @@ public class TrashCanBlock extends Block {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        KNOWN_TRASH_CANS.add(pos.immutable());
         boolean open = state.getValue(OPEN);
         level.setBlockAndUpdate(pos, state.setValue(OPEN, !open));
         float pitch = open ? 0.9F : 1.1F;
