@@ -67,7 +67,7 @@ public class WateringCanItem extends Item {
 
     @Override
     public UseAnim getUseAnimation(ItemStack stack) {
-        return UseAnim.BOW;
+        return UseAnim.BRUSH;
     }
 
     @Override
@@ -101,11 +101,6 @@ public class WateringCanItem extends Item {
             return InteractionResultHolder.consume(stack);
         }
 
-        // In client side, do not run world mutations
-        if (level.isClientSide()) {
-            return InteractionResultHolder.pass(stack);
-        }
-
         // Raycast selected block/fluid
         BlockPos pos = blockHighlightedOrNull(player);
         if (pos == null) {
@@ -116,11 +111,13 @@ public class WateringCanItem extends Item {
 
         // Refill watering can if clicking on water
         if (blockState.getFluidState().is(FluidTags.WATER) || blockState.is(Blocks.WATER)) {
-            stack.setDamageValue(0);
-            level.playSound(null, player.getOnPos(), SoundEvents.HONEY_BLOCK_BREAK, SoundSource.PLAYERS, 1.0f, 1.0f);
-            player.getCooldowns().addCooldown(this, cooldown);
-            player.swing(hand, true);
-            return InteractionResultHolder.success(stack);
+            if (!level.isClientSide()) {
+                stack.setDamageValue(0);
+                level.playSound(null, player.getOnPos(), SoundEvents.HONEY_BLOCK_BREAK, SoundSource.PLAYERS, 1.0f, 1.0f);
+                player.getCooldowns().addCooldown(this, cooldown);
+            }
+            player.swing(hand);
+            return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
         }
 
         // Only allow pouring if looking downwards or level
@@ -130,8 +127,10 @@ public class WateringCanItem extends Item {
 
         // Empty check
         if (stack.getDamageValue() >= stack.getMaxDamage() && !player.isCreative()) {
-            player.playNotifySound(SoundEvents.LANTERN_FALL, SoundSource.PLAYERS, 1.0f, 1.0f);
-            player.getCooldowns().addCooldown(this, cooldown);
+            if (!level.isClientSide()) {
+                player.playNotifySound(SoundEvents.LANTERN_FALL, SoundSource.PLAYERS, 1.0f, 1.0f);
+                player.getCooldowns().addCooldown(this, cooldown);
+            }
             return InteractionResultHolder.fail(stack);
         }
 
@@ -141,12 +140,11 @@ public class WateringCanItem extends Item {
         }
 
         // Pour water on target block
-        if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
+        if (!level.isClientSide() && level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
             pourWater(serverLevel, serverPlayer, stack, pos, blockState, false);
-            player.swing(hand, true);
         }
-
-        return InteractionResultHolder.success(stack);
+        player.swing(hand);
+        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
     }
 
     @Override
