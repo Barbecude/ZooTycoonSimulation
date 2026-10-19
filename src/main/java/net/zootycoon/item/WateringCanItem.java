@@ -32,8 +32,9 @@ import net.zootycoon.block.ZooFeedingTroughBlockEntity;
 
 /**
  * Watering Can Item ported and adapted from Dew Drop: Watering Cans by coolbot100s.
- * Supports water refilling, farmland hydrating, crop bonemealing, mud creation,
- * fire dousing, animal watering, feeding trough filling, and charged "Super" multi-block area watering.
+ * Supports continuous swinging/pouring animation when right-click is held down,
+ * water refilling, farmland hydrating, crop bonemealing, mud creation,
+ * fire dousing, feeding trough filling, and charged "Super" area watering when crouching.
  */
 public class WateringCanItem extends Item {
 
@@ -63,6 +64,14 @@ public class WateringCanItem extends Item {
 
     public int getMaxSuperLevel() {
         return maxSuperLevel;
+    }
+
+    public int getContinuousInterval() {
+        if (isNetherite) return 4;
+        if (maxSuperLevel >= 3) return 6; // diamond
+        if (maxSuperLevel >= 2) return 8; // gold
+        if (maxSuperLevel >= 1) return 10; // iron
+        return 12; // copper
     }
 
     @Override
@@ -95,34 +104,21 @@ public class WateringCanItem extends Item {
             return InteractionResultHolder.fail(stack);
         }
 
-        // Crouch + charge super ability
-        if (player.isCrouching() && maxSuperLevel >= 1) {
-            player.startUsingItem(hand);
-            return InteractionResultHolder.consume(stack);
-        }
-
-        // Raycast selected block/fluid
+        // Raycast target block
         BlockPos pos = blockHighlightedOrNull(player);
-        if (pos == null) {
-            return InteractionResultHolder.pass(stack);
-        }
 
-        BlockState blockState = level.getBlockState(pos);
-
-        // Refill watering can if clicking on water
-        if (blockState.getFluidState().is(FluidTags.WATER) || blockState.is(Blocks.WATER)) {
-            if (!level.isClientSide()) {
-                stack.setDamageValue(0);
-                level.playSound(null, player.getOnPos(), SoundEvents.HONEY_BLOCK_BREAK, SoundSource.PLAYERS, 1.0f, 1.0f);
-                player.getCooldowns().addCooldown(this, cooldown);
+        // Instant refill when clicking on water
+        if (pos != null) {
+            BlockState blockState = level.getBlockState(pos);
+            if (blockState.getFluidState().is(FluidTags.WATER) || blockState.is(Blocks.WATER)) {
+                if (!level.isClientSide()) {
+                    stack.setDamageValue(0);
+                    level.playSound(null, player.getOnPos(), SoundEvents.HONEY_BLOCK_BREAK, SoundSource.PLAYERS, 1.0f, 1.0f);
+                    player.getCooldowns().addCooldown(this, cooldown);
+                }
+                player.swing(hand);
+                return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
             }
-            player.swing(hand);
-            return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
-        }
-
-        // Only allow pouring if looking downwards or level
-        if (player.getLookAngle().y > 0) {
-            return InteractionResultHolder.pass(stack);
         }
 
         // Empty check
@@ -134,111 +130,165 @@ public class WateringCanItem extends Item {
             return InteractionResultHolder.fail(stack);
         }
 
-        // Obstructed by solid block above
-        if (level.getBlockState(pos.above()).isSolidRender(level, pos.above())) {
-            return InteractionResultHolder.pass(stack);
-        }
-
-        // Pour water on target block
-        if (!level.isClientSide() && level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
-            pourWater(serverLevel, serverPlayer, stack, pos, blockState, false);
-        }
-        player.swing(hand);
-        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
+        // Start using so holding right-click enters a continuous smooth swaying/swinging animation
+        player.startUsingItem(hand);
+        return InteractionResultHolder.consume(stack);
     }
 
     @Override
     public void onUseTick(Level level, LivingEntity livingEntity, ItemStack stack, int timeLeft) {
-        if (level.isClientSide() || !(livingEntity instanceof ServerPlayer player)) {
+        if (!(livingEntity instanceof Player player)) {
             return;
         }
 
         int useDuration = this.getUseDuration(stack, livingEntity) - timeLeft;
 
-        // Sound cue on charging each super level
-        if (chargePerLevel > 0 && (useDuration == chargePerLevel || (useDuration % chargePerLevel == 0 && useDuration <= chargePerLevel * maxSuperLevel && useDuration > 0))) {
-            player.playNotifySound(SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
-        }
-
-        // Particle preview every 8 ticks
-        if (useDuration % 8 != 0) {
-            return;
-        }
-
-        int superLevelToUse = chargePerLevel > 0 ? Math.floorDiv(useDuration, chargePerLevel) : 0;
-        if (superLevelToUse > maxSuperLevel) {
-            superLevelToUse = maxSuperLevel;
-        }
-
-        if (superLevelToUse <= 0) {
-            return;
-        }
-
-        BlockPos pos = blockHighlightedOrNull(player);
-        if (pos == null) {
-            return;
-        }
-
-        AABB area = getAreaForSuper(superLevelToUse, player, pos);
-        ServerLevel serverLevel = (ServerLevel) level;
-
-        BlockPos.betweenClosedStream(area).forEach(bp -> {
-            double yoff;
-            if (level.getBlockState(bp).isAir()) {
-                double shapeMax = level.getBlockState(bp.below()).getShape(level, bp.below()).isEmpty() ? 0.0 : level.getBlockState(bp.below()).getShape(level, bp.below()).max(Direction.Axis.Y);
-                yoff = -1.0 + shapeMax + 0.1;
-            } else {
-                double shapeMax = level.getBlockState(bp).getShape(level, bp).isEmpty() ? 1.0 : level.getBlockState(bp).getShape(level, bp).max(Direction.Axis.Y);
-                yoff = shapeMax + 0.1;
+        // MODE 1: Crouch + Super Ability (Iron+)
+        if (player.isCrouching() && maxSuperLevel >= 1) {
+            if (level.isClientSide() || !(player instanceof ServerPlayer serverPlayer)) {
+                return;
             }
-            serverLevel.sendParticles(ParticleTypes.COMPOSTER, bp.getX() + 0.5, bp.getY() + yoff, bp.getZ() + 0.5, 1, 0, 0, 0, 0);
-        });
+
+            // Sound cue on charging each super level
+            if (chargePerLevel > 0 && (useDuration == chargePerLevel || (useDuration % chargePerLevel == 0 && useDuration <= chargePerLevel * maxSuperLevel && useDuration > 0))) {
+                serverPlayer.playNotifySound(SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
+            }
+
+            // Particle preview every 8 ticks
+            if (useDuration % 8 != 0) {
+                return;
+            }
+
+            int superLevelToUse = chargePerLevel > 0 ? Math.floorDiv(useDuration, chargePerLevel) : 0;
+            if (superLevelToUse > maxSuperLevel) {
+                superLevelToUse = maxSuperLevel;
+            }
+
+            if (superLevelToUse <= 0) {
+                return;
+            }
+
+            BlockPos pos = blockHighlightedOrNull(player);
+            if (pos == null) {
+                return;
+            }
+
+            AABB area = getAreaForSuper(superLevelToUse, player, pos);
+            ServerLevel serverLevel = (ServerLevel) level;
+
+            BlockPos.betweenClosedStream(area).forEach(bp -> {
+                double yoff;
+                if (level.getBlockState(bp).isAir()) {
+                    double shapeMax = level.getBlockState(bp.below()).getShape(level, bp.below()).isEmpty() ? 0.0 : level.getBlockState(bp.below()).getShape(level, bp.below()).max(Direction.Axis.Y);
+                    yoff = -1.0 + shapeMax + 0.1;
+                } else {
+                    double shapeMax = level.getBlockState(bp).getShape(level, bp).isEmpty() ? 1.0 : level.getBlockState(bp).getShape(level, bp).max(Direction.Axis.Y);
+                    yoff = shapeMax + 0.1;
+                }
+                serverLevel.sendParticles(ParticleTypes.COMPOSTER, bp.getX() + 0.5, bp.getY() + yoff, bp.getZ() + 0.5, 1, 0, 0, 0, 0);
+            });
+            return;
+        }
+
+        // MODE 2: Normal Continuous Watering (smooth swinging animation while holding right click)
+        int interval = getContinuousInterval();
+        if (useDuration == 1 || (useDuration > 1 && useDuration % interval == 0)) {
+            // Looking downwards check
+            if (player.getLookAngle().y > 0) {
+                return;
+            }
+
+            BlockPos pos = blockHighlightedOrNull(player);
+            if (pos == null) {
+                return;
+            }
+
+            // Empty check
+            if (stack.getDamageValue() >= stack.getMaxDamage() && !player.isCreative()) {
+                if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {
+                    serverPlayer.playNotifySound(SoundEvents.LANTERN_FALL, SoundSource.PLAYERS, 1.0f, 1.0f);
+                    serverPlayer.getCooldowns().addCooldown(this, cooldown);
+                }
+                player.stopUsingItem();
+                return;
+            }
+
+            // Obstructed by solid block above
+            if (level.getBlockState(pos.above()).isSolidRender(level, pos.above())) {
+                return;
+            }
+
+            BlockState blockState = level.getBlockState(pos);
+
+            // Refill if pointing at water
+            if (blockState.getFluidState().is(FluidTags.WATER) || blockState.is(Blocks.WATER)) {
+                if (!level.isClientSide()) {
+                    stack.setDamageValue(0);
+                    level.playSound(null, player.getOnPos(), SoundEvents.HONEY_BLOCK_BREAK, SoundSource.PLAYERS, 1.0f, 1.0f);
+                }
+                return;
+            }
+
+            // Server-side pouring
+            if (!level.isClientSide() && level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
+                pourWater(serverLevel, serverPlayer, stack, pos, blockState, false);
+            }
+        }
     }
 
     @Override
     public void releaseUsing(ItemStack stack, Level level, LivingEntity entity, int timeLeft) {
-        if (level.isClientSide() || !(entity instanceof ServerPlayer player)) {
-            return;
-        }
-
-        if (player.getLookAngle().y > 0) {
-            return;
-        }
-
-        BlockPos pos = blockHighlightedOrNull(player);
-        if (pos == null) {
+        if (!(entity instanceof Player player)) {
             return;
         }
 
         int useDuration = this.getUseDuration(stack, entity) - timeLeft;
-        if (chargePerLevel <= 0 || useDuration < chargePerLevel) {
+
+        // If player was crouching with a super capable can and charged at least 1 level:
+        if (player.isCrouching() && maxSuperLevel >= 1 && chargePerLevel > 0 && useDuration >= chargePerLevel) {
+            if (level.isClientSide() || !(player instanceof ServerPlayer serverPlayer)) {
+                return;
+            }
+
+            if (player.getLookAngle().y > 0) {
+                return;
+            }
+
+            BlockPos pos = blockHighlightedOrNull(player);
+            if (pos == null) {
+                return;
+            }
+
+            int superLevelToUse = Math.min(Math.floorDiv(useDuration, chargePerLevel), maxSuperLevel);
+            AABB area = getAreaForSuper(superLevelToUse, player, pos);
+
+            int areaSize = (int) BlockPos.betweenClosedStream(area).count();
+            int waterLeft = stack.getMaxDamage() - stack.getDamageValue();
+
+            if (areaSize > waterLeft && !player.isCreative()) {
+                serverPlayer.playNotifySound(SoundEvents.LANTERN_FALL, SoundSource.PLAYERS, 1.0f, 1.0f);
+                serverPlayer.getCooldowns().addCooldown(this, cooldown);
+                return;
+            }
+
+            ServerLevel serverLevel = (ServerLevel) level;
+            BlockPos.betweenClosedStream(area).forEach(bp -> {
+                BlockState state = level.getBlockState(bp);
+                pourWater(serverLevel, serverPlayer, stack, bp, state, true);
+            });
+
+            if (!player.isCreative()) {
+                stack.setDamageValue(stack.getDamageValue() + areaSize);
+            }
+
+            serverPlayer.getCooldowns().addCooldown(this, cooldown);
             return;
         }
 
-        int superLevelToUse = Math.min(Math.floorDiv(useDuration, chargePerLevel), maxSuperLevel);
-        AABB area = getAreaForSuper(superLevelToUse, player, pos);
-
-        int areaSize = (int) BlockPos.betweenClosedStream(area).count();
-        int waterLeft = stack.getMaxDamage() - stack.getDamageValue();
-
-        if (areaSize > waterLeft && !player.isCreative()) {
-            player.playNotifySound(SoundEvents.LANTERN_FALL, SoundSource.PLAYERS, 1.0f, 1.0f);
-            player.getCooldowns().addCooldown(this, cooldown);
-            return;
+        // Normal mode release: apply small cooldown so clicking doesn't flutter
+        if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {
+            serverPlayer.getCooldowns().addCooldown(this, 5);
         }
-
-        ServerLevel serverLevel = (ServerLevel) level;
-        BlockPos.betweenClosedStream(area).forEach(bp -> {
-            BlockState state = level.getBlockState(bp);
-            pourWater(serverLevel, player, stack, bp, state, true);
-        });
-
-        if (!player.isCreative()) {
-            stack.setDamageValue(stack.getDamageValue() + areaSize);
-        }
-
-        player.getCooldowns().addCooldown(this, cooldown);
-        player.swing(player.getUsedItemHand(), true);
     }
 
     public void pourWater(ServerLevel level, ServerPlayer player, ItemStack stack, BlockPos pos, BlockState state, boolean isSuper) {
@@ -246,7 +296,6 @@ public class WateringCanItem extends Item {
             if (!player.isCreative()) {
                 stack.setDamageValue(stack.getDamageValue() + 1);
             }
-            player.getCooldowns().addCooldown(this, cooldown);
         }
 
         // Nether check: only netherite watering can functions in the Nether
