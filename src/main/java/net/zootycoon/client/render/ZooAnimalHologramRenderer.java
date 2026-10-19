@@ -135,8 +135,12 @@ public class ZooAnimalHologramRenderer {
 
         // Lock onto active target when right click is pressed
         if (isRightClickHeld) {
-            if (lockedAnimal == null && activeTarget != null && activeTarget.isAlive() && InspectionTargetTracker.isZooRegisteredAnimal(activeTarget)) {
-                lockedAnimal = activeTarget;
+            if (lockedAnimal == null) {
+                if (activeTarget != null && activeTarget.isAlive() && InspectionTargetTracker.isZooRegisteredAnimal(activeTarget)) {
+                    lockedAnimal = activeTarget;
+                } else if (mc.crosshairPickEntity instanceof LivingEntity picked && picked.isAlive() && InspectionTargetTracker.isZooRegisteredAnimal(picked)) {
+                    lockedAnimal = picked;
+                }
             }
         } else {
             // When released and animation finished easing out, clear lockedAnimal

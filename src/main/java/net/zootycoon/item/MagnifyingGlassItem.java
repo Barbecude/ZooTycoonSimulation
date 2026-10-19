@@ -69,26 +69,36 @@ public class MagnifyingGlassItem extends Item {
     }
 
     private static void scanAndRegister(ServerPlayer sp, LivingEntity target) {
-        ZooAnimalHungerManager.registerAnimalFromSpyglass(sp, target, false);
+        boolean newlyRegistered = ZooAnimalHungerManager.registerAnimalFromSpyglass(sp, target, true);
+        var env = SereneSeasonsCompat.evaluateEnvironment(target);
 
         sp.playNotifySound(SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 0.8f, 1.4f);
         sp.serverLevel().sendParticles(ParticleTypes.HAPPY_VILLAGER, target.getX(), target.getY() + target.getBbHeight() + 0.3, target.getZ(), 8, 0.2, 0.2, 0.2, 0.02);
 
         // Always send animal sync to client so the hologram has fresh data immediately
         ZooNetworkPayloads.sendAnimalSync(sp);
+
+        if (!newlyRegistered) {
+            String name = target.hasCustomName() ? target.getCustomName().getString() : target.getType().getDescription().getString();
+            ZooNetworkPayloads.sendToast(sp, "item.zootycoon.magnifying_glass",
+                    "zootycoon.animal.scan_toast", 1, name, env.tempCategory(), env.seasonName());
+        }
     }
 
     @Override
     public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
+        player.playSound(SoundEvents.SPYGLASS_USE, 1.0F, 1.0F);
+        player.startUsingItem(hand);
         if (ZooAnimalHungerManager.isZooAnimalCandidate(target)) {
             if (player.level().isClientSide()) {
                 net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new net.zootycoon.network.ZooNetworkPayloads.ScanAnimalPayload(target.getId()));
+                target.addTag("zoo_registered");
+                net.zootycoon.client.inspect.InspectionTargetTracker.markRegisteredLocally(target.getId());
             } else if (player instanceof ServerPlayer sp) {
                 scanAndRegister(sp, target);
             }
-            return InteractionResult.sidedSuccess(player.level().isClientSide());
         }
-        return super.interactLivingEntity(stack, player, target, hand);
+        return InteractionResult.CONSUME;
     }
 
     @Override

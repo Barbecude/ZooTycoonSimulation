@@ -101,23 +101,28 @@
   1. Penyesuaian Posisi Hologram: Ketinggian hologram in-world diturunkan dari yang sebelumnya melayang 2+ blok di atas kepala satwa menjadi sejajar ketinggian pandang mata alami (`yOffset = Math.max(0.65, eyeHeight + 0.15)`), serta batas vertikal kartu (`startY` dan `maxY`) kini simetris di sekitar titik tengah (`-halfH` ke `+halfH`). Hologram kini tepat berada di depan pandangan satwa tanpa membuat pemain mendongak ke langit.
   2. Animasi Zoom Ease Smooth & Screen Lock: Ketika pemain menahan klik kanan dengan Magnifying Glass pada satwa terdaftar, target dikunci (`InspectionTargetTracker`) dan hologram bertransisi mulus menggunakan kurva interpolasi cubic ease-in-out (`smoothEase`) dari posisi dunia menuju tepat di tengah layar kamera (`0, 0, -1.35f`). Hologram terkunci stabil di tengah layar tanpa bergoyang atau terpengaruh gerakan mob. Saat klik kanan dilepas, animasi ease kembali memutar transisi secara halus mengembalikan posisi hologram atau menghilangkannya jika pemain tidak lagi membidik satwa tersebut.
 
-- Animasi Fade-Out Hologram & Penghapusan Toast Pindai Satwa:
+- Animasi Fade-Out Hologram, Pemulihan Toast Notifikasi & Perbaikan Zoom Kaca Pembesar:
   1. Animasi Fade Singkat Saat Hilang: Ditambahkan state `fadeAlpha` pada `ZooAnimalHologramRenderer` dan dukungan `alphaFactor` pada `HologramBarRenderer` (`applyAlpha`, `drawVanillaTooltipBackground`, `drawTexturedIcon`, `drawAtlasSprite`, dan ikon-ikon stat). Saat bidikan crosshair terlepas atau kunci klik kanan selesai, hologram tidak lagi langsung lenyap mendadak (pop), melainkan memudar secara mulus dan responsif dalam durasi singkat (~0.18 detik / speed 5.5f).
-  2. Penghapusan Toast Notifikasi Pindai: Toast "Berhasil memindai %s!" pada `MagnifyingGlassItem` telah dihapus total, dan `ZooAnimalHungerManager.registerAnimalFromSpyglass` kini mendaftarkan satwa secara senyap tanpa toast popup. Saat pemain mengeklik kanan atau membidik satwa dengan kaca pembesar, layar tetap bersih dan hanya menampilkan kartu hologram inspeksi tanpa toast yang mengganggu sudut layar.
+  2. Pemulihan Toast Notifikasi Pindai & Pendaftaran: Toast notifikasi dipulihkan sesuai permintaan pengguna. Pemindaian satwa terdaftar memunculkan toast "Berhasil memindai %s!" via `MagnifyingGlassItem`, dan pendaftaran satwa baru memunculkan toast "%s berhasil didaftarkan ke kebun binatang!" via `ZooAnimalHungerManager`.
+  3. Eliminasi Animasi Pukul/Swing Mob & Aktivasi Langsung Zoom Scoping: Diperbaiki bug di mana klik kanan pada mob memicu animasi pukul/ayun lengan (`player.swing(hand)`) dan membatalkan scoping:
+     - `UseEntityCallback` di `ZooTycoonMod` kini mengembalikan `InteractionResult.PASS` untuk item pemindai sehingga klik kanan tidak ditahan atau dipukul oleh callback entitas.
+     - `MagnifyingGlassItem.interactLivingEntity` memanggil `player.startUsingItem(hand)` secara langsung dan mengembalikan `InteractionResult.CONSUME` (`shouldSwing() == false`), menghilangkan ayunan tangan dan langsung mengaktifkan pose spyglass.
+     - Ditambahkan `markRegisteredLocally` pada `InspectionTargetTracker` dan fallback `mc.crosshairPickEntity` pada `ZooAnimalHologramRenderer` sehingga penguncian target dan animasi zoom ease ke tengah layar berjalan instan tanpa jeda jaringan.
 
 ## Bukti Selesai
-- Seluruh permintaan pengguna telah terimplementasi dan terkompilasi bersih dengan .\gradlew.bat build (BUILD SUCCESSFUL in 1m 12s).
+- Seluruh permintaan pengguna telah terimplementasi dan terkompilasi bersih dengan .\gradlew.bat build (BUILD SUCCESSFUL in 1m 4s).
 - File jar hasil build zootycoon-1.0.0.jar otomatis tersalin ke folder mods profil Modrinth di `C:\Users\Zevaldo\AppData\Roaming\ModrinthApp\profiles\Fresh & Smooth\mods\zootycoon-1.0.0.jar`.
-- Animasi fade out halus dan singkat telah aktif saat hologram hendak hilang.
-- Toast pemindaian satwa berhasil dihapus total dari interaksi klik kanan kaca pembesar.
+- Animasi fade out halus dan singkat tetap aktif saat hologram hilang.
+- Toast pemindaian dan pendaftaran satwa telah dipulihkan.
+- Klik kanan kaca pembesar pada mob tidak lagi memukul/mengayunkan tangan, melainkan langsung melakukan zoom ease hologram ke tengah layar.
 
 ## Blocker
 - Tidak ada blocker.
 
 ## File yang diubah
+- src/main/java/net/zootycoon/ZooTycoonMod.java
 - src/main/java/net/zootycoon/animal/ZooAnimalHungerManager.java
-- src/main/java/net/zootycoon/client/ZooTycoonClient.java
-- src/main/java/net/zootycoon/client/inspect/HologramBarRenderer.java
+- src/main/java/net/zootycoon/client/inspect/InspectionTargetTracker.java
 - src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
 - src/main/java/net/zootycoon/item/MagnifyingGlassItem.java
 - docs/hologram/PROGRESS.md
@@ -126,4 +131,4 @@
 - Tidak ada.
 
 ## Belum terverifikasi
-- Pengujian in-game langsung oleh pengguna untuk memeriksa kehalusan animasi fade-out saat crosshair dilepas serta memastikan tidak ada lagi toast yang muncul saat klik kanan kaca pembesar.
+- Pengujian in-game langsung oleh pengguna untuk memeriksa kehalusan animasi zoom saat klik kanan kaca pembesar pada satwa dan kemunculan toast notifikasi.

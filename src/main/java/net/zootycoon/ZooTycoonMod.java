@@ -108,12 +108,8 @@ public class ZooTycoonMod implements ModInitializer {
             if (!world.isClientSide() && player instanceof net.minecraft.server.level.ServerPlayer sp && entity instanceof net.minecraft.world.entity.LivingEntity living) {
                 net.minecraft.world.item.ItemStack held = player.getItemInHand(hand);
                 if (net.zootycoon.animal.ZooAnimalHungerManager.isScanningItem(held)) {
-                    if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)) {
-                        boolean ok = net.zootycoon.animal.ZooAnimalHungerManager.registerAnimalFromSpyglass(sp, living);
-                        if (ok) {
-                            return net.minecraft.world.InteractionResult.SUCCESS;
-                        }
-                    }
+                    // Do not swing arm or cancel item use; allow normal scoping/zooming
+                    return net.minecraft.world.InteractionResult.PASS;
                 } else if (net.zootycoon.animal.AnimalBathingManager.isWateringCan(held)) {
                     if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)
                             && net.zootycoon.animal.ZooAnimalHungerManager.isTagged(living)) {

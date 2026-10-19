@@ -101,11 +101,19 @@ public class InspectionTargetTracker {
         setTarget(validTarget);
     }
 
+    private static final java.util.Set<Integer> LOCALLY_REGISTERED_IDS = new java.util.HashSet<>();
+
+    public static void markRegisteredLocally(int entityId) {
+        LOCALLY_REGISTERED_IDS.add(entityId);
+    }
+
     public static boolean isZooRegisteredAnimal(LivingEntity e) {
         if (e == null || !e.isAlive()) return false;
         if (!ZooAnimalHungerManager.isZooAnimalCandidate(e)) return false;
 
         int id = e.getId();
+        if (LOCALLY_REGISTERED_IDS.contains(id)) return true;
+
         // 1. Check clientAnimals list from server sync
         for (net.zootycoon.network.ZooNetworkPayloads.AnimalSyncData a : net.zootycoon.client.ZooTycoonClient.clientAnimals) {
             if (a.entityId() == id) return true;

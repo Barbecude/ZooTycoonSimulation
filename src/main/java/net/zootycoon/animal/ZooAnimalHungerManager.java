@@ -107,7 +107,7 @@ public class ZooAnimalHungerManager {
     }
 
     public static boolean registerAnimalFromSpyglass(ServerPlayer player, LivingEntity animal) {
-        return registerAnimalFromSpyglass(player, animal, false);
+        return registerAnimalFromSpyglass(player, animal, true);
     }
 
     public static boolean registerAnimalFromSpyglass(ServerPlayer player, LivingEntity animal, boolean sendToast) {
