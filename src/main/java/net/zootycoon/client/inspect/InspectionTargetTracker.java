@@ -114,7 +114,8 @@ public class InspectionTargetTracker {
         int id = e.getId();
         if (LOCALLY_REGISTERED_IDS.contains(id)) return true;
 
-        // 1. Check clientAnimals list from server sync
+        // 1. Check clientAnimals from server sync (O(1) map lookup first)
+        if (net.zootycoon.client.ZooTycoonClient.clientAnimalMap.containsKey(id)) return true;
         for (net.zootycoon.network.ZooNetworkPayloads.AnimalSyncData a : net.zootycoon.client.ZooTycoonClient.clientAnimals) {
             if (a.entityId() == id) return true;
         }

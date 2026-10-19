@@ -145,17 +145,34 @@
      - Mengubah nilai alpha border pada `HologramBarRenderer` dari `0xF0` (terlalu terang) kembali ke nilai vanilla `0x50` (`TOOLTIP_BORDER_TOP = 0x505000FF` dan `TOOLTIP_BORDER_BOTTOM = 0x5028007F`).
      - Border ungu gradien kini tampil halus, semi-transparan (~31% opacity), dan nyaman dipandang mengikuti estetika tooltip vanilla Minecraft.
 
+- Optimasi Performa Render Client Hologram:
+  1. Eliminasi Pemanggilan Redundan Raycast:
+     - Menghapus pemanggilan `InspectionTargetTracker.tick(mc)` dari dalam `ZooAnimalHologramRenderer.render`, karena deteksi target raycast dan collision test sudah berjalan setiap tick di `ClientTickEvents.END_CLIENT_TICK`.
+     - Mengoptimalkan `InspectionTargetTracker.isZooRegisteredAnimal` dengan pencarian O(1) pada `clientAnimalMap` sebelum fallback ke list `clientAnimals`.
+  2. Konsolidasi Buffer Flush:
+     - Menghapus pemanggilan berulang `bs.endBatch()` di tengah-tengah render kartu (setelah tooltip background, setelah ikon makanan, dan setelah ikon stat).
+     - Menyatukan seluruh buffer draw call (background, teks, ikon stat, ikon makanan) ke dalam satu panggilan flush tunggal `bs.endBatch()` di akhir rendering kartu, mengeliminasi GPU pipeline stalls dan draw call splitting.
+  3. Eliminasi Refleksi Musim & Kalkulasi Temperatur:
+     - Menghapus pemanggilan `ZooClimate.getEffectiveTemperature(entity)` dan refleksi runtime ke `FabricSeasonsCompat` di setiap frame render.
+     - Membaca langsung musim dan temperatur dari paket `InspectionSnapshotPayload` (`InspectionPayloads.getLatestClimate`) yang dikirim dari server, memetakan kategori temperatur secara instan tanpa refleksi.
+  4. Caching Lokal Parsing Habitat & Bioma Per Snapshot:
+     - Menerapkan `SNAPSHOT_RENDER_CACHE` untuk menyimpan hasil parsing `HabitatParsedInfo`, teks temperatur, label status, dan itemized checklist `redNeeds`. Selama data snapshot belum berubah antar frame, tidak ada regex split (`split(";")`, `split("=")`, `split("\\|")`) maupun alokasi objek baru yang dieksekusi.
+     - Menerapkan `BIOME_LIST_CACHE` untuk menyimpan format nama bioma bahasa Inggris per `HabitatProfile` agar tidak memformat ulang string bioma setiap frame.
+     - Membuat label stat ("Kesehatan:", "Lapar:", "Haus:", "Kebersihan:", "Suhu:") sebagai konstanta `static final Component` untuk menghindari alokasi `Component.literal` setiap frame.
+
 ## Bukti Selesai
-- Seluruh permintaan pengguna telah terimplementasi dan terkompilasi bersih dengan .\gradlew.bat build.
-- File jar hasil build zootycoon-1.0.0.jar otomatis tersalin ke folder mods profil Modrinth di `C:\Users\Zevaldo\AppData\Roaming\ModrinthApp\profiles\Fresh & Smooth\mods\zootycoon-1.0.0.jar`.
-- Ikon makanan tampil datar 2D tanpa shading 3D dan tidak terpotong.
-- Border ungu tooltip tidak lagi terlalu terang, kembali ke tingkat kepekatan vanilla yang lembut.
+- Seluruh permintaan pengguna telah terimplementasi dan terkompilasi bersih dengan `compileJava` dan `assemble`.
+- File jar hasil build `zootycoon-1.0.0.jar` telah tersalin ke folder mods profil Modrinth di `C:\Users\chill\AppData\Roaming\ModrinthApp\profiles\Fabric 1.21\mods\zootycoon-1.0.0.jar`.
+- Pemanggilan `tick(mc)` di dalam loop render telah dihapus sepenuhnya.
+- Buffer flush berkurang dari 4x per frame menjadi 1x per frame.
+- Refleksi `FabricSeasonsCompat` dihilangkan dari thread rendering.
+- Regex split habitat dan bioma telah dicache per snapshot.
 
 ## Blocker
 - Tidak ada blocker.
 
 ## File yang diubah
-- src/main/java/net/zootycoon/client/inspect/HologramBarRenderer.java
+- src/main/java/net/zootycoon/client/inspect/InspectionTargetTracker.java
 - src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
 - docs/hologram/PROGRESS.md
 
@@ -163,6 +180,7 @@
 - Tidak ada.
 
 ## Belum terverifikasi
-- Pengujian visual in-game langsung oleh pengguna untuk memastikan ikon makanan 2D tampil bersih tanpa shading/crop dan border ungu nyaman dipandang.
+- Pengujian in-game langsung oleh pengguna untuk memeriksa grafik frame time Alt + F3 (lonjakan merah hilang) dan kelancaran animasi zoom ease serta fade-out.
+
 
 
