@@ -131,6 +131,16 @@ public class InspectionTargetTracker {
     }
 
     private static LivingEntity findTarget(Minecraft mc, Player player, Level level) {
+        if (player == null || level == null) {
+            return null;
+        }
+
+        boolean holdingMagnifier = player.getMainHandItem().is(ZooItems.MAGNIFYING_GLASS)
+                || player.getOffhandItem().is(ZooItems.MAGNIFYING_GLASS);
+        if (!holdingMagnifier) {
+            return null;
+        }
+
         Vec3 eyePos = player.getEyePosition(1.0F);
         Vec3 lookVec = player.getViewVector(1.0F);
         Vec3 reachVec = eyePos.add(lookVec.scale(16.0));

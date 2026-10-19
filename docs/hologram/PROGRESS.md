@@ -160,13 +160,22 @@
      - Menerapkan `BIOME_LIST_CACHE` untuk menyimpan format nama bioma bahasa Inggris per `HabitatProfile` agar tidak memformat ulang string bioma setiap frame.
      - Membuat label stat ("Kesehatan:", "Lapar:", "Haus:", "Kebersihan:", "Suhu:") sebagai konstanta `static final Component` untuk menghindari alokasi `Component.literal` setiap frame.
 
+- Optimasi Client Rendering Hologram dan Target Tracker (Prompt 2):
+  1. Caching Metrik Teks dan Diet Makanan:
+     - Memindahkan seluruh komputasi `font.width` (label stat, nilai stat HP/Hunger/Thirst/Cleanliness/Suhu, judul entitas, status temperatur, dan checklist kebutuhan habitat) ke dalam `CachedSnapshotRenderData.build(...)` yang hanya dipanggil saat data snapshot baru diterima dari server atau terjadi perubahan status satwa.
+     - Memindahkan pemanggilan `AnimalDietRegistry.getFoodsForAnimal(entity)` ke dalam `CachedSnapshotRenderData`, menghilangkan pemindaian berat item registry di setiap frame render (~100 FPS).
+     - Loop render per frame murni membaca nilai dimensi, lebar teks, dan list item pakan yang sudah tercache tanpa melakukan alokasi memori baru (zero-allocation rendering).
+     - Tata letak visual, ukuran ikon 2D, warna font, padding, dan billboard tooltip background vanilla Minecraft dipertahankan 100% identik tanpa perubahan.
+  2. Optimasi Raycast Target Tracker:
+     - Pada `InspectionTargetTracker.java`, menambahkan guard check di awal `findTarget` sehingga `level.clip` (raycast blok padat) dan `ProjectileUtil.getEntityHitResult` hanya dieksekusi apabila pemain sedang memegang item `Magnifying Glass` di main hand atau offhand.
+     - Jika pemain tidak memegang `Magnifying Glass`, tracker langsung mengembalikan `null` seketika tanpa melakukan komputasi raycast apa pun.
+     - Toleransi grace buffer 15 tick (`targetRetentionTicks = 15`) tetap dipertahankan agar kartu hologram stabil dan tidak berkedip saat crosshair membidik sedikit meleset dari model satwa.
+
 ## Bukti Selesai
-- Seluruh permintaan pengguna telah terimplementasi dan terkompilasi bersih dengan `compileJava` dan `assemble`.
-- File jar hasil build `zootycoon-1.0.0.jar` telah tersalin ke folder mods profil Modrinth di `C:\Users\chill\AppData\Roaming\ModrinthApp\profiles\Fabric 1.21\mods\zootycoon-1.0.0.jar`.
-- Pemanggilan `tick(mc)` di dalam loop render telah dihapus sepenuhnya.
-- Buffer flush berkurang dari 4x per frame menjadi 1x per frame.
-- Refleksi `FabricSeasonsCompat` dihilangkan dari thread rendering.
-- Regex split habitat dan bioma telah dicache per snapshot.
+- Seluruh permintaan Prompt 2 telah terimplementasi dan terkompilasi bersih dengan `compileJava` dan `build`.
+- File jar `zootycoon-1.0.0.jar` telah tersalin ke folder mods profil Modrinth.
+- Tidak ada panggilan `font.width` maupun `AnimalDietRegistry.getFoodsForAnimal` yang berjalan di dalam per-frame render loop.
+- Guard check di `findTarget` memblokir `level.clip` dan `getEntityHitResult` jika pemain tidak memegang Magnifying Glass.
 
 ## Blocker
 - Tidak ada blocker.
@@ -180,7 +189,8 @@
 - Tidak ada.
 
 ## Belum terverifikasi
-- Pengujian in-game langsung oleh pengguna untuk memeriksa grafik frame time Alt + F3 (lonjakan merah hilang) dan kelancaran animasi zoom ease serta fade-out.
+- Pengujian in-game langsung oleh pengguna untuk memeriksa grafik frame time Alt + F3 dan kestabilan kartu hologram saat crosshair digeser tipis.
+
 
 
 

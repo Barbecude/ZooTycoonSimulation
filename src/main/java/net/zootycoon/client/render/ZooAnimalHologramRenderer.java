@@ -46,36 +46,405 @@ public class ZooAnimalHologramRenderer {
     private static final Component CLEAN_LABEL = Component.literal("Kebersihan:");
     private static final Component TEMP_LABEL = Component.literal("Suhu:");
 
+    private static final String HABITAT_OK_TEXT = "Kebutuhan Habitat: Terpenuhi";
+    private static final String HABITAT_HEADER_TEXT = "Kebutuhan Habitat:";
+
+    private static final float TITLE_SCALE = 1.25f;
+    private static final float ROW_HEIGHT = 11.0f;
+    private static final float HEADER_HEIGHT = 13.0f;
+    private static final float FOOD_SPACING = 16.0f;
+    private static final float FOOD_SIZE = 12.0f;
+    private static final float ICON_WIDTH = 9.0f;
+    private static final float GAP_LABEL_TO_ICON = 4.0f;
+    private static final float GAP_ICON_TO_VALUE = 4.0f;
+
     public static class CachedSnapshotRenderData {
         public final int entityId;
+        public final long snapshotTimestamp;
+        public final boolean registered;
+        public final int hpPct;
+        public final int hunger;
+        public final int thirst;
+        public final int cleanliness;
+        public final boolean isWet;
         public final String rawNeeds;
         public final String rawStatus;
         public final String tempCategory;
+
+        public final Component titleComp;
+        public final float scaledTitleWidth;
+
+        public final String hpText;
+        public final int hpTextColor;
+        public final int hpTextWidth;
+
+        public final String hungerText;
+        public final int hungerTextColor;
+        public final int hungerTextWidth;
+
+        public final String thirstText;
+        public final int thirstTextColor;
+        public final int thirstTextWidth;
+
+        public final String cleanText;
+        public final int cleanTextColor;
+        public final int cleanTextWidth;
+
         public final HabitatParsedInfo parsedInfo;
         public final int celsius;
         public final String tempBaseText;
+        public final int tempBaseTextWidth;
         public final String tempStatusLabel;
+        public final int tempStatusLabelWidth;
         public final int tempStatusColor;
         public final int tempTotalWidth;
+
+        public final int maxLabelWidth;
+        public final int maxValueWidth;
+        public final float statRowWidth;
+
+        public final List<ItemStack> foods;
+        public final int foodCount;
+        public final float foodsRowWidth;
+
         public final List<Component> redNeeds;
         public final float maxHabitatTextWidth;
 
-        public CachedSnapshotRenderData(int entityId, String rawNeeds, String rawStatus, String tempCategory,
-                                        HabitatParsedInfo parsedInfo, int celsius, String tempBaseText,
-                                        String tempStatusLabel, int tempStatusColor, int tempTotalWidth,
-                                        List<Component> redNeeds, float maxHabitatTextWidth) {
+        public final float headerHeight;
+        public final float foodSectionHeight;
+        public final float statsSectionHeight;
+        public final float habitatSectionHeight;
+        public final float contentHeight;
+        public final float totalBoxHeight;
+        public final float boxWidth;
+        public final float minX;
+        public final float maxX;
+        public final float startY;
+        public final float maxY;
+
+        public CachedSnapshotRenderData(
+                int entityId,
+                long snapshotTimestamp,
+                boolean registered,
+                int hpPct,
+                int hunger,
+                int thirst,
+                int cleanliness,
+                boolean isWet,
+                String rawNeeds,
+                String rawStatus,
+                String tempCategory,
+                Component titleComp,
+                float scaledTitleWidth,
+                String hpText,
+                int hpTextColor,
+                int hpTextWidth,
+                String hungerText,
+                int hungerTextColor,
+                int hungerTextWidth,
+                String thirstText,
+                int thirstTextColor,
+                int thirstTextWidth,
+                String cleanText,
+                int cleanTextColor,
+                int cleanTextWidth,
+                HabitatParsedInfo parsedInfo,
+                int celsius,
+                String tempBaseText,
+                int tempBaseTextWidth,
+                String tempStatusLabel,
+                int tempStatusLabelWidth,
+                int tempStatusColor,
+                int tempTotalWidth,
+                int maxLabelWidth,
+                int maxValueWidth,
+                float statRowWidth,
+                List<ItemStack> foods,
+                int foodCount,
+                float foodsRowWidth,
+                List<Component> redNeeds,
+                float maxHabitatTextWidth,
+                float headerHeight,
+                float foodSectionHeight,
+                float statsSectionHeight,
+                float habitatSectionHeight,
+                float contentHeight,
+                float totalBoxHeight,
+                float boxWidth,
+                float minX,
+                float maxX,
+                float startY,
+                float maxY
+        ) {
             this.entityId = entityId;
+            this.snapshotTimestamp = snapshotTimestamp;
+            this.registered = registered;
+            this.hpPct = hpPct;
+            this.hunger = hunger;
+            this.thirst = thirst;
+            this.cleanliness = cleanliness;
+            this.isWet = isWet;
             this.rawNeeds = rawNeeds;
             this.rawStatus = rawStatus;
             this.tempCategory = tempCategory;
+            this.titleComp = titleComp;
+            this.scaledTitleWidth = scaledTitleWidth;
+            this.hpText = hpText;
+            this.hpTextColor = hpTextColor;
+            this.hpTextWidth = hpTextWidth;
+            this.hungerText = hungerText;
+            this.hungerTextColor = hungerTextColor;
+            this.hungerTextWidth = hungerTextWidth;
+            this.thirstText = thirstText;
+            this.thirstTextColor = thirstTextColor;
+            this.thirstTextWidth = thirstTextWidth;
+            this.cleanText = cleanText;
+            this.cleanTextColor = cleanTextColor;
+            this.cleanTextWidth = cleanTextWidth;
             this.parsedInfo = parsedInfo;
             this.celsius = celsius;
             this.tempBaseText = tempBaseText;
+            this.tempBaseTextWidth = tempBaseTextWidth;
             this.tempStatusLabel = tempStatusLabel;
+            this.tempStatusLabelWidth = tempStatusLabelWidth;
             this.tempStatusColor = tempStatusColor;
             this.tempTotalWidth = tempTotalWidth;
+            this.maxLabelWidth = maxLabelWidth;
+            this.maxValueWidth = maxValueWidth;
+            this.statRowWidth = statRowWidth;
+            this.foods = foods;
+            this.foodCount = foodCount;
+            this.foodsRowWidth = foodsRowWidth;
             this.redNeeds = redNeeds;
             this.maxHabitatTextWidth = maxHabitatTextWidth;
+            this.headerHeight = headerHeight;
+            this.foodSectionHeight = foodSectionHeight;
+            this.statsSectionHeight = statsSectionHeight;
+            this.habitatSectionHeight = habitatSectionHeight;
+            this.contentHeight = contentHeight;
+            this.totalBoxHeight = totalBoxHeight;
+            this.boxWidth = boxWidth;
+            this.minX = minX;
+            this.maxX = maxX;
+            this.startY = startY;
+            this.maxY = maxY;
+        }
+
+        public static CachedSnapshotRenderData build(
+                LivingEntity entity,
+                Font font,
+                int hpPct,
+                long snapshotTimestamp,
+                boolean isRegistered,
+                int hunger,
+                int thirst,
+                int cleanliness,
+                boolean isWet,
+                String rawNeeds,
+                String rawStatus,
+                String tempCategory
+        ) {
+            HabitatParsedInfo habitatInfo = HabitatParsedInfo.parse(rawNeeds, rawStatus);
+            int celsius = parseCelsiusFromCategory(tempCategory);
+            String tempBaseText = celsius + "°C";
+
+            String tempStatusLabel;
+            int tempStatusColor;
+            if ("HEATER".equalsIgnoreCase(habitatInfo.tempStatus())) {
+                tempStatusLabel = " (Butuh Heater)";
+                tempStatusColor = 0xFFFF5555; // Red
+            } else if ("COOLER".equalsIgnoreCase(habitatInfo.tempStatus())) {
+                tempStatusLabel = " (Butuh Cooler Box)";
+                tempStatusColor = 0xFFFF5555; // Red
+            } else {
+                tempStatusLabel = " (Nyaman)";
+                tempStatusColor = 0xFF55FF55; // Green
+            }
+
+            int tempBaseTextWidth = font.width(tempBaseText);
+            int tempStatusLabelWidth = font.width(tempStatusLabel);
+            int tempTotalWidth = tempBaseTextWidth + tempStatusLabelWidth;
+
+            HabitatProfile profile = HabitatProfileLoader.getProfile(entity);
+            List<Component> redNeeds = new ArrayList<>();
+
+            if (!habitatInfo.serverUnmet().isEmpty()) {
+                for (String item : habitatInfo.serverUnmet()) {
+                    if (item.startsWith("Bioma:")) {
+                        continue; // Biome is handled below with English bullet points
+                    }
+                    if (item.startsWith("Butuh Heater") || item.startsWith("Butuh Cooler Box")) {
+                        continue; // Temperature status is displayed in Suhu row
+                    }
+                    redNeeds.add(Component.literal("• " + item));
+                }
+            } else {
+                if ("NO".equalsIgnoreCase(habitatInfo.waterStatus())) {
+                    redNeeds.add(Component.literal("• Butuh Air"));
+                }
+                if (!habitatInfo.groundOk()) {
+                    redNeeds.add(Component.literal("• Butuh Tanah Alami"));
+                }
+                if (!habitatInfo.mateOk()) {
+                    redNeeds.add(Component.literal("• Butuh Pasangan"));
+                }
+            }
+
+            if (!habitatInfo.biomeOk()) {
+                List<String> biomes = getBiomeListEnglish(profile);
+                boolean hasBiomes = false;
+                for (String b : biomes) {
+                    if (!"Any".equalsIgnoreCase(b) && !b.isBlank()) {
+                        hasBiomes = true;
+                        break;
+                    }
+                }
+                if (hasBiomes) {
+                    redNeeds.add(Component.literal("• Bioma yang cocok:"));
+                    for (String b : biomes) {
+                        if (!"Any".equalsIgnoreCase(b) && !b.isBlank()) {
+                            redNeeds.add(Component.literal("  - " + b));
+                        }
+                    }
+                }
+            }
+
+            float maxHabTextWidth;
+            if (redNeeds.isEmpty()) {
+                maxHabTextWidth = font.width(HABITAT_OK_TEXT);
+            } else {
+                maxHabTextWidth = font.width(HABITAT_HEADER_TEXT);
+                for (Component c : redNeeds) {
+                    maxHabTextWidth = Math.max(maxHabTextWidth, font.width(c));
+                }
+            }
+
+            String hpText = hpPct + "%";
+            int hpTextColor = HologramBarRenderer.getStatusColor((float) hpPct);
+            int hpTextWidth = font.width(hpText);
+
+            String hungerText;
+            int hungerTextColor;
+            if (isRegistered && hunger >= 0) {
+                hungerText = hunger + "%";
+                hungerTextColor = HologramBarRenderer.getStatusColor((float) hunger);
+            } else {
+                hungerText = "-";
+                hungerTextColor = HologramBarRenderer.COLOR_MUTED;
+            }
+            int hungerTextWidth = font.width(hungerText);
+
+            String thirstText;
+            int thirstTextColor;
+            if (isRegistered && thirst >= 0) {
+                thirstText = thirst + "%";
+                thirstTextColor = HologramBarRenderer.getStatusColor((float) thirst);
+            } else {
+                thirstText = "-";
+                thirstTextColor = HologramBarRenderer.COLOR_MUTED;
+            }
+            int thirstTextWidth = font.width(thirstText);
+
+            String cleanText;
+            int cleanTextColor;
+            if (isRegistered && cleanliness >= 0) {
+                cleanText = cleanliness + "%" + (isWet ? " (Basah)" : "");
+                cleanTextColor = HologramBarRenderer.getStatusColor((float) cleanliness);
+            } else {
+                cleanText = "-";
+                cleanTextColor = HologramBarRenderer.COLOR_MUTED;
+            }
+            int cleanTextWidth = font.width(cleanText);
+
+            int maxLabelWidth = Math.max(font.width(HP_LABEL),
+                    Math.max(font.width(HUNGER_LABEL),
+                    Math.max(font.width(THIRST_LABEL),
+                    Math.max(font.width(CLEAN_LABEL), font.width(TEMP_LABEL)))));
+
+            int maxValueWidth = Math.max(hpTextWidth,
+                    Math.max(hungerTextWidth,
+                    Math.max(thirstTextWidth,
+                    Math.max(cleanTextWidth, tempTotalWidth))));
+
+            List<ItemStack> foods = Collections.unmodifiableList(AnimalDietRegistry.getFoodsForAnimal(entity));
+            int foodCount = Math.min(5, foods.size());
+            float foodsRowWidth = foodCount * FOOD_SPACING;
+
+            Component titleComp = entity.getDisplayName();
+            float scaledTitleWidth = font.width(titleComp) * TITLE_SCALE;
+
+            float statRowWidth = maxLabelWidth + GAP_LABEL_TO_ICON + ICON_WIDTH + GAP_ICON_TO_VALUE + maxValueWidth;
+
+            float boxWidth = Math.max(statRowWidth + 16.0f,
+                    Math.max(scaledTitleWidth + 16.0f,
+                    Math.max(foodsRowWidth + 16.0f, maxHabTextWidth + 18.0f)));
+
+            float foodSectionHeight = (foodCount > 0) ? 16.0f : 0.0f;
+            float statsSectionHeight = 5.0f * ROW_HEIGHT;
+            float habitatSectionHeight = redNeeds.isEmpty() ? 12.0f : (12.0f + (redNeeds.size() * 10.0f));
+
+            float contentHeight = HEADER_HEIGHT + foodSectionHeight + statsSectionHeight + 4.0f + habitatSectionHeight;
+            float totalBoxHeight = contentHeight + 10.0f; // 5px padding top & bottom
+
+            float minX = -boxWidth / 2.0f;
+            float maxX = boxWidth / 2.0f;
+            float startY = -totalBoxHeight;
+            float maxY = 0.0f;
+
+            return new CachedSnapshotRenderData(
+                    entity.getId(),
+                    snapshotTimestamp,
+                    isRegistered,
+                    hpPct,
+                    hunger,
+                    thirst,
+                    cleanliness,
+                    isWet,
+                    rawNeeds,
+                    rawStatus,
+                    tempCategory,
+                    titleComp,
+                    scaledTitleWidth,
+                    hpText,
+                    hpTextColor,
+                    hpTextWidth,
+                    hungerText,
+                    hungerTextColor,
+                    hungerTextWidth,
+                    thirstText,
+                    thirstTextColor,
+                    thirstTextWidth,
+                    cleanText,
+                    cleanTextColor,
+                    cleanTextWidth,
+                    habitatInfo,
+                    celsius,
+                    tempBaseText,
+                    tempBaseTextWidth,
+                    tempStatusLabel,
+                    tempStatusLabelWidth,
+                    tempStatusColor,
+                    tempTotalWidth,
+                    maxLabelWidth,
+                    maxValueWidth,
+                    statRowWidth,
+                    foods,
+                    foodCount,
+                    foodsRowWidth,
+                    Collections.unmodifiableList(redNeeds),
+                    maxHabTextWidth,
+                    HEADER_HEIGHT,
+                    foodSectionHeight,
+                    statsSectionHeight,
+                    habitatSectionHeight,
+                    contentHeight,
+                    totalBoxHeight,
+                    boxWidth,
+                    minX,
+                    maxX,
+                    startY,
+                    maxY
+            );
         }
     }
 
@@ -288,46 +657,15 @@ public class ZooAnimalHologramRenderer {
         float currentHp = entity.getHealth();
         float maxHp = entity.getMaxHealth();
         int hpPct = Math.round((currentHp / Math.max(1.0f, maxHp)) * 100.0f);
-        String hpText = hpPct + "%";
-        int hpTextColor = HologramBarRenderer.getStatusColor((float) hpPct);
 
         // 2. Snapshot data from server
         InspectionClientCache.Snapshot snapshot = InspectionClientCache.getSnapshot(entity.getId());
         boolean isRegistered = snapshot != null && snapshot.registered();
-
-        String hungerText;
-        int hungerTextColor;
-        if (isRegistered && snapshot.hunger() >= 0) {
-            int hVal = snapshot.hunger();
-            hungerText = hVal + "%";
-            hungerTextColor = HologramBarRenderer.getStatusColor((float) hVal);
-        } else {
-            hungerText = "-";
-            hungerTextColor = HologramBarRenderer.COLOR_MUTED;
-        }
-
-        String thirstText;
-        int thirstTextColor;
-        if (isRegistered && snapshot.thirst() >= 0) {
-            int tVal = snapshot.thirst();
-            thirstText = tVal + "%";
-            thirstTextColor = HologramBarRenderer.getStatusColor((float) tVal);
-        } else {
-            thirstText = "-";
-            thirstTextColor = HologramBarRenderer.COLOR_MUTED;
-        }
-
-        String cleanText;
-        int cleanTextColor;
+        int hunger = (snapshot != null) ? snapshot.hunger() : -1;
+        int thirst = (snapshot != null) ? snapshot.thirst() : -1;
+        int cleanliness = (snapshot != null) ? snapshot.cleanliness() : -1;
+        long snapshotTimestamp = (snapshot != null) ? snapshot.timestamp() : -1L;
         boolean isWet = isRegistered && InspectionPayloads.isAnimalWet(entity.getId());
-        if (isRegistered && snapshot.cleanliness() >= 0) {
-            int cVal = snapshot.cleanliness();
-            cleanText = cVal + "%" + (isWet ? " (Basah)" : "");
-            cleanTextColor = HologramBarRenderer.getStatusColor((float) cVal);
-        } else {
-            cleanText = "-";
-            cleanTextColor = HologramBarRenderer.COLOR_MUTED;
-        }
 
         // 3. Climate & Habitat cached snapshot data
         InspectionPayloads.HabitatData habitatData = InspectionPayloads.getLatestHabitat(entity.getId());
@@ -338,152 +676,38 @@ public class ZooAnimalHologramRenderer {
 
         CachedSnapshotRenderData cached = SNAPSHOT_RENDER_CACHE.get(entity.getId());
         if (cached == null
+                || cached.snapshotTimestamp != snapshotTimestamp
+                || cached.registered != isRegistered
+                || cached.hpPct != hpPct
+                || cached.hunger != hunger
+                || cached.thirst != thirst
+                || cached.cleanliness != cleanliness
+                || cached.isWet != isWet
+                || !Objects.equals(cached.titleComp.getString(), entity.getDisplayName().getString())
                 || !Objects.equals(cached.rawNeeds, rawNeeds)
                 || !Objects.equals(cached.rawStatus, rawStatus)
                 || !Objects.equals(cached.tempCategory, tempCategory)) {
 
-            HabitatParsedInfo habitatInfo = HabitatParsedInfo.parse(rawNeeds, rawStatus);
-            int celsius = parseCelsiusFromCategory(tempCategory);
-            String tempBaseText = celsius + "°C";
-
-            String tempStatusLabel;
-            int tempStatusColor;
-            if ("HEATER".equalsIgnoreCase(habitatInfo.tempStatus())) {
-                tempStatusLabel = " (Butuh Heater)";
-                tempStatusColor = 0xFFFF5555; // Red
-            } else if ("COOLER".equalsIgnoreCase(habitatInfo.tempStatus())) {
-                tempStatusLabel = " (Butuh Cooler Box)";
-                tempStatusColor = 0xFFFF5555; // Red
-            } else {
-                tempStatusLabel = " (Nyaman)";
-                tempStatusColor = 0xFF55FF55; // Green
-            }
-
-            int tempTotalWidth = font.width(tempBaseText) + font.width(tempStatusLabel);
-
-            HabitatProfile profile = HabitatProfileLoader.getProfile(entity);
-            List<Component> redNeeds = new ArrayList<>();
-
-            if (!habitatInfo.serverUnmet().isEmpty()) {
-                for (String item : habitatInfo.serverUnmet()) {
-                    if (item.startsWith("Bioma:")) {
-                        continue; // Biome is handled below with English bullet points
-                    }
-                    if (item.startsWith("Butuh Heater") || item.startsWith("Butuh Cooler Box")) {
-                        continue; // Temperature status is displayed in Suhu row
-                    }
-                    redNeeds.add(Component.literal("• " + item));
-                }
-            } else {
-                if ("NO".equalsIgnoreCase(habitatInfo.waterStatus())) {
-                    redNeeds.add(Component.literal("• Butuh Air"));
-                }
-                if (!habitatInfo.groundOk()) {
-                    redNeeds.add(Component.literal("• Butuh Tanah Alami"));
-                }
-                if (!habitatInfo.mateOk()) {
-                    redNeeds.add(Component.literal("• Butuh Pasangan"));
-                }
-            }
-
-            if (!habitatInfo.biomeOk()) {
-                List<String> biomes = getBiomeListEnglish(profile);
-                boolean hasBiomes = false;
-                for (String b : biomes) {
-                    if (!"Any".equalsIgnoreCase(b) && !b.isBlank()) {
-                        hasBiomes = true;
-                        break;
-                    }
-                }
-                if (hasBiomes) {
-                    redNeeds.add(Component.literal("• Bioma yang cocok:"));
-                    for (String b : biomes) {
-                        if (!"Any".equalsIgnoreCase(b) && !b.isBlank()) {
-                            redNeeds.add(Component.literal("  - " + b));
-                        }
-                    }
-                }
-            }
-
-            float maxHabTextWidth = 0.0f;
-            if (redNeeds.isEmpty()) {
-                maxHabTextWidth = font.width("Kebutuhan Habitat: Terpenuhi");
-            } else {
-                maxHabTextWidth = font.width("Kebutuhan Habitat:");
-                for (Component c : redNeeds) {
-                    maxHabTextWidth = Math.max(maxHabTextWidth, font.width(c));
-                }
-            }
-
-            cached = new CachedSnapshotRenderData(
-                    entity.getId(),
+            cached = CachedSnapshotRenderData.build(
+                    entity,
+                    font,
+                    hpPct,
+                    snapshotTimestamp,
+                    isRegistered,
+                    hunger,
+                    thirst,
+                    cleanliness,
+                    isWet,
                     rawNeeds,
                     rawStatus,
-                    tempCategory,
-                    habitatInfo,
-                    celsius,
-                    tempBaseText,
-                    tempStatusLabel,
-                    tempStatusColor,
-                    tempTotalWidth,
-                    Collections.unmodifiableList(redNeeds),
-                    maxHabTextWidth
+                    tempCategory
             );
             SNAPSHOT_RENDER_CACHE.put(entity.getId(), cached);
         }
 
-        // 4. Stat Labels measurements
-        int maxLabelWidth = Math.max(font.width(HP_LABEL),
-                Math.max(font.width(HUNGER_LABEL),
-                Math.max(font.width(THIRST_LABEL),
-                Math.max(font.width(CLEAN_LABEL), font.width(TEMP_LABEL)))));
-
-        int maxValueWidth = Math.max(font.width(hpText),
-                Math.max(font.width(hungerText),
-                Math.max(font.width(thirstText),
-                Math.max(font.width(cleanText), cached.tempTotalWidth))));
-
-        // 5. Food items (icons only)
-        List<ItemStack> foods = AnimalDietRegistry.getFoodsForAnimal(entity);
-        int foodCount = Math.min(5, foods.size());
-        float foodSpacing = 16.0f;
-        float foodsRowWidth = foodCount * foodSpacing;
-
-        List<Component> redNeeds = cached.redNeeds;
-        float maxHabitatTextWidth = cached.maxHabitatTextWidth;
-
-        Component titleComp = entity.getDisplayName();
-        float titleScale = 1.25f;
-        float scaledTitleWidth = font.width(titleComp) * titleScale;
-
-        float iconWidth = 9.0f;
-        float gapLabelToIcon = 4.0f;
-        float gapIconToValue = 4.0f;
-        float statRowWidth = maxLabelWidth + gapLabelToIcon + iconWidth + gapIconToValue + maxValueWidth;
-
-        float boxWidth = Math.max(statRowWidth + 16.0f,
-                Math.max(scaledTitleWidth + 16.0f,
-                Math.max(foodsRowWidth + 16.0f, maxHabitatTextWidth + 18.0f)));
-
-        float rowHeight = 11.0f;
-        float headerHeight = 13.0f;
-        float foodSectionHeight = (foodCount > 0) ? 16.0f : 0.0f;
-        float statsSectionHeight = 5.0f * rowHeight;
-        float habitatSectionHeight = redNeeds.isEmpty() ? 12.0f : (12.0f + (redNeeds.size() * 10.0f));
-
-        float contentHeight = headerHeight + foodSectionHeight + statsSectionHeight + 4.0f + habitatSectionHeight;
-        float totalBoxHeight = contentHeight + 10.0f; // 5px padding top & bottom
-
-        float minX = -boxWidth / 2.0f;
-        float maxX = boxWidth / 2.0f;
-        // Bottom-anchored card: startY = -totalBoxHeight (top), maxY = 0.0f (bottom)
-        // With -curScale along Y, local Y = 0 sits at yOffset, and local Y = -totalBoxHeight extends upwards above mob!
-        float startY = -totalBoxHeight;
-        float maxY = 0.0f;
-
         // Smoothly interpolate scale: world scale (0.0110f) -> screen locked scale (0.0068f)
         float curScale = 0.0110f + (0.0068f - 0.0110f) * eased;
-        float halfHWorld = (totalBoxHeight / 2.0f) * curScale;
+        float halfHWorld = (cached.totalBoxHeight / 2.0f) * curScale;
         float targetTransY = -halfHWorld; // Screen-center vertical alignment when locked
 
         // Smoothly interpolate between in-world mob position and screen-center locked position
@@ -501,42 +725,41 @@ public class ZooAnimalHologramRenderer {
 
         if (buffer != null) {
             // 1. Draw authentic vanilla tooltip background with fadeAlpha
-            HologramBarRenderer.drawVanillaTooltipBackground(buffer, matrix, minX, startY, maxX, maxY, LightTexture.FULL_BRIGHT, fadeAlpha);
+            HologramBarRenderer.drawVanillaTooltipBackground(buffer, matrix, cached.minX, cached.startY, cached.maxX, cached.maxY, LightTexture.FULL_BRIGHT, fadeAlpha);
 
-            float leftX = minX + 8.0f;
-            float curY = startY + 5.0f;
+            float leftX = cached.minX + 8.0f;
+            float curY = cached.startY + 5.0f;
 
             // 2. Animal Title (Enlarged & Left-aligned)
             poseStack.pushPose();
             poseStack.translate(leftX, curY, 0.0f);
-            poseStack.scale(titleScale, titleScale, 1.0f);
-            font.drawInBatch(titleComp, 0.0f, 0.0f, HologramBarRenderer.applyAlpha(0xFFFFFFFF, fadeAlpha), false, poseStack.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            poseStack.scale(TITLE_SCALE, TITLE_SCALE, 1.0f);
+            font.drawInBatch(cached.titleComp, 0.0f, 0.0f, HologramBarRenderer.applyAlpha(0xFFFFFFFF, fadeAlpha), false, poseStack.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             poseStack.popPose();
-            curY += headerHeight;
+            curY += cached.headerHeight;
 
             // 3. Favorite Food Icons (2D Flat, Unshaded, Never Cropped)
-            if (foodCount > 0) {
-                float foodSize = 12.0f;
-                for (int i = 0; i < foodCount; i++) {
-                    ItemStack foodStack = foods.get(i);
-                    float foodX = leftX + (i * foodSpacing);
+            if (cached.foodCount > 0) {
+                for (int i = 0; i < cached.foodCount; i++) {
+                    ItemStack foodStack = cached.foods.get(i);
+                    float foodX = leftX + (i * FOOD_SPACING);
                     float foodY = curY + 2.0f;
-                    HologramBarRenderer.drawItemIcon2D(mc, buffer, matrix, foodStack, foodX, foodY, foodSize, LightTexture.FULL_BRIGHT, fadeAlpha);
+                    HologramBarRenderer.drawItemIcon2D(mc, buffer, matrix, foodStack, foodX, foodY, FOOD_SIZE, LightTexture.FULL_BRIGHT, fadeAlpha);
                 }
-                curY += foodSectionHeight;
+                curY += cached.foodSectionHeight;
             }
 
             // 4. Stat rows layout (Left-aligned)
             float labelX = leftX;
-            float iconX = labelX + maxLabelWidth + gapLabelToIcon;
-            float valueX = iconX + iconWidth + gapIconToValue;
+            float iconX = labelX + cached.maxLabelWidth + GAP_LABEL_TO_ICON;
+            float valueX = iconX + ICON_WIDTH + GAP_ICON_TO_VALUE;
 
             float r1Y = curY;
-            float r2Y = curY + rowHeight;
-            float r3Y = curY + (rowHeight * 2.0f);
-            float r4Y = curY + (rowHeight * 3.0f);
-            float r5Y = curY + (rowHeight * 4.0f);
-            curY += (rowHeight * 5.0f) + 4.0f;
+            float r2Y = curY + ROW_HEIGHT;
+            float r3Y = curY + (ROW_HEIGHT * 2.0f);
+            float r4Y = curY + (ROW_HEIGHT * 3.0f);
+            float r5Y = curY + (ROW_HEIGHT * 4.0f);
+            curY += (ROW_HEIGHT * 5.0f) + 4.0f;
 
             // Render Stat Icons (Two-sided & depth-tested with fadeAlpha)
             HologramBarRenderer.drawVanillaHeartIcon(mc, font, buffer, matrix, iconX, r1Y + 1.0f, LightTexture.FULL_BRIGHT, fadeAlpha);
@@ -553,26 +776,26 @@ public class ZooAnimalHologramRenderer {
             font.drawInBatch(TEMP_LABEL, labelX, r5Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 
             // Render Stat Values with fadeAlpha
-            font.drawInBatch(hpText, valueX, r1Y + 1.0f, HologramBarRenderer.applyAlpha(hpTextColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(hungerText, valueX, r2Y + 1.0f, HologramBarRenderer.applyAlpha(hungerTextColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(thirstText, valueX, r3Y + 1.0f, HologramBarRenderer.applyAlpha(thirstTextColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(cleanText, valueX, r4Y + 1.0f, HologramBarRenderer.applyAlpha(cleanTextColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(cached.hpText, valueX, r1Y + 1.0f, HologramBarRenderer.applyAlpha(cached.hpTextColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(cached.hungerText, valueX, r2Y + 1.0f, HologramBarRenderer.applyAlpha(cached.hungerTextColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(cached.thirstText, valueX, r3Y + 1.0f, HologramBarRenderer.applyAlpha(cached.thirstTextColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(cached.cleanText, valueX, r4Y + 1.0f, HologramBarRenderer.applyAlpha(cached.cleanTextColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 
             // Temperature Value: Celsius (White) + Status (Green if comfortable, Red if needs heater/cooler)
             font.drawInBatch(cached.tempBaseText, valueX, r5Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFFFFFFF, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            float statusX = valueX + font.width(cached.tempBaseText);
+            float statusX = valueX + cached.tempBaseTextWidth;
             font.drawInBatch(cached.tempStatusLabel, statusX, r5Y + 1.0f, HologramBarRenderer.applyAlpha(cached.tempStatusColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 
             // 5. Habitat Needs Section: ONLY RED ITEMS SHOWN (Left-aligned with fadeAlpha)
             float checklistStartX = leftX;
-            if (redNeeds.isEmpty()) {
+            if (cached.redNeeds.isEmpty()) {
                 // All needs satisfied: single green line
-                font.drawInBatch("Kebutuhan Habitat: Terpenuhi", checklistStartX, curY, HologramBarRenderer.applyAlpha(0xFF55FF55, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+                font.drawInBatch(HABITAT_OK_TEXT, checklistStartX, curY, HologramBarRenderer.applyAlpha(0xFF55FF55, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             } else {
                 // Some needs missing: yellow header and red itemized checklist
-                font.drawInBatch("Kebutuhan Habitat:", checklistStartX, curY, HologramBarRenderer.applyAlpha(0xFFFFFF55, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+                font.drawInBatch(HABITAT_HEADER_TEXT, checklistStartX, curY, HologramBarRenderer.applyAlpha(0xFFFFFF55, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
                 curY += 11.0f;
-                for (Component need : redNeeds) {
+                for (Component need : cached.redNeeds) {
                     font.drawInBatch(need, checklistStartX + 4.0f, curY, HologramBarRenderer.applyAlpha(0xFFFF5555, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
                     curY += 10.0f;
                 }
