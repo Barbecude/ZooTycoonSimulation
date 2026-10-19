@@ -347,6 +347,8 @@ public class ZooItems {
         ItemGroupEvents.modifyEntriesEvent(CREATIVE_TAB_KEY).register(entries -> {
             entries.accept(net.zootycoon.block.ZooBlocks.FEEDING_TROUGH_ITEM);
             entries.accept(net.zootycoon.block.ZooBlocks.GACHA_MACHINE_ITEM);
+            entries.accept(net.zootycoon.block.ZooBlocks.HEATER_ITEM);
+            entries.accept(net.zootycoon.block.ZooBlocks.COOLER_ITEM);
             entries.accept(MAGNIFYING_GLASS);
             entries.accept(BROOM);
             entries.accept(BUILDER_NOTE);
@@ -368,6 +370,15 @@ public class ZooItems {
             for (ItemStack pvStack : createPhysicalVehiclesItems()) {
                 entries.accept(pvStack);
             }
+        });
+
+        ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(entries -> {
+            entries.accept(net.zootycoon.block.ZooBlocks.HEATER_ITEM);
+            entries.accept(net.zootycoon.block.ZooBlocks.COOLER_ITEM);
+            entries.accept(net.zootycoon.block.ZooBlocks.FEEDING_TROUGH_ITEM);
+            entries.accept(net.zootycoon.block.ZooBlocks.GACHA_MACHINE_ITEM);
+            entries.accept(net.zootycoon.block.ZooBlocks.TOILET_ITEM);
+            entries.accept(net.zootycoon.block.ZooBlocks.TRASH_CAN_ITEM);
         });
 
         ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(entries -> {

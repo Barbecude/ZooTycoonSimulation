@@ -290,6 +290,14 @@ public class ZooTycoonMod implements ModInitializer {
                 var funcOpt = server.getFunctions().get(ResourceLocation.fromNamespaceAndPath("jbt", "give_recipes"));
                 funcOpt.ifPresent(func -> server.getFunctions().execute(func, player.createCommandSourceStack().withSuppressedOutput().withPermission(2)));
             } catch (Exception ignored) {}
+
+            // Unlock Zoo Tycoon recipes for recipe book
+            try {
+                server.getCommands().performPrefixedCommand(
+                    player.createCommandSourceStack().withSuppressedOutput().withPermission(2),
+                    "recipe give @s zootycoon:*"
+                );
+            } catch (Exception ignored) {}
         });
 
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
