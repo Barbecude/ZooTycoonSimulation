@@ -107,14 +107,23 @@
   3. Eliminasi Animasi Pukul/Swing Mob & Aktivasi Langsung Zoom Scoping: Diperbaiki bug di mana klik kanan pada mob memicu animasi pukul/ayun lengan (`player.swing(hand)`) dan membatalkan scoping:
      - `UseEntityCallback` di `ZooTycoonMod` kini mengembalikan `InteractionResult.PASS` untuk item pemindai sehingga klik kanan tidak ditahan atau dipukul oleh callback entitas.
      - `MagnifyingGlassItem.interactLivingEntity` memanggil `player.startUsingItem(hand)` secara langsung dan mengembalikan `InteractionResult.CONSUME` (`shouldSwing() == false`), menghilangkan ayunan tangan dan langsung mengaktifkan pose spyglass.
-     - Ditambahkan `markRegisteredLocally` pada `InspectionTargetTracker` dan fallback `mc.crosshairPickEntity` pada `ZooAnimalHologramRenderer` sehingga penguncian target dan animasi zoom ease ke tengah layar berjalan instan tanpa jeda jaringan.
+      - Ditambahkan `markRegisteredLocally` pada `InspectionTargetTracker` dan fallback `mc.crosshairPickEntity` pada `ZooAnimalHologramRenderer` sehingga penguncian target dan animasi zoom ease ke tengah layar berjalan instan tanpa jeda jaringan.
+
+- Perbaikan Oklusi Hologram Berbasis Z-Index (Tanpa Menggeser Posisi):
+  1. Eliminasi Pergeseran Posisi Koordinat (`forwardOffset`): Blok komputasi `forwardOffset` (yang sebelumnya menggeser koordinat X dan Z ke depan ke arah kamera) dicabut sepenuhnya dari `ZooAnimalHologramRenderer`. Posisi 3D hologram tetap terpasang alami di atas kepala satwa tanpa melayang ke depan atau bergeser saat dipandang dari sudut berbeda.
+  2. Lapisan Render See-Through (`NO_DEPTH_TEST`): Seluruh elemen rendering hologram dialihkan ke render type see-through vanilla yang menonaktifkan depth test OpenGL (`NO_DEPTH_TEST`):
+     - Background tooltip vanilla: `RenderType.textBackgroundSeeThrough()`
+     - Ikon stat & tekstur: `RenderType.textSeeThrough(...)`
+     - Seluruh teks & label: `Font.DisplayMode.SEE_THROUGH`
+  3. Jaminan Layering (Z-Index): Karena OpenGL depth testing dinonaktifkan, urutan render (`draw order`) menjamin kartu hologram selalu tampil di lapisan paling depan (di atas tubuh, belalai, moncong, maupun tanduk satwa) tanpa ada bagian kartu yang terpotong atau tertutup geometri mob.
 
 ## Bukti Selesai
-- Seluruh permintaan pengguna telah terimplementasi dan terkompilasi bersih dengan .\gradlew.bat build (BUILD SUCCESSFUL in 1m 4s).
+- Seluruh permintaan pengguna telah terimplementasi dan terkompilasi bersih dengan .\gradlew.bat build.
 - File jar hasil build zootycoon-1.0.0.jar otomatis tersalin ke folder mods profil Modrinth di `C:\Users\Zevaldo\AppData\Roaming\ModrinthApp\profiles\Fresh & Smooth\mods\zootycoon-1.0.0.jar`.
 - Animasi fade out halus dan singkat tetap aktif saat hologram hilang.
 - Toast pemindaian dan pendaftaran satwa telah dipulihkan.
 - Klik kanan kaca pembesar pada mob tidak lagi memukul/mengayunkan tangan, melainkan langsung melakukan zoom ease hologram ke tengah layar.
+- Oklusi badan mob diatasi murni menggunakan Z-index / see-through render layers tanpa menggeser posisi koordinat hologram.
 
 ## Blocker
 - Tidak ada blocker.
@@ -122,6 +131,7 @@
 ## File yang diubah
 - src/main/java/net/zootycoon/ZooTycoonMod.java
 - src/main/java/net/zootycoon/animal/ZooAnimalHungerManager.java
+- src/main/java/net/zootycoon/client/inspect/HologramBarRenderer.java
 - src/main/java/net/zootycoon/client/inspect/InspectionTargetTracker.java
 - src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
 - src/main/java/net/zootycoon/item/MagnifyingGlassItem.java
@@ -131,4 +141,4 @@
 - Tidak ada.
 
 ## Belum terverifikasi
-- Pengujian in-game langsung oleh pengguna untuk memeriksa kehalusan animasi zoom saat klik kanan kaca pembesar pada satwa dan kemunculan toast notifikasi.
+- Pengujian in-game langsung oleh pengguna untuk memeriksa tampilan hologram yang tidak tertutup badan mob dengan posisi tetap stabil di atas satwa.

@@ -114,7 +114,7 @@ public class HologramBarRenderer {
     }
 
     public static void drawVanillaTooltipBackground(MultiBufferSource buffer, Matrix4f matrix, float minX, float minY, float maxX, float maxY, int light, float alphaFactor) {
-        VertexConsumer consumer = buffer.getBuffer(RenderType.textBackground());
+        VertexConsumer consumer = buffer.getBuffer(RenderType.textBackgroundSeeThrough());
         float z = -0.02f;
 
         int bg = applyAlpha(TOOLTIP_BG, alphaFactor);
@@ -138,14 +138,14 @@ public class HologramBarRenderer {
     }
 
     /**
-     * Draws a textured 9x9 icon using RenderType.text with two-sided quads so it is always visible.
+     * Draws a textured 9x9 icon using RenderType.textSeeThrough with two-sided quads so it is always visible.
      */
     public static void drawTexturedIcon(MultiBufferSource buffer, Matrix4f matrix, ResourceLocation texture, float x, float y, float width, float height, int light) {
         drawTexturedIcon(buffer, matrix, texture, x, y, width, height, light, 1.0f);
     }
 
     public static void drawTexturedIcon(MultiBufferSource buffer, Matrix4f matrix, ResourceLocation texture, float x, float y, float width, float height, int light, float alphaFactor) {
-        VertexConsumer consumer = buffer.getBuffer(RenderType.text(texture));
+        VertexConsumer consumer = buffer.getBuffer(RenderType.textSeeThrough(texture));
         float z = -0.005f;
         int a = Math.max(0, Math.min(255, Math.round(255 * Math.max(0.0f, Math.min(1.0f, alphaFactor)))));
         int r = 255, g = 255, b = 255;
@@ -164,7 +164,7 @@ public class HologramBarRenderer {
     }
 
     /**
-     * Draws a vanilla GUI atlas sprite with two-sided quads.
+     * Draws a vanilla GUI atlas sprite with two-sided quads using RenderType.textSeeThrough.
      */
     public static void drawAtlasSprite(MultiBufferSource buffer, Matrix4f matrix, TextureAtlasSprite sprite, float x, float y, float width, float height, int light) {
         drawAtlasSprite(buffer, matrix, sprite, x, y, width, height, light, 1.0f);
@@ -172,7 +172,7 @@ public class HologramBarRenderer {
 
     public static void drawAtlasSprite(MultiBufferSource buffer, Matrix4f matrix, TextureAtlasSprite sprite, float x, float y, float width, float height, int light, float alphaFactor) {
         if (sprite == null) return;
-        VertexConsumer consumer = buffer.getBuffer(RenderType.text(sprite.atlasLocation()));
+        VertexConsumer consumer = buffer.getBuffer(RenderType.textSeeThrough(sprite.atlasLocation()));
         float u0 = sprite.getU0();
         float u1 = sprite.getU1();
         float v0 = sprite.getV0();
@@ -202,7 +202,7 @@ public class HologramBarRenderer {
     }
 
     public static void drawVanillaHeartIcon(Minecraft mc, Font font, MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light, float alphaFactor) {
-        font.drawInBatch("❤", x + 1.0f, y, applyAlpha(0xFFFF2222, alphaFactor), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, light);
+        font.drawInBatch("❤", x + 1.0f, y, applyAlpha(0xFFFF2222, alphaFactor), false, matrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, light);
     }
 
     /**
@@ -221,7 +221,7 @@ public class HologramBarRenderer {
             }
         }
         // Fallback: draw textured icon or colored square
-        drawRect(buffer.getBuffer(RenderType.textBackground()), matrix, x, y, x + 8.0f, y + 8.0f, -0.005f, applyAlpha(0xFFD47A22, alphaFactor), light);
+        drawRect(buffer.getBuffer(RenderType.textBackgroundSeeThrough()), matrix, x, y, x + 8.0f, y + 8.0f, -0.005f, applyAlpha(0xFFD47A22, alphaFactor), light);
     }
 
     /**
