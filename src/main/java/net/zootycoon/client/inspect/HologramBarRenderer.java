@@ -6,7 +6,9 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 import org.joml.Matrix4f;
 
 /**
@@ -24,10 +26,10 @@ public class HologramBarRenderer {
     public static final ResourceLocation CLEANLINESS_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/inspect/cleanliness.png");
     public static final ResourceLocation THERMOMETER_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/inspect/thermometer.png");
 
-    // Vanilla Tooltip Colors: dark translucent background and gradient border (Top 0xF05000FF to Bottom 0xF028007F)
+    // Vanilla Tooltip Colors: dark translucent background and gradient border (Top 0x505000FF to Bottom 0x5028007F)
     public static final int TOOLTIP_BG = 0xF0100010;
-    public static final int TOOLTIP_BORDER_TOP = 0xF05000FF;
-    public static final int TOOLTIP_BORDER_BOTTOM = 0xF028007F;
+    public static final int TOOLTIP_BORDER_TOP = 0x505000FF;
+    public static final int TOOLTIP_BORDER_BOTTOM = 0x5028007F;
 
     // Value text threshold colors
     public static final int COLOR_NORMAL = 0xFFFFFFFF;   // > 50%
@@ -255,5 +257,38 @@ public class HologramBarRenderer {
 
     public static void drawThermometerIcon(MultiBufferSource buffer, Matrix4f matrix, float x, float y, int light, float alphaFactor) {
         drawTexturedIcon(buffer, matrix, THERMOMETER_ICON, x, y, 9.0f, 9.0f, light, alphaFactor);
+    }
+
+    /**
+     * Draws a 2D flat unshaded item icon from the item model sprite with no 3D extrusion, no shading, and no cropping.
+     */
+    public static void drawItemIcon2D(Minecraft mc, MultiBufferSource buffer, Matrix4f matrix, ItemStack stack, float x, float y, float size, int light, float alphaFactor) {
+        if (stack == null || stack.isEmpty() || mc == null) return;
+        BakedModel model = mc.getItemRenderer().getModel(stack, mc.level, null, 0);
+        if (model == null) return;
+        TextureAtlasSprite sprite = model.getParticleIcon();
+        if (sprite == null) return;
+
+        int a = Math.max(0, Math.min(255, Math.round(255 * Math.max(0.0f, Math.min(1.0f, alphaFactor)))));
+        int r = 255, g = 255, b = 255;
+
+        VertexConsumer consumer = buffer.getBuffer(RenderType.text(sprite.atlasLocation()));
+        float u0 = sprite.getU0();
+        float u1 = sprite.getU1();
+        float v0 = sprite.getV0();
+        float v1 = sprite.getV1();
+        float z = -0.005f;
+
+        // Front face (aligned with billboard matrix)
+        consumer.addVertex(matrix, x, y, z).setColor(r, g, b, a).setUv(u0, v0).setLight(light);
+        consumer.addVertex(matrix, x, y + size, z).setColor(r, g, b, a).setUv(u0, v1).setLight(light);
+        consumer.addVertex(matrix, x + size, y + size, z).setColor(r, g, b, a).setUv(u1, v1).setLight(light);
+        consumer.addVertex(matrix, x + size, y, z).setColor(r, g, b, a).setUv(u1, v0).setLight(light);
+
+        // Back face (two-sided for safety)
+        consumer.addVertex(matrix, x, y, z).setColor(r, g, b, a).setUv(u0, v0).setLight(light);
+        consumer.addVertex(matrix, x + size, y, z).setColor(r, g, b, a).setUv(u1, v0).setLight(light);
+        consumer.addVertex(matrix, x + size, y + size, z).setColor(r, g, b, a).setUv(u1, v1).setLight(light);
+        consumer.addVertex(matrix, x, y + size, z).setColor(r, g, b, a).setUv(u0, v1).setLight(light);
     }
 }

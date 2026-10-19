@@ -8,11 +8,9 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.zootycoon.animal.AnimalDietRegistry;
@@ -381,7 +379,7 @@ public class ZooAnimalHologramRenderer {
 
         float rowHeight = 11.0f;
         float headerHeight = 13.0f;
-        float foodSectionHeight = (foodCount > 0) ? 18.0f : 0.0f;
+        float foodSectionHeight = (foodCount > 0) ? 16.0f : 0.0f;
         float statsSectionHeight = 5.0f * rowHeight;
         float habitatSectionHeight = redNeeds.isEmpty() ? 12.0f : (12.0f + (redNeeds.size() * 10.0f));
 
@@ -432,26 +430,14 @@ public class ZooAnimalHologramRenderer {
             poseStack.popPose();
             curY += headerHeight;
 
-            // 3. Favorite Food Icons (Enlarged & Left-aligned with subtle shrink on fade)
+            // 3. Favorite Food Icons (2D Flat, Unshaded, Never Cropped)
             if (foodCount > 0) {
-                float foodStartX = leftX + (foodSpacing / 2.0f);
-                float itemScale = 12.0f * Math.min(1.0f, fadeAlpha * 1.25f);
+                float foodSize = 12.0f;
                 for (int i = 0; i < foodCount; i++) {
                     ItemStack foodStack = foods.get(i);
-                    poseStack.pushPose();
-                    poseStack.translate(foodStartX + (i * foodSpacing), curY + 6.0f, -0.005f);
-                    poseStack.scale(itemScale, -itemScale, itemScale);
-                    mc.getItemRenderer().renderStatic(
-                            foodStack,
-                            ItemDisplayContext.GUI,
-                            LightTexture.FULL_BRIGHT,
-                            OverlayTexture.NO_OVERLAY,
-                            poseStack,
-                            buffer,
-                            mc.level,
-                            0
-                    );
-                    poseStack.popPose();
+                    float foodX = leftX + (i * foodSpacing);
+                    float foodY = curY + 2.0f;
+                    HologramBarRenderer.drawItemIcon2D(mc, buffer, matrix, foodStack, foodX, foodY, foodSize, LightTexture.FULL_BRIGHT, fadeAlpha);
                 }
                 curY += foodSectionHeight;
             }

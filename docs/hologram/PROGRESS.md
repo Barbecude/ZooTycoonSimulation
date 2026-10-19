@@ -136,18 +136,25 @@
      - Geometri tubuh, leher, dada, maupun moncong satwa secara matematis tidak pernah memotong bidang kartu hologram, dan posisinya tetap dekat dan pas tepat di atas satwa ("tidak terlalu atas").
      - Penyesuaian animasi zoom ease: saat klik kanan ditahan (`lockProgress` menuju 1.0f), kartu secara otomatis menginterpolasi translasi vertikal (`transY`) ke `-halfHWorld`, menempatkan kartu tepat di tengah layar kamera.
 
+- Ikon Makanan 2D Flat Unshaded & Penyesuaian Kecerahan Border Ungu:
+  1. Ikon Makanan 2D Flat (Tanpa Shading & Tidak Terpotong):
+     - Menghapus rendering 3D `ItemRenderer.renderStatic` yang sebelumnya memicu shading bayangan 3D dan pemotongan kedalaman (clipping) akibat geometri model 3D menembus pelat background.
+     - Menambahkan helper `HologramBarRenderer.drawItemIcon2D` yang mengambil sprite partikel 2D murni (`model.getParticleIcon()`) dan merendernya sebagai quad 2D datar murni pada `RenderType.text(sprite.atlasLocation())` di koordinat `z = -0.005f`.
+     - Ikon makanan kini tampil datar 2D, terang penuh (unshaded) tanpa bayangan, tidak terpotong (uncropped), dan memudar secara mulus bersama `fadeAlpha`.
+  2. Penyesuaian Kecerahan Border Ungu:
+     - Mengubah nilai alpha border pada `HologramBarRenderer` dari `0xF0` (terlalu terang) kembali ke nilai vanilla `0x50` (`TOOLTIP_BORDER_TOP = 0x505000FF` dan `TOOLTIP_BORDER_BOTTOM = 0x5028007F`).
+     - Border ungu gradien kini tampil halus, semi-transparan (~31% opacity), dan nyaman dipandang mengikuti estetika tooltip vanilla Minecraft.
+
 ## Bukti Selesai
 - Seluruh permintaan pengguna telah terimplementasi dan terkompilasi bersih dengan .\gradlew.bat build.
 - File jar hasil build zootycoon-1.0.0.jar otomatis tersalin ke folder mods profil Modrinth di `C:\Users\Zevaldo\AppData\Roaming\ModrinthApp\profiles\Fresh & Smooth\mods\zootycoon-1.0.0.jar`.
-- Selesai memindai dengan Field Guide langsung mendaftarkan satwa ke kebun binatang.
-- Border ungu gradien tooltip pulih, depth testing aktif (tidak tembus langit/balok/mob), dan kartu hologram tidak tertutup tubuh satwa.
+- Ikon makanan tampil datar 2D tanpa shading 3D dan tidak terpotong.
+- Border ungu tooltip tidak lagi terlalu terang, kembali ke tingkat kepekatan vanilla yang lembut.
 
 ## Blocker
 - Tidak ada blocker.
 
 ## File yang diubah
-- src/main/java/net/zootycoon/mixin/compat/FieldGuideScanUnlockMixin.java
-- src/main/java/net/zootycoon/mixin/compat/FieldGuideScanManagerMixin.java
 - src/main/java/net/zootycoon/client/inspect/HologramBarRenderer.java
 - src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
 - docs/hologram/PROGRESS.md
@@ -156,5 +163,6 @@
 - Tidak ada.
 
 ## Belum terverifikasi
-- Pengujian langsung di dalam game untuk mengonfirmasi registrasi otomatis lewat Field Guide dan tampilan visual border serta posisi hologram terhadap satwa.
+- Pengujian visual in-game langsung oleh pengguna untuk memastikan ikon makanan 2D tampil bersih tanpa shading/crop dan border ungu nyaman dipandang.
+
 
