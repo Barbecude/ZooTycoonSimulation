@@ -24,6 +24,8 @@ import net.zootycoon.client.inspect.InspectionClientCache;
 import net.zootycoon.client.inspect.InspectionTargetTracker;
 import net.zootycoon.network.InspectionPayloads;
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,6 +40,13 @@ import java.util.Locale;
 public class ZooAnimalHologramRenderer {
 
     public static LivingEntity currentTargetedAnimal = null;
+    private static float lockProgress = 0.0f;
+    private static LivingEntity lockedAnimal = null;
+    private static long lastFrameTimeNano = 0L;
+
+    public static float smoothEase(float t) {
+        return t * t * (3.0f - 2.0f * t);
+    }
 
     public record HabitatParsedInfo(
             String status,
@@ -96,32 +105,75 @@ public class ZooAnimalHologramRenderer {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) {
             currentTargetedAnimal = null;
+            lockedAnimal = null;
+            lockProgress = 0.0f;
+            lastFrameTimeNano = 0L;
             return;
         }
+
+        long now = System.nanoTime();
+        float dt = (lastFrameTimeNano == 0L) ? 0.016f : (float) ((now - lastFrameTimeNano) / 1_000_000_000.0);
+        lastFrameTimeNano = now;
+        dt = Math.min(dt, 0.05f);
+
+        net.minecraft.world.entity.player.Player player = mc.player;
+        boolean holdingMagnifier = player != null && (player.getMainHandItem().is(net.zootycoon.item.ZooItems.MAGNIFYING_GLASS)
+                || player.getOffhandItem().is(net.zootycoon.item.ZooItems.MAGNIFYING_GLASS));
+        boolean isRightClickHeld = holdingMagnifier && player.isUsingItem() && player.getUseItem().is(net.zootycoon.item.ZooItems.MAGNIFYING_GLASS);
 
         InspectionTargetTracker.tick(mc);
 
-        LivingEntity target = InspectionTargetTracker.getTarget();
-        currentTargetedAnimal = target;
+        LivingEntity activeTarget = InspectionTargetTracker.getTarget();
 
-        if (target == null || !target.isAlive() || !InspectionTargetTracker.isZooRegisteredAnimal(target)) {
+        // Lock onto active target when right click is pressed
+        if (isRightClickHeld) {
+            if (lockedAnimal == null && activeTarget != null && activeTarget.isAlive() && InspectionTargetTracker.isZooRegisteredAnimal(activeTarget)) {
+                lockedAnimal = activeTarget;
+            }
+        } else {
+            // When released and animation finished easing out, clear lockedAnimal
+            if (lockProgress <= 0.001f) {
+                lockedAnimal = null;
+            }
+        }
+
+        // Entity to render: locked animal if still active, otherwise currently hovered target
+        LivingEntity entityToRender = (lockedAnimal != null && lockedAnimal.isAlive()) ? lockedAnimal : activeTarget;
+        currentTargetedAnimal = entityToRender;
+
+        boolean shouldDisplay = entityToRender != null && entityToRender.isAlive() && InspectionTargetTracker.isZooRegisteredAnimal(entityToRender);
+
+        // Target lock progress: 1.0f when locked in center, 0.0f when free in-world
+        float targetProgress = (isRightClickHeld && shouldDisplay) ? 1.0f : 0.0f;
+
+        // Smooth ease transition rate (~0.25 seconds for full ease)
+        float transitionSpeed = 4.0f;
+        if (lockProgress < targetProgress) {
+            lockProgress = Math.min(targetProgress, lockProgress + dt * transitionSpeed);
+        } else if (lockProgress > targetProgress) {
+            lockProgress = Math.max(targetProgress, lockProgress - dt * transitionSpeed);
+        }
+
+        if (!shouldDisplay && lockProgress <= 0.001f) {
             return;
         }
 
-        renderHologram(context, mc, target);
+        renderHologram(context, mc, entityToRender, lockProgress);
     }
 
-    private static void renderHologram(WorldRenderContext context, Minecraft mc, LivingEntity entity) {
+    private static void renderHologram(WorldRenderContext context, Minecraft mc, LivingEntity entity, float lockProgress) {
         PoseStack poseStack = context.matrixStack();
         Camera camera = context.camera();
         Vec3 camPos = camera.getPosition();
         Font font = mc.font;
 
-        double entX = entity.getX() - camPos.x;
-        double yOffset = entity.getBbHeight() + (entity.getBbHeight() > 2.0 ? 0.6 : 0.4);
+        // 1. Natural eye-level vertical positioning (fixes issue #1: hologram previously too high)
+        double eyeHeight = entity.getEyeHeight();
+        double yOffset = Math.max(0.65, eyeHeight + 0.15);
         if (entity.hasCustomName()) {
             yOffset += 0.25;
         }
+        double entX = entity.getX() - camPos.x;
         double entY = entity.getY() + yOffset - camPos.y;
         double entZ = entity.getZ() - camPos.z;
 
@@ -135,11 +187,31 @@ public class ZooAnimalHologramRenderer {
             entZ += (dz / distXZ) * forwardOffset;
         }
 
+        // Convert camera-relative world coordinates into camera-local space
+        Quaternionf camRot = camera.rotation();
+        Quaternionf invRot = new Quaternionf(camRot).conjugate();
+        Vector3f localPos = new Vector3f((float) entX, (float) entY, (float) entZ);
+        invRot.transform(localPos);
+
+        // Clamp localPos.z in front of camera so it never clips behind view during fast turns
+        if (localPos.z > -0.8f) {
+            localPos.z = -0.8f;
+        }
+
+        float eased = smoothEase(lockProgress);
+
+        // Smoothly interpolate between in-world mob position and screen-center locked position (0, 0, -1.35)
+        float transX = localPos.x + (0.0f - localPos.x) * eased;
+        float transY = localPos.y + (0.0f - localPos.y) * eased;
+        float transZ = localPos.z + (-1.35f - localPos.z) * eased;
+
+        // Smoothly interpolate scale: world scale (0.0110f) -> screen locked scale (0.0068f)
+        float curScale = 0.0110f + (0.0068f - 0.0110f) * eased;
+
         poseStack.pushPose();
-        poseStack.translate(entX, entY, entZ);
         poseStack.mulPose(camera.rotation());
-        float scale = 0.0125f;
-        poseStack.scale(scale, -scale, scale);
+        poseStack.translate(transX, transY, transZ);
+        poseStack.scale(curScale, -curScale, curScale);
 
         // 1. Entity Health
         float currentHp = entity.getHealth();
@@ -308,8 +380,9 @@ public class ZooAnimalHologramRenderer {
 
         float minX = -boxWidth / 2.0f;
         float maxX = boxWidth / 2.0f;
-        float maxY = 0.0f;
-        float startY = maxY - totalBoxHeight;
+        float halfH = totalBoxHeight / 2.0f;
+        float startY = -halfH;
+        float maxY = halfH;
 
         Matrix4f matrix = poseStack.last().pose();
         MultiBufferSource buffer = context.consumers();

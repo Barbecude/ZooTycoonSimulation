@@ -97,20 +97,21 @@
   3. Pemenuhan Tanah Alami ("Butuh Tanah Alami"): Pemindaian blok di `HabitatEvaluator.scanSurroundingBlocks` diperluas untuk mencakup tag `#zootycoon:natural_ground`, `#minecraft:dirt`, `#minecraft:sand`, `#minecraft:terracotta`, serta blok langsung seperti `dirt`, `podzol`, `coarse_dirt`, `grass_block`, `gravel`, `mud`, `clay`, dan `snow`. Ambang batas pemenuhan disesuaikan menjadi minimal 4 blok di dalam radius kandang.
   4. AI Mandiri Satwa Mencari & Meminum Air: Batasan sepihak `requiresWater` pada `AnimalDrinkWaterGoal` dicabut sehingga seluruh satwa darat terdaftar (`PathfinderMob` non-akuatik) dapat secara mandiri mencari air ke kolam atau feeding trough berisi air saat tingkat kehausan turun (thirst <= 60). Radius pencarian 24 blok, jarak toleransi minum 2.5 blok, batas waktu gerak 10 detik, dan cooldown minum 5 menit mencegah satwa mengalami stuck atau loop navigasi.
 
+- Penyesuaian Ketinggian Hologram & Animasi Zoom Ease Screen Lock:
+  1. Penyesuaian Posisi Hologram: Ketinggian hologram in-world diturunkan dari yang sebelumnya melayang 2+ blok di atas kepala satwa menjadi sejajar ketinggian pandang mata alami (`yOffset = Math.max(0.65, eyeHeight + 0.15)`), serta batas vertikal kartu (`startY` dan `maxY`) kini simetris di sekitar titik tengah (`-halfH` ke `+halfH`). Hologram kini tepat berada di depan pandangan satwa tanpa membuat pemain mendongak ke langit.
+  2. Animasi Zoom Ease Smooth & Screen Lock: Ketika pemain menahan klik kanan dengan Magnifying Glass pada satwa terdaftar, target dikunci (`InspectionTargetTracker`) dan hologram bertransisi mulus menggunakan kurva interpolasi cubic ease-in-out (`smoothEase`) dari posisi dunia menuju tepat di tengah layar kamera (`0, 0, -1.35f`). Hologram terkunci stabil di tengah layar tanpa bergoyang atau terpengaruh gerakan mob. Saat klik kanan dilepas, animasi ease kembali memutar transisi secara halus mengembalikan posisi hologram atau menghilangkannya jika pemain tidak lagi membidik satwa tersebut.
+
 ## Bukti Selesai
-- Seluruh 4 poin permintaan pengguna telah terimplementasi dan terkompilasi bersih dengan .\gradlew.bat build (BUILD SUCCESSFUL in 59s).
+- Seluruh permintaan pengguna telah terimplementasi dan terkompilasi bersih dengan .\gradlew.bat build (BUILD SUCCESSFUL in 29s).
 - File jar hasil build zootycoon-1.0.0.jar otomatis tersalin ke folder mods profil Modrinth di `C:\Users\Zevaldo\AppData\Roaming\ModrinthApp\profiles\Fresh & Smooth\mods\zootycoon-1.0.0.jar`.
-- Dynamic fallback habitat profile aktif di `HabitatProfileLoader`.
-- Evaluasi pohon, bambu, dan blok habitat aktif di `HabitatEvaluator`.
-- AI minum satwa aktif untuk seluruh satwa darat di `AnimalDrinkWaterGoal`.
+- Ketinggian hologram diturunkan dan simetris di pandangan mata mob.
+- Animasi zoom ease dan lock ke tengah layar saat klik kanan tahan kaca pembesar telah aktif.
 
 ## Blocker
 - Tidak ada blocker.
 
 ## File yang diubah
-- src/main/java/net/zootycoon/animal/ai/AnimalDrinkWaterGoal.java
-- src/main/java/net/zootycoon/animal/habitat/HabitatEvaluator.java
-- src/main/java/net/zootycoon/animal/habitat/HabitatProfileLoader.java
+- src/main/java/net/zootycoon/client/inspect/InspectionTargetTracker.java
 - src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
 - docs/hologram/PROGRESS.md
 
@@ -118,4 +119,4 @@
 - Tidak ada.
 
 ## Belum terverifikasi
-- Pengujian in-game langsung oleh pengguna untuk memeriksa satwa berjalan ke air/feeding trough, pemenuhan tanah alami dengan meletakkan dirt/podzol, dan kemunculan checklist pohon/air pada habitat satwa yang membutuhkan.
+- Pengujian in-game langsung oleh pengguna untuk memeriksa kenyamanan ketinggian hologram in-world dan kelancaran animasi zoom ease saat menahan serta melepas klik kanan kaca pembesar.

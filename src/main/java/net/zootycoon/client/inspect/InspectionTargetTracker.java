@@ -86,6 +86,16 @@ public class InspectionTargetTracker {
             return;
         }
 
+        // If holding right-click with magnifying glass, maintain active target lock
+        if (player.isUsingItem() && player.getUseItem().is(ZooItems.MAGNIFYING_GLASS)) {
+            if (currentTarget != null && currentTarget.isAlive() && isZooRegisteredAnimal(currentTarget)) {
+                if (player.distanceToSqr(currentTarget) <= 24.0 * 24.0) {
+                    targetRetentionTicks = 30;
+                    return;
+                }
+            }
+        }
+
         // 2. Target detection with 16 blocks range and solid block collider collision
         LivingEntity validTarget = findTarget(mc, player, mc.level);
         setTarget(validTarget);
