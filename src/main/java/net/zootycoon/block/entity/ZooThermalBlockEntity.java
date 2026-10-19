@@ -60,6 +60,11 @@ public class ZooThermalBlockEntity extends BlockEntity {
             this.maxFuelTime = this.fuelTime;
         }
         updateLitState();
+        if (this.thermalType == ThermalType.HEATING) {
+            ACTIVE_HEATERS.add(worldPosition.immutable());
+        } else {
+            ACTIVE_COOLERS.add(worldPosition.immutable());
+        }
         setChanged();
         if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);

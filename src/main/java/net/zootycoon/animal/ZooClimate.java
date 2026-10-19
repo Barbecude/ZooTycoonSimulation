@@ -85,16 +85,34 @@ public class ZooClimate {
     public static float getThermalAdjustment(BlockPos pos) {
         if (pos == null) return 0.0f;
         float adjustment = 0.0f;
+        int heaterCount = 0;
         for (BlockPos heaterPos : net.zootycoon.block.entity.ZooThermalBlockEntity.ACTIVE_HEATERS) {
-            if (pos.closerThan(heaterPos, 12.0)) {
-                adjustment += 0.6f;
-                break;
+            int dx = pos.getX() - heaterPos.getX();
+            int dz = pos.getZ() - heaterPos.getZ();
+            int dy = Math.abs(pos.getY() - heaterPos.getY());
+            if (dx * dx + dz * dz <= 400 && dy <= 8) { // 20-block horizontal radius, 8-block vertical
+                heaterCount++;
+                if (heaterCount == 1) {
+                    adjustment += 0.65f;
+                } else if (heaterCount >= 2) {
+                    adjustment += 0.45f;
+                    break;
+                }
             }
         }
+        int coolerCount = 0;
         for (BlockPos coolerPos : net.zootycoon.block.entity.ZooThermalBlockEntity.ACTIVE_COOLERS) {
-            if (pos.closerThan(coolerPos, 12.0)) {
-                adjustment -= 0.6f;
-                break;
+            int dx = pos.getX() - coolerPos.getX();
+            int dz = pos.getZ() - coolerPos.getZ();
+            int dy = Math.abs(pos.getY() - coolerPos.getY());
+            if (dx * dx + dz * dz <= 400 && dy <= 8) { // 20-block horizontal radius, 8-block vertical
+                coolerCount++;
+                if (coolerCount == 1) {
+                    adjustment -= 0.75f;
+                } else if (coolerCount >= 2) {
+                    adjustment -= 0.45f;
+                    break;
+                }
             }
         }
         return adjustment;

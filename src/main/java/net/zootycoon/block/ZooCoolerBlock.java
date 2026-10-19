@@ -111,12 +111,12 @@ public class ZooCoolerBlock extends BaseEntityBlock {
 
     public static int getCoolingTicks(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return 0;
-        if (stack.is(Items.SNOWBALL)) return 600; // 30 seconds
-        if (stack.is(Items.SNOW_BLOCK)) return 2400; // 2 minutes
-        if (stack.is(Items.ICE)) return 2400; // 2 minutes
-        if (stack.is(Items.PACKED_ICE)) return 7200; // 6 minutes
-        if (stack.is(Items.BLUE_ICE)) return 24000; // 20 minutes
-        if (stack.is(Items.POWDER_SNOW_BUCKET)) return 24000; // 20 minutes
+        if (stack.is(Items.SNOWBALL)) return 1200; // 60 seconds (1 minute)
+        if (stack.is(Items.SNOW_BLOCK)) return 4800; // 4 minutes
+        if (stack.is(Items.ICE)) return 4800; // 4 minutes
+        if (stack.is(Items.PACKED_ICE)) return 12000; // 10 minutes
+        if (stack.is(Items.BLUE_ICE)) return 30000; // 25 minutes
+        if (stack.is(Items.POWDER_SNOW_BUCKET)) return 30000; // 25 minutes
         return 0;
     }
 
