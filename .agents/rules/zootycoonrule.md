@@ -33,8 +33,9 @@ fungsi yg udah fix (tidak boleh sampe rusak karena mengubah kode):
 10. Reaksi satwa terhadap environtment, suhu, musim, biome,
 
 fungsi yang belum fix atau belum ada atau masih cacat (Dilarang mengerjakan semua tahap ini sebelum diminta secara eksplisit oleh pengguna):
+- jika salah satu dari stats (haus, kebersihan, lapar, suhu) sampai 0 atau tidak nyaman maka hewan akan dapat effect minecraft negatif bisa berupa poison, hunger atau lainnya.
 - Khusus Satwa yang bisa mencari makan sendiri dia akan makan lewat feeding thrugh yang di isi oleh zookeper (berkaitan dengan sistem lapar)
-- Khusus makan yang perlu di kasi makan langsung dia akan di beri pakan langsung oleh zookeper (berkaitan dengan sistem lapar)
+- Khusus Satwa yang perlu di kasi makan langsung dia akan di beri pakan langsung oleh zookeper (berkaitan dengan sistem lapar)
 - Khusus satwa yang butuh air dia akan auto jalan ke air
 - Sistem Rating Zoo dan Integrasi UI
 Bangun formula perhitungan rating dinamis berdasarkan rata-rata kesehatan satwa, kebersihan kandang, kelengkapan fasilitas, dan kepuasan pengunjung, serta tampilkan indikator rating di UI/HUD.
@@ -43,4 +44,4 @@ Perbarui spawner pengunjung agar kapasitas maksimal dan frekuensi kedatangan ber
 - Finansial dan Penetapan Harga (Tiket, Makanan, Gaji Pegawai)
 Sediakan pengaturan harga tiket dan makanan/minuman yang berdampak pada keputusan pengunjung, serta terapkan pemotongan gaji berkala (biaya operasional harian) untuk seluruh staf zoo.
 - Gudang (Warehouse dan Rantai Pasok)
-Bangun sistem gudang sentral untuk menyimpan stok pakan dan suplai grosir, serta integrasikan zookeeper untuk mengambil jatah pakan dari gudang tanpa memberi pakan awal otomatis.
+Bangun sistem gudang sentral untuk menyimpan stok pakan dan suplai grosir, serta integrasikan zookeeper, dan cashier untuk mengambil jatah pakan dari gudang tanpa memberi pakan awal otomatis.
