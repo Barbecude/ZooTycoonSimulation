@@ -73,3 +73,4 @@ if prune and bad > 0:
     with open(index_path, "w", encoding="utf-8") as f:
         f.write("\n".join(final_lines) + "\n")
     print(f"pruned {bad} dead row(s)")
+

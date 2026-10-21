@@ -24,3 +24,4 @@ with open(journal_path, "a", encoding="utf-8") as f:
     f.write(f"{label} :: {kind} :: {target} :: {note}\n")
 
 print(f"journalled: {label} ({kind})")
+

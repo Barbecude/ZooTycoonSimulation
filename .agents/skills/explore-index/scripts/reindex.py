@@ -56,3 +56,4 @@ with open(out_path, "w", encoding="utf-8") as f:
     f.write(f"cap: {cap} per bucket\n")
 
 print(f"reindexed -> {out_path}")
+
