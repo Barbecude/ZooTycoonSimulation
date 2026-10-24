@@ -229,6 +229,10 @@ public class ZooTycoonClient implements ClientModInitializer {
             });
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.PlayBrushAnimationPayload.TYPE, (payload, context) -> {
+            context.client().execute(net.zootycoon.client.animation.PlayerBrushAnimationManager::startBrushing);
+        });
+
         ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.ShowToastPayload.TYPE, (payload, context) -> {
             context.client().execute(() -> {
                 Object[] fmtArgs = payload.args() != null ? payload.args().toArray() : new Object[0];
@@ -519,6 +523,7 @@ public class ZooTycoonClient implements ClientModInitializer {
             ClaimBoundaryRenderer.clientTick(client);
             PlacementPreviewRenderer.clientTick(client);
             net.zootycoon.client.inspect.InspectionTargetTracker.tick(client);
+            net.zootycoon.client.animation.PlayerBrushAnimationManager.clientTick();
 
             // Open Zoo Management Menu on Right Shift (no stick required)
             boolean rShiftDown = (client.getWindow() != null) && InputConstants.isKeyDown(client.getWindow().getWindow(), InputConstants.KEY_RSHIFT);
@@ -582,6 +587,20 @@ public class ZooTycoonClient implements ClientModInitializer {
 
         // 6. Register sleek top-left HUD overlay + Essential-Mod style Toasts
         HudRenderCallback.EVENT.register(ZooHudOverlay::render);
+
+        net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
+            if (world.isClientSide() && hand == net.minecraft.world.InteractionHand.MAIN_HAND && entity instanceof net.minecraft.world.entity.LivingEntity living) {
+                net.minecraft.world.item.ItemStack held = player.getItemInHand(hand);
+                if (held.is(net.minecraft.world.item.Items.BRUSH)) {
+                    if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)
+                            && net.zootycoon.animal.ZooAnimalHungerManager.isTagged(living)
+                            && net.zootycoon.animal.AnimalBathingManager.isWet(living)) {
+                        net.zootycoon.client.animation.PlayerBrushAnimationManager.startBrushing();
+                    }
+                }
+            }
+            return net.minecraft.world.InteractionResult.PASS;
+        });
 
         ZooTycoonMod.LOGGER.info("Zoo Tycoon Client initialized successfully.");
     }

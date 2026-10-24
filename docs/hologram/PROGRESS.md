@@ -18,6 +18,7 @@
 | 13 | Diet & Metode Pakan Satwa | SELESAI | 2026-10-24 | Kategori diet & metode pakan di hologram serta AI makan palung vs pakan dilempar |
 | 14 | Pemaksaan feeding trough & AI jangkauan makan | SELESAI | 2026-10-24 | AI Goal AnimalEatFromTroughGoal & perbaikan jangkauan makan/minum satwa berleher tinggi / ramping (ostrich, jerapah, unta, burung, dll) |
 | 15 | Kondisi Dialog 2-Tombol & Perbaikan Toast Pakan | SELESAI | 2026-10-24 | Rework dialog zookeeper menjadi tepat 2 tombol sesuai kebutuhan (Alat Mandi vs Pakan) dan perbaikan toast pakan |
+| 16 | Zookeeper Lempar Pakan, Animasi Mandi & Brush First-Person | SELESAI | 2026-10-24 | AI lempar pakan zookeeper untuk karnivora, dialog dinamis pakan lempar vs palung, animasi model penyiram & sikat zookeeper, dan animasi first-person brush player |
 
 ## Keputusan
 - Koreksi CONTEXT.md poin T5: Sync periodik sebenarnya ada di server tick setiap 40 tick (2 detik) melalui `ZooNetworkPayloads.sendAnimalSync(player)`. Namun, method ini HANYA mengirimkan hewan yang sudah terdaftar (`isTagged`) dan dimiliki pemain (`isOwnedBy`). Hewan yang belum terdaftar tidak pernah masuk payload sehingga client renderer selalu menerima null dan jatuh ke nilai palsu (80/80/100). Mekanisme request inspeksi on-demand per target belum ada.

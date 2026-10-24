@@ -47,6 +47,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.zootycoon.animal.ZooAnimalHungerManager;
 import net.zootycoon.util.ZooTranslations;
+import net.minecraft.ChatFormatting;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -64,6 +67,8 @@ public class ZooZookeeperEntity extends PathfinderMob {
             SynchedEntityData.defineId(ZooZookeeperEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> HAS_BATHING_TOOLS =
             SynchedEntityData.defineId(ZooZookeeperEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Integer> BATHING_ACTION =
+            SynchedEntityData.defineId(ZooZookeeperEntity.class, EntityDataSerializers.INT);
 
     private static final String[] NAMES = new String[]{
             "Siti Rahma", "Agus Setiawan", "Rudi Hartono", "Dewi Lestari",
@@ -75,6 +80,7 @@ public class ZooZookeeperEntity extends PathfinderMob {
     private UUID assignedAnimalUuid = null;
     private String currentDutyState = "IDLE"; // "REFILL", "NEED_FOOD", "SWEEPING", "BATHING", "IDLE"
     private int actionCooldown = 0;
+    private int bathingStepTicks = 0;
 
     private boolean hasWateringCan = false;
     private ItemStack wateringCanStack = ItemStack.EMPTY;
@@ -92,6 +98,7 @@ public class ZooZookeeperEntity extends PathfinderMob {
         builder.define(FOOD_STOCK_DATA, 0); // Starts with 0 food units (player supplies food)
         builder.define(SWEEPING, false);
         builder.define(HAS_BATHING_TOOLS, false);
+        builder.define(BATHING_ACTION, 0);
     }
 
     public ZooZookeeperEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
@@ -428,48 +435,64 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
                 if (distSq > 2.8 * 2.8) {
                     this.getNavigation().moveTo(assignedAnimal, 1.25);
+                    this.setBathingAction(0);
                     return;
                 } else {
                     this.getNavigation().stop();
                     if (!isWet) {
-                        // Step 1: Water the animal to make it wet
-                        this.swing(InteractionHand.MAIN_HAND);
-                        net.zootycoon.animal.AnimalBathingManager.setWet(assignedAnimal, net.zootycoon.animal.AnimalBathingManager.WET_DURATION_TICKS);
+                        // Step 1: Water the animal to make it wet with continuous animation
+                        this.setBathingAction(1);
+                        bathingStepTicks++;
 
-                        sLevel.playSound(null, assignedAnimal.blockPosition(), SoundEvents.BUCKET_EMPTY, SoundSource.NEUTRAL, 1.0f, 1.2f);
-                        sLevel.playSound(null, assignedAnimal.blockPosition(), SoundEvents.GENERIC_SPLASH, SoundSource.NEUTRAL, 0.8f, 1.0f);
+                        if (bathingStepTicks % 4 == 0) {
+                            sLevel.sendParticles(ParticleTypes.SPLASH, assignedAnimal.getX(), assignedAnimal.getY() + assignedAnimal.getBbHeight() * 0.5, assignedAnimal.getZ(),
+                                    12, assignedAnimal.getBbWidth() * 0.35, assignedAnimal.getBbHeight() * 0.25, assignedAnimal.getBbWidth() * 0.35, 0.08);
+                            sLevel.sendParticles(ParticleTypes.DRIPPING_WATER, assignedAnimal.getX(), assignedAnimal.getY() + assignedAnimal.getBbHeight() * 0.8, assignedAnimal.getZ(),
+                                    6, assignedAnimal.getBbWidth() * 0.25, 0.1, assignedAnimal.getBbWidth() * 0.25, 0.04);
+                            sLevel.playSound(null, this.blockPosition(), SoundEvents.WATER_AMBIENT, SoundSource.NEUTRAL, 0.5f, 1.2f);
+                        }
 
-                        sLevel.sendParticles(ParticleTypes.SPLASH, assignedAnimal.getX(), assignedAnimal.getY() + assignedAnimal.getBbHeight() * 0.5, assignedAnimal.getZ(),
-                                30, assignedAnimal.getBbWidth() * 0.4, assignedAnimal.getBbHeight() * 0.3, assignedAnimal.getBbWidth() * 0.4, 0.1);
-                        sLevel.sendParticles(ParticleTypes.DRIPPING_WATER, assignedAnimal.getX(), assignedAnimal.getY() + assignedAnimal.getBbHeight() * 0.8, assignedAnimal.getZ(),
-                                15, assignedAnimal.getBbWidth() * 0.3, 0.1, assignedAnimal.getBbWidth() * 0.3, 0.05);
+                        if (bathingStepTicks >= 30) {
+                            bathingStepTicks = 0;
+                            net.zootycoon.animal.AnimalBathingManager.setWet(assignedAnimal, net.zootycoon.animal.AnimalBathingManager.WET_DURATION_TICKS);
 
-                        net.zootycoon.animal.ZooInspectionService.notifyAnimalUpdated(assignedAnimal);
-                        ItemStack brushItem = !brushStack.isEmpty() ? brushStack : new ItemStack(Items.BRUSH);
-                        this.setItemSlot(EquipmentSlot.MAINHAND, brushItem.copy());
-                        actionCooldown = 30; // 1.5s delay before brushing
+                            sLevel.playSound(null, assignedAnimal.blockPosition(), SoundEvents.BUCKET_EMPTY, SoundSource.NEUTRAL, 1.0f, 1.2f);
+                            sLevel.playSound(null, assignedAnimal.blockPosition(), SoundEvents.GENERIC_SPLASH, SoundSource.NEUTRAL, 0.8f, 1.0f);
+
+                            net.zootycoon.animal.ZooInspectionService.notifyAnimalUpdated(assignedAnimal);
+                            this.setBathingAction(0);
+                            ItemStack brushItem = !brushStack.isEmpty() ? brushStack : new ItemStack(Items.BRUSH);
+                            this.setItemSlot(EquipmentSlot.MAINHAND, brushItem.copy());
+                            actionCooldown = 15;
+                        }
                         return;
                     } else {
-                        // Step 2: Brush the wet animal
-                        this.swing(InteractionHand.MAIN_HAND);
-                        ZooAnimalHungerManager.setCleanliness(assignedAnimal, ZooAnimalHungerManager.MAX_CLEANLINESS);
+                        // Step 2: Brush the wet animal with continuous scrubbing animation
+                        this.setBathingAction(2);
+                        bathingStepTicks++;
 
-                        hurtBrush(1, sLevel);
+                        if (bathingStepTicks % 6 == 0) {
+                            sLevel.playSound(null, assignedAnimal.blockPosition(), SoundEvents.BRUSH_GENERIC, SoundSource.NEUTRAL, 0.8f, 1.0f + this.getRandom().nextFloat() * 0.2f);
+                            sLevel.sendParticles(ParticleTypes.BUBBLE_POP, assignedAnimal.getX(), assignedAnimal.getY() + assignedAnimal.getBbHeight() * 0.5, assignedAnimal.getZ(),
+                                    8, assignedAnimal.getBbWidth() * 0.35, assignedAnimal.getBbHeight() * 0.25, assignedAnimal.getBbWidth() * 0.35, 0.04);
+                            sLevel.sendParticles(ParticleTypes.WAX_OFF, assignedAnimal.getX(), assignedAnimal.getY() + assignedAnimal.getBbHeight() * 0.5, assignedAnimal.getZ(),
+                                    5, assignedAnimal.getBbWidth() * 0.35, assignedAnimal.getBbHeight() * 0.25, assignedAnimal.getBbWidth() * 0.35, 0.02);
+                        }
 
-                        sLevel.playSound(null, assignedAnimal.blockPosition(), SoundEvents.BRUSH_GENERIC, SoundSource.NEUTRAL, 1.0f, 1.0f);
+                        if (bathingStepTicks >= 40) {
+                            bathingStepTicks = 0;
+                            ZooAnimalHungerManager.setCleanliness(assignedAnimal, ZooAnimalHungerManager.MAX_CLEANLINESS);
 
-                        sLevel.sendParticles(ParticleTypes.BUBBLE_POP, assignedAnimal.getX(), assignedAnimal.getY() + assignedAnimal.getBbHeight() * 0.5, assignedAnimal.getZ(),
-                                20, assignedAnimal.getBbWidth() * 0.4, assignedAnimal.getBbHeight() * 0.3, assignedAnimal.getBbWidth() * 0.4, 0.05);
-                        sLevel.sendParticles(ParticleTypes.WAX_OFF, assignedAnimal.getX(), assignedAnimal.getY() + assignedAnimal.getBbHeight() * 0.5, assignedAnimal.getZ(),
-                                12, assignedAnimal.getBbWidth() * 0.4, assignedAnimal.getBbHeight() * 0.3, assignedAnimal.getBbWidth() * 0.4, 0.02);
-                        sLevel.sendParticles(ParticleTypes.SPLASH, assignedAnimal.getX(), assignedAnimal.getY() + assignedAnimal.getBbHeight() * 0.5, assignedAnimal.getZ(),
-                                8, assignedAnimal.getBbWidth() * 0.3, 0.1, assignedAnimal.getBbWidth() * 0.3, 0.05);
-                        sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, assignedAnimal.getX(), assignedAnimal.getY() + assignedAnimal.getBbHeight() * 0.8, assignedAnimal.getZ(),
-                                8, 0.3, 0.3, 0.3, 0.02);
+                            hurtBrush(1, sLevel);
 
-                        this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
-                        net.zootycoon.animal.ZooInspectionService.notifyAnimalUpdated(assignedAnimal);
-                        actionCooldown = 40; // 2s cooldown after bathing
+                            sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, assignedAnimal.getX(), assignedAnimal.getY() + assignedAnimal.getBbHeight() * 0.8, assignedAnimal.getZ(),
+                                    8, 0.3, 0.3, 0.3, 0.02);
+
+                            this.setBathingAction(0);
+                            this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+                            net.zootycoon.animal.ZooInspectionService.notifyAnimalUpdated(assignedAnimal);
+                            actionCooldown = 40;
+                        }
                         return;
                     }
                 }
@@ -478,93 +501,137 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
         // If not bathing, clear bathing tools from hand if held
         if (!"BATHING".equals(currentDutyState)) {
+            if (this.getBathingAction() != 0) {
+                this.setBathingAction(0);
+            }
+            bathingStepTicks = 0;
             if (this.getMainHandItem().is(Items.BRUSH) || net.zootycoon.animal.AnimalBathingManager.isWateringCan(this.getMainHandItem())) {
                 this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
             }
         }
 
         // ========================================================
-        // 2b. PRIORITY 2b: Check Feeding Trough for assigned animal
-        // Prioritize designated trough specifically assigned to this animal
+        // 2b. PRIORITY 2b: Feeding Duty for assigned animal
+        // Handles both Thrown Food (Carnivores/Predators) and Trough (Herbivores/Omnivores)
         // ========================================================
         if (assignedAnimal != null) {
             var diet = AnimalDietRegistry.getDiet(assignedAnimal);
-            Item targetFoodItem = Items.WHEAT;
-            if (diet != null && !diet.acceptedFoods.isEmpty()) {
-                targetFoodItem = diet.acceptedFoods.get(0);
-            } else if (assignedAnimal instanceof net.minecraft.world.entity.animal.Animal a) {
-                if (a.isFood(new ItemStack(Items.CARROT))) targetFoodItem = Items.CARROT;
-                else if (a.isFood(new ItemStack(Items.WHEAT_SEEDS))) targetFoodItem = Items.WHEAT_SEEDS;
-                else if (a.isFood(new ItemStack(Items.BAMBOO))) targetFoodItem = Items.BAMBOO;
-                else if (a.isFood(new ItemStack(Items.APPLE))) targetFoodItem = Items.APPLE;
-            }
+            boolean isThrownMeat = (diet != null && diet.feedingType == AnimalDietRegistry.FeedingType.THROWN_MEAT);
 
-            BlockPos designatedTrough = null;
-            double minAssignedDistSq = Double.MAX_VALUE;
+            if (isThrownMeat) {
+                // Carnivores / Thrown food: Zookeeper throws food directly to the animal
+                int hunger = ZooAnimalHungerManager.getHunger(assignedAnimal);
+                if (hunger <= 75) {
+                    if (this.getFoodStock() > 0) {
+                        currentDutyState = "FEEDING_ANIMAL";
+                        Item targetFoodItem = (diet != null && !diet.acceptedFoods.isEmpty()) ? diet.acceptedFoods.get(0) : Items.BEEF;
+                        this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(targetFoodItem));
 
-            BlockPos fallbackTrough = null;
-            double minFallbackDistSq = Double.MAX_VALUE;
+                        double distSq = this.distanceToSqr(assignedAnimal);
+                        if (distSq > 4.5 * 4.5) {
+                            this.getNavigation().moveTo(assignedAnimal, 1.25);
+                            return;
+                        } else {
+                            this.getNavigation().stop();
+                            this.getLookControl().setLookAt(assignedAnimal, 30.0F, 30.0F);
+                            this.swing(InteractionHand.MAIN_HAND);
 
-            for (BlockPos troughPos : ZooFeedingTroughBlock.KNOWN_TROUGHS) {
-                if (ownerUuid != null && !claimManager.isClaimedBy(troughPos, ownerUuid)) continue;
-                double distSq = myPos.distSqr(troughPos);
-                if (distSq > 48 * 48) continue;
+                            ItemStack throwStack = new ItemStack(targetFoodItem, 1);
+                            ItemEntity itemEntity = new ItemEntity(sLevel, this.getX(), this.getEyeY() - 0.2, this.getZ(), throwStack);
+                            Vec3 targetPos = assignedAnimal.position().add(0, assignedAnimal.getBbHeight() * 0.25, 0);
+                            Vec3 throwVec = targetPos.subtract(itemEntity.position()).normalize().scale(0.38);
+                            itemEntity.setDeltaMovement(throwVec.x, throwVec.y + 0.12, throwVec.z);
+                            itemEntity.setDefaultPickUpDelay();
+                            sLevel.addFreshEntity(itemEntity);
 
-                BlockEntity be = sLevel.getBlockEntity(troughPos);
-                if (be instanceof ZooFeedingTroughBlockEntity troughBe) {
-                    if (troughBe.hasWater()) continue;
-                    ItemStack foodInTrough = troughBe.getFoodStack();
-                    boolean needsFood = foodInTrough.isEmpty() || (foodInTrough.is(targetFoodItem) && foodInTrough.getCount() < 32);
+                            sLevel.playSound(null, this.blockPosition(), SoundEvents.SNOWBALL_THROW, SoundSource.NEUTRAL, 0.6f, 0.9f + this.getRandom().nextFloat() * 0.2f);
+                            this.setFoodStock(this.getFoodStock() - 1);
+                            actionCooldown = 40; // 2 seconds cooldown between throws
+                            return;
+                        }
+                    } else {
+                        currentDutyState = "NEED_FOOD";
+                    }
+                }
+            } else {
+                // Herbivores / Trough eaters: Refill feeding trough
+                Item targetFoodItem = Items.WHEAT;
+                if (diet != null && !diet.acceptedFoods.isEmpty()) {
+                    targetFoodItem = diet.acceptedFoods.get(0);
+                } else if (assignedAnimal instanceof net.minecraft.world.entity.animal.Animal a) {
+                    if (a.isFood(new ItemStack(Items.CARROT))) targetFoodItem = Items.CARROT;
+                    else if (a.isFood(new ItemStack(Items.WHEAT_SEEDS))) targetFoodItem = Items.WHEAT_SEEDS;
+                    else if (a.isFood(new ItemStack(Items.BAMBOO))) targetFoodItem = Items.BAMBOO;
+                    else if (a.isFood(new ItemStack(Items.APPLE))) targetFoodItem = Items.APPLE;
+                }
 
-                    if (needsFood) {
-                        if (troughBe.isAssignedTo(assignedAnimal)) {
-                            if (distSq < minAssignedDistSq) {
-                                minAssignedDistSq = distSq;
-                                designatedTrough = troughPos;
-                            }
-                        } else if (!troughBe.isAssigned() && assignedAnimal.blockPosition().distSqr(troughPos) <= 24 * 24) {
-                            if (distSq < minFallbackDistSq) {
-                                minFallbackDistSq = distSq;
-                                fallbackTrough = troughPos;
+                BlockPos designatedTrough = null;
+                double minAssignedDistSq = Double.MAX_VALUE;
+
+                BlockPos fallbackTrough = null;
+                double minFallbackDistSq = Double.MAX_VALUE;
+
+                for (BlockPos troughPos : ZooFeedingTroughBlock.KNOWN_TROUGHS) {
+                    if (ownerUuid != null && !claimManager.isClaimedBy(troughPos, ownerUuid)) continue;
+                    double distSq = myPos.distSqr(troughPos);
+                    if (distSq > 48 * 48) continue;
+
+                    BlockEntity be = sLevel.getBlockEntity(troughPos);
+                    if (be instanceof ZooFeedingTroughBlockEntity troughBe) {
+                        if (troughBe.hasWater()) continue;
+                        ItemStack foodInTrough = troughBe.getFoodStack();
+                        boolean needsFood = foodInTrough.isEmpty() || (foodInTrough.is(targetFoodItem) && foodInTrough.getCount() < 32);
+
+                        if (needsFood) {
+                            if (troughBe.isAssignedTo(assignedAnimal)) {
+                                if (distSq < minAssignedDistSq) {
+                                    minAssignedDistSq = distSq;
+                                    designatedTrough = troughPos;
+                                }
+                            } else if (!troughBe.isAssigned() && assignedAnimal.blockPosition().distSqr(troughPos) <= 24 * 24) {
+                                if (distSq < minFallbackDistSq) {
+                                    minFallbackDistSq = distSq;
+                                    fallbackTrough = troughPos;
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            BlockPos needRefillTrough = (designatedTrough != null) ? designatedTrough : fallbackTrough;
+                BlockPos needRefillTrough = (designatedTrough != null) ? designatedTrough : fallbackTrough;
 
-            if (needRefillTrough != null) {
-                if (this.getFoodStock() > 0) {
-                    currentDutyState = "REFILL";
-                    this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(targetFoodItem));
+                if (needRefillTrough != null) {
+                    if (this.getFoodStock() > 0) {
+                        currentDutyState = "REFILL";
+                        this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(targetFoodItem));
 
-                    double distSq = this.distanceToSqr(needRefillTrough.getX() + 0.5, needRefillTrough.getY(), needRefillTrough.getZ() + 0.5);
-                    if (distSq > 2.5 * 2.5) {
-                        this.getNavigation().moveTo(needRefillTrough.getX() + 0.5, needRefillTrough.getY(), needRefillTrough.getZ() + 0.5, 1.2);
-                    } else {
-                        // Refill the trough with the assigned animal's food!
-                        BlockEntity be = sLevel.getBlockEntity(needRefillTrough);
-                        if (be instanceof ZooFeedingTroughBlockEntity troughBe) {
-                            int toInsert = Math.min(8, this.getFoodStock());
-                            boolean inserted = troughBe.insertFood(new ItemStack(targetFoodItem, toInsert), toInsert);
-                            if (inserted) {
-                                this.setFoodStock(this.getFoodStock() - toInsert);
-                                sLevel.playSound(null, needRefillTrough, SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.9f, 1.2f);
-                                sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, needRefillTrough.getX() + 0.5, needRefillTrough.getY() + 0.8, needRefillTrough.getZ() + 0.5, 6, 0.2, 0.2, 0.2, 0.02);
-                                actionCooldown = 40; // 2 seconds cooldown between refills
+                        double distSq = this.distanceToSqr(needRefillTrough.getX() + 0.5, needRefillTrough.getY(), needRefillTrough.getZ() + 0.5);
+                        if (distSq > 2.5 * 2.5) {
+                            this.getNavigation().moveTo(needRefillTrough.getX() + 0.5, needRefillTrough.getY(), needRefillTrough.getZ() + 0.5, 1.2);
+                        } else {
+                            // Refill the trough with the assigned animal's food!
+                            BlockEntity be = sLevel.getBlockEntity(needRefillTrough);
+                            if (be instanceof ZooFeedingTroughBlockEntity troughBe) {
+                                int toInsert = Math.min(8, this.getFoodStock());
+                                boolean inserted = troughBe.insertFood(new ItemStack(targetFoodItem, toInsert), toInsert);
+                                if (inserted) {
+                                    this.setFoodStock(this.getFoodStock() - toInsert);
+                                    sLevel.playSound(null, needRefillTrough, SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.9f, 1.2f);
+                                    sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, needRefillTrough.getX() + 0.5, needRefillTrough.getY() + 0.8, needRefillTrough.getZ() + 0.5, 6, 0.2, 0.2, 0.2, 0.02);
+                                    actionCooldown = 40; // 2 seconds cooldown between refills
+                                }
                             }
                         }
+                        return;
+                    } else {
+                        currentDutyState = "NEED_FOOD";
                     }
-                    return;
-                } else {
-                    currentDutyState = "NEED_FOOD";
                 }
             }
         }
 
-        // If not refilling a trough, clear food from hand if held
-        if ("REFILL".equals(currentDutyState)) {
+        // If not feeding/refilling, clear food from hand if held
+        if ("REFILL".equals(currentDutyState) || "FEEDING_ANIMAL".equals(currentDutyState)) {
             currentDutyState = "IDLE";
             this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
         }
@@ -644,6 +711,21 @@ public class ZooZookeeperEntity extends PathfinderMob {
             int cleanlinessVal = ZooAnimalHungerManager.getCleanliness(animal);
             if (cleanlinessVal <= 50 && !this.hasBathingTools()) {
                 dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.need_bathing_tools", animalName);
+            } else {
+                ChatFormatting hungerColor = hunger <= 25 ? ChatFormatting.RED : (hunger <= 60 ? ChatFormatting.YELLOW : ChatFormatting.GREEN);
+                String hungerColoredStr = hungerColor + String.valueOf(hunger) + "%" + ChatFormatting.RESET;
+                var diet = AnimalDietRegistry.getDiet(animal);
+                boolean isThrownDiet = (diet != null && diet.feedingType == AnimalDietRegistry.FeedingType.THROWN_MEAT);
+
+                if (this.getFoodStock() <= 0) {
+                    dialogText = isThrownDiet
+                            ? ZooTranslations.get("zootycoon.dialog.zookeeper.empty_stock_throw", animalName, hungerColoredStr)
+                            : ZooTranslations.get("zootycoon.dialog.zookeeper.empty_stock", animalName, hungerColoredStr);
+                } else {
+                    dialogText = isThrownDiet
+                            ? ZooTranslations.get("zootycoon.dialog.zookeeper.speech_with_animal_throw", animalName, hungerColoredStr, String.valueOf(this.getFoodStock()))
+                            : ZooTranslations.get("zootycoon.dialog.zookeeper.speech_with_animal", animalName, hungerColoredStr, String.valueOf(this.getFoodStock()));
+                }
             }
         }
 
@@ -756,6 +838,14 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
     public boolean hasBrush() {
         return !this.brushStack.isEmpty();
+    }
+
+    public int getBathingAction() {
+        return this.entityData.get(BATHING_ACTION);
+    }
+
+    public void setBathingAction(int action) {
+        this.entityData.set(BATHING_ACTION, action);
     }
 
     public ItemStack getBrushStack() {

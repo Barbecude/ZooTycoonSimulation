@@ -207,6 +207,8 @@
   "zootycoon.dialog.zookeeper.role": "Zoo Animal Caretaker",
   "zootycoon.dialog.zookeeper.default_speech": "Hello Boss! Is there anything I can help you with regarding animal care?",
   "zootycoon.dialog.zookeeper.speech_with_animal": "Hello Boss! I am caring for %s (Fullness: %s). Remaining food stock in pocket: %s. Ready to refill trough!",
+  "zootycoon.dialog.zookeeper.speech_with_animal_throw": "Hello Boss! I am caring for %s (Fullness: %s). Remaining food stock in pocket: %s. Ready to toss fresh food!",
+  "zootycoon.dialog.zookeeper.empty_stock_throw": "Hello Boss! I am caring for %s (Fullness: %s), but my food stock is completely empty! Could you supply food to toss?",
   "zootycoon.dialog.zookeeper.empty_stock": "Hello Boss! I am caring for %s (Fullness: %s), but my food stock is completely empty! Could you hand over some food?",
   "zootycoon.dialog.zookeeper.speech_no_animal": "Halo bos, kalo saya memang gapunya satwa yang harus dibina gapapa kok saya bersih bersih, asal ada upah nya ya",
   "zootycoon.dialog.zookeeper.caring": "Hello Boss! I am taking care of %s and regularly refilling its feeding trough!",

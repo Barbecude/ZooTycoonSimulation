@@ -834,6 +834,16 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // 32. Play Brush Animation Payload (S2C)
+    public record PlayBrushAnimationPayload() implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<PlayBrushAnimationPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("play_brush_anim"));
+        public static final StreamCodec<FriendlyByteBuf, PlayBrushAnimationPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {},
+                buf -> new PlayBrushAnimationPayload()
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     // 21. Request Client Selection Save Payload (S2C) for /kandang and /fasilitas
     public record RequestClientSelectionSavePayload(String name, String category) implements CustomPacketPayload {
         public static final CustomPacketPayload.Type<RequestClientSelectionSavePayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("req_client_sel_save"));
@@ -1072,6 +1082,7 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playS2C().register(SyncEmeraldBalancePayload.TYPE, SyncEmeraldBalancePayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncRatingPayload.TYPE, SyncRatingPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(ShowToastPayload.TYPE, ShowToastPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(PlayBrushAnimationPayload.TYPE, PlayBrushAnimationPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(RequestClientSelectionSavePayload.TYPE, RequestClientSelectionSavePayload.CODEC);
 
         // Handler: Claim Land (Old / Direct)

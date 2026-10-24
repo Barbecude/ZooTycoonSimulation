@@ -27,7 +27,34 @@ public class ZooZookeeperModel extends HumanoidModel<ZooZookeeperEntity> {
     public void setupAnim(ZooZookeeperEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
         super.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
 
-        if (entity.isSweeping()) {
+        int bathingAction = entity.getBathingAction();
+        if (bathingAction == 1) {
+            // Watering can animation: holding watering can forward and tilted down to pour water
+            float pourCycle = Mth.sin(ageInTicks * 0.25f);
+            this.rightArm.xRot = -1.15f + pourCycle * 0.08f;
+            this.rightArm.yRot = -0.25f;
+            this.rightArm.zRot = -0.35f + pourCycle * 0.05f;
+
+            this.leftArm.xRot = -0.75f + pourCycle * 0.05f;
+            this.leftArm.yRot = 0.35f;
+            this.leftArm.zRot = 0.15f;
+
+            this.body.xRot = 0.12f;
+        } else if (bathingAction == 2) {
+            // Brushing animation: scrubbing motion back and forth against the animal
+            float scrubSin = Mth.sin(ageInTicks * 0.75f);
+            float scrubCos = Mth.cos(ageInTicks * 0.75f);
+
+            this.rightArm.xRot = -0.90f + scrubSin * 0.30f;
+            this.rightArm.yRot = -0.20f + scrubCos * 0.22f;
+            this.rightArm.zRot = 0.10f;
+
+            this.leftArm.xRot = -0.45f;
+            this.leftArm.yRot = 0.25f;
+            this.leftArm.zRot = -0.10f;
+
+            this.body.yRot = scrubCos * 0.12f;
+        } else if (entity.isSweeping()) {
             // Sweeping animation: both arms sweep forward and across the floor
             float sweepCycle = Mth.sin(ageInTicks * 0.45f);
             float sweepCos = Mth.cos(ageInTicks * 0.45f);

@@ -202,6 +202,8 @@
   "zootycoon.dialog.zookeeper.role": "Pengasuh Satwa Kebun Binatang",
   "zootycoon.dialog.zookeeper.default_speech": "Halo Bos! Ada yang bisa saya bantu untuk ngerawat satwa?",
   "zootycoon.dialog.zookeeper.speech_with_animal": "Halo Bos! Saya lagi ngerawat %s (Kenyang: %s). Sisa stok pakan di kantong ada %s buah. Siap isi palung pakan!",
+  "zootycoon.dialog.zookeeper.speech_with_animal_throw": "Halo Bos! Saya lagi ngerawat %s (Kenyang: %s). Sisa stok pakan di kantong ada %s buah. Siap lempar pakan segar!",
+  "zootycoon.dialog.zookeeper.empty_stock_throw": "Halo Bos! Saya lagi ngerawat %s (Kenyang: %s), tapi stok pakan di kantong lagi habis! Boleh serahkan pakan untuk dilempar?",
   "zootycoon.dialog.zookeeper.empty_stock": "Halo Bos! Saya lagi ngerawat %s (Kenyang: %s), tapi stok pakan di kantong lagi habis! Boleh serahkan pakan dari tas Bos?",
   "zootycoon.dialog.zookeeper.speech_no_animal": "Halo bos, kalo saya memang gapunya satwa yang harus dibina gapapa kok saya bersih bersih, asal ada upah nya ya",
   "zootycoon.dialog.zookeeper.caring": "Halo Bos! Saya sedang merawat satwa %s dan rutin mengisi palung pakannya!",

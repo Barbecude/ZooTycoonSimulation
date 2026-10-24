@@ -76,7 +76,7 @@ public class AnimalBathingManager {
         sl.sendParticles(ParticleTypes.DRIPPING_WATER, animal.getX(), animal.getY() + animal.getBbHeight() * 0.8, animal.getZ(),
                 15, animal.getBbWidth() * 0.3, 0.1, animal.getBbWidth() * 0.3, 0.05);
 
-        player.swing(hand, true);
+        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player, new ZooNetworkPayloads.PlayBrushAnimationPayload());
 
         // Notify active inspectors to immediately update hologram
         ZooInspectionService.notifyAnimalUpdated(animal);
