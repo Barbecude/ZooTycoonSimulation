@@ -205,6 +205,17 @@
      - Satwa bertipe `FeedingType.TROUGH` hanya mencari dan memakan pakan dari `ZooFeedingTroughBlock`.
      - Satwa predator / karnivora bertipe `FeedingType.THROWN_MEAT` tidak lagi menuju ke palung pakan kayu, melainkan secara aktif mendeteksi dan mendekati item pakan yang dilempar/terjatuh di tanah (`ItemEntity`) dalam radius 16 blok, memakannya hingga kenyang (+35 rasa lapar), memainkan partikel hati dan suara mengunyah.
 
+
+- Perbaikan AI Memakan Pakan Dilempar (Dropped Food Consumption Fix):
+  1. Penghapusan Pembatas Status Kenyang pada Pakan Dilempar:
+     - Mencabut kondisi `if (feeder == null && current >= MAX_HUNGER) return false;` pada `ZooAnimalHungerManager.feedAnimal`. Satwa kini dapat menikmati camilan atau pakan yang dilempar pemain di tanah sekalipun tingkat kelaparan masih penuh (100%), memulihkan 2 HP bila terluka dan memunculkan partikel hati serta efek suara makan.
+  2. Eliminasi Modulo Lock (% 25) pada handleUniversalAnimalNeeds:
+     - Menghapus pengecekan modulo `(mob.getId() + level.getGameTime()) % 25 != 0` yang sebelumnya menyebabkan 80% entitas terkunci secara matematis karena berjalan di dalam blok tick kelipatan 20.
+  3. Pembuatan AnimalEatDroppedFoodGoal (AI Goal Dedicated):
+     - Membangun AI Goal prioritas tinggi (`AnimalEatDroppedFoodGoal`) pada `net.zootycoon.animal.ai` yang terpasang pada seluruh `PathfinderMob` terdaftar. AI Goal ini secara aktif memindai pakan jatuh dalam radius 16 blok, menavigasikan mob menuju pakan dengan kecepatan 1.25x, dan melahap pakan saat tiba di dekatnya dengan jeda cooldown 1.5 detik.
+  4. Deteksi Pakan Dekat Instan (Proximity Pickup):
+     - Menambahkan deteksi instan pakan di kaki satwa (`mob.getBoundingBox().inflate(1.6D, 1.0D, 1.6D)`) sehingga pakan yang dilempar langsung ke arah satwa langsung dimakan tanpa jeda.
+
 ## Bukti Selesai
 - Seluruh kode terkompilasi bersih tanpa error dengan `compileJava` dan `build`.
 - File jar `zootycoon-1.0.0.jar` telah tersalin ke direktori mods profil Modrinth.
@@ -216,12 +227,8 @@
 - Tidak ada blocker.
 
 ## File yang diubah
-- src/main/resources/assets/zootycoon/models/block/heater_off.json
-- src/main/resources/assets/zootycoon/models/block/heater_on.json
-- src/main/java/net/zootycoon/block/ZooHeaterBlock.java
-- src/main/java/net/zootycoon/block/ZooCoolerBlock.java
-- src/main/resources/assets/zootycoon/lang/id_id.json
-- src/main/resources/assets/zootycoon/lang/en_us.json
+- src/main/java/net/zootycoon/animal/ai/AnimalEatDroppedFoodGoal.java
+- src/main/java/net/zootycoon/animal/ZooAnimalHungerManager.java
 - docs/hologram/PROGRESS.md
 
 ## Butuh izin user

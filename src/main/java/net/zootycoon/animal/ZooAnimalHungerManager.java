@@ -255,6 +255,7 @@ public class ZooAnimalHungerManager {
             // Animal pathing to feeding trough and water source (ONLY registered animals)
             if (animal instanceof net.minecraft.world.entity.PathfinderMob pathfinderMob) {
                 net.zootycoon.animal.ai.AnimalDrinkWaterGoal.attach(pathfinderMob);
+                net.zootycoon.animal.ai.AnimalEatDroppedFoodGoal.attach(pathfinderMob);
             }
             if (animal instanceof Mob mob) {
                 handleUniversalAnimalNeeds(level, mob);
@@ -323,8 +324,22 @@ public class ZooAnimalHungerManager {
     public static void handleUniversalAnimalNeeds(ServerLevel level, Mob mob) {
         if (!isTagged(mob)) return; // Strictly only registered zoo animals!
 
-        // High performance check: stagger every 25 ticks per entity ID to preserve 20 TPS
-        if ((mob.getId() + level.getGameTime()) % 25 != 0) return;
+        // 0. Immediate proximity food pickup: if a valid food item is near mob feet, consume it instantly
+        List<ItemEntity> touching = level.getEntitiesOfClass(ItemEntity.class, mob.getBoundingBox().inflate(1.6D, 1.0D, 1.6D));
+        for (ItemEntity ie : touching) {
+            if (!ie.isAlive() || ie.getItem().isEmpty()) continue;
+            if (AnimalDietRegistry.isFoodValid(mob, ie.getItem())) {
+                ItemStack st = ie.getItem();
+                if (feedAnimal(mob, st, null)) {
+                    if (st.isEmpty()) {
+                        ie.discard();
+                    } else {
+                        ie.setItem(st);
+                    }
+                    return;
+                }
+            }
+        }
 
         int thirst = getThirst(mob);
         int hunger = getHunger(mob);
@@ -418,97 +433,95 @@ public class ZooAnimalHungerManager {
             }
         }
 
-        // 2. Hunger pathing: only path to food when animal is at least 10% hungry (hunger <= 90)
-        if (hunger <= 90) {
-            AnimalDietRegistry.FeedingType feedingType = AnimalDietRegistry.getFeedingType(mob);
-            if (feedingType == AnimalDietRegistry.FeedingType.TROUGH) {
-                BlockPos closestFoodTrough = null;
-                ZooFeedingTroughBlockEntity targetFoodTrough = null;
-                double closestFoodDist = Double.MAX_VALUE;
+        // 2. Hunger pathing: Feeding trough (when hunger <= 90) OR dropped food items in vicinity
+        AnimalDietRegistry.FeedingType feedingType = AnimalDietRegistry.getFeedingType(mob);
+        if (feedingType == AnimalDietRegistry.FeedingType.TROUGH && hunger <= 90) {
+            BlockPos closestFoodTrough = null;
+            ZooFeedingTroughBlockEntity targetFoodTrough = null;
+            double closestFoodDist = Double.MAX_VALUE;
 
-                for (BlockPos tp : ZooFeedingTroughBlock.KNOWN_TROUGHS) {
-                    if (tp.distSqr(mob.blockPosition()) <= 48.0 * 48.0) { // within 48 blocks
-                        if (level.getBlockEntity(tp) instanceof ZooFeedingTroughBlockEntity trough && trough.hasFood()) {
-                            if (trough.isAssigned() && !trough.isAssignedTo(mob)) {
-                                continue;
-                            }
-                            if (AnimalDietRegistry.isFoodValid(mob, trough.getFoodStack())) {
-                                double d = mob.distanceToSqr(tp.getX() + 0.5, tp.getY() + 0.5, tp.getZ() + 0.5);
-                                if (d < closestFoodDist) {
-                                    closestFoodDist = d;
-                                    closestFoodTrough = tp;
-                                    targetFoodTrough = trough;
-                                }
+            for (BlockPos tp : ZooFeedingTroughBlock.KNOWN_TROUGHS) {
+                if (tp.distSqr(mob.blockPosition()) <= 48.0 * 48.0) { // within 48 blocks
+                    if (level.getBlockEntity(tp) instanceof ZooFeedingTroughBlockEntity trough && trough.hasFood()) {
+                        if (trough.isAssigned() && !trough.isAssignedTo(mob)) {
+                            continue;
+                        }
+                        if (AnimalDietRegistry.isFoodValid(mob, trough.getFoodStack())) {
+                            double d = mob.distanceToSqr(tp.getX() + 0.5, tp.getY() + 0.5, tp.getZ() + 0.5);
+                            if (d < closestFoodDist) {
+                                closestFoodDist = d;
+                                closestFoodTrough = tp;
+                                targetFoodTrough = trough;
                             }
                         }
                     }
                 }
+            }
 
-                if (closestFoodTrough != null && targetFoodTrough != null) {
-                    double maxEatDist = (mob.getBbWidth() * 0.5) + 1.2;
-                    if (closestFoodDist <= maxEatDist * maxEatDist) {
-                        double dx = (closestFoodTrough.getX() + 0.5) - mob.getX();
-                        double dz = (closestFoodTrough.getZ() + 0.5) - mob.getZ();
-                        double len = Math.sqrt(dx * dx + dz * dz);
-                        double dot = 1.0;
-                        if (len > 1.0E-4) {
-                            Vec3 look = mob.getViewVector(1.0f);
-                            dot = (look.x * (dx / len)) + (look.z * (dz / len));
+            if (closestFoodTrough != null && targetFoodTrough != null) {
+                double maxEatDist = (mob.getBbWidth() * 0.5) + 1.2;
+                if (closestFoodDist <= maxEatDist * maxEatDist) {
+                    double dx = (closestFoodTrough.getX() + 0.5) - mob.getX();
+                    double dz = (closestFoodTrough.getZ() + 0.5) - mob.getZ();
+                    double len = Math.sqrt(dx * dx + dz * dz);
+                    double dot = 1.0;
+                    if (len > 1.0E-4) {
+                        Vec3 look = mob.getViewVector(1.0f);
+                        dot = (look.x * (dx / len)) + (look.z * (dz / len));
+                    }
+
+                    mob.getNavigation().stop();
+                    mob.getLookControl().setLookAt(closestFoodTrough.getX() + 0.5, closestFoodTrough.getY() + 0.2, closestFoodTrough.getZ() + 0.5);
+
+                    // Mob must physically be close and facing towards the feeding trough (dot >= 0.5 = within ~60 degrees)
+                    if (dot >= 0.5 && targetFoodTrough.hasFood()) {
+                        ItemStack food = targetFoodTrough.extractFood(1);
+                        if (!food.isEmpty()) {
+                            feedAnimal(mob, food, null); // Emits HEART particles and restores hunger
+                            targetFoodTrough.setChanged();
                         }
+                    }
+                } else {
+                    mob.getNavigation().moveTo(closestFoodTrough.getX() + 0.5, closestFoodTrough.getY(), closestFoodTrough.getZ() + 0.5, 1.15);
+                    mob.getLookControl().setLookAt(closestFoodTrough.getX() + 0.5, closestFoodTrough.getY() + 0.3, closestFoodTrough.getZ() + 0.5);
+                }
+            }
+        }
 
-                        mob.getNavigation().stop();
-                        mob.getLookControl().setLookAt(closestFoodTrough.getX() + 0.5, closestFoodTrough.getY() + 0.2, closestFoodTrough.getZ() + 0.5);
+        // 3. Search for nearby dropped food items (ItemEntity) on the ground
+        ItemEntity closestFoodItem = null;
+        double closestFoodDist = Double.MAX_VALUE;
 
-                        // Mob must physically be close and facing towards the feeding trough (dot >= 0.5 = within ~60 degrees)
-                        if (dot >= 0.5 && targetFoodTrough.hasFood()) {
-                            ItemStack food = targetFoodTrough.extractFood(1);
-                            if (!food.isEmpty()) {
-                                feedAnimal(mob, food, null); // Emits HEART particles and restores hunger
-                                targetFoodTrough.setChanged();
-                            }
-                        }
+        List<ItemEntity> nearbyItems = level.getEntitiesOfClass(ItemEntity.class, mob.getBoundingBox().inflate(16.0, 4.0, 16.0));
+        for (ItemEntity ie : nearbyItems) {
+            if (!ie.isAlive() || ie.getItem().isEmpty()) continue;
+            if (AnimalDietRegistry.isFoodValid(mob, ie.getItem())) {
+                double d = mob.distanceToSqr(ie);
+                if (d < closestFoodDist) {
+                    closestFoodDist = d;
+                    closestFoodItem = ie;
+                }
+            }
+        }
+
+        if (closestFoodItem != null) {
+            double maxEatDist = (mob.getBbWidth() * 0.5) + 1.25;
+            if (closestFoodDist <= maxEatDist * maxEatDist) {
+                mob.getNavigation().stop();
+                mob.getLookControl().setLookAt(closestFoodItem.getX(), closestFoodItem.getY() + 0.1, closestFoodItem.getZ());
+
+                ItemStack food = closestFoodItem.getItem();
+                boolean fed = feedAnimal(mob, food, null);
+                if (fed) {
+                    if (food.isEmpty()) {
+                        closestFoodItem.discard();
                     } else {
-                        mob.getNavigation().moveTo(closestFoodTrough.getX() + 0.5, closestFoodTrough.getY(), closestFoodTrough.getZ() + 0.5, 1.15);
-                        mob.getLookControl().setLookAt(closestFoodTrough.getX() + 0.5, closestFoodTrough.getY() + 0.3, closestFoodTrough.getZ() + 0.5);
+                        closestFoodItem.setItem(food);
                     }
                 }
             } else {
-                // Predator / Carnivore (Lempar Makanan): search for dropped food ItemEntity
-                ItemEntity closestFoodItem = null;
-                double closestFoodDist = Double.MAX_VALUE;
-
-                List<ItemEntity> nearbyItems = level.getEntitiesOfClass(ItemEntity.class, mob.getBoundingBox().inflate(16.0, 4.0, 16.0));
-                for (ItemEntity ie : nearbyItems) {
-                    if (!ie.isAlive() || ie.getItem().isEmpty()) continue;
-                    if (AnimalDietRegistry.isFoodValid(mob, ie.getItem())) {
-                        double d = mob.distanceToSqr(ie);
-                        if (d < closestFoodDist) {
-                            closestFoodDist = d;
-                            closestFoodItem = ie;
-                        }
-                    }
-                }
-
-                if (closestFoodItem != null) {
-                    double maxEatDist = (mob.getBbWidth() * 0.5) + 1.2;
-                    if (closestFoodDist <= maxEatDist * maxEatDist) {
-                        mob.getNavigation().stop();
-                        mob.getLookControl().setLookAt(closestFoodItem.getX(), closestFoodItem.getY() + 0.1, closestFoodItem.getZ());
-
-                        ItemStack food = closestFoodItem.getItem();
-                        boolean fed = feedAnimal(mob, food, null);
-                        if (fed) {
-                            if (food.isEmpty()) {
-                                closestFoodItem.discard();
-                            } else {
-                                closestFoodItem.setItem(food);
-                            }
-                        }
-                    } else {
-                        mob.getNavigation().moveTo(closestFoodItem.getX(), closestFoodItem.getY(), closestFoodItem.getZ(), 1.15);
-                        mob.getLookControl().setLookAt(closestFoodItem.getX(), closestFoodItem.getY() + 0.2, closestFoodItem.getZ());
-                    }
-                }
+                mob.getNavigation().moveTo(closestFoodItem.getX(), closestFoodItem.getY(), closestFoodItem.getZ(), 1.2);
+                mob.getLookControl().setLookAt(closestFoodItem.getX(), closestFoodItem.getY() + 0.2, closestFoodItem.getZ());
             }
         }
     }
@@ -522,6 +535,10 @@ public class ZooAnimalHungerManager {
         if (entity == null) return;
         if (tagged) {
             entity.addTag("zoo_registered");
+            if (entity instanceof net.minecraft.world.entity.PathfinderMob pMob) {
+                net.zootycoon.animal.ai.AnimalDrinkWaterGoal.attach(pMob);
+                net.zootycoon.animal.ai.AnimalEatDroppedFoodGoal.attach(pMob);
+            }
             if (!HUNGER_MAP.containsKey(entity.getUUID())) {
                 setHunger(entity, MAX_HUNGER);
             }
@@ -704,11 +721,11 @@ public class ZooAnimalHungerManager {
         if (!AnimalDietRegistry.isFoodValid(animal, foodStack)) return false;
 
         int current = getHunger(animal);
-        if (feeder == null && current >= MAX_HUNGER) {
-            return false;
-        }
         int restored = Math.min(MAX_HUNGER, current + 35);
         setHunger(animal, restored);
+        if (animal.getHealth() < animal.getMaxHealth()) {
+            animal.heal(2.0f);
+        }
         if (feeder != null && !isTagged(animal)) {
             setTagged(animal, true);
             if (getOwnerUuid(animal) == null) {
