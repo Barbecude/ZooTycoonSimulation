@@ -16,7 +16,7 @@
 | 11 | Mood hewan | BELUM | - | |
 | 12 | Validasi akhir hologram | BELUM | - | |
 | 13 | Diet & Metode Pakan Satwa | SELESAI | 2026-10-24 | Kategori diet & metode pakan di hologram serta AI makan palung vs pakan dilempar |
-| 14 | Pemaksaan feeding trough | BELUM | - | |
+| 14 | Pemaksaan feeding trough & AI jangkauan makan | SELESAI | 2026-10-24 | AI Goal AnimalEatFromTroughGoal & perbaikan jangkauan makan/minum satwa berleher tinggi / ramping (ostrich, jerapah, unta, burung, dll) |
 
 ## Keputusan
 - Koreksi CONTEXT.md poin T5: Sync periodik sebenarnya ada di server tick setiap 40 tick (2 detik) melalui `ZooNetworkPayloads.sendAnimalSync(player)`. Namun, method ini HANYA mengirimkan hewan yang sudah terdaftar (`isTagged`) dan dimiliki pemain (`isOwnedBy`). Hewan yang belum terdaftar tidak pernah masuk payload sehingga client renderer selalu menerima null dan jatuh ke nilai palsu (80/80/100). Mekanisme request inspeksi on-demand per target belum ada.
@@ -216,6 +216,21 @@
   4. Deteksi Pakan Dekat Instan (Proximity Pickup):
      - Menambahkan deteksi instan pakan di kaki satwa (`mob.getBoundingBox().inflate(1.6D, 1.0D, 1.6D)`) sehingga pakan yang dilempar langsung ke arah satwa langsung dimakan tanpa jeda.
 
+- Perbaikan Komprehensif Feeding Trough AI & Reach Distance (Ostrich & Seluruh Satwa):
+  1. Akar Masalah Terpecahkan:
+     - Formula jangkauan lama `(bbWidth * 0.5) + 1.2` menyebabkan mob bertubuh ramping seperti Ostrich (lebar 0.7m) hanya memiliki jangkauan 1.55m (`1.55^2 = 2.40`), sedangkan jarak berhenti navigasi Minecraft ke feeding trough di blok sebelah adalah ~1.6m - 1.8m (`jarak^2 = 2.56 - 3.24`), sehingga kondisi makan tidak pernah terpenuhi. Berbeda dengan Zebra (lebar 1.4m) yang memiliki toleransi 1.9m (`1.9^2 = 3.61`) sehingga Zebra berhasil makan. Seluruh mob dengan lebar < 1.2m (burung, kelinci, bebek, kura-kura, rusa, kasuari, emu, kangguru, unta, penguin) mengalami masalah serupa.
+     - Satwa bertubuh tinggi (Ostrich tinggi 2.4m, Jerapah 4.5m, Unta 2.8m, Gajah 3.2m) melihat ke palung pakan di tanah dengan sudut pitch menunduk 50-70 derajat. Pengecekan lama `dot >= 0.5` gagal total karena `cos(pitch) <= 0.5`, sehingga dot product vektor pandang horizontal tidak pernah mencapai 0.5 walau satwa menatap persis ke palung.
+  2. Implementasi AnimalEatFromTroughGoal (AI Goal Mandiri):
+     - Membangun kelas AI `AnimalEatFromTroughGoal` pada `net.zootycoon.animal.ai` yang meng-extend `MoveToBlockGoal`.
+     - Toleransi jarak adaptif `acceptedDistance = Math.max(2.6D, (mob.getBbWidth() * 0.5D) + 1.6D)` dengan verifikasi ganda `closerThan` dan `horizDistSq <= maxDist * maxDist && vertDist <= 3.0D`.
+     - Integrasi instan ke cache koordinat palung `ZooFeedingTroughBlock.KNOWN_TROUGHS` untuk pathfinding tanpa lag.
+     - Menghapus ketergantungan kalkulasi pitch vector yang cacat.
+  3. Penyelarasan ZooAnimalHungerManager:
+     - Memperbaiki perhitungan jangkauan makan palung, minum palung air, dan minum air alami pada `handleUniversalAnimalNeeds`.
+     - Mendaftarkan `AnimalEatFromTroughGoal.attach(pMob)` pada `tickServer` dan `setTagged`.
+  4. Perluasan Ragam Makanan Palung pada AnimalDietRegistry:
+     - Menambahkan variasi benih (pumpkin, beetroot, torchflower), jerami (hay block), gandum, dan apel untuk burung unta, emu, kasuari, jerapah, gajah, rusa, bebek, kura-kura, unta, dan kangguru.
+
 ## Bukti Selesai
 - Seluruh kode terkompilasi bersih tanpa error dengan `compileJava` dan `build`.
 - File jar `zootycoon-1.0.0.jar` telah tersalin ke direktori mods profil Modrinth.
@@ -227,8 +242,9 @@
 - Tidak ada blocker.
 
 ## File yang diubah
-- src/main/java/net/zootycoon/animal/ai/AnimalEatDroppedFoodGoal.java
+- src/main/java/net/zootycoon/animal/ai/AnimalEatFromTroughGoal.java
 - src/main/java/net/zootycoon/animal/ZooAnimalHungerManager.java
+- src/main/java/net/zootycoon/animal/AnimalDietRegistry.java
 - docs/hologram/PROGRESS.md
 
 ## Butuh izin user

@@ -256,6 +256,7 @@ public class ZooAnimalHungerManager {
             if (animal instanceof net.minecraft.world.entity.PathfinderMob pathfinderMob) {
                 net.zootycoon.animal.ai.AnimalDrinkWaterGoal.attach(pathfinderMob);
                 net.zootycoon.animal.ai.AnimalEatDroppedFoodGoal.attach(pathfinderMob);
+                net.zootycoon.animal.ai.AnimalEatFromTroughGoal.attach(pathfinderMob);
             }
             if (animal instanceof Mob mob) {
                 handleUniversalAnimalNeeds(level, mob);
@@ -364,20 +365,20 @@ public class ZooAnimalHungerManager {
             }
 
             if (closestWaterTrough != null && targetWaterTrough != null) {
-                double maxDrinkDist = (mob.getBbWidth() * 0.5) + 1.2;
-                if (closestTroughDist <= maxDrinkDist * maxDrinkDist) {
-                    double dx = (closestWaterTrough.getX() + 0.5) - mob.getX();
-                    double dz = (closestWaterTrough.getZ() + 0.5) - mob.getZ();
-                    double len = Math.sqrt(dx * dx + dz * dz);
-                    double dot = 1.0;
-                    if (len > 1.0E-4) {
-                        Vec3 look = mob.getViewVector(1.0f);
-                        dot = (look.x * (dx / len)) + (look.z * (dz / len));
-                    }
+                double maxDrinkDist = Math.max(2.6D, (mob.getBbWidth() * 0.5D) + 1.6D);
+                double dx = (closestWaterTrough.getX() + 0.5) - mob.getX();
+                double dz = (closestWaterTrough.getZ() + 0.5) - mob.getZ();
+                double horizDistSq = dx * dx + dz * dz;
+                double vertDist = Math.abs((closestWaterTrough.getY() + 0.5) - mob.getY());
+
+                boolean isCloseEnough = (horizDistSq <= maxDrinkDist * maxDrinkDist && vertDist <= 3.0D)
+                        || mob.blockPosition().closerThan(closestWaterTrough, maxDrinkDist);
+
+                if (isCloseEnough) {
                     mob.getNavigation().stop();
                     mob.getLookControl().setLookAt(closestWaterTrough.getX() + 0.5, closestWaterTrough.getY() + 0.2, closestWaterTrough.getZ() + 0.5);
 
-                    if (dot >= 0.5 && targetWaterTrough.hasWater()) {
+                    if (targetWaterTrough.hasWater()) {
                         setThirst(mob, MAX_THIRST);
                         level.playSound(null, mob.blockPosition(), SoundEvents.GENERIC_DRINK, SoundSource.NEUTRAL, 0.8f, 1.0f);
                         level.sendParticles(ParticleTypes.SPLASH, mob.getX(), mob.getY() + 0.3, mob.getZ(), 8, 0.25, 0.15, 0.25, 0.05);
@@ -406,24 +407,21 @@ public class ZooAnimalHungerManager {
             }
 
             if (closestWater != null) {
-                double maxDrinkDist = (mob.getBbWidth() * 0.5) + 1.2;
-                if (minWaterDist <= maxDrinkDist * maxDrinkDist) {
-                    double dx = (closestWater.getX() + 0.5) - mob.getX();
-                    double dz = (closestWater.getZ() + 0.5) - mob.getZ();
-                    double len = Math.sqrt(dx * dx + dz * dz);
-                    double dot = 1.0;
-                    if (len > 1.0E-4) {
-                        Vec3 look = mob.getViewVector(1.0f);
-                        dot = (look.x * (dx / len)) + (look.z * (dz / len));
-                    }
+                double maxDrinkDist = Math.max(2.6D, (mob.getBbWidth() * 0.5D) + 1.6D);
+                double dx = (closestWater.getX() + 0.5) - mob.getX();
+                double dz = (closestWater.getZ() + 0.5) - mob.getZ();
+                double horizDistSq = dx * dx + dz * dz;
+                double vertDist = Math.abs((closestWater.getY() + 0.5) - mob.getY());
+
+                boolean isCloseEnough = (horizDistSq <= maxDrinkDist * maxDrinkDist && vertDist <= 3.0D)
+                        || mob.blockPosition().closerThan(closestWater, maxDrinkDist);
+
+                if (isCloseEnough) {
                     mob.getNavigation().stop();
                     mob.getLookControl().setLookAt(closestWater.getX() + 0.5, closestWater.getY() + 0.2, closestWater.getZ() + 0.5);
-
-                    if (dot >= 0.5) {
-                        setThirst(mob, MAX_THIRST);
-                        level.playSound(null, mob.blockPosition(), SoundEvents.GENERIC_DRINK, SoundSource.NEUTRAL, 0.8f, 1.0f);
-                        level.sendParticles(ParticleTypes.SPLASH, mob.getX(), mob.getY() + 0.3, mob.getZ(), 8, 0.25, 0.15, 0.25, 0.05);
-                    }
+                    setThirst(mob, MAX_THIRST);
+                    level.playSound(null, mob.blockPosition(), SoundEvents.GENERIC_DRINK, SoundSource.NEUTRAL, 0.8f, 1.0f);
+                    level.sendParticles(ParticleTypes.SPLASH, mob.getX(), mob.getY() + 0.3, mob.getZ(), 8, 0.25, 0.15, 0.25, 0.05);
                     return;
                 } else {
                     mob.getNavigation().moveTo(closestWater.getX() + 0.5, closestWater.getY(), closestWater.getZ() + 0.5, 1.05);
@@ -459,22 +457,20 @@ public class ZooAnimalHungerManager {
             }
 
             if (closestFoodTrough != null && targetFoodTrough != null) {
-                double maxEatDist = (mob.getBbWidth() * 0.5) + 1.2;
-                if (closestFoodDist <= maxEatDist * maxEatDist) {
-                    double dx = (closestFoodTrough.getX() + 0.5) - mob.getX();
-                    double dz = (closestFoodTrough.getZ() + 0.5) - mob.getZ();
-                    double len = Math.sqrt(dx * dx + dz * dz);
-                    double dot = 1.0;
-                    if (len > 1.0E-4) {
-                        Vec3 look = mob.getViewVector(1.0f);
-                        dot = (look.x * (dx / len)) + (look.z * (dz / len));
-                    }
+                double maxEatDist = Math.max(2.6D, (mob.getBbWidth() * 0.5D) + 1.6D);
+                double dx = (closestFoodTrough.getX() + 0.5) - mob.getX();
+                double dz = (closestFoodTrough.getZ() + 0.5) - mob.getZ();
+                double horizDistSq = dx * dx + dz * dz;
+                double vertDist = Math.abs((closestFoodTrough.getY() + 0.5) - mob.getY());
 
+                boolean isCloseEnough = (horizDistSq <= maxEatDist * maxEatDist && vertDist <= 3.0D)
+                        || mob.blockPosition().closerThan(closestFoodTrough, maxEatDist);
+
+                if (isCloseEnough) {
                     mob.getNavigation().stop();
                     mob.getLookControl().setLookAt(closestFoodTrough.getX() + 0.5, closestFoodTrough.getY() + 0.2, closestFoodTrough.getZ() + 0.5);
 
-                    // Mob must physically be close and facing towards the feeding trough (dot >= 0.5 = within ~60 degrees)
-                    if (dot >= 0.5 && targetFoodTrough.hasFood()) {
+                    if (targetFoodTrough.hasFood()) {
                         ItemStack food = targetFoodTrough.extractFood(1);
                         if (!food.isEmpty()) {
                             feedAnimal(mob, food, null); // Emits HEART particles and restores hunger
@@ -538,6 +534,7 @@ public class ZooAnimalHungerManager {
             if (entity instanceof net.minecraft.world.entity.PathfinderMob pMob) {
                 net.zootycoon.animal.ai.AnimalDrinkWaterGoal.attach(pMob);
                 net.zootycoon.animal.ai.AnimalEatDroppedFoodGoal.attach(pMob);
+                net.zootycoon.animal.ai.AnimalEatFromTroughGoal.attach(pMob);
             }
             if (!HUNGER_MAP.containsKey(entity.getUUID())) {
                 setHunger(entity, MAX_HUNGER);

@@ -283,7 +283,7 @@ public class AnimalDietRegistry {
         register("minecraft:rabbit", FeedingType.TROUGH, "Herbivora (Wortel, Kubis & Dandelion)", Items.CARROT, Items.GOLDEN_CARROT, Items.DANDELION);
         register("minecraft:panda", FeedingType.TROUGH, "Folivora (Bambu & Kue)", Items.BAMBOO, Items.CAKE);
         register("minecraft:sniffer", FeedingType.TROUGH, "Herbivora (Benih Purba)", Items.TORCHFLOWER_SEEDS, Items.PITCHER_POD);
-        register("minecraft:camel", FeedingType.TROUGH, "Herbivora (Kaktus)", Items.CACTUS);
+        register("minecraft:camel", FeedingType.TROUGH, "Herbivora (Kaktus, Jerami & Gandum)", Items.CACTUS, Items.HAY_BLOCK, Items.WHEAT);
         register("minecraft:strider", FeedingType.TROUGH, "Pemakan Jamur Nether", Items.WARPED_FUNGUS);
         register("minecraft:turtle", FeedingType.TROUGH, "Herbivora Laut (Lamun)", Items.SEAGRASS);
         register("minecraft:frog", FeedingType.TROUGH, "Insektivora (Slime & Serangga)", Items.SLIME_BALL);
@@ -304,12 +304,12 @@ public class AnimalDietRegistry {
         register("alexsmobs:gorilla", FeedingType.TROUGH, "Frugivora (Pisang & Buah)", Items.MELON_SLICE, Items.APPLE, Items.SWEET_BERRIES);
         register("alexsmobs:capuchin_monkey", FeedingType.TROUGH, "Frugivora (Pisang, Buah & Telur)", Items.MELON_SLICE, Items.APPLE, Items.SWEET_BERRIES, Items.EGG);
         register("alexsmobs:elephant", FeedingType.TROUGH, "Herbivora Besar (Melon, Jerami & Sayur)", Items.MELON_SLICE, Items.HAY_BLOCK, Items.APPLE, Items.CARROT);
-        register("alexsmobs:kangaroo", FeedingType.TROUGH, "Herbivora (Gandum, Wortel & Rumput)", Items.WHEAT, Items.CARROT, Items.APPLE);
+        register("alexsmobs:kangaroo", FeedingType.TROUGH, "Herbivora (Gandum, Jerami, Wortel & Rumput)", Items.WHEAT, Items.HAY_BLOCK, Items.CARROT, Items.APPLE);
         register("alexsmobs:moose", FeedingType.TROUGH, "Herbivora (Gandum, Daun & Apel)", Items.WHEAT, Items.OAK_LEAVES, Items.APPLE, Items.DANDELION);
         register("alexsmobs:gazelle", FeedingType.TROUGH, "Herbivora (Gandum & Rumput)", Items.WHEAT, Items.HAY_BLOCK);
         register("alexsmobs:bison", FeedingType.TROUGH, "Herbivora (Gandum & Jerami)", Items.WHEAT, Items.HAY_BLOCK);
         register("alexsmobs:gelada_monkey", FeedingType.TROUGH, "Herbivora (Rumput & Biji)", Items.WHEAT, Items.WHEAT_SEEDS);
-        register("alexsmobs:emu", FeedingType.TROUGH, "Granivora (Biji-bijian & Buah)", Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.SWEET_BERRIES);
+        register("alexsmobs:emu", FeedingType.TROUGH, "Granivora (Biji-bijian, Rumput & Buah)", Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS, Items.WHEAT, Items.SWEET_BERRIES, Items.APPLE);
         register("alexsmobs:platypus", FeedingType.TROUGH, "Pemakan Ikan & Serangga Air", false, true, Items.COD, Items.SALMON);
         register("alexsmobs:roadrunner", FeedingType.TROUGH, "Pemakan Biji & Serangga", Items.WHEAT_SEEDS, Items.BEETROOT_SEEDS);
         register("alexsmobs:hummingbird", FeedingType.TROUGH, "Nektar (Bunga & Gula)", Items.DANDELION, Items.POPPY, Items.SUGAR);
@@ -335,18 +335,18 @@ public class AnimalDietRegistry {
         // 3. NATURALIST
         // ==========================================
         register("naturalist:elephant", FeedingType.TROUGH, "Herbivora Raksasa (Melon, Jerami & Sayur)", Items.MELON_SLICE, Items.HAY_BLOCK, Items.APPLE, Items.CARROT, Items.WHEAT);
-        register("naturalist:giraffe", FeedingType.TROUGH, "Folivora (Daun, Apel & Sayur)", Items.ACACIA_LEAVES, Items.OAK_LEAVES, Items.APPLE, Items.CARROT, Items.HAY_BLOCK);
+        register("naturalist:giraffe", FeedingType.TROUGH, "Folivora (Daun, Jerami, Apel & Sayur)", Items.ACACIA_LEAVES, Items.OAK_LEAVES, Items.APPLE, Items.CARROT, Items.HAY_BLOCK, Items.WHEAT);
         register("naturalist:zebra", FeedingType.TROUGH, "Herbivora (Gandum, Jerami & Wortel)", Items.WHEAT, Items.HAY_BLOCK, Items.CARROT, Items.APPLE);
-        register("naturalist:deer", FeedingType.TROUGH, "Herbivora (Gandum, Apel & Beri)", Items.WHEAT, Items.APPLE, Items.CARROT, Items.SWEET_BERRIES);
+        register("naturalist:deer", FeedingType.TROUGH, "Herbivora (Gandum, Jerami, Apel & Beri)", Items.WHEAT, Items.HAY_BLOCK, Items.APPLE, Items.CARROT, Items.SWEET_BERRIES);
         register("naturalist:rhino", FeedingType.TROUGH, "Herbivora (Gandum, Melon & Jerami)", Items.WHEAT, Items.MELON_SLICE, Items.HAY_BLOCK, Items.CARROT);
         register("naturalist:hippo", FeedingType.TROUGH, "Herbivora Air (Melon, Labu & Gandum)", Items.MELON_SLICE, Items.PUMPKIN, Items.WHEAT, Items.APPLE);
-        register("naturalist:duck", FeedingType.TROUGH, "Granivora (Biji-bijian & Roti)", Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS, Items.BREAD);
+        register("naturalist:duck", FeedingType.TROUGH, "Granivora (Biji-bijian & Roti)", Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS, Items.TORCHFLOWER_SEEDS, Items.BREAD, Items.WHEAT);
         register("naturalist:canary", FeedingType.TROUGH, "Granivora (Biji-bijian & Beri)", Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.SWEET_BERRIES);
         register("naturalist:cardinal", FeedingType.TROUGH, "Granivora (Biji-bijian & Beri)", Items.WHEAT_SEEDS, Items.SWEET_BERRIES);
         register("naturalist:bluejay", FeedingType.TROUGH, "Granivora (Biji-bijian & Beri)", Items.WHEAT_SEEDS, Items.SWEET_BERRIES);
         register("naturalist:finch", FeedingType.TROUGH, "Granivora (Biji-bijian)", Items.WHEAT_SEEDS, Items.MELON_SEEDS);
         register("naturalist:sparrow", FeedingType.TROUGH, "Granivora (Biji-bijian)", Items.WHEAT_SEEDS, Items.MELON_SEEDS);
-        register("naturalist:tortoise", FeedingType.TROUGH, "Herbivora (Sayuran, Wortel & Bunga)", Items.CARROT, Items.DANDELION, Items.MELON_SLICE, Items.APPLE, Items.SWEET_BERRIES);
+        register("naturalist:tortoise", FeedingType.TROUGH, "Herbivora (Sayuran, Wortel, Apel & Bunga)", Items.CARROT, Items.DANDELION, Items.MELON_SLICE, Items.APPLE, Items.SWEET_BERRIES, Items.BEETROOT, Items.WHEAT);
         register("naturalist:butterfly", FeedingType.TROUGH, "Nektar (Bunga)", Items.DANDELION, Items.POPPY, Items.BLUE_ORCHID);
         register("naturalist:snail", FeedingType.TROUGH, "Herbivora Kecil (Jamur & Sayur)", Items.RED_MUSHROOM, Items.BROWN_MUSHROOM, Items.CARROT);
 
@@ -370,9 +370,9 @@ public class AnimalDietRegistry {
         // ==========================================
         // 4. WILDER NATURE & ADDITIONAL ALEX'S MOBS / NATURALIST
         // ==========================================
-        register("wildernature:cassowary", FeedingType.TROUGH, "Omnivora", "Omnivora (Melon, Apel, Biji & Serangga)", Items.MELON_SLICE, Items.APPLE, Items.WHEAT_SEEDS, Items.SPIDER_EYE);
+        register("wildernature:cassowary", FeedingType.TROUGH, "Omnivora", "Omnivora (Melon, Apel, Biji & Serangga)", Items.MELON_SLICE, Items.APPLE, Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS, Items.WHEAT, Items.SPIDER_EYE);
         register("wildernature:mini_sheep", FeedingType.TROUGH, "Herbivora", "Herbivora (Gandum & Rumput Segar)", Items.WHEAT, Items.HAY_BLOCK);
-        register("naturalist:ostrich", FeedingType.TROUGH, "Granivora", "Granivora (Biji, Rumput & Wortel)", Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.CARROT, Items.WHEAT);
+        register("naturalist:ostrich", FeedingType.TROUGH, "Granivora", "Granivora (Biji-bijian, Rumput, Apel & Wortel)", Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS, Items.TORCHFLOWER_SEEDS, Items.CARROT, Items.WHEAT, Items.HAY_BLOCK, Items.APPLE);
         register("naturalist:capybara", FeedingType.TROUGH, "Herbivora", "Herbivora (Apel, Wortel, Rumput & Melon)", Items.APPLE, Items.CARROT, Items.MELON_SLICE, Items.WHEAT);
         register("alexsmobs:giant_anteater", FeedingType.TROUGH, "Insektivora", "Insektivora (Serangga & Telur)", Items.SPIDER_EYE, Items.SLIME_BALL, Items.EGG);
         register("alexsmobs:anteater", FeedingType.TROUGH, "Insektivora", "Insektivora (Serangga & Telur)", Items.SPIDER_EYE, Items.SLIME_BALL, Items.EGG);
