@@ -166,9 +166,9 @@ public class HabitatEvaluator {
         boolean tooHot = effectiveTemp > profile.maxTemperature();
         boolean tempOk = !tooCold && !tooHot;
 
-        // 6. Check Companion (ONLY required for social animals, radius 24)
-        boolean companionRequired = isSocialAnimal(animal, profile);
-        boolean hasCompanion = !companionRequired || !level.getEntitiesOfClass(animal.getClass(), animal.getBoundingBox().inflate(24.0), e -> e != animal && e.isAlive()).isEmpty();
+        // 6. Companion requirement removed per user request
+        boolean companionRequired = false;
+        boolean hasCompanion = true;
 
         // 7. Check Required Blocks (Trees, Bamboo, Snow, Sand, etc.)
         boolean extraBlocksOk = true;
@@ -263,16 +263,14 @@ public class HabitatEvaluator {
                 unmet.add("Butuh " + specificGround);
             }
         }
-        if (companionRequired && !hasCompanion && !unmet.contains("Butuh Pasangan")) {
-            unmet.add("Butuh Pasangan");
-        }
+
         if (tooCold) {
             unmet.add("Butuh Heater");
         } else if (tooHot) {
             unmet.add("Butuh Cooler Box");
         }
 
-        boolean isSuitable = biomeOk && tempOk && groundOk && waterOk && extraBlocksOk && (!companionRequired || hasCompanion) && predatorSafe;
+        boolean isSuitable = biomeOk && tempOk && groundOk && waterOk && extraBlocksOk && predatorSafe;
         HabitatStatus status = isSuitable ? HabitatStatus.SUITABLE : HabitatStatus.UNSUITABLE;
 
         return new HabitatResult(status, profile.displayName(), biomeOk, waterRequired, waterOk, tempOk, tooCold, groundOk, companionRequired, hasCompanion, unmet);

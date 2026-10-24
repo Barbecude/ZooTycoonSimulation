@@ -286,9 +286,7 @@ public class ZooAnimalHologramRenderer {
                 if (!habitatInfo.groundOk()) {
                     redNeeds.add(Component.literal("• Butuh " + net.zootycoon.animal.habitat.HabitatEvaluator.getSpecificGroundLabel(profile)));
                 }
-                if (!habitatInfo.mateOk()) {
-                    redNeeds.add(Component.literal("• Butuh Pasangan"));
-                }
+
             }
 
             if (!habitatInfo.biomeOk()) {
