@@ -367,8 +367,11 @@ public class ZooAnimalHologramRenderer {
                     Math.max(thirstTextWidth,
                     Math.max(cleanTextWidth, tempTotalWidth))));
 
-            List<ItemStack> foods = Collections.unmodifiableList(AnimalDietRegistry.getFoodsForAnimal(entity));
-            int foodCount = Math.min(5, foods.size());
+            List<ItemStack> allFoods = AnimalDietRegistry.getFoodsForAnimal(entity);
+            int foodCount = Math.min(8, allFoods.size());
+            List<ItemStack> foods = (foodCount > 0)
+                    ? Collections.unmodifiableList(new ArrayList<>(allFoods.subList(0, foodCount)))
+                    : Collections.emptyList();
             float foodsRowWidth = foodCount * FOOD_SPACING;
 
             Component titleComp = entity.getDisplayName();
@@ -739,7 +742,7 @@ public class ZooAnimalHologramRenderer {
             poseStack.popPose();
             curY += cached.headerHeight;
 
-            // 3. Favorite Food Icons (3D Vanilla for Blocks, 2D Flat for Items)
+            // 3. Favorite Food Icons (3D Vanilla for Blocks, 2D Flat for Items) - Single Source of Truth (Max 8 in Hologram)
             if (cached.foodCount > 0) {
                 for (int i = 0; i < cached.foodCount; i++) {
                     ItemStack foodStack = cached.foods.get(i);
