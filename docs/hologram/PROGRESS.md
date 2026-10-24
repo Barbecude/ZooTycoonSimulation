@@ -15,7 +15,7 @@
 | 10 | Mandi hewan oleh zookeeper & Bedah Rendering Hologram | SELESAI | 2026-10-18 | Bedah total in-world hologram (vertical anchoring maxY=0 ke atas, quad winding CCW, Z-layering presisi, Font.DisplayMode.POLYGON_OFFSET, pakan 3D skala 7) & integrasi Zookeeper memandikan satwa asuh (GiveBathingToolsPayload, tombol dialog 3-button, AI mandi siram + sikat kebersihan 100%, durability brush berkurang 1) |
 | 11 | Mood hewan | BELUM | - | |
 | 12 | Validasi akhir hologram | BELUM | - | |
-| 13 | Audit feeding trough | BELUM | - | |
+| 13 | Diet & Metode Pakan Satwa | SELESAI | 2026-10-24 | Kategori diet & metode pakan di hologram serta AI makan palung vs pakan dilempar |
 | 14 | Pemaksaan feeding trough | BELUM | - | |
 
 ## Keputusan
@@ -190,6 +190,20 @@
      - Mengimplementasikan helper `formatDuration(int totalSeconds)` pada `ZooHeaterBlock.java` dan `ZooCoolerBlock.java`.
      - Teks actionbar / popup saat pengisian bahan bakar atau pengecekan sisa waktu kini diformat ramah pengguna dalam satuan menit dan detik (contoh: "2 menit", "4 menit 30 detik", atau "45 detik") alih-alih angka detik mentah.
      - Menyesuaikan string terjemahan `id_id.json` dan `en_us.json` agar placeholder `%s` langsung menampilkan teks durasi lengkap.
+
+
+- Integrasi Kategori Diet Satwa & Metode Pakan (Hologram & AI Lapar):
+  1. Klasifikasi Kategori Diet & Metode Pakan di AnimalDietRegistry:
+     - Menambahkan label resmi metode pakan: `TROUGH` ("Perlu Palung Makanan") dan `THROWN_MEAT` ("Lempar Makanan").
+     - Menambahkan klasifikasi kategori diet: `Herbivora`, `Karnivora`, `Omnivora`, `Frugivora`, `Granivora`, `Insektivora`, `Piscivora`, `Pemakan Jamur`, `Pemakan Mineral`, dan `Nektarivora`.
+     - Memetakan 40 spesies satwa dari Dokumen Google Doc Bagian 1, 2, dan 3 (Naturalist, Alex's Mobs, Wilder Nature, Vanilla) ke registry lengkap dengan kategori, jenis pakan, dan metode pakan.
+     - Menyediakan helper client-safe `AnimalDietRegistry.getDietCategorySubtitle(LivingEntity)` yang menghasilkan format teks e.g. "Herbivora (Perlu Palung Makanan)" atau "Karnivora (Lempar Makanan)".
+  2. Tampilan Subtitle di Bawah Nama Satwa pada Hologram:
+     - Menambahkan baris subtitle tepat di bawah nama satwa pada `ZooAnimalHologramRenderer` (posisi Y = curY + 13.0f, warna abu-abu lembut 0xFFAAAAAA, font NORMAL, full bright).
+     - Menyesuaikan `HEADER_HEIGHT` menjadi 25.0f dan lebar kartu `boxWidth` secara dinamis menghitung lebar subtitle pakan agar tidak terpotong.
+  3. Pemisahan AI Lapar Satwa (Palung Pakan vs Pakan Dilempar):
+     - Satwa bertipe `FeedingType.TROUGH` hanya mencari dan memakan pakan dari `ZooFeedingTroughBlock`.
+     - Satwa predator / karnivora bertipe `FeedingType.THROWN_MEAT` tidak lagi menuju ke palung pakan kayu, melainkan secara aktif mendeteksi dan mendekati item pakan yang dilempar/terjatuh di tanah (`ItemEntity`) dalam radius 16 blok, memakannya hingga kenyang (+35 rasa lapar), memainkan partikel hati dan suara mengunyah.
 
 ## Bukti Selesai
 - Seluruh kode terkompilasi bersih tanpa error dengan `compileJava` dan `build`.

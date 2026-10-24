@@ -52,7 +52,7 @@ public class ZooAnimalHologramRenderer {
 
     private static final float TITLE_SCALE = 1.25f;
     private static final float ROW_HEIGHT = 11.0f;
-    private static final float HEADER_HEIGHT = 13.0f;
+    private static final float HEADER_HEIGHT = 25.0f;
     private static final float FOOD_SPACING = 16.0f;
     private static final float FOOD_SIZE = 12.0f;
     private static final float ICON_WIDTH = 9.0f;
@@ -74,6 +74,8 @@ public class ZooAnimalHologramRenderer {
 
         public final Component titleComp;
         public final float scaledTitleWidth;
+        public final Component dietSubtitleComp;
+        public final float dietSubtitleWidth;
 
         public final String hpText;
         public final int hpTextColor;
@@ -137,6 +139,8 @@ public class ZooAnimalHologramRenderer {
                 String tempCategory,
                 Component titleComp,
                 float scaledTitleWidth,
+                Component dietSubtitleComp,
+                float dietSubtitleWidth,
                 String hpText,
                 int hpTextColor,
                 int hpTextWidth,
@@ -190,6 +194,8 @@ public class ZooAnimalHologramRenderer {
             this.tempCategory = tempCategory;
             this.titleComp = titleComp;
             this.scaledTitleWidth = scaledTitleWidth;
+            this.dietSubtitleComp = dietSubtitleComp;
+            this.dietSubtitleWidth = dietSubtitleWidth;
             this.hpText = hpText;
             this.hpTextColor = hpTextColor;
             this.hpTextWidth = hpTextWidth;
@@ -375,11 +381,15 @@ public class ZooAnimalHologramRenderer {
             Component titleComp = entity.getDisplayName();
             float scaledTitleWidth = font.width(titleComp) * TITLE_SCALE;
 
+            Component dietSubtitleComp = Component.literal(AnimalDietRegistry.getDietCategorySubtitle(entity));
+            float dietSubtitleWidth = font.width(dietSubtitleComp);
+
             float statRowWidth = maxLabelWidth + GAP_LABEL_TO_ICON + ICON_WIDTH + GAP_ICON_TO_VALUE + maxValueWidth;
 
             float boxWidth = Math.max(statRowWidth + 16.0f,
                     Math.max(scaledTitleWidth + 16.0f,
-                    Math.max(foodsRowWidth + 16.0f, maxHabTextWidth + 18.0f)));
+                    Math.max(dietSubtitleWidth + 16.0f,
+                    Math.max(foodsRowWidth + 16.0f, maxHabTextWidth + 18.0f))));
 
             float foodSectionHeight = (foodCount > 0) ? 16.0f : 0.0f;
             float statsSectionHeight = 5.0f * ROW_HEIGHT;
@@ -407,6 +417,8 @@ public class ZooAnimalHologramRenderer {
                     tempCategory,
                     titleComp,
                     scaledTitleWidth,
+                    dietSubtitleComp,
+                    dietSubtitleWidth,
                     hpText,
                     hpTextColor,
                     hpTextWidth,
@@ -738,6 +750,10 @@ public class ZooAnimalHologramRenderer {
             poseStack.scale(TITLE_SCALE, TITLE_SCALE, 1.0f);
             font.drawInBatch(cached.titleComp, 0.0f, 0.0f, HologramBarRenderer.applyAlpha(0xFFFFFFFF, fadeAlpha), false, poseStack.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             poseStack.popPose();
+
+            // Subtitle: Category & Feeding Method (Left-aligned, Light Gray)
+            font.drawInBatch(cached.dietSubtitleComp, leftX, curY + 13.0f, HologramBarRenderer.applyAlpha(0xFFAAAAAA, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+
             curY += cached.headerHeight;
 
             // 3. Favorite Food Icons (3D Vanilla for Blocks, 2D Flat for Items) - Single Source of Truth (Max 8 in Hologram)

@@ -13,6 +13,7 @@
     { "id": "farmersdelight:bacon", "required": false },
     { "id": "farmersdelight:mutton_chops", "required": false },
     { "id": "farmersdelight:ham", "required": false },
+    { "id": "moredelight:diced_ham", "required": false },
     { "id": "farm_and_charm:minced_beef", "required": false },
     { "id": "farm_and_charm:chicken_parts", "required": false },
     { "id": "farm_and_charm:lamb_ham", "required": false },

@@ -33,18 +33,21 @@ fungsi yg udah fix (tidak boleh sampe rusak karena mengubah kode):
 10. Reaksi satwa terhadap environtment, suhu, musim, biome,
 
 fungsi yang belum fix atau belum ada atau masih cacat (Dilarang mengerjakan semua tahap ini sebelum diminta secara eksplisit oleh pengguna):
+
 - jika salah satu dari stats (haus, kebersihan, lapar, suhu) sampai 0 atau tidak nyaman maka hewan akan dapat effect minecraft negatif bisa berupa poison, hunger atau lainnya.
 -animasi  zookeper  membersihkan satwa menggunakan watering can dan brush
--di hologram tambahkan
 - Khusus Satwa yang bisa mencari makan sendiri dia akan makan lewat feeding thrugh yang di isi oleh zookeper (berkaitan dengan sistem lapar)
 - Khusus Satwa yang perlu di kasi makan langsung dia akan di beri pakan langsung oleh zookeper (berkaitan dengan sistem lapar)
 - Khusus satwa yang butuh air dia akan auto jalan ke air
-- Sistem Rating Zoo dan Integrasi UI
-Bangun formula perhitungan rating dinamis berdasarkan rata-rata kesehatan satwa, kebersihan kandang, kelengkapan fasilitas, dan kepuasan pengunjung, serta tampilkan indikator rating di UI/HUD.
--tambahkan already builded biome di kategori "terrain" di menu bangunan yang dimana already builded biome adalah biome yg di ambil dari world generation asli dari mod apapun misal user pake world generation vanila atau moded world generation apapun seperti tectonic nah di kategori terrain itu sudah ada already builded biome yg otomatis di generate oleh mod ini dan yg di generate nya itu world generation dari mod world generation itu sendiri dengan size biome yg bisa dikustomisasi. 
+- Sistem Rating Zoo Bangun formula perhitungan rating dinamis berdasarkan rata-rata kesehatan satwa, kebersihan kandang, kelengkapan fasilitas, dan kepuasan pengunjung, serta tampilkan indikator rating di UI/HUD.
+- tambahkan already builded biome di kategori "terrain" di menu bangunan yang dimana already builded biome adalah biome yg di ambil dari world generation asli dari mod apapun misal user pake world generation vanila atau moded world generation apapun seperti tectonic nah di kategori terrain itu sudah ada already builded biome yg otomatis di generate oleh mod ini dan yg di generate nya itu world generation dari mod world generation itu sendiri dengan size biome yg bisa dikustomisasi. 
 - Kunjungan Pengunjung Mengikuti Rating dan Kualitas
 Perbarui spawner pengunjung agar kapasitas maksimal dan frekuensi kedatangan berskala dinamis mengikuti rating kebun binatang dan jumlah fasilitas/satwa aktif.
 - Finansial dan Penetapan Harga (Tiket, Makanan, Gaji Pegawai)
 Sediakan pengaturan harga tiket dan makanan/minuman yang berdampak pada keputusan pengunjung, serta terapkan pemotongan gaji berkala (biaya operasional harian) untuk seluruh staf zoo.
 - Gudang (Warehouse dan Rantai Pasok)
 Bangun sistem gudang sentral untuk menyimpan stok pakan dan suplai grosir, serta integrasikan zookeeper, dan cashier untuk mengambil jatah pakan dari gudang tanpa memberi pakan awal otomatis.
+
+mod source yg dipakai untuk mencari tau isi kode atau mixin:
+https://github.com/Codx-org/AlexsMobsContinued
+https://github.com/crispytwig/Naturalist

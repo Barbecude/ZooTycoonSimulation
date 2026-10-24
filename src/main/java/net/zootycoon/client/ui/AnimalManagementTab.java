@@ -407,32 +407,40 @@ public class AnimalManagementTab {
         graphics.drawString(font, ZooTranslations.component("zootycoon.ui.animals.favorite_food").withStyle(ChatFormatting.YELLOW), infoX, gridY, 0xFFFFFFFF, false);
 
         if (previewEntity != null) {
-            var diet = AnimalDietRegistry.getDiet(previewEntity);
-            List<Item> foods = diet.acceptedFoods;
+            List<ItemStack> foods = AnimalDietRegistry.getFoodsForAnimal(previewEntity);
             int slotSize = 22;
             int gap = 4;
             int slotStartY = gridY + 12;
+            int colsPerRow = Math.max(1, (infoW + gap) / (slotSize + gap));
+            ItemStack hoveredFoodStack = ItemStack.EMPTY;
 
             for (int i = 0; i < foods.size(); i++) {
-                Item foodItem = foods.get(i);
-                int slotX = infoX + i * (slotSize + gap);
+                ItemStack foodStack = foods.get(i);
+                int col = i % colsPerRow;
+                int row = i / colsPerRow;
+                int slotX = infoX + col * (slotSize + gap);
+                int slotY = slotStartY + row * (slotSize + gap);
+                if (slotY + slotSize > contentY + contentH - 6) break;
 
-                boolean slotHovered = mouseX >= slotX && mouseX <= slotX + slotSize && mouseY >= slotStartY && mouseY <= slotStartY + slotSize;
+                boolean slotHovered = mouseX >= slotX && mouseX <= slotX + slotSize && mouseY >= slotY && mouseY <= slotY + slotSize;
                 int slotBg = slotHovered ? 0xFF1E2433 : 0xFF141720;
                 int slotBorder = slotHovered ? 0xFF58A6FF : 0xFF2A3140;
 
-                graphics.fill(slotX, slotStartY, slotX + slotSize, slotStartY + slotSize, slotBg);
-                graphics.fill(slotX, slotStartY, slotX + slotSize, slotStartY + 1, slotBorder);
-                graphics.fill(slotX, slotStartY + slotSize - 1, slotX + slotSize, slotStartY + slotSize, slotBorder);
-                graphics.fill(slotX, slotStartY, slotX + 1, slotStartY + slotSize, slotBorder);
-                graphics.fill(slotX + slotSize - 1, slotStartY, slotX + slotSize, slotStartY + slotSize, slotBorder);
+                graphics.fill(slotX, slotY, slotX + slotSize, slotY + slotSize, slotBg);
+                graphics.fill(slotX, slotY, slotX + slotSize, slotY + 1, slotBorder);
+                graphics.fill(slotX, slotY + slotSize - 1, slotX + slotSize, slotY + slotSize, slotBorder);
+                graphics.fill(slotX, slotY, slotX + 1, slotY + slotSize, slotBorder);
+                graphics.fill(slotX + slotSize - 1, slotY, slotX + slotSize, slotY + slotSize, slotBorder);
 
-                ItemStack foodStack = new ItemStack(foodItem);
-                graphics.renderItem(foodStack, slotX + 3, slotStartY + 3);
+                graphics.renderItem(foodStack, slotX + 3, slotY + 3);
 
                 if (slotHovered) {
-                    graphics.renderTooltip(font, foodStack.getHoverName(), mouseX, mouseY);
+                    hoveredFoodStack = foodStack;
                 }
+            }
+
+            if (!hoveredFoodStack.isEmpty()) {
+                graphics.renderTooltip(font, hoveredFoodStack.getHoverName(), mouseX, mouseY);
             }
         }
 
@@ -737,8 +745,7 @@ public class AnimalManagementTab {
             Minecraft mc = Minecraft.getInstance();
             LivingEntity previewEntity = resolveLivingEntity(mc, selectedData);
             if (previewEntity != null) {
-                var diet = AnimalDietRegistry.getDiet(previewEntity);
-                List<Item> foods = diet.acceptedFoods;
+                List<ItemStack> foods = AnimalDietRegistry.getFoodsForAnimal(previewEntity);
                 int totalHearts = Math.max(1, (int) Math.ceil(selectedData.maxHealth() / 2.0f));
                 int heartsToDraw = Math.min(totalHearts, 20);
                 int rowsOfHearts = (int) Math.ceil(heartsToDraw / 10.0);
@@ -748,10 +755,16 @@ public class AnimalManagementTab {
                 int slotStartY = gridY + 12;
                 int slotSize = 22;
                 int gap = 4;
+                int contentH = screen.height - contentY - 14;
+                int colsPerRow = Math.max(1, (infoW + gap) / (slotSize + gap));
 
                 for (int i = 0; i < foods.size(); i++) {
-                    int slotX = infoX + i * (slotSize + gap);
-                    if (mouseX >= slotX && mouseX <= slotX + slotSize && mouseY >= slotStartY && mouseY <= slotStartY + slotSize) {
+                    int col = i % colsPerRow;
+                    int row = i / colsPerRow;
+                    int slotX = infoX + col * (slotSize + gap);
+                    int slotY = slotStartY + row * (slotSize + gap);
+                    if (slotY + slotSize > contentY + contentH - 6) break;
+                    if (mouseX >= slotX && mouseX <= slotX + slotSize && mouseY >= slotY && mouseY <= slotY + slotSize) {
                         ClientPlayNetworking.send(new ZooNetworkPayloads.FeedAnimalFromGuiPayload(selectedData.entityId()));
                         return true;
                     }
