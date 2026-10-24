@@ -642,7 +642,7 @@ public class ZooZookeeperEntity extends PathfinderMob {
             dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.speech_no_animal");
         } else {
             int cleanlinessVal = ZooAnimalHungerManager.getCleanliness(animal);
-            if (cleanlinessVal <= 40 && !this.hasBathingTools()) {
+            if (cleanlinessVal <= 50 && !this.hasBathingTools()) {
                 dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.need_bathing_tools", animalName);
             }
         }
@@ -660,9 +660,13 @@ public class ZooZookeeperEntity extends PathfinderMob {
         }
 
         int totalGiven = 0;
+        boolean hasAnyFoodItem = false;
         for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
             ItemStack st = player.getInventory().getItem(i);
             if (!st.isEmpty()) {
+                if (AnimalDietRegistry.isAnyFood(st) || AnimalDietRegistry.isAnyTroughFood(st)) {
+                    hasAnyFoodItem = true;
+                }
                 boolean valid = (animal != null) ? AnimalDietRegistry.isFoodValid(animal, st) : (AnimalDietRegistry.isAnyFood(st) || AnimalDietRegistry.isAnyTroughFood(st));
                 if (valid) {
                     int toTake = Math.min(st.getCount(), 32 - totalGiven);
@@ -680,10 +684,13 @@ public class ZooZookeeperEntity extends PathfinderMob {
         if (totalGiven > 0) {
             this.playSound(SoundEvents.VILLAGER_YES, 1.0f, 1.0f);
             ((ServerLevel) this.level()).sendParticles(ParticleTypes.HAPPY_VILLAGER, this.getX(), this.getY() + 1.2, this.getZ(), 6, 0.2, 0.2, 0.2, 0.02);
-            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.zookeeper.food_given_toast", 1, totalGiven, anDesc);
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.zookeeper", "zootycoon.zookeeper.food_given_toast", 1, totalGiven, anDesc);
+        } else if (!hasAnyFoodItem) {
+            this.playSound(SoundEvents.VILLAGER_NO, 1.0f, 1.0f);
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.zookeeper", "zootycoon.zookeeper.no_food_in_inv", 2);
         } else {
             this.playSound(SoundEvents.VILLAGER_NO, 1.0f, 1.0f);
-            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.warning", "zootycoon.zookeeper.wrong_food_toast", 2, anDesc);
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.zookeeper", "zootycoon.zookeeper.wrong_food_toast", 2, anDesc);
         }
     }
 
@@ -737,6 +744,9 @@ public class ZooZookeeperEntity extends PathfinderMob {
     }
 
     public boolean hasBathingTools() {
+        if (this.level() != null && this.level().isClientSide()) {
+            return this.entityData.get(HAS_BATHING_TOOLS);
+        }
         return this.hasWateringCan && !this.brushStack.isEmpty();
     }
 

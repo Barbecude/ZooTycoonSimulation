@@ -138,6 +138,8 @@ public class ZooTycoonMod implements ModInitializer {
                         && net.zootycoon.animal.AnimalDietRegistry.isFoodValid(living, held)) {
                     boolean fed = net.zootycoon.animal.ZooAnimalHungerManager.feedAnimal(living, held, sp);
                     if (fed) {
+                        int hungerAfter = net.zootycoon.animal.ZooAnimalHungerManager.getHunger(living);
+                        ZooNetworkPayloads.sendToast(sp, "zootycoon.toast.title.animal", "zootycoon.animal.fed", 1, living.getName().getString(), hungerAfter);
                         ZooNetworkPayloads.sendAnimalSync(sp);
                         return net.minecraft.world.InteractionResult.SUCCESS;
                     }

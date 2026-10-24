@@ -25,6 +25,9 @@ public class ZookeeperDialogScreen extends EasyNpcDialogScreen {
 
     private final UUID keeperUuid;
     private final boolean hasAnimal;
+    private final String dialogText;
+    private final int hunger;
+    private final int foodStock;
     private boolean dropdownOpen = false;
     private List<ZooNetworkPayloads.AnimalSyncData> availableAnimals = List.of();
     private int dropdownX = 0;
@@ -53,6 +56,9 @@ public class ZookeeperDialogScreen extends EasyNpcDialogScreen {
         );
         this.keeperUuid = keeperUuid;
         this.hasAnimal = hasAnimal;
+        this.dialogText = dialogText;
+        this.hunger = hunger;
+        this.foodStock = foodStock;
     }
 
     private static Component buildSpeechComponent(boolean hasAnimal, String animalName, int hunger, int foodStock, String dialogText) {
@@ -129,49 +135,41 @@ public class ZookeeperDialogScreen extends EasyNpcDialogScreen {
                 this.dropdownY = btnY - dropdownH - 4;
             }
         } else {
-            // When hasAnimal: 3-button layout
-            int tripleBtnW = (panelWidth - 24 - 12) / 3;
+            // When hasAnimal: Exactly 2 buttons according to current need!
+            int actionBtnX = startX + 12;
+            int closeBtnX = startX + 12 + btnW + 8;
 
-            // Action button 1: Serahkan Pakan (Beri pakan ke Zookeeper untuk satwa binaan)
-            ZooButton giveFoodBtn = new ZooButton(startX + 12, btnY, tripleBtnW, 22,
-                    ZooTranslations.component("zootycoon.dialog.zookeeper.btn.give_food"), b -> {
-                ClientPlayNetworking.send(new ZooNetworkPayloads.SupplyZookeeperFoodPayload(this.keeperUuid));
-                this.onClose();
-            }).asPrimary();
-            addRenderableWidget(giveFoodBtn);
+            boolean isBathingCondition = this.dialogText != null && (
+                    this.dialogText.contains("dimandikan")
+                    || this.dialogText.contains("sikat")
+                    || this.dialogText.contains("penyiram")
+                    || this.dialogText.contains("alat mandi")
+                    || this.dialogText.contains("bath")
+            );
 
-            // Action button 2: Serahkan Alat Mandi (Watering can + brush)
-            Minecraft mc = Minecraft.getInstance();
-            boolean playerHasCan = false;
-            boolean playerHasBrush = false;
-            if (mc.player != null) {
-                for (int i = 0; i < mc.player.getInventory().getContainerSize(); i++) {
-                    ItemStack st = mc.player.getInventory().getItem(i);
-                    if (!st.isEmpty()) {
-                        if (net.zootycoon.animal.AnimalBathingManager.isWateringCan(st)) {
-                            playerHasCan = true;
-                        }
-                        if (st.is(net.minecraft.world.item.Items.BRUSH)) {
-                            playerHasBrush = true;
-                        }
-                    }
-                }
+            if (isBathingCondition) {
+                // Condition: Butuh Alat Mandi -> Show [Serahkan Alat Mandi] & [Semangat kerjanya!]
+                ZooButton giveToolsBtn = new ZooButton(actionBtnX, btnY, btnW, 22,
+                        ZooTranslations.component("zootycoon.dialog.zookeeper.btn.give_bathing_tools"), b -> {
+                    ClientPlayNetworking.send(new net.zootycoon.network.ZookeeperBathingPayloads.GiveBathingToolsPayload(this.keeperUuid));
+                    this.onClose();
+                }).asPrimary();
+                giveToolsBtn.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
+                        Component.literal(ZooTranslations.get("zootycoon.zookeeper.no_bathing_tools_toast"))
+                ));
+                addRenderableWidget(giveToolsBtn);
+            } else {
+                // Condition: Butuh Pakan / Regular -> Show [Serahkan Pakan] & [Semangat kerjanya!]
+                ZooButton giveFoodBtn = new ZooButton(actionBtnX, btnY, btnW, 22,
+                        ZooTranslations.component("zootycoon.dialog.zookeeper.btn.give_food"), b -> {
+                    ClientPlayNetworking.send(new ZooNetworkPayloads.SupplyZookeeperFoodPayload(this.keeperUuid));
+                    this.onClose();
+                }).asPrimary();
+                addRenderableWidget(giveFoodBtn);
             }
-            boolean keeperAlreadyHasTools = false;
-            if (this.previewEntity instanceof net.zootycoon.entity.ZooZookeeperEntity keeper) {
-                keeperAlreadyHasTools = keeper.hasBathingTools();
-            }
 
-            ZooButton giveToolsBtn = new ZooButton(startX + 12 + tripleBtnW + 6, btnY, tripleBtnW, 22,
-                    ZooTranslations.component("zootycoon.dialog.zookeeper.btn.give_bathing_tools"), b -> {
-                ClientPlayNetworking.send(new net.zootycoon.network.ZookeeperBathingPayloads.GiveBathingToolsPayload(this.keeperUuid));
-                this.onClose();
-            }).asPrimary();
-            giveToolsBtn.active = !keeperAlreadyHasTools && playerHasCan && playerHasBrush;
-            addRenderableWidget(giveToolsBtn);
-
-            // Action button 3: Semangat kerjanya!
-            ZooButton workBtn = new ZooButton(startX + 12 + (tripleBtnW + 6) * 2, btnY, tripleBtnW, 22,
+            // Close button: Semangat kerjanya!
+            ZooButton workBtn = new ZooButton(closeBtnX, btnY, btnW, 22,
                     ZooTranslations.component("zootycoon.dialog.zookeeper.btn.working_well"), b -> {
                 this.onClose();
             }).asPrimary();
