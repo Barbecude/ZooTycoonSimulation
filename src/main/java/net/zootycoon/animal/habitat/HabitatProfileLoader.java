@@ -277,7 +277,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 List.of(ResourceLocation.parse("minecraft:forest"), ResourceLocation.parse("minecraft:flower_forest"), ResourceLocation.parse("minecraft:birch_forest"), ResourceLocation.parse("minecraft:dark_forest")),
                 0.25f,
                 1.8f,
-                List.of(new HabitatProfile.BlockRequirement("trees", 6, "Pepohonan"))
+                List.of(new HabitatProfile.BlockRequirement("trees", 6, "Pohon Oak / Birch"))
         );
         TEMPLATES.put(ZooTycoonMod.id("forest"), forest);
         TEMPLATES.put(ZooTycoonMod.id("templates/forest"), forest);
@@ -292,7 +292,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 0.70f,
                 2.5f,
                 List.of(
-                        new HabitatProfile.BlockRequirement("trees", 6, "Pepohonan"),
+                        new HabitatProfile.BlockRequirement("trees", 6, "Pohon Oak / Birch"),
                         new HabitatProfile.BlockRequirement("water", 4, "Air")
                 )
         );
@@ -308,7 +308,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 List.of(ResourceLocation.parse("minecraft:snowy_plains"), ResourceLocation.parse("minecraft:ice_spikes"), ResourceLocation.parse("minecraft:snowy_taiga"), ResourceLocation.parse("minecraft:snowy_slopes"), ResourceLocation.parse("minecraft:frozen_peaks"), ResourceLocation.parse("minecraft:jagged_peaks"), ResourceLocation.parse("minecraft:grove"), ResourceLocation.parse("minecraft:frozen_ocean"), ResourceLocation.parse("minecraft:deep_frozen_ocean")),
                 -10.0f,
                 0.25f,
-                List.of(new HabitatProfile.BlockRequirement("snow", 6, "Salju/Es"))
+                List.of(new HabitatProfile.BlockRequirement("snow", 6, "Blok Salju / Es"))
         );
         TEMPLATES.put(ZooTycoonMod.id("snow"), snow);
         TEMPLATES.put(ZooTycoonMod.id("templates/snow"), snow);
@@ -322,7 +322,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 List.of(ResourceLocation.parse("minecraft:desert"), ResourceLocation.parse("minecraft:badlands"), ResourceLocation.parse("minecraft:eroded_badlands"), ResourceLocation.parse("minecraft:wooded_badlands")),
                 1.1f,
                 2.5f,
-                List.of(new HabitatProfile.BlockRequirement("sand", 8, "Pasir"))
+                List.of(new HabitatProfile.BlockRequirement("sand", 8, "Blok Pasir"))
         );
         TEMPLATES.put(ZooTycoonMod.id("desert"), desert);
         TEMPLATES.put(ZooTycoonMod.id("templates/desert"), desert);
@@ -336,7 +336,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 List.of(ResourceLocation.parse("minecraft:plains"), ResourceLocation.parse("minecraft:sunflower_plains"), ResourceLocation.parse("minecraft:meadow"), ResourceLocation.parse("minecraft:cherry_grove")),
                 0.25f,
                 1.8f,
-                List.of(new HabitatProfile.BlockRequirement("grass", 8, "Rumput"))
+                List.of(new HabitatProfile.BlockRequirement("grass", 8, "Blok Rumput"))
         );
         TEMPLATES.put(ZooTycoonMod.id("plains"), plains);
         TEMPLATES.put(ZooTycoonMod.id("templates/plains"), plains);
@@ -397,8 +397,8 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 List.of(
                         new HabitatProfile.BlockRequirement("water", 2, "Air"),
                         new HabitatProfile.BlockRequirement("acacia", 2, "Pohon Akasia"),
-                        new HabitatProfile.BlockRequirement("grass", 4, "Rumput"),
-                        new HabitatProfile.BlockRequirement("mud", 1, "Lumpur")
+                        new HabitatProfile.BlockRequirement("grass", 4, "Blok Rumput"),
+                        new HabitatProfile.BlockRequirement("mud", 1, "Blok Lumpur")
                 )
         );
         registerDefaultSpecies(savannaSafari,
@@ -419,8 +419,8 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 2.5f,
                 List.of(
                         new HabitatProfile.BlockRequirement("water", 2, "Air"),
-                        new HabitatProfile.BlockRequirement("stone", 2, "Batu / Tebing"),
-                        new HabitatProfile.BlockRequirement("sandstone", 2, "Batu Pasir")
+                        new HabitatProfile.BlockRequirement("stone", 2, "Batu Tebing (Smooth Stone)"),
+                        new HabitatProfile.BlockRequirement("sandstone", 2, "Batu Pasir (Sandstone)")
                 )
         );
         registerDefaultSpecies(lionProfile, "alexsmobs:lion", "naturalist:lion", "naturalist:hyena", "naturalist:leopard");
@@ -436,7 +436,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 List.of(
                         new HabitatProfile.BlockRequirement("water", 2, "Air"),
                         new HabitatProfile.BlockRequirement("jungle_wood", 4, "Pohon Rimba"),
-                        new HabitatProfile.BlockRequirement("bamboo", 2, "Bambu")
+                        new HabitatProfile.BlockRequirement("bamboo", 2, "Batang Bambu")
                 )
         );
         registerDefaultSpecies(tigerProfile, "alexsmobs:tiger", "naturalist:tiger");
@@ -450,9 +450,9 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 -10.0f,
                 0.25f,
                 List.of(
-                        new HabitatProfile.BlockRequirement("ice", 2, "Es"),
-                        new HabitatProfile.BlockRequirement("snow", 4, "Salju"),
-                        new HabitatProfile.BlockRequirement("stone", 2, "Batu / Tebing")
+                        new HabitatProfile.BlockRequirement("ice", 2, "Blok Es (Packed/Blue)"),
+                        new HabitatProfile.BlockRequirement("snow", 4, "Blok Salju"),
+                        new HabitatProfile.BlockRequirement("stone", 2, "Batu Tebing (Smooth Stone)")
                 )
         );
         registerDefaultSpecies(snowLeopardProfile, "alexsmobs:snow_leopard");
@@ -468,8 +468,8 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 2.0f,
                 List.of(
                         new HabitatProfile.BlockRequirement("water", 4, "Air Kolam"),
-                        new HabitatProfile.BlockRequirement("mud", 2, "Lumpur"),
-                        new HabitatProfile.BlockRequirement("lily_pad", 1, "Lily Pad")
+                        new HabitatProfile.BlockRequirement("mud", 2, "Blok Lumpur"),
+                        new HabitatProfile.BlockRequirement("lily_pad", 1, "Tanaman Lily Pad")
                 )
         );
         registerDefaultSpecies(wetlandProfile,
@@ -488,9 +488,9 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 1.5f,
                 List.of(
                         new HabitatProfile.BlockRequirement("spruce", 4, "Pohon Spruce"),
-                        new HabitatProfile.BlockRequirement("podzol", 2, "Podzol"),
+                        new HabitatProfile.BlockRequirement("podzol", 2, "Blok Podzol"),
                         new HabitatProfile.BlockRequirement("water", 2, "Air"),
-                        new HabitatProfile.BlockRequirement("sweet_berries", 1, "Sweet Berry")
+                        new HabitatProfile.BlockRequirement("sweet_berries", 1, "Semak Sweet Berry")
                 )
         );
         registerDefaultSpecies(borealForest,
@@ -509,9 +509,9 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 2.5f,
                 List.of(
                         new HabitatProfile.BlockRequirement("jungle_wood", 4, "Pohon Rimba"),
-                        new HabitatProfile.BlockRequirement("bamboo", 2, "Bambu"),
-                        new HabitatProfile.BlockRequirement("vines", 2, "Tanaman Rambat"),
-                        new HabitatProfile.BlockRequirement("mud", 1, "Lumpur")
+                        new HabitatProfile.BlockRequirement("bamboo", 2, "Batang Bambu"),
+                        new HabitatProfile.BlockRequirement("vines", 2, "Tanaman Rambat (Vines)"),
+                        new HabitatProfile.BlockRequirement("mud", 1, "Blok Lumpur")
                 )
         );
         registerDefaultSpecies(jungleCanopy,
@@ -528,9 +528,9 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 2.0f,
                 List.of(
                         new HabitatProfile.BlockRequirement("water", 2, "Air"),
-                        new HabitatProfile.BlockRequirement("mud", 1, "Lumpur"),
-                        new HabitatProfile.BlockRequirement("lily_pad", 1, "Lily Pad"),
-                        new HabitatProfile.BlockRequirement("flowers", 2, "Bunga")
+                        new HabitatProfile.BlockRequirement("mud", 1, "Blok Lumpur"),
+                        new HabitatProfile.BlockRequirement("lily_pad", 1, "Tanaman Lily Pad"),
+                        new HabitatProfile.BlockRequirement("flowers", 2, "Tanaman Bunga")
                 )
         );
         registerDefaultSpecies(walkInPetting,
@@ -547,8 +547,8 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 0.80f,
                 2.5f,
                 List.of(
-                        new HabitatProfile.BlockRequirement("red_sand", 2, "Pasir Merah"),
-                        new HabitatProfile.BlockRequirement("terracotta", 2, "Terracotta"),
+                        new HabitatProfile.BlockRequirement("red_sand", 2, "Blok Pasir Merah"),
+                        new HabitatProfile.BlockRequirement("terracotta", 2, "Blok Terracotta"),
                         new HabitatProfile.BlockRequirement("water", 2, "Air")
                 )
         );
@@ -565,8 +565,8 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 0.80f,
                 2.5f,
                 List.of(
-                        new HabitatProfile.BlockRequirement("sandstone", 2, "Batu Pasir"),
-                        new HabitatProfile.BlockRequirement("bamboo", 2, "Bambu"),
+                        new HabitatProfile.BlockRequirement("sandstone", 2, "Batu Pasir (Sandstone)"),
+                        new HabitatProfile.BlockRequirement("bamboo", 2, "Batang Bambu"),
                         new HabitatProfile.BlockRequirement("bone", 1, "Blok Tulang")
                 )
         );
@@ -584,9 +584,9 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 1.1f,
                 2.5f,
                 List.of(
-                        new HabitatProfile.BlockRequirement("sand", 6, "Pasir"),
-                        new HabitatProfile.BlockRequirement("sandstone", 2, "Batu Pasir"),
-                        new HabitatProfile.BlockRequirement("dead_bush", 1, "Semak Kering")
+                        new HabitatProfile.BlockRequirement("sand", 6, "Blok Pasir"),
+                        new HabitatProfile.BlockRequirement("sandstone", 2, "Batu Pasir (Sandstone)"),
+                        new HabitatProfile.BlockRequirement("dead_bush", 1, "Semak Kering (Dead Bush)")
                 )
         );
         registerDefaultSpecies(camelProfile, "minecraft:camel");
@@ -601,7 +601,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 0.60f,
                 2.0f,
                 List.of(
-                        new HabitatProfile.BlockRequirement("bamboo", 6, "Bambu"),
+                        new HabitatProfile.BlockRequirement("bamboo", 6, "Batang Bambu"),
                         new HabitatProfile.BlockRequirement("jungle_wood", 2, "Pohon Rimba"),
                         new HabitatProfile.BlockRequirement("water", 2, "Air")
                 )
@@ -618,9 +618,9 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 -10.0f,
                 0.35f,
                 List.of(
-                        new HabitatProfile.BlockRequirement("ice", 4, "Es"),
-                        new HabitatProfile.BlockRequirement("snow", 4, "Salju"),
-                        new HabitatProfile.BlockRequirement("stone", 2, "Batu Halus"),
+                        new HabitatProfile.BlockRequirement("ice", 4, "Blok Es (Packed/Blue)"),
+                        new HabitatProfile.BlockRequirement("snow", 4, "Blok Salju"),
+                        new HabitatProfile.BlockRequirement("stone", 2, "Batu Halus (Smooth Stone)"),
                         new HabitatProfile.BlockRequirement("water", 4, "Air Kolam")
                 )
         );
@@ -636,8 +636,8 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 -10.0f,
                 0.20f,
                 List.of(
-                        new HabitatProfile.BlockRequirement("ice", 4, "Es"),
-                        new HabitatProfile.BlockRequirement("snow", 6, "Salju"),
+                        new HabitatProfile.BlockRequirement("ice", 4, "Blok Es (Packed/Blue)"),
+                        new HabitatProfile.BlockRequirement("snow", 6, "Blok Salju"),
                         new HabitatProfile.BlockRequirement("water", 2, "Air")
                 )
         );
@@ -655,7 +655,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 2.0f,
                 List.of(
                         new HabitatProfile.BlockRequirement("water", 16, "Air Laut"),
-                        new HabitatProfile.BlockRequirement("coral", 4, "Prismarine / Karang")
+                        new HabitatProfile.BlockRequirement("coral", 4, "Blok Prismarine / Karang")
                 )
         );
         registerDefaultSpecies(pelagicProfile,
@@ -672,8 +672,8 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 0.20f,
                 2.2f,
                 List.of(
-                        new HabitatProfile.BlockRequirement("spruce", 4, "Pohon Tinggi"),
-                        new HabitatProfile.BlockRequirement("stone", 2, "Batu / Tebing"),
+                        new HabitatProfile.BlockRequirement("spruce", 4, "Pohon Spruce / Cemara"),
+                        new HabitatProfile.BlockRequirement("stone", 2, "Batu Tebing (Smooth Stone)"),
                         new HabitatProfile.BlockRequirement("water", 2, "Air")
                 )
         );
@@ -690,9 +690,9 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 0.25f,
                 1.8f,
                 List.of(
-                        new HabitatProfile.BlockRequirement("grass", 6, "Rumput"),
-                        new HabitatProfile.BlockRequirement("hay", 2, "Bale Jerami"),
-                        new HabitatProfile.BlockRequirement("flowers", 2, "Bunga")
+                        new HabitatProfile.BlockRequirement("grass", 6, "Blok Rumput"),
+                        new HabitatProfile.BlockRequirement("hay", 2, "Bale Jerami (Hay Block)"),
+                        new HabitatProfile.BlockRequirement("flowers", 2, "Tanaman Bunga")
                 )
         );
         registerDefaultSpecies(pettingFarm,
@@ -708,9 +708,9 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 0.20f,
                 2.2f,
                 List.of(
-                        new HabitatProfile.BlockRequirement("mushrooms", 2, "Jamur / Spora"),
-                        new HabitatProfile.BlockRequirement("podzol", 2, "Podzol / Miselium"),
-                        new HabitatProfile.BlockRequirement("terracotta", 2, "Terracotta / Pasir")
+                        new HabitatProfile.BlockRequirement("mushrooms", 2, "Blok Jamur / Miselium"),
+                        new HabitatProfile.BlockRequirement("podzol", 2, "Blok Podzol / Miselium"),
+                        new HabitatProfile.BlockRequirement("terracotta", 2, "Blok Terracotta / Pasir")
                 )
         );
         registerDefaultSpecies(fantasyDome,

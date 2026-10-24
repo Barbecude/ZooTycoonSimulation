@@ -257,8 +257,11 @@ public class HabitatEvaluator {
         if (waterRequired && !waterOk && !unmet.contains("Butuh Air")) {
             unmet.add("Butuh Air");
         }
-        if (!groundOk && !unmet.contains("Butuh Tanah Alami")) {
-            unmet.add("Butuh Tanah Alami");
+        if (!groundOk && !hasGroundRequirementInUnmet(unmet)) {
+            String specificGround = getSpecificGroundLabel(profile);
+            if (!unmet.contains("Butuh " + specificGround)) {
+                unmet.add("Butuh " + specificGround);
+            }
         }
         if (companionRequired && !hasCompanion && !unmet.contains("Butuh Pasangan")) {
             unmet.add("Butuh Pasangan");
@@ -522,6 +525,32 @@ public class HabitatEvaluator {
 
         HitResult hit = from.level().clip(new ClipContext(eye1, eye2, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, from));
         return hit.getType() == HitResult.Type.MISS;
+    }
+
+    public static String getSpecificGroundLabel(HabitatProfile profile) {
+        if (profile == null) return "Blok Rumput";
+        String name = profile.name().toLowerCase(Locale.ROOT);
+        if (name.contains("desert")) return "Blok Pasir";
+        if (name.contains("snow") || name.contains("ice")) return "Blok Salju / Es";
+        if (name.contains("swamp") || name.contains("wetland")) return "Blok Lumpur";
+        if (name.contains("taiga") || name.contains("boreal") || name.contains("forest")) return "Blok Podzol";
+        if (name.contains("badlands") || name.contains("arid")) return "Pasir Merah / Terracotta";
+        if (name.contains("ocean") || name.contains("freshwater")) return "Dasar Pasir / Kerikil";
+        if (name.contains("fantasy")) return "Blok Miselium / Podzol";
+        return "Blok Rumput";
+    }
+
+    private static boolean hasGroundRequirementInUnmet(List<String> unmet) {
+        if (unmet == null || unmet.isEmpty()) return false;
+        for (String item : unmet) {
+            String lower = item.toLowerCase(Locale.ROOT);
+            if (lower.contains("rumput") || lower.contains("pasir") || lower.contains("salju")
+                    || lower.contains("lumpur") || lower.contains("podzol") || lower.contains("miselium")
+                    || lower.contains("terracotta") || lower.contains("es")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static String capitalize(String str) {

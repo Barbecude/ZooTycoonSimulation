@@ -284,7 +284,7 @@ public class ZooAnimalHologramRenderer {
                     redNeeds.add(Component.literal("• Butuh Air"));
                 }
                 if (!habitatInfo.groundOk()) {
-                    redNeeds.add(Component.literal("• Butuh Tanah Alami"));
+                    redNeeds.add(Component.literal("• Butuh " + net.zootycoon.animal.habitat.HabitatEvaluator.getSpecificGroundLabel(profile)));
                 }
                 if (!habitatInfo.mateOk()) {
                     redNeeds.add(Component.literal("• Butuh Pasangan"));
