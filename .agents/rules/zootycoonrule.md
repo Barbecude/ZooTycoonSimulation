@@ -50,7 +50,6 @@ fungsi yang belum fix atau belum ada atau masih cacat (Dilarang mengerjakan semu
 
 fungsi yg belum ada atau masih cacat (jangan eksekusi fitur ini sebelum secara eksplisit diminta)
 
-- animasi  zookeper  membersihkan satwa menggunakan watering can dan brush
 - Sistem Rating Zoo Bangun formula perhitungan rating total 5 star dinamis berdasarkan rata-rata kesehatan satwa, kebersihan kandang, kelengkapan fasilitas, dan kepuasan pengunjung, serta tampilkan indikator rating di UI/HUD.
 - tambahkan already builded biome di kategori "terrain" di menu bangunan yang dimana already builded biome adalah biome yg di ambil dari world generation asli dari mod apapun misal user pake world generation vanila atau moded world generation apapun seperti tectonic nah di kategori terrain itu sudah ada already builded biome yg otomatis di generate oleh mod ini dan yg di generate nya itu world generation dari mod world generation itu sendiri dengan size biome yg bisa dikustomisasi. 
 - Kunjungan Pengunjung Mengikuti Rating dan Kualitas
@@ -59,4 +58,19 @@ Perbarui spawner pengunjung agar kapasitas maksimal dan frekuensi kedatangan ber
 Sediakan pengaturan harga tiket dan makanan/minuman yang berdampak pada keputusan pengunjung, serta terapkan pemotongan gaji berkala (biaya operasional harian) untuk seluruh staf zoo.
 - Gudang (Warehouse dan Rantai Pasok)
 Bangun sistem gudang sentral untuk menyimpan stok pakan dan suplai grosir, serta integrasikan zookeeper, dan cashier untuk mengambil jatah pakan dari gudang tanpa memberi pakan awal otomatis.
+- Alasan Kepuasan Pengunjung Ringkas (Single-Reason Visitor Feedback)
+- kendaraan untuk menangkap hewan
+- mob bag logic
 
+Urutan eksekusi sederhana:
+
+
+2. Finansial dan penetapan harga Alasan: Mengatur harga tiket, harga makanan, dan pemotongan gaji staf harian.
+
+3. Logika Mob Bag dan mobil Alasan: Alat tangan untuk menangkap satwa liar dan memindahkannya ke mobil untuk membawa nya ke zoo.
+
+4. Sistem rating zoo 5 star dan indikator UI Alasan: Menghitung nilai kebun binatang dari kesehatan satwa, kebersihan, dan kepuasan pengunjung.
+
+5. Spawner pengunjung mengikuti rating Alasan: Jumlah dan frekuensi pengunjung otomatis bertambah jika rating zoo tinggi.
+
+6. Already builded biome di kategori terrain Alasan: Menghasilkan biome asli dari world generation dengan ukuran kustom.

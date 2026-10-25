@@ -532,7 +532,7 @@ public class ZooAnimalHungerManager {
                     mob.getNavigation().stop();
                     mob.getLookControl().setLookAt(closestFoodTrough.getX() + 0.5, closestFoodTrough.getY() + 0.2, closestFoodTrough.getZ() + 0.5);
 
-                    if (hunger < MAX_HUNGER && targetFoodTrough.hasFood()) {
+                                if (hunger < MAX_HUNGER && targetFoodTrough.hasFood()) {
                         ItemStack food = targetFoodTrough.extractFood(1);
                         if (!food.isEmpty()) {
                             feedAnimal(mob, food, null); // Emits HEART particles and restores hunger
