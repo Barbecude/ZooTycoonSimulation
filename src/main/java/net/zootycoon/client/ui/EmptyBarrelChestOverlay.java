@@ -1,20 +1,24 @@
 package net.zootycoon.client.ui;
 
-import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.TooltipComponentCallback;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
 import net.minecraft.world.item.ItemStack;
 import net.zootycoon.entity.ZooEntities;
 import net.zootycoon.network.WarehousePayloads;
@@ -25,6 +29,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 public class EmptyBarrelChestOverlay {
@@ -42,6 +47,52 @@ public class EmptyBarrelChestOverlay {
     private static final int CHEST_HEIGHT = 166;
     private static final int CARD_HEIGHT = 68;
     private static final int CARD_GAP = 5;
+
+    public record RawIngredientsTooltipData(List<ItemStack> ingredients) implements TooltipComponent {
+    }
+
+    public static class RawIngredientsClientTooltip implements ClientTooltipComponent {
+        private final List<ItemStack> ingredients;
+        private static final int ROW_HEIGHT = 14;
+
+        public RawIngredientsClientTooltip(RawIngredientsTooltipData data) {
+            this.ingredients = data.ingredients();
+        }
+
+        @Override
+        public int getHeight() {
+            return ingredients.size() * ROW_HEIGHT + 2;
+        }
+
+        @Override
+        public int getWidth(Font font) {
+            int maxW = 0;
+            for (ItemStack raw : ingredients) {
+                String text = raw.getCount() + "x " + raw.getHoverName().getString();
+                maxW = Math.max(maxW, 14 + font.width(text));
+            }
+            return maxW;
+        }
+
+        @Override
+        public void renderImage(Font font, int x, int y, GuiGraphics graphics) {
+            int curY = y;
+            for (ItemStack raw : ingredients) {
+                graphics.pose().pushPose();
+                graphics.pose().translate(x, curY - 1, 400.0f);
+                graphics.pose().scale(0.75f, 0.75f, 1.0f);
+                graphics.renderFakeItem(raw, 0, 0);
+                graphics.pose().popPose();
+
+                String text = raw.getCount() + "x " + raw.getHoverName().getString();
+                graphics.pose().pushPose();
+                graphics.pose().translate(0.0f, 0.0f, 400.0f);
+                graphics.drawString(font, text, x + 14, curY + 1, 0xFFAAAAAA, true);
+                graphics.pose().popPose();
+                curY += ROW_HEIGHT;
+            }
+        }
+    }
 
     public static void prepareBarrelOpen(BlockPos pos, String category) {
         activeBarrelPos = pos;
@@ -68,6 +119,13 @@ public class EmptyBarrelChestOverlay {
     }
 
     public static void register() {
+        TooltipComponentCallback.EVENT.register(data -> {
+            if (data instanceof RawIngredientsTooltipData rawData) {
+                return new RawIngredientsClientTooltip(rawData);
+            }
+            return null;
+        });
+
         ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
             if (screen instanceof ContainerScreen) {
                 ScreenEvents.afterRender(screen).register((scr, graphics, mouseX, mouseY, tickDelta) -> {
@@ -347,80 +405,24 @@ public class EmptyBarrelChestOverlay {
             graphics.fill(trackX, thumbY, trackX + 3, thumbY + thumbH, (scrollHover || isDraggingScrollbar) ? 0xFF94A3B8 : 0xFF475569);
         }
 
-        // 5. Custom Tooltip with real 16x16 raw ingredient icons replacing the '-' dash
+        // 5. Vanilla Tooltip with real food icons inline via TooltipComponent
         if (hoveredStack != null && hoveredDto != null) {
-            renderCustomIngredientTooltip(screen, graphics, font, hoveredStack, hoveredDto, mouseX, mouseY);
+            List<Component> lines = new ArrayList<>();
+            lines.add(hoveredStack.getHoverName());
+            if ("CASHIER".equalsIgnoreCase(hoveredDto.staffType())) {
+                lines.add(Component.literal(ZooTranslations.get("zootycoon.warehouse.tooltip.raw_needed")).withStyle(ChatFormatting.YELLOW));
+                graphics.renderTooltip(
+                        font,
+                        lines,
+                        Optional.of(new RawIngredientsTooltipData(hoveredDto.rawIngredients())),
+                        mouseX,
+                        mouseY
+                );
+            } else {
+                lines.add(Component.literal(ZooTranslations.get("zootycoon.warehouse.tooltip.zookeeper_food")).withStyle(ChatFormatting.GRAY));
+                graphics.renderTooltip(font, lines, Optional.empty(), mouseX, mouseY);
+            }
         }
-    }
-
-    private static void renderCustomIngredientTooltip(
-            Screen screen,
-            GuiGraphics graphics,
-            Font font,
-            ItemStack hoveredStack,
-            WarehousePayloads.StaffRequestDto dto,
-            int mouseX,
-            int mouseY
-    ) {
-        String title = hoveredStack.getHoverName().getString();
-        boolean isCashier = "CASHIER".equalsIgnoreCase(dto.staffType());
-        String subHeader = isCashier
-                ? ZooTranslations.get("zootycoon.warehouse.tooltip.raw_needed")
-                : ZooTranslations.get("zootycoon.warehouse.tooltip.zookeeper_food");
-
-        List<ItemStack> itemsToShow = isCashier ? dto.rawIngredients() : List.of();
-
-        int maxW = Math.max(font.width(title), font.width(subHeader));
-        for (ItemStack raw : itemsToShow) {
-            String rowText = raw.getCount() + "x " + raw.getHoverName().getString();
-            maxW = Math.max(maxW, 16 + font.width(rowText));
-        }
-
-        int pad = 6;
-        int rowH = 15;
-        int boxW = maxW + pad * 2;
-        int boxH = pad * 2 + 12 + 12 + (itemsToShow.size() * rowH);
-
-        int bx = mouseX + 12;
-        int by = mouseY - 12;
-        if (bx + boxW > screen.width - 4) {
-            bx = Math.max(4, mouseX - boxW - 8);
-        }
-        if (by + boxH > screen.height - 4) {
-            by = Math.max(4, screen.height - boxH - 4);
-        }
-        if (by < 4) {
-            by = 4;
-        }
-
-        graphics.pose().pushPose();
-        graphics.pose().translate(0.0f, 0.0f, 400.0f);
-
-        // Vanilla/Slate tooltip box background & border
-        graphics.fill(bx, by, bx + boxW, by + boxH, 0xF0100010);
-        graphics.renderOutline(bx, by, boxW, boxH, 0xFF5000FF);
-
-        int curY = by + pad;
-        graphics.drawString(font, title, bx + pad, curY, 0xFFFFFFFF, true);
-        curY += 12;
-
-        graphics.drawString(font, subHeader, bx + pad, curY, isCashier ? 0xFFFFFF55 : 0xFFAAAAAA, true);
-        curY += 12;
-
-        for (ItemStack raw : itemsToShow) {
-            // Render real 16x16 item icon scaled cleanly to 12x12 inline instead of '-' dash
-            graphics.pose().pushPose();
-            graphics.pose().translate(bx + pad, curY - 1, 0.0f);
-            graphics.pose().scale(0.75f, 0.75f, 1.0f);
-            graphics.renderFakeItem(raw, 0, 0);
-            graphics.pose().popPose();
-
-            String rowText = raw.getCount() + "x " + raw.getHoverName().getString();
-            graphics.drawString(font, rowText, bx + pad + 15, curY + 1, 0xFFAAAAAA, true);
-            curY += rowH;
-        }
-
-        graphics.pose().popPose();
     }
 
     private static boolean handleMouseClicked(ContainerScreen screen, double mouseX, double mouseY, int button) {
