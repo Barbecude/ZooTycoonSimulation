@@ -200,8 +200,18 @@ public class HabitatEvaluator {
                     count = blockCounts.getOrDefault("acacia", 0);
                 } else if ("spruce".equals(type)) {
                     count = blockCounts.getOrDefault("spruce", 0);
-                } else if ("jungle_wood".equals(type)) {
+                } else if ("jungle_wood".equals(type) || "jungle".equals(type)) {
                     count = blockCounts.getOrDefault("jungle_wood", 0);
+                } else if ("oak".equals(type)) {
+                    count = blockCounts.getOrDefault("oak", 0);
+                } else if ("birch".equals(type)) {
+                    count = blockCounts.getOrDefault("birch", 0);
+                } else if ("dark_oak".equals(type)) {
+                    count = blockCounts.getOrDefault("dark_oak", 0);
+                } else if ("mangrove".equals(type)) {
+                    count = blockCounts.getOrDefault("mangrove", 0);
+                } else if ("cherry".equals(type)) {
+                    count = blockCounts.getOrDefault("cherry", 0);
                 } else if ("vines".equals(type)) {
                     count = blockCounts.getOrDefault("vines", 0);
                 } else if ("flowers".equals(type)) {
@@ -237,6 +247,22 @@ public class HabitatEvaluator {
                 if (count < req.minCount()) {
                     extraBlocksOk = false;
                     String label = (req.label() != null && !req.label().isEmpty()) ? req.label() : capitalize(type);
+                    if (label.equalsIgnoreCase("Pepohonan") || label.equalsIgnoreCase("Pohon")) {
+                        if (profile.name().toLowerCase(Locale.ROOT).contains("jungle") || type.contains("jungle")) {
+                            label = "Pohon Jungle";
+                        } else {
+                            label = "Pohon Oak";
+                        }
+                    }
+                    if (label.contains("Rimba")) {
+                        label = label.replace("Rimba", "Jungle");
+                    }
+                    if (label.contains("Akasia")) {
+                        label = label.replace("Akasia", "Acacia");
+                    }
+                    if (label.contains("Cemara")) {
+                        label = label.replace(" / Cemara", "").replace("/ Cemara", "").replace("Cemara", "Spruce");
+                    }
                     if (!unmet.contains("Butuh " + label)) {
                         unmet.add("Butuh " + label);
                     }
@@ -370,6 +396,37 @@ public class HabitatEvaluator {
                     if (state.is(Blocks.JUNGLE_LOG) || state.is(Blocks.JUNGLE_WOOD) || state.is(Blocks.JUNGLE_LEAVES)
                             || state.is(Blocks.STRIPPED_JUNGLE_LOG) || state.is(Blocks.STRIPPED_JUNGLE_WOOD)) {
                         counts.merge("jungle_wood", 1, Integer::sum);
+                    }
+
+                    // Oak Wood / Leaves
+                    if (state.is(Blocks.OAK_LOG) || state.is(Blocks.OAK_WOOD) || state.is(Blocks.OAK_LEAVES)
+                            || state.is(Blocks.STRIPPED_OAK_LOG) || state.is(Blocks.STRIPPED_OAK_WOOD)) {
+                        counts.merge("oak", 1, Integer::sum);
+                    }
+
+                    // Birch Wood / Leaves
+                    if (state.is(Blocks.BIRCH_LOG) || state.is(Blocks.BIRCH_WOOD) || state.is(Blocks.BIRCH_LEAVES)
+                            || state.is(Blocks.STRIPPED_BIRCH_LOG) || state.is(Blocks.STRIPPED_BIRCH_WOOD)) {
+                        counts.merge("birch", 1, Integer::sum);
+                    }
+
+                    // Dark Oak Wood / Leaves
+                    if (state.is(Blocks.DARK_OAK_LOG) || state.is(Blocks.DARK_OAK_WOOD) || state.is(Blocks.DARK_OAK_LEAVES)
+                            || state.is(Blocks.STRIPPED_DARK_OAK_LOG) || state.is(Blocks.STRIPPED_DARK_OAK_WOOD)) {
+                        counts.merge("dark_oak", 1, Integer::sum);
+                    }
+
+                    // Mangrove Wood / Leaves / Roots
+                    if (state.is(Blocks.MANGROVE_LOG) || state.is(Blocks.MANGROVE_WOOD) || state.is(Blocks.MANGROVE_LEAVES)
+                            || state.is(Blocks.MANGROVE_ROOTS) || state.is(Blocks.MUDDY_MANGROVE_ROOTS)
+                            || state.is(Blocks.STRIPPED_MANGROVE_LOG) || state.is(Blocks.STRIPPED_MANGROVE_WOOD)) {
+                        counts.merge("mangrove", 1, Integer::sum);
+                    }
+
+                    // Cherry Wood / Leaves
+                    if (state.is(Blocks.CHERRY_LOG) || state.is(Blocks.CHERRY_WOOD) || state.is(Blocks.CHERRY_LEAVES)
+                            || state.is(Blocks.STRIPPED_CHERRY_LOG) || state.is(Blocks.STRIPPED_CHERRY_WOOD)) {
+                        counts.merge("cherry", 1, Integer::sum);
                     }
 
                     // Vines

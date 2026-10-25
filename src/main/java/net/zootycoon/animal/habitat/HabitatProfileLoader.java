@@ -277,7 +277,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 List.of(ResourceLocation.parse("minecraft:forest"), ResourceLocation.parse("minecraft:flower_forest"), ResourceLocation.parse("minecraft:birch_forest"), ResourceLocation.parse("minecraft:dark_forest")),
                 0.25f,
                 1.8f,
-                List.of(new HabitatProfile.BlockRequirement("trees", 6, "Pohon Oak / Birch"))
+                List.of(new HabitatProfile.BlockRequirement("oak", 6, "Pohon Oak"))
         );
         TEMPLATES.put(ZooTycoonMod.id("forest"), forest);
         TEMPLATES.put(ZooTycoonMod.id("templates/forest"), forest);
@@ -292,7 +292,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 0.70f,
                 2.5f,
                 List.of(
-                        new HabitatProfile.BlockRequirement("trees", 6, "Pohon Oak / Birch"),
+                        new HabitatProfile.BlockRequirement("jungle_wood", 6, "Pohon Jungle"),
                         new HabitatProfile.BlockRequirement("water", 4, "Air")
                 )
         );
@@ -396,7 +396,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 2.5f,
                 List.of(
                         new HabitatProfile.BlockRequirement("water", 2, "Air"),
-                        new HabitatProfile.BlockRequirement("acacia", 2, "Pohon Akasia"),
+                        new HabitatProfile.BlockRequirement("acacia", 2, "Pohon Acacia"),
                         new HabitatProfile.BlockRequirement("grass", 4, "Blok Rumput"),
                         new HabitatProfile.BlockRequirement("mud", 1, "Blok Lumpur")
                 )
@@ -435,7 +435,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 2.5f,
                 List.of(
                         new HabitatProfile.BlockRequirement("water", 2, "Air"),
-                        new HabitatProfile.BlockRequirement("jungle_wood", 4, "Pohon Rimba"),
+                        new HabitatProfile.BlockRequirement("jungle_wood", 4, "Pohon Jungle"),
                         new HabitatProfile.BlockRequirement("bamboo", 2, "Batang Bambu")
                 )
         );
@@ -502,13 +502,13 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
         HabitatProfile jungleCanopy = new HabitatProfile(
                 ZooTycoonMod.id("jungle_canopy"),
                 "jungle",
-                "Kanopi Rimba",
+                "Kanopi Jungle",
                 List.of("#minecraft:is_jungle"),
                 List.of(ResourceLocation.parse("minecraft:jungle"), ResourceLocation.parse("minecraft:bamboo_jungle"), ResourceLocation.parse("minecraft:sparse_jungle")),
                 0.70f,
                 2.5f,
                 List.of(
-                        new HabitatProfile.BlockRequirement("jungle_wood", 4, "Pohon Rimba"),
+                        new HabitatProfile.BlockRequirement("jungle_wood", 4, "Pohon Jungle"),
                         new HabitatProfile.BlockRequirement("bamboo", 2, "Batang Bambu"),
                         new HabitatProfile.BlockRequirement("vines", 2, "Tanaman Rambat (Vines)"),
                         new HabitatProfile.BlockRequirement("mud", 1, "Blok Lumpur")
@@ -602,7 +602,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 2.0f,
                 List.of(
                         new HabitatProfile.BlockRequirement("bamboo", 6, "Batang Bambu"),
-                        new HabitatProfile.BlockRequirement("jungle_wood", 2, "Pohon Rimba"),
+                        new HabitatProfile.BlockRequirement("jungle_wood", 2, "Pohon Jungle"),
                         new HabitatProfile.BlockRequirement("water", 2, "Air")
                 )
         );
@@ -672,7 +672,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 0.20f,
                 2.2f,
                 List.of(
-                        new HabitatProfile.BlockRequirement("spruce", 4, "Pohon Spruce / Cemara"),
+                        new HabitatProfile.BlockRequirement("spruce", 4, "Pohon Spruce"),
                         new HabitatProfile.BlockRequirement("stone", 2, "Batu Tebing (Smooth Stone)"),
                         new HabitatProfile.BlockRequirement("water", 2, "Air")
                 )

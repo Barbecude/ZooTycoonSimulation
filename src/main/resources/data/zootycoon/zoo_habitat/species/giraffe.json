@@ -5,10 +5,9 @@
   "template": "zootycoon:savanna",
   "extra_blocks": [
     {
-      "type": "trees",
+      "type": "acacia",
       "min_count": 4,
-      "label": "Pohon Akasia"
+      "label": "Pohon Acacia"
     }
   ]
 }
-

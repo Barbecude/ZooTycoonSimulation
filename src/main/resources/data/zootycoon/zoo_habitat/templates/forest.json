@@ -13,9 +13,9 @@
   "max_temperature": 1.8,
   "required_blocks": [
     {
-      "type": "trees",
+      "type": "oak",
       "min_count": 6,
-      "label": "Pepohonan"
+      "label": "Pohon Oak"
     }
   ]
 }

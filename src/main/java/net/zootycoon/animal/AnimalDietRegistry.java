@@ -352,7 +352,7 @@ public class AnimalDietRegistry {
 
         // Carnivores / Predators / Omnivores (Thrown Meat & Fish)
         register("naturalist:lion", FeedingType.THROWN_MEAT, "Predator Savana (Daging Segar)", true, false, Items.BEEF, Items.PORKCHOP, Items.MUTTON, Items.CHICKEN, Items.RABBIT);
-        register("naturalist:tiger", FeedingType.THROWN_MEAT, "Predator Rimba (Daging Segar)", true, false, Items.BEEF, Items.PORKCHOP, Items.MUTTON, Items.CHICKEN, Items.RABBIT);
+        register("naturalist:tiger", FeedingType.THROWN_MEAT, "Predator Jungle (Daging Segar)", true, false, Items.BEEF, Items.PORKCHOP, Items.MUTTON, Items.CHICKEN, Items.RABBIT);
         register("naturalist:bear", FeedingType.THROWN_MEAT, "Omnivora Besar (Ikan, Madu, Beri & Daging)", true, true, Items.SALMON, Items.COD, Items.HONEY_BOTTLE, Items.SWEET_BERRIES, Items.BEEF, Items.PORKCHOP);
         register("naturalist:wolf", FeedingType.THROWN_MEAT, "Karnivora (Daging Segar)", true, false, Items.BEEF, Items.PORKCHOP, Items.CHICKEN, Items.MUTTON, Items.RABBIT);
         register("naturalist:alligator", FeedingType.THROWN_MEAT, "Karnivora Rawa (Daging & Ikan)", true, true, Items.BEEF, Items.PORKCHOP, Items.CHICKEN, Items.SALMON, Items.COD);

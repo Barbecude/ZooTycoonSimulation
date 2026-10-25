@@ -19,6 +19,7 @@
 | 14 | Pemaksaan feeding trough & AI jangkauan makan | SELESAI | 2026-10-24 | AI Goal AnimalEatFromTroughGoal & perbaikan jangkauan makan/minum satwa berleher tinggi / ramping (ostrich, jerapah, unta, burung, dll) |
 | 15 | Kondisi Dialog 2-Tombol & Perbaikan Toast Pakan | SELESAI | 2026-10-24 | Rework dialog zookeeper menjadi tepat 2 tombol sesuai kebutuhan (Alat Mandi vs Pakan) dan perbaikan toast pakan |
 | 16 | Zookeeper Lempar Pakan, Animasi Mandi & Brush First-Person | SELESAI | 2026-10-24 | AI lempar pakan zookeeper untuk karnivora, dialog dinamis pakan lempar vs palung, animasi model penyiram & sikat zookeeper, dan animasi first-person brush player |
+| 17 | Detail Jenis Pohon Habitat (Bahasa Inggris) | SELESAI | 2026-10-25 | Mengganti label generic pepohonan dan istilah terjemahan menjadi nama spesifik jenis pohon dalam bahasa Inggris (Pohon Jungle, Pohon Oak, Pohon Acacia, Pohon Spruce, dll) |
 
 ## Keputusan
 - Koreksi CONTEXT.md poin T5: Sync periodik sebenarnya ada di server tick setiap 40 tick (2 detik) melalui `ZooNetworkPayloads.sendAnimalSync(player)`. Namun, method ini HANYA mengirimkan hewan yang sudah terdaftar (`isTagged`) dan dimiliki pemain (`isOwnedBy`). Hewan yang belum terdaftar tidak pernah masuk payload sehingga client renderer selalu menerima null dan jatuh ke nilai palsu (80/80/100). Mekanisme request inspeksi on-demand per target belum ada.
@@ -233,19 +234,33 @@
   4. Perluasan Ragam Makanan Palung pada AnimalDietRegistry:
      - Menambahkan variasi benih (pumpkin, beetroot, torchflower), jerami (hay block), gandum, dan apel untuk burung unta, emu, kasuari, jerapah, gajah, rusa, bebek, kura-kura, unta, dan kangguru.
 
+- Spesifikasi Jenis Pohon Habitat Berbahasa Inggris (Fase 17):
+  1. Penggantian Istilah Generic & Bahasa Daerah:
+     - Mengubah kebutuhan template `jungle.json` dari "Pepohonan" menjadi "Pohon Jungle" (`jungle_wood`).
+     - Mengubah kebutuhan template `forest.json` dari "Pepohonan" menjadi "Pohon Oak" (`oak`).
+     - Mengubah kebutuhan spesies `giraffe.json` dari "Pohon Akasia" menjadi "Pohon Acacia" (`acacia`).
+     - Mengubah `HabitatProfileLoader.java` untuk menghapus "Pohon Rimba", "Pohon Akasia", dan "Pohon Spruce / Cemara" menjadi "Pohon Jungle", "Pohon Acacia", dan "Pohon Spruce".
+     - Mengubah `AnimalDietRegistry.java` dari "Predator Rimba" menjadi "Predator Jungle".
+  2. Evaluasi & Scanning Blok Kayu Spesifik pada HabitatEvaluator:
+     - Menambahkan pemindaian blok dan daun spesifik untuk oak, birch, dark_oak, mangrove, dan cherry di `scanSurroundingBlocks`.
+     - Mendukung tipe kebutuhan `jungle` / `jungle_wood`, `oak`, `birch`, `dark_oak`, `mangrove`, dan `cherry` di `evaluate`.
+     - Sanitasi dinamis pada label kebutuhan pohon yang belum terpenuhi (`unmet`) agar bila terdapat sisa template atau fallback bertuliskan "Pepohonan", "Rimba", "Akasia", atau "Cemara", label otomatis terformat rapi menjadi "Pohon Jungle", "Pohon Oak", "Pohon Acacia", atau "Pohon Spruce".
+
 ## Bukti Selesai
 - Seluruh kode terkompilasi bersih tanpa error dengan `compileJava` dan `build`.
 - File jar `zootycoon-1.0.0.jar` telah tersalin ke direktori mods profil Modrinth.
-- Model `heater_off.json` dan `heater_on.json` memiliki cerobong asap lengkap (13 elemen).
-- VoxelShape `ZooHeaterBlock` dan partikel asap cerobong telah aktif.
-- Format durasi Heater dan Cooler Box menyajikan menit dan detik dalam bahasa Indonesia.
+- Template habitat jungle, forest, dan spesies jerapah telah menggunakan nama jenis pohon spesifik dalam bahasa Inggris.
+- Scanning dan evaluasi blok kayu/daun pohon spesifik telah terimplementasi di `HabitatEvaluator.java`.
 
 ## Blocker
 - Tidak ada blocker.
 
 ## File yang diubah
-- src/main/java/net/zootycoon/animal/ai/AnimalEatFromTroughGoal.java
-- src/main/java/net/zootycoon/animal/ZooAnimalHungerManager.java
+- src/main/resources/data/zootycoon/zoo_habitat/templates/jungle.json
+- src/main/resources/data/zootycoon/zoo_habitat/templates/forest.json
+- src/main/resources/data/zootycoon/zoo_habitat/species/giraffe.json
+- src/main/java/net/zootycoon/animal/habitat/HabitatProfileLoader.java
+- src/main/java/net/zootycoon/animal/habitat/HabitatEvaluator.java
 - src/main/java/net/zootycoon/animal/AnimalDietRegistry.java
 - docs/hologram/PROGRESS.md
 
@@ -253,4 +268,4 @@
 - Tidak ada.
 
 ## Belum terverifikasi
-- Pengujian in-game langsung oleh pengguna untuk memeriksa visual model cerobong heater, partikel asap cerobong, dan popup durasi bahan bakar dalam menit.
+- Pengujian visual in-game langsung oleh pengguna untuk memeriksa teks checklist kebutuhan habitat pohon pada satwa hutan/rimba (seperti Tiger/Panda/Gorilla) dan savana (Giraffe).
