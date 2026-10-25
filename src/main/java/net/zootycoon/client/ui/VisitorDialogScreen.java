@@ -57,6 +57,8 @@ public class VisitorDialogScreen extends EasyNpcDialogScreen {
             return ZooTranslations.component("zootycoon.dialog.visitor.speech.amazed");
         } else if ("ADORED".equalsIgnoreCase(moodName)) {
             return ZooTranslations.component("zootycoon.dialog.visitor.speech.adored");
+        } else if ("SCARED".equalsIgnoreCase(moodName)) {
+            return ZooTranslations.component("zootycoon.dialog.visitor.speech.scared");
         } else {
             return ZooTranslations.component("zootycoon.dialog.visitor.speech.neutral");
         }

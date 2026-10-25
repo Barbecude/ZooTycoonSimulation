@@ -84,7 +84,8 @@ public class ZooVisitorEntity extends PathfinderMob {
         AMAZED("zootycoon.visitor.mood.amazed", 0x00FFFF),
         ADORED("zootycoon.visitor.mood.adored", 0xFF69B4),
         HUNGRY("zootycoon.visitor.mood.hungry", 0xFF0000),
-        THIRSTY("zootycoon.visitor.mood.thirsty", 0x0000FF);
+        THIRSTY("zootycoon.visitor.mood.thirsty", 0x0000FF),
+        SCARED("zootycoon.visitor.mood.scared", 0xFF4500);
 
         public final String labelKey;
         public final int color;
@@ -130,6 +131,7 @@ public class ZooVisitorEntity extends PathfinderMob {
     private int watchingAnimalId = -1;
     // 0 = small/baby, 1 = normal, 2 = big
     private int watchingAnimalSize = -1;
+    private boolean watchingAnimalIsPredator = false;
     private int eatTimer = 0;
     private int runBurstTimer = 0;
     private int runBurstType = 0; // 0 = none, 1 = run only, 2 = run & jump
@@ -418,6 +420,11 @@ public class ZooVisitorEntity extends PathfinderMob {
                 this.setNeedsToilet(true);
                 this.setMood(VisitorMood.TOILET);
             }
+            case SCARED -> {
+                this.watchingAnimalIsPredator = true;
+                this.watchingAnimalId = 999999;
+                this.setMood(VisitorMood.SCARED);
+            }
             default -> {
                 this.setMood(VisitorMood.NEUTRAL);
             }
@@ -693,7 +700,9 @@ public class ZooVisitorEntity extends PathfinderMob {
             return;
         }
         if (watchingAnimalId != -1) {
-            if (watchingAnimalSize == 2) {
+            if (watchingAnimalIsPredator) {
+                setMood(VisitorMood.SCARED);
+            } else if (watchingAnimalSize == 2) {
                 setMood(VisitorMood.AMAZED);
             } else if (watchingAnimalSize == 0) {
                 setMood(VisitorMood.ADORED);
@@ -1818,6 +1827,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             if (targetAnimal != null) {
                 visitor.watchingAnimalId = targetAnimal.getId();
                 visitor.watchingAnimalSize = determineAnimalSize(targetAnimal);
+                visitor.watchingAnimalIsPredator = net.zootycoon.animal.habitat.HabitatEvaluator.isApexPredator(targetAnimal);
                 watchPos = computeWatchPos(targetAnimal);
                 visitor.updateMood();
             }
@@ -1831,6 +1841,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             }
             visitor.watchingAnimalId = -1;
             visitor.watchingAnimalSize = -1;
+            visitor.watchingAnimalIsPredator = false;
             targetAnimal = null;
             watchPos = null;
             visitor.updateMood();

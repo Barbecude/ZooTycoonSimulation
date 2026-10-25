@@ -1741,7 +1741,11 @@ public class ZooNetworkPayloads {
                             }
                         }
                         sendAnimalSync(player);
-                        sendToast(player, "zootycoon.toast.title.success", "zootycoon.ui.animals.zookeeper_assigned_toast", 1);
+                        if (payload.zookeeperUuid() != null) {
+                            sendToast(player, "zootycoon.toast.title.success", "zootycoon.ui.animals.zookeeper_assigned_toast", 1);
+                        } else {
+                            sendToast(player, "zootycoon.toast.title.info", "zootycoon.ui.animals.zookeeper_unassigned_toast", 2);
+                        }
                         break;
                     }
                 }

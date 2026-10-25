@@ -61,6 +61,13 @@ public class ZooCommands {
                             .then(Commands.argument("jumlah", IntegerArgumentType.integer(1, 100))
                                     .executes(ctx -> spawnDebugVisitors(ctx.getSource(), ZooVisitorEntity.VisitorMood.TOILET, IntegerArgumentType.getInteger(ctx, "jumlah")))
                             )
+                    )
+                    // 5. /zootycoon takut [jumlah pengunjung]
+                    .then(Commands.literal("takut")
+                            .executes(ctx -> spawnDebugVisitors(ctx.getSource(), ZooVisitorEntity.VisitorMood.SCARED, 1))
+                            .then(Commands.argument("jumlah", IntegerArgumentType.integer(1, 100))
+                                    .executes(ctx -> spawnDebugVisitors(ctx.getSource(), ZooVisitorEntity.VisitorMood.SCARED, IntegerArgumentType.getInteger(ctx, "jumlah")))
+                            )
                     );
 
             dispatcher.register(root);
@@ -298,6 +305,7 @@ public class ZooCommands {
             case HUNGRY -> "lapar";
             case THIRSTY -> "haus";
             case TOILET -> "kebelet toilet";
+            case SCARED -> "takut/waspada";
             default -> mood.name().toLowerCase();
         };
 
@@ -316,6 +324,7 @@ public class ZooCommands {
         source.sendSuccess(() -> Component.literal("/zootycoon lapar [jumlah] - Spawn pengunjung dengan mood lapar").withStyle(ChatFormatting.GRAY), false);
         source.sendSuccess(() -> Component.literal("/zootycoon haus [jumlah] - Spawn pengunjung dengan mood haus").withStyle(ChatFormatting.GRAY), false);
         source.sendSuccess(() -> Component.literal("/zootycoon toilet [jumlah] - Spawn pengunjung dengan mood toilet").withStyle(ChatFormatting.GRAY), false);
+        source.sendSuccess(() -> Component.literal("/zootycoon takut [jumlah] - Spawn pengunjung dengan mood takut").withStyle(ChatFormatting.GRAY), false);
         return 1;
     }
 }

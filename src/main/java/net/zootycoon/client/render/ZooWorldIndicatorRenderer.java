@@ -136,6 +136,7 @@ public class ZooWorldIndicatorRenderer {
                         case ADORED -> ZooTycoonMod.id("textures/gui/moods/mood_adored.png");
                         case HUNGRY -> ZooTycoonMod.id("textures/gui/moods/mood_hungry.png");
                         case THIRSTY -> ZooTycoonMod.id("textures/gui/moods/mood_thirsty.png");
+                        case SCARED -> ZooTycoonMod.id("textures/gui/moods/mood_scared.png");
                         default -> null;
                     };
                     if (tex != null) {

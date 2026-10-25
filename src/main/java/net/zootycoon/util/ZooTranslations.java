@@ -50,6 +50,13 @@ public final class ZooTranslations {
     public static String get(String key, Object... args) {
         ensureLoaded();
         String raw = TRANSLATIONS.getOrDefault(key, key);
+        if (raw.equals(key)) {
+            try {
+                if (net.minecraft.locale.Language.getInstance().has(key)) {
+                    raw = net.minecraft.locale.Language.getInstance().getOrDefault(key);
+                }
+            } catch (Throwable ignored) {}
+        }
         if (args == null || args.length == 0) {
             return raw.replace("%%", "%");
         }
