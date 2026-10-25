@@ -19,6 +19,7 @@ import net.zootycoon.animal.AnimalBathingManager;
 import net.zootycoon.animal.ZooAnimalHungerManager;
 import net.zootycoon.client.ZooTycoonClient;
 import net.zootycoon.client.animation.PlayerBrushAnimationManager;
+import net.zootycoon.client.inspect.InspectionClientCache;
 import net.zootycoon.client.ui.ZooHudOverlay;
 import net.zootycoon.network.ZooNetworkPayloads;
 
@@ -36,6 +37,24 @@ public class PlayerBathingClientController {
     private static int currentStage = STAGE_NONE;
     private static int progressTicks = 0;
     private static int warningCooldown = 0;
+    private static int justCleanedEntityId = -1;
+    private static long justCleanedTimestamp = 0L;
+
+    public static boolean isAnimalClean(LivingEntity target) {
+        if (target == null) return false;
+        if (target.getId() == justCleanedEntityId && (System.currentTimeMillis() - justCleanedTimestamp) < 10000L) {
+            return true;
+        }
+        ZooNetworkPayloads.AnimalSyncData sync = ZooTycoonClient.clientAnimalMap.get(target.getId());
+        if (sync != null && sync.cleanliness() >= 100) {
+            return true;
+        }
+        InspectionClientCache.Snapshot snap = InspectionClientCache.getSnapshot(target.getId());
+        if (snap != null && snap.cleanliness() >= 100) {
+            return true;
+        }
+        return false;
+    }
 
     public static boolean isBathing() {
         return currentStage != STAGE_NONE && activeTargetAnimal != null && activeTargetAnimal.isAlive();
@@ -153,7 +172,7 @@ public class PlayerBathingClientController {
         } else {
             // Stage 2: Brushing
             if (!AnimalBathingManager.isWet(target)) {
-                if (warningCooldown <= 0) {
+                if (!isAnimalClean(target) && warningCooldown <= 0) {
                     mc.player.displayClientMessage(Component.translatable("zootycoon.bathing.need_water"), true);
                     warningCooldown = 30;
                 }
@@ -184,6 +203,10 @@ public class PlayerBathingClientController {
 
             if (progressTicks >= MAX_PROGRESS_TICKS_BRUSHING) {
                 // Completed Stage 2: Brushing
+                justCleanedEntityId = targetId;
+                justCleanedTimestamp = System.currentTimeMillis();
+                warningCooldown = 60;
+                AnimalBathingManager.setWet(target, 0);
                 ClientPlayNetworking.send(new ZooNetworkPayloads.CompletePlayerBathingPayload(targetId, 2));
                 mc.level.playLocalSound(target.getX(), target.getY(), target.getZ(),
                         SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.7f, 1.4f, false);

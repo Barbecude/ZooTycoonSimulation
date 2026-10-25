@@ -125,7 +125,8 @@ public class ZooTycoonMod implements ModInitializer {
                     }
                 } else if (held.is(net.minecraft.world.item.Items.BRUSH)) {
                     if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)) {
-                        if (!net.zootycoon.animal.AnimalBathingManager.isWet(living)) {
+                        int currentClean = net.zootycoon.animal.ZooAnimalHungerManager.getCleanliness(living);
+                        if (!net.zootycoon.animal.AnimalBathingManager.isWet(living) && currentClean < 100) {
                             sp.displayClientMessage(net.minecraft.network.chat.Component.translatable("zootycoon.bathing.need_water"), true);
                         }
                         return net.minecraft.world.InteractionResult.SUCCESS;
