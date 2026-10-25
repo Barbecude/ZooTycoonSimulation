@@ -77,7 +77,7 @@ public class AnimalManagementTab {
     private boolean isDraggingDetailsScrollbar = false;
     private int maxDetailsScroll = 0;
     private boolean showAllFoods = false;
-    private static final int ITEM_HEIGHT = 26;
+    private static final int ITEM_HEIGHT = 28;
 
     public AnimalManagementTab(MainManagementScreen screen) {
         this.screen = screen;
@@ -298,42 +298,40 @@ public class AnimalManagementTab {
                 boolean isHabProblem = !habParsed.serverUnmet().isEmpty();
                 boolean hasProblem = hasNoZk || isHpLow || isHungry || isThirsty || isDirty || isTempProblem || isHabProblem;
 
-                // 2. Animal Name in normal white
-                String displayName = a.customName().isEmpty() ? formatSpecies(a.entityTypeId()) : a.customName();
+                // 2. Mini 3D Animal Model (di samping kiri nama satwa)
                 int modelSize = 22;
-                int modelX = cardRight - 14 - modelSize - 3;
-                int modelY = curY + 1;
+                int modelX = sidebarX + 6;
+                int modelY = curY + 2;
 
-                int textX = isSelected ? (sidebarX + 9) : (sidebarX + 7);
-                int maxNameW = Math.max(20, modelX - textX - 4);
-                String trimmedName = font.plainSubstrByWidth(displayName, maxNameW);
-                graphics.drawString(font, Component.literal(trimmedName).withStyle(ChatFormatting.WHITE), textX, curY + 8, 0xFFFFFFFF, false);
-
-                // 3. Mini 3D Animal Model (di samping kanan nama satwa)
                 LivingEntity miniEntity = resolveLivingEntity(mc, a);
                 if (miniEntity != null) {
                     try {
                         float bbH = Math.max(0.4f, miniEntity.getBbHeight());
                         float bbW = Math.max(0.4f, miniEntity.getBbWidth());
                         float maxDim = Math.max(bbH, bbW * 0.8f);
-                        int miniScale = (int) Math.clamp(12.0f / maxDim, 4, 15);
-                        if (modelY >= sidebarY + 1 && modelY + modelSize <= sidebarY + sidebarH - 1) {
+                        int miniScale = (int) Math.clamp(13.0f / maxDim, 5, 16);
+                        if (modelY >= sidebarY && modelY + modelSize <= sidebarY + sidebarH) {
                             InventoryScreen.renderEntityInInventoryFollowsMouse(
                                     graphics,
                                     modelX, modelY, modelX + modelSize, modelY + modelSize,
                                     miniScale, 0.0f, (float) mouseX, (float) mouseY, miniEntity
                             );
-                            graphics.enableScissor(sidebarX + 1, sidebarY + 1, sidebarX + sidebarW - 1, sidebarY + sidebarH - 1);
                         }
-                    } catch (Throwable ignored) {
-                        graphics.enableScissor(sidebarX + 1, sidebarY + 1, sidebarX + sidebarW - 1, sidebarY + sidebarH - 1);
-                    }
+                    } catch (Throwable ignored) {}
                 }
+
+                // 3. Animal Name in normal white (di samping kanan model 3D)
+                String displayName = a.customName().isEmpty() ? formatSpecies(a.entityTypeId()) : a.customName();
+                int textX = sidebarX + 32;
+                int textY = curY + 9;
+                int exX = cardRight - 14;
+                int exY = curY + 8;
+                int maxNameW = Math.max(20, (hasProblem ? exX - 4 : cardRight - 4) - textX);
+                String trimmedName = font.plainSubstrByWidth(displayName, maxNameW);
+                graphics.drawString(font, Component.literal(trimmedName).withStyle(ChatFormatting.WHITE), textX, textY, 0xFFFFFFFF, false);
 
                 // 4. Alert Exclamation Mark (align kanan)
                 if (hasProblem) {
-                    int exX = cardRight - 14;
-                    int exY = curY + 7;
                     graphics.blit(EXCLAMATION_ICON, exX, exY, 0, 0, 10, 10, 64, 64);
                     if (mouseX >= exX && mouseX <= exX + 10 && mouseY >= exY && mouseY <= exY + 10) {
                         List<Component> problems = new ArrayList<>();
@@ -781,10 +779,9 @@ public class AnimalManagementTab {
     private LivingEntity resolveLivingEntity(Minecraft mc, ZooNetworkPayloads.AnimalSyncData data) {
         if (data == null) return null;
 
-        if (mc.level != null) {
+        if (mc.level != null && data.entityId() != 0) {
             Entity ent = mc.level.getEntity(data.entityId());
             if (ent instanceof LivingEntity living) {
-                ensureEntityId(living, data.entityId());
                 return living;
             }
         }
@@ -792,7 +789,6 @@ public class AnimalManagementTab {
         if (clientDummyCache.containsKey(data.entityTypeId())) {
             LivingEntity cached = clientDummyCache.get(data.entityTypeId());
             if (cached != null) {
-                ensureEntityId(cached, data.entityId());
                 return cached;
             }
         }
@@ -803,7 +799,6 @@ public class AnimalManagementTab {
             if (type != null && mc.level != null) {
                 Entity dummy = type.create(mc.level);
                 if (dummy instanceof LivingEntity living) {
-                    ensureEntityId(living, data.entityId());
                     clientDummyCache.put(data.entityTypeId(), living);
                     return living;
                 }
