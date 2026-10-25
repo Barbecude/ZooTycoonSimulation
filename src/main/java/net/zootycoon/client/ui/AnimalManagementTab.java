@@ -421,14 +421,15 @@ public class AnimalManagementTab {
                 graphics.blitSprite(VANILLA_HEART_HALF, hX, healthY, 9, 9);
             }
         }
-        int hp = (int) Math.ceil(selectedData.health());
-        int maxHp = (int) Math.ceil(selectedData.maxHealth());
         int statTextX = infoX + 106;
-
         int hpPct = Math.round((selectedData.health() / Math.max(0.1f, selectedData.maxHealth())) * 100.0f);
         int hpColor = HologramBarRenderer.getStatusColor((float) hpPct);
-        String hpStr = hp + "/" + maxHp + " HP (" + hpPct + "%)";
-        graphics.drawString(font, Component.literal(hpStr), statTextX, healthY + 1, hpColor, false);
+        graphics.drawString(font, Component.literal(hpPct + "%"), statTextX, healthY + 1, hpColor, false);
+        if (inScrollArea && mouseX >= infoX && mouseX <= infoX + 100 && mouseY >= healthY && mouseY <= healthY + 10) {
+            int hp = (int) Math.ceil(selectedData.health());
+            int maxHp = (int) Math.ceil(selectedData.maxHealth());
+            hoveredStatTooltip = Component.literal("Darah: " + hp + "/" + maxHp + " HP (" + hpPct + "%)");
+        }
         relY += 12;
 
         // 2. Hunger (Food shanks + percentage)

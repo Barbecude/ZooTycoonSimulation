@@ -551,6 +551,7 @@
   "zootycoon.temperature.warm": "Hangat",
   "zootycoon.temperature.hot": "Panas Terik",
   "zootycoon.bathing.need_water": "Basahi satwa terlebih dahulu dengan penyiram air!",
+  "zootycoon.bathing.already_watered": "Satwa sudah disiram, segera bersihkan dengan brush!",
   "zootycoon.bathing.progress.watering": "Menyiram...",
   "zootycoon.bathing.progress.brushing": "Menyikat...",
   "zootycoon.inspect.cleanliness.wet": "(Basah)",

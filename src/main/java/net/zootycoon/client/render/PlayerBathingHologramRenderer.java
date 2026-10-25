@@ -10,6 +10,8 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
 import net.zootycoon.client.bathing.PlayerBathingClientController;
 import net.zootycoon.client.inspect.HologramBarRenderer;
@@ -20,6 +22,7 @@ import org.joml.Quaternionf;
 public class PlayerBathingHologramRenderer {
 
     private static final float HOLO_SCALE = 0.015f;
+    private static final ItemStack BRUSH_STACK = new ItemStack(Items.BRUSH);
 
     public static void render(WorldRenderContext context) {
         if (!PlayerBathingClientController.isBathing()) {
@@ -98,13 +101,13 @@ public class PlayerBathingHologramRenderer {
         HologramBarRenderer.drawRect(bgConsumer, matrix, minX + 1.0f, minY, maxX - 1.0f, minY + 1.0f, -0.016f, 0xFF2A2D36, light);
         HologramBarRenderer.drawRect(bgConsumer, matrix, minX + 1.0f, maxY - 1.0f, maxX - 1.0f, maxY, -0.016f, 0xFF2A2D36, light);
 
-        // 2. Icon (Droplet or Cleanliness)
+        // 2. Icon (Droplet or Minecraft Brush item)
         float iconX = minX + 5.0f;
         float iconY = minY + 4.0f;
         if (stage == PlayerBathingClientController.STAGE_WATERING) {
             HologramBarRenderer.drawThirstIcon(buffer, matrix, iconX, iconY, light);
         } else {
-            HologramBarRenderer.drawCleanlinessIcon(buffer, matrix, iconX, iconY, light);
+            HologramBarRenderer.drawItemIcon2D(mc, buffer, matrix, BRUSH_STACK, iconX, iconY - 0.5f, 10.0f, light, 1.0f);
         }
 
         // 3. Title text

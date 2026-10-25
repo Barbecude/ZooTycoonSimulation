@@ -19,6 +19,7 @@ import net.zootycoon.animal.AnimalBathingManager;
 import net.zootycoon.animal.ZooAnimalHungerManager;
 import net.zootycoon.client.ZooTycoonClient;
 import net.zootycoon.client.animation.PlayerBrushAnimationManager;
+import net.zootycoon.client.ui.ZooHudOverlay;
 import net.zootycoon.network.ZooNetworkPayloads;
 
 public class PlayerBathingClientController {
@@ -27,7 +28,8 @@ public class PlayerBathingClientController {
     public static final int STAGE_WATERING = 1;
     public static final int STAGE_BRUSHING = 2;
 
-    public static final int MAX_PROGRESS_TICKS = 30; // ~1.5 seconds
+    public static final int MAX_PROGRESS_TICKS_WATERING = 60; // 3.0 seconds (slowed down)
+    public static final int MAX_PROGRESS_TICKS_BRUSHING = 60; // 3.0 seconds (slowed down)
 
     private static LivingEntity activeTargetAnimal = null;
     private static int targetEntityId = -1;
@@ -51,8 +53,12 @@ public class PlayerBathingClientController {
         return currentStage;
     }
 
+    public static int getMaxTicks() {
+        return (currentStage == STAGE_WATERING) ? MAX_PROGRESS_TICKS_WATERING : MAX_PROGRESS_TICKS_BRUSHING;
+    }
+
     public static float getProgress() {
-        return Math.min(1.0f, (float) progressTicks / (float) MAX_PROGRESS_TICKS);
+        return Math.min(1.0f, (float) progressTicks / (float) getMaxTicks());
     }
 
     public static void clientTick(Minecraft mc) {
@@ -97,6 +103,19 @@ public class PlayerBathingClientController {
         targetEntityId = targetId;
 
         if (isCan) {
+            if (AnimalBathingManager.isWet(target)) {
+                if (warningCooldown <= 0) {
+                    ZooHudOverlay.showToast(
+                            "zootycoon.toast.title.animal",
+                            "zootycoon.bathing.already_watered",
+                            ZooHudOverlay.TOAST_INFO
+                    );
+                    warningCooldown = 60;
+                }
+                reset();
+                return;
+            }
+
             if (currentStage != STAGE_WATERING) {
                 currentStage = STAGE_WATERING;
                 progressTicks = 0;
@@ -118,7 +137,7 @@ public class PlayerBathingClientController {
                 }
             }
 
-            if (progressTicks >= MAX_PROGRESS_TICKS) {
+            if (progressTicks >= MAX_PROGRESS_TICKS_WATERING) {
                 // Completed Stage 1: Watering
                 AnimalBathingManager.setWet(target, AnimalBathingManager.WET_DURATION_TICKS);
                 ClientPlayNetworking.send(new ZooNetworkPayloads.CompletePlayerBathingPayload(targetId, 1));
@@ -163,7 +182,7 @@ public class PlayerBathingClientController {
                 }
             }
 
-            if (progressTicks >= MAX_PROGRESS_TICKS) {
+            if (progressTicks >= MAX_PROGRESS_TICKS_BRUSHING) {
                 // Completed Stage 2: Brushing
                 ClientPlayNetworking.send(new ZooNetworkPayloads.CompletePlayerBathingPayload(targetId, 2));
                 mc.level.playLocalSound(target.getX(), target.getY(), target.getZ(),

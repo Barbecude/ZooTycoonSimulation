@@ -1940,7 +1940,11 @@ public class ZooNetworkPayloads {
                     }
                     if (payload.stage() == 1) { // Watering
                         if (net.zootycoon.animal.AnimalBathingManager.isWateringCan(held)) {
-                            net.zootycoon.animal.AnimalBathingManager.waterAnimal(animal, player, held, hand);
+                            if (!net.zootycoon.animal.AnimalBathingManager.isWet(animal)) {
+                                net.zootycoon.animal.AnimalBathingManager.waterAnimal(animal, player, held, hand);
+                            } else {
+                                sendToast(player, "zootycoon.toast.title.animal", "zootycoon.bathing.already_watered", 0);
+                            }
                         }
                     } else if (payload.stage() == 2) { // Brushing
                         if (held.is(Items.BRUSH) && net.zootycoon.animal.AnimalBathingManager.isWet(animal)) {

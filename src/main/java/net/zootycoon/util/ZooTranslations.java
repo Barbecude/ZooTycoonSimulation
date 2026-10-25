@@ -26,14 +26,29 @@ public final class ZooTranslations {
     private ZooTranslations() {}
 
     private static void loadLangFile(String resourcePath) {
-        try (InputStream stream = ZooTranslations.class.getResourceAsStream(resourcePath)) {
+        String cleanPath = resourcePath.startsWith("/") ? resourcePath.substring(1) : resourcePath;
+        InputStream stream = ZooTranslations.class.getResourceAsStream(resourcePath);
+        if (stream == null) {
+            stream = ZooTranslations.class.getClassLoader().getResourceAsStream(cleanPath);
+        }
+        if (stream == null) {
+            ClassLoader ccl = Thread.currentThread().getContextClassLoader();
+            if (ccl != null) {
+                stream = ccl.getResourceAsStream(cleanPath);
+            }
+        }
+        try {
             if (stream != null) {
-                JsonObject obj = JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8)).getAsJsonObject();
-                for (Map.Entry<String, JsonElement> entry : obj.entrySet()) {
-                    if (entry.getValue().isJsonPrimitive()) {
-                        TRANSLATIONS.put(entry.getKey(), entry.getValue().getAsString());
+                try (InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
+                    JsonObject obj = JsonParser.parseReader(reader).getAsJsonObject();
+                    for (Map.Entry<String, JsonElement> entry : obj.entrySet()) {
+                        if (entry.getValue().isJsonPrimitive()) {
+                            TRANSLATIONS.put(entry.getKey(), entry.getValue().getAsString());
+                        }
                     }
                 }
+            } else {
+                ZooTycoonMod.LOGGER.warn("Could not find lang file resource: " + resourcePath);
             }
         } catch (Exception e) {
             ZooTycoonMod.LOGGER.error("Failed to load translations from " + resourcePath, e);
@@ -54,6 +69,14 @@ public final class ZooTranslations {
             try {
                 if (net.minecraft.locale.Language.getInstance().has(key)) {
                     raw = net.minecraft.locale.Language.getInstance().getOrDefault(key);
+                }
+            } catch (Throwable ignored) {}
+        }
+        if (raw.equals(key)) {
+            try {
+                String translated = Component.translatable(key).getString();
+                if (!translated.equals(key)) {
+                    raw = translated;
                 }
             } catch (Throwable ignored) {}
         }

@@ -547,6 +547,7 @@
   "zootycoon.temperature.warm": "Warm",
   "zootycoon.temperature.hot": "Hot",
   "zootycoon.bathing.need_water": "Wet the animal first with a watering can!",
+  "zootycoon.bathing.already_watered": "Animal is already watered, clean it with a brush now!",
   "zootycoon.bathing.progress.watering": "Watering...",
   "zootycoon.bathing.progress.brushing": "Brushing...",
   "zootycoon.inspect.cleanliness.wet": "(Wet)",

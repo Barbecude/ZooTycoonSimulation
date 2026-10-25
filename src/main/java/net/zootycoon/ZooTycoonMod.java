@@ -117,6 +117,9 @@ public class ZooTycoonMod implements ModInitializer {
                 } else if (net.zootycoon.animal.AnimalBathingManager.isWateringCan(held)) {
                     if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)
                             && net.zootycoon.animal.ZooAnimalHungerManager.isTagged(living)) {
+                        if (net.zootycoon.animal.AnimalBathingManager.isWet(living)) {
+                            ZooNetworkPayloads.sendToast(sp, "zootycoon.toast.title.animal", "zootycoon.bathing.already_watered", 0);
+                        }
                         // Consumed: Bathing is driven by holding right-click with continuous progress bar
                         return net.minecraft.world.InteractionResult.SUCCESS;
                     }
