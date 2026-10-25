@@ -40,6 +40,7 @@ public class ZooTycoonMod implements ModInitializer {
 
         // 3. Register server networking payloads & handlers
         ZooNetworkPayloads.registerServerReceivers();
+        net.zootycoon.network.WarehousePayloads.registerCommon();
         net.zootycoon.network.InspectionPayloads.registerCommon();
         net.zootycoon.animal.ZooInspectionService.registerServerReceivers();
 
@@ -81,6 +82,8 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.economy.ZooRatingManager.reset();
             net.zootycoon.construction.ConstructionManager.reset();
             net.zootycoon.block.ZooFeedingTroughBlock.reset();
+            net.zootycoon.block.EmptyBarrelBlock.reset();
+            net.zootycoon.warehouse.WarehouseSupplyManager.reset();
             net.zootycoon.block.ZooGachaMachineBlock.reset();
             net.zootycoon.block.ToiletBlockEntity.reset();
             net.zootycoon.hunter.ZooHunterManager.reset();
@@ -97,6 +100,8 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.economy.ZooRatingManager.reset();
             net.zootycoon.construction.ConstructionManager.reset();
             net.zootycoon.block.ZooFeedingTroughBlock.reset();
+            net.zootycoon.block.EmptyBarrelBlock.reset();
+            net.zootycoon.warehouse.WarehouseSupplyManager.reset();
             net.zootycoon.block.ZooGachaMachineBlock.reset();
             net.zootycoon.block.ToiletBlockEntity.reset();
             net.zootycoon.hunter.ZooHunterManager.reset();

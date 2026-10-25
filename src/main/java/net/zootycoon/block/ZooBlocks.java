@@ -156,6 +156,16 @@ public class ZooBlocks {
             FabricBlockEntityTypeBuilder.create((pos, state) -> new net.zootycoon.block.entity.ZooThermalBlockEntity(pos, state, net.zootycoon.block.entity.ZooThermalBlockEntity.ThermalType.COOLING), COOLER).build()
     );
 
+    public static final ResourceKey<Block> EMPTY_BARREL_KEY = ResourceKey.create(Registries.BLOCK, ZooTycoonMod.id("empty_barrel"));
+    public static final ResourceKey<Item> EMPTY_BARREL_ITEM_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("empty_barrel"));
+    public static final Block EMPTY_BARREL = new EmptyBarrelBlock();
+    public static final BlockItem EMPTY_BARREL_ITEM = new BlockItem(EMPTY_BARREL, new Item.Properties());
+    public static final BlockEntityType<EmptyBarrelBlockEntity> EMPTY_BARREL_BLOCK_ENTITY = Registry.register(
+            BuiltInRegistries.BLOCK_ENTITY_TYPE,
+            ZooTycoonMod.id("empty_barrel"),
+            FabricBlockEntityTypeBuilder.create(EmptyBarrelBlockEntity::new, EMPTY_BARREL).build()
+    );
+
     public static void register() {
         // Blocks
         Registry.register(BuiltInRegistries.BLOCK, ConstructionTapeBlock.BLOCK_KEY, CONSTRUCTION_TAPE);
@@ -166,6 +176,7 @@ public class ZooBlocks {
         Registry.register(BuiltInRegistries.BLOCK, GACHA_MACHINE_KEY, GACHA_MACHINE);
         Registry.register(BuiltInRegistries.BLOCK, HEATER_KEY, HEATER);
         Registry.register(BuiltInRegistries.BLOCK, COOLER_KEY, COOLER);
+        Registry.register(BuiltInRegistries.BLOCK, EMPTY_BARREL_KEY, EMPTY_BARREL);
 
         // Block Items
         Registry.register(BuiltInRegistries.ITEM, CONSTRUCTION_TAPE_ITEM_KEY, CONSTRUCTION_TAPE_ITEM);
@@ -176,5 +187,6 @@ public class ZooBlocks {
         Registry.register(BuiltInRegistries.ITEM, GACHA_MACHINE_ITEM_KEY, GACHA_MACHINE_ITEM);
         Registry.register(BuiltInRegistries.ITEM, HEATER_ITEM_KEY, HEATER_ITEM);
         Registry.register(BuiltInRegistries.ITEM, COOLER_ITEM_KEY, COOLER_ITEM);
+        Registry.register(BuiltInRegistries.ITEM, EMPTY_BARREL_ITEM_KEY, EMPTY_BARREL_ITEM);
     }
 }

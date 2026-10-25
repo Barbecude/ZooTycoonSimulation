@@ -346,6 +346,7 @@ public class ZooItems {
 
         ItemGroupEvents.modifyEntriesEvent(CREATIVE_TAB_KEY).register(entries -> {
             entries.accept(net.zootycoon.block.ZooBlocks.FEEDING_TROUGH_ITEM);
+            entries.accept(net.zootycoon.block.ZooBlocks.EMPTY_BARREL_ITEM);
             entries.accept(net.zootycoon.block.ZooBlocks.GACHA_MACHINE_ITEM);
             entries.accept(net.zootycoon.block.ZooBlocks.HEATER_ITEM);
             entries.accept(net.zootycoon.block.ZooBlocks.COOLER_ITEM);
@@ -376,6 +377,7 @@ public class ZooItems {
             entries.accept(net.zootycoon.block.ZooBlocks.HEATER_ITEM);
             entries.accept(net.zootycoon.block.ZooBlocks.COOLER_ITEM);
             entries.accept(net.zootycoon.block.ZooBlocks.FEEDING_TROUGH_ITEM);
+            entries.accept(net.zootycoon.block.ZooBlocks.EMPTY_BARREL_ITEM);
             entries.accept(net.zootycoon.block.ZooBlocks.GACHA_MACHINE_ITEM);
             entries.accept(net.zootycoon.block.ZooBlocks.TOILET_ITEM);
             entries.accept(net.zootycoon.block.ZooBlocks.TRASH_CAN_ITEM);

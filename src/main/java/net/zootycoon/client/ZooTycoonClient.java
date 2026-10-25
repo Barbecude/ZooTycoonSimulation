@@ -416,6 +416,20 @@ public class ZooTycoonClient implements ClientModInitializer {
             });
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(net.zootycoon.network.WarehousePayloads.OpenBarrelCategoryScreenPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                Minecraft.getInstance().setScreen(new net.zootycoon.client.ui.EmptyBarrelCategoryScreen(payload.pos()));
+            });
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(net.zootycoon.network.WarehousePayloads.SyncBarrelRequestsPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                net.zootycoon.client.ui.EmptyBarrelChestOverlay.onSyncRequests(payload);
+            });
+        });
+
+        net.zootycoon.client.ui.EmptyBarrelChestOverlay.register();
+
         // Reset client static state when disconnecting from world or joining a new server
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             ClaimBoundaryRenderer.CLIENT_CLAIMS.clear();
@@ -434,6 +448,7 @@ public class ZooTycoonClient implements ClientModInitializer {
             net.zootycoon.client.render.ZooAnimalHologramRenderer.reset();
             net.zootycoon.client.inspect.InspectionTargetTracker.reset();
             net.zootycoon.client.inspect.InspectionClientCache.clear();
+            net.zootycoon.client.ui.EmptyBarrelChestOverlay.reset();
         });
 
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
@@ -445,6 +460,7 @@ public class ZooTycoonClient implements ClientModInitializer {
             clientEmeraldBalance = 0;
             net.zootycoon.client.inspect.InspectionTargetTracker.reset();
             net.zootycoon.client.inspect.InspectionClientCache.clear();
+            net.zootycoon.client.ui.EmptyBarrelChestOverlay.reset();
         });
 
         // 3b. Register Entity Renderer & Model Layer for Humanoid Builder NPC
@@ -513,6 +529,7 @@ public class ZooTycoonClient implements ClientModInitializer {
         net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap.INSTANCE.putBlock(net.zootycoon.block.ZooBlocks.FEEDING_TROUGH, net.minecraft.client.renderer.RenderType.cutout());
         net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap.INSTANCE.putBlock(net.zootycoon.block.ZooBlocks.HEATER, net.minecraft.client.renderer.RenderType.cutout());
         net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap.INSTANCE.putBlock(net.zootycoon.block.ZooBlocks.COOLER, net.minecraft.client.renderer.RenderType.cutout());
+        net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap.INSTANCE.putBlock(net.zootycoon.block.ZooBlocks.EMPTY_BARREL, net.minecraft.client.renderer.RenderType.cutout());
         net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap.INSTANCE.putBlock(net.zootycoon.block.ZooBlocks.GACHA_MACHINE, net.minecraft.client.renderer.RenderType.translucent());
 
         // 3h. Register Block Entity Renderer for Feeding Trough (Dynamic 3D food items) and Gacha Machine (Dynamic 3D plushies)

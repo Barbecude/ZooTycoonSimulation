@@ -7,7 +7,6 @@ Validate: python .agents/skills/explore-index/scripts/verify.py
 
 Answer is no. Stop searching; do not retry synonyms.
 
-central warehouse supply :: ABSENT :: src/** :: roadmap lines 44-45; warehouse chain not yet implemented
 direct feeding keeper ai :: ABSENT :: src/main/java/net/zootycoon/entity/ZooZookeeperEntity.java :: roadmap lines 36-37; keeper direct feeding not implemented
 dynamic visitor scaling :: ABSENT :: src/** :: roadmap lines 40-41; spawner scaling not yet implemented
 financial ticket pricing system :: ABSENT :: src/** :: roadmap lines 42-43; staff wages not yet implemented
@@ -23,6 +22,7 @@ animal diet registry :: REGION :: src/main/java/net/zootycoon/animal/AnimalDietR
 animal hunger manager :: REGION :: src/main/java/net/zootycoon/animal/ZooAnimalHungerManager.java :: hunger, thirst, cleanliness, food throwing
 builder entity :: REGION :: src/main/java/net/zootycoon/entity/ZooBuilderEntity.java :: builder logic and blueprints
 cashier entity :: REGION :: src/main/java/net/zootycoon/entity/ZooCashierEntity.java :: cashier logic and ticket handling
+central warehouse supply :: REGION :: src/main/java/net/zootycoon/warehouse :: empty barrel warehouse, recipe resolver, staff supply requests
 claim system :: REGION :: src/main/java/net/zootycoon/claim :: zoo claim management and boundaries
 feeding trough block :: REGION :: src/main/java/net/zootycoon/block/ZooFeedingTroughBlock.java :: trough block and known troughs registry
 feeding trough entity :: REGION :: src/main/java/net/zootycoon/block/ZooFeedingTroughBlockEntity.java :: trough inventory, water, food storage
