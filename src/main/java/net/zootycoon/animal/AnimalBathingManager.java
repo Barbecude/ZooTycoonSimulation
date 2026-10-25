@@ -34,7 +34,17 @@ public class AnimalBathingManager {
     private static final Map<UUID, Long> WET_EXPIRY_MAP = new ConcurrentHashMap<>();
 
     public static boolean isWateringCan(ItemStack stack) {
-        return stack != null && !stack.isEmpty() && stack.is(WATERING_CANS);
+        if (stack == null || stack.isEmpty()) {
+            return false;
+        }
+        if (stack.is(WATERING_CANS) || stack.is(net.minecraft.world.item.Items.WATER_BUCKET)) {
+            return true;
+        }
+        if (stack.getItem() instanceof net.zootycoon.item.WateringCanItem) {
+            return true;
+        }
+        String path = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
+        return path.contains("watering_can");
     }
 
     public static boolean isWet(LivingEntity animal) {

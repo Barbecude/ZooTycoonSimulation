@@ -20,6 +20,7 @@
 | 15 | Kondisi Dialog 2-Tombol & Perbaikan Toast Pakan | SELESAI | 2026-10-24 | Rework dialog zookeeper menjadi tepat 2 tombol sesuai kebutuhan (Alat Mandi vs Pakan) dan perbaikan toast pakan |
 | 16 | Zookeeper Lempar Pakan, Animasi Mandi & Brush First-Person | SELESAI | 2026-10-24 | AI lempar pakan zookeeper untuk karnivora, dialog dinamis pakan lempar vs palung, animasi model penyiram & sikat zookeeper, dan animasi first-person brush player |
 | 17 | Detail Jenis Pohon Habitat (Bahasa Inggris) | SELESAI | 2026-10-25 | Mengganti label generic pepohonan dan istilah terjemahan menjadi nama spesifik jenis pohon dalam bahasa Inggris (Pohon Jungle, Pohon Oak, Pohon Acacia, Pohon Spruce, dll) |
+| 18 | Perbaikan Mandi Satwa Zookeeper & Kebersihan 100% | SELESAI | 2026-10-25 | Ticking per-tick aksi mandi zookeeper, jarak adaptif, pemulihan kebersihan 100%, dan filter dialog alat mandi hanya saat satwa kotor |
 
 ## Keputusan
 - Koreksi CONTEXT.md poin T5: Sync periodik sebenarnya ada di server tick setiap 40 tick (2 detik) melalui `ZooNetworkPayloads.sendAnimalSync(player)`. Namun, method ini HANYA mengirimkan hewan yang sudah terdaftar (`isTagged`) dan dimiliki pemain (`isOwnedBy`). Hewan yang belum terdaftar tidak pernah masuk payload sehingga client renderer selalu menerima null dan jatuh ke nilai palsu (80/80/100). Mekanisme request inspeksi on-demand per target belum ada.
@@ -246,26 +247,35 @@
      - Mendukung tipe kebutuhan `jungle` / `jungle_wood`, `oak`, `birch`, `dark_oak`, `mangrove`, dan `cherry` di `evaluate`.
      - Sanitasi dinamis pada label kebutuhan pohon yang belum terpenuhi (`unmet`) agar bila terdapat sisa template atau fallback bertuliskan "Pepohonan", "Rimba", "Akasia", atau "Cemara", label otomatis terformat rapi menjadi "Pohon Jungle", "Pohon Oak", "Pohon Acacia", atau "Pohon Spruce".
 
+- Perbaikan Mandi Satwa Zookeeper & Kenaikan Kebersihan 100% (Fase 18):
+  1. Akar Masalah Bersih-Bersih Zookeeper Sebelumnya:
+     - Logika mandi sebelumnya hanya berjalan di dalam `handleStaffDuties` yang hanya dipanggil setiap 25 tick (`tickCount % 25 == 0`), sehingga `bathingStepTicks` hanya bertambah 1 setiap 1.25 detik. Dibutuhkan 87.5 detik durasi kedekatan tanpa henti untuk menyelesaikan tahap siram air dan sikat. Di Minecraft mob selalu bergerak setiap 2-5 detik sehingga zookeeper terus terinterupsi dan kebersihan tidak pernah naik.
+     - Jarak jangkauan 2.8m center-to-center terlalu sempit untuk satwa dengan hitbox lebar (Zebra, Jerapah, Gajah, Beruang) sehingga zookeeper terjebak di luar jarak toleransi.
+  2. Implementasi Ticking Aktif & Jarak Adaptif:
+     - `tickBathingDuty` kini dijalankan setiap tick (20 TPS) saat `currentDutyState` adalah `"BATHING"`. Tahap siram air berlangsung mulus 30 tick (1.5 detik) dan tahap sikat berlangsung 35 tick (1.75 detik). Total pemandian hanya membutuhkan 3.25 detik.
+     - Jarak jangkauan dihitung adaptif `Math.max(3.2, (assignedAnimal.getBbWidth() * 0.5) + 2.0)`.
+     - Kebersihan satwa dipulihkan penuh ke 100% (`ZooAnimalHungerManager.MAX_CLEANLINESS`), durability sikat berkurang 1, dan pembaruan dikirimkan secara instan ke hologram dan sync client.
+  3. Dialog & Proteksi Penyerahan Alat Mandi:
+     - Zookeeper hanya meminta 2 alat mandi (penyiram air dan sikat) jika satwa kotor (`cleanliness <= 60`) dan zookeeper belum memiliki alat mandi.
+     - Jika satwa bersih (`cleanliness > 60`), zookeeper tidak meminta alat mandi, dan `handleBathingToolsTransfer` menolak penyerahan alat jika satwa tidak kotor.
+     - Saat sikat rusak/habis, inventaris zookeeper direset bersih sehingga zookeeper tidak memiliki alat awal apa pun ("jangan kasih zookeeper apapun") hingga satwa kotor kembali.
+
 ## Bukti Selesai
 - Seluruh kode terkompilasi bersih tanpa error dengan `compileJava` dan `build`.
 - File jar `zootycoon-1.0.0.jar` telah tersalin ke direktori mods profil Modrinth.
-- Template habitat jungle, forest, dan spesies jerapah telah menggunakan nama jenis pohon spesifik dalam bahasa Inggris.
-- Scanning dan evaluasi blok kayu/daun pohon spesifik telah terimplementasi di `HabitatEvaluator.java`.
+- Zookeeper menjalankan `tickBathingDuty` setiap tick, memandikan satwa dalam 3.25 detik, dan memulihkan kebersihan ke 100%.
+- Filter dialog alat mandi hanya muncul saat satwa kotor (`<= 60%`).
 
 ## Blocker
 - Tidak ada blocker.
 
 ## File yang diubah
-- src/main/resources/data/zootycoon/zoo_habitat/templates/jungle.json
-- src/main/resources/data/zootycoon/zoo_habitat/templates/forest.json
-- src/main/resources/data/zootycoon/zoo_habitat/species/giraffe.json
-- src/main/java/net/zootycoon/animal/habitat/HabitatProfileLoader.java
-- src/main/java/net/zootycoon/animal/habitat/HabitatEvaluator.java
-- src/main/java/net/zootycoon/animal/AnimalDietRegistry.java
+- src/main/java/net/zootycoon/animal/AnimalBathingManager.java
+- src/main/java/net/zootycoon/entity/ZooZookeeperEntity.java
 - docs/hologram/PROGRESS.md
 
 ## Butuh izin user
 - Tidak ada.
 
 ## Belum terverifikasi
-- Pengujian visual in-game langsung oleh pengguna untuk memeriksa teks checklist kebutuhan habitat pohon pada satwa hutan/rimba (seperti Tiger/Panda/Gorilla) dan savana (Giraffe).
+- Pengujian in-game langsung oleh pengguna untuk memeriksa zookeeper membersihkan satwa dan persentase kebersihan naik menjadi 100%.

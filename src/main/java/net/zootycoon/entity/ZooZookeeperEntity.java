@@ -301,8 +301,10 @@ public class ZooZookeeperEntity extends PathfinderMob {
             }
         }
 
-        // Run duties every 25 ticks
-        if (this.tickCount % 25 == 0 && actionCooldown <= 0) {
+        // Run active bathing duty every tick, or routine duties every 20 ticks
+        if ("BATHING".equals(this.currentDutyState)) {
+            tickBathingDuty(sLevel);
+        } else if (this.tickCount % 20 == 0 && actionCooldown <= 0) {
             handleStaffDuties(sLevel);
         }
     }
@@ -416,86 +418,14 @@ public class ZooZookeeperEntity extends PathfinderMob {
         this.entityData.set(SWEEPING, false);
 
         // ========================================================
-        // 2a. PRIORITY 2a: Bathe assigned animal if dirty (cleanliness <= 50%) and tools are available
+        // 2a. PRIORITY 2a: Bathe assigned animal if dirty (cleanliness <= 60%) and tools are available
         // ========================================================
         if (assignedAnimal != null && this.hasBathingTools()) {
             int cleanliness = ZooAnimalHungerManager.getCleanliness(assignedAnimal);
-            if (cleanliness <= 50) {
+            if (cleanliness <= 60) {
                 currentDutyState = "BATHING";
-                double distSq = this.distanceToSqr(assignedAnimal);
-
-                boolean isWet = net.zootycoon.animal.AnimalBathingManager.isWet(assignedAnimal);
-                ItemStack targetTool = isWet ? (!brushStack.isEmpty() ? brushStack : new ItemStack(Items.BRUSH))
-                        : (!wateringCanStack.isEmpty() ? wateringCanStack : new ItemStack(Items.WATER_BUCKET));
-                if (!this.getMainHandItem().is(targetTool.getItem())) {
-                    this.setItemSlot(EquipmentSlot.MAINHAND, targetTool.copy());
-                }
-
-                this.getLookControl().setLookAt(assignedAnimal, 30.0F, 30.0F);
-
-                if (distSq > 2.8 * 2.8) {
-                    this.getNavigation().moveTo(assignedAnimal, 1.25);
-                    this.setBathingAction(0);
-                    return;
-                } else {
-                    this.getNavigation().stop();
-                    if (!isWet) {
-                        // Step 1: Water the animal to make it wet with continuous animation
-                        this.setBathingAction(1);
-                        bathingStepTicks++;
-
-                        if (bathingStepTicks % 4 == 0) {
-                            sLevel.sendParticles(ParticleTypes.SPLASH, assignedAnimal.getX(), assignedAnimal.getY() + assignedAnimal.getBbHeight() * 0.5, assignedAnimal.getZ(),
-                                    12, assignedAnimal.getBbWidth() * 0.35, assignedAnimal.getBbHeight() * 0.25, assignedAnimal.getBbWidth() * 0.35, 0.08);
-                            sLevel.sendParticles(ParticleTypes.DRIPPING_WATER, assignedAnimal.getX(), assignedAnimal.getY() + assignedAnimal.getBbHeight() * 0.8, assignedAnimal.getZ(),
-                                    6, assignedAnimal.getBbWidth() * 0.25, 0.1, assignedAnimal.getBbWidth() * 0.25, 0.04);
-                            sLevel.playSound(null, this.blockPosition(), SoundEvents.WATER_AMBIENT, SoundSource.NEUTRAL, 0.5f, 1.2f);
-                        }
-
-                        if (bathingStepTicks >= 30) {
-                            bathingStepTicks = 0;
-                            net.zootycoon.animal.AnimalBathingManager.setWet(assignedAnimal, net.zootycoon.animal.AnimalBathingManager.WET_DURATION_TICKS);
-
-                            sLevel.playSound(null, assignedAnimal.blockPosition(), SoundEvents.BUCKET_EMPTY, SoundSource.NEUTRAL, 1.0f, 1.2f);
-                            sLevel.playSound(null, assignedAnimal.blockPosition(), SoundEvents.GENERIC_SPLASH, SoundSource.NEUTRAL, 0.8f, 1.0f);
-
-                            net.zootycoon.animal.ZooInspectionService.notifyAnimalUpdated(assignedAnimal);
-                            this.setBathingAction(0);
-                            ItemStack brushItem = !brushStack.isEmpty() ? brushStack : new ItemStack(Items.BRUSH);
-                            this.setItemSlot(EquipmentSlot.MAINHAND, brushItem.copy());
-                            actionCooldown = 15;
-                        }
-                        return;
-                    } else {
-                        // Step 2: Brush the wet animal with continuous scrubbing animation
-                        this.setBathingAction(2);
-                        bathingStepTicks++;
-
-                        if (bathingStepTicks % 6 == 0) {
-                            sLevel.playSound(null, assignedAnimal.blockPosition(), SoundEvents.BRUSH_GENERIC, SoundSource.NEUTRAL, 0.8f, 1.0f + this.getRandom().nextFloat() * 0.2f);
-                            sLevel.sendParticles(ParticleTypes.BUBBLE_POP, assignedAnimal.getX(), assignedAnimal.getY() + assignedAnimal.getBbHeight() * 0.5, assignedAnimal.getZ(),
-                                    8, assignedAnimal.getBbWidth() * 0.35, assignedAnimal.getBbHeight() * 0.25, assignedAnimal.getBbWidth() * 0.35, 0.04);
-                            sLevel.sendParticles(ParticleTypes.WAX_OFF, assignedAnimal.getX(), assignedAnimal.getY() + assignedAnimal.getBbHeight() * 0.5, assignedAnimal.getZ(),
-                                    5, assignedAnimal.getBbWidth() * 0.35, assignedAnimal.getBbHeight() * 0.25, assignedAnimal.getBbWidth() * 0.35, 0.02);
-                        }
-
-                        if (bathingStepTicks >= 40) {
-                            bathingStepTicks = 0;
-                            ZooAnimalHungerManager.setCleanliness(assignedAnimal, ZooAnimalHungerManager.MAX_CLEANLINESS);
-
-                            hurtBrush(1, sLevel);
-
-                            sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, assignedAnimal.getX(), assignedAnimal.getY() + assignedAnimal.getBbHeight() * 0.8, assignedAnimal.getZ(),
-                                    8, 0.3, 0.3, 0.3, 0.02);
-
-                            this.setBathingAction(0);
-                            this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
-                            net.zootycoon.animal.ZooInspectionService.notifyAnimalUpdated(assignedAnimal);
-                            actionCooldown = 40;
-                        }
-                        return;
-                    }
-                }
+                tickBathingDuty(sLevel);
+                return;
             }
         }
 
@@ -709,7 +639,8 @@ public class ZooZookeeperEntity extends PathfinderMob {
             dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.speech_no_animal");
         } else {
             int cleanlinessVal = ZooAnimalHungerManager.getCleanliness(animal);
-            if (cleanlinessVal <= 50 && !this.hasBathingTools()) {
+            boolean isDirty = (cleanlinessVal <= 60);
+            if (isDirty && !this.hasBathingTools()) {
                 dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.need_bathing_tools", animalName);
             } else {
                 ChatFormatting hungerColor = hunger <= 25 ? ChatFormatting.RED : (hunger <= 60 ? ChatFormatting.YELLOW : ChatFormatting.GREEN);
@@ -732,6 +663,113 @@ public class ZooZookeeperEntity extends PathfinderMob {
         ServerPlayNetworking.send(player, new ZooNetworkPayloads.OpenZookeeperScreenPayload(
                 this.getUUID(), keeperName, hasAnimal, animalName, hunger, this.getFoodStock(), dialogText, foods
         ));
+    }
+
+    private void tickBathingDuty(ServerLevel sLevel) {
+        LivingEntity assignedAnimal = null;
+        if (this.assignedAnimalUuid != null) {
+            Entity ent = sLevel.getEntity(this.assignedAnimalUuid);
+            if (ent instanceof LivingEntity l && l.isAlive()) {
+                assignedAnimal = l;
+            }
+        }
+
+        if (assignedAnimal == null || !this.hasBathingTools()) {
+            stopBathing();
+            return;
+        }
+
+        int cleanliness = ZooAnimalHungerManager.getCleanliness(assignedAnimal);
+        if (cleanliness >= ZooAnimalHungerManager.MAX_CLEANLINESS) {
+            stopBathing();
+            return;
+        }
+
+        double maxBathDist = Math.max(3.2, (assignedAnimal.getBbWidth() * 0.5) + 2.0);
+        double distSq = this.distanceToSqr(assignedAnimal);
+
+        boolean isWet = net.zootycoon.animal.AnimalBathingManager.isWet(assignedAnimal);
+        ItemStack targetTool = isWet ? (!brushStack.isEmpty() ? brushStack : new ItemStack(Items.BRUSH))
+                : (!wateringCanStack.isEmpty() ? wateringCanStack : new ItemStack(Items.WATER_BUCKET));
+        if (!this.getMainHandItem().is(targetTool.getItem())) {
+            this.setItemSlot(EquipmentSlot.MAINHAND, targetTool.copy());
+        }
+
+        this.getLookControl().setLookAt(assignedAnimal, 30.0F, 30.0F);
+
+        if (distSq > maxBathDist * maxBathDist) {
+            this.getNavigation().moveTo(assignedAnimal, 1.25);
+            this.setBathingAction(0);
+            return;
+        }
+
+        // Close enough: stop moving and perform bathing actions
+        this.getNavigation().stop();
+
+        if (!isWet) {
+            // Step 1: Pour water with watering can
+            this.setBathingAction(1);
+            bathingStepTicks++;
+
+            if (bathingStepTicks % 4 == 0) {
+                sLevel.sendParticles(ParticleTypes.SPLASH, assignedAnimal.getX(), assignedAnimal.getY() + assignedAnimal.getBbHeight() * 0.5, assignedAnimal.getZ(),
+                        10, assignedAnimal.getBbWidth() * 0.35, assignedAnimal.getBbHeight() * 0.25, assignedAnimal.getBbWidth() * 0.35, 0.08);
+                sLevel.sendParticles(ParticleTypes.DRIPPING_WATER, assignedAnimal.getX(), assignedAnimal.getY() + assignedAnimal.getBbHeight() * 0.8, assignedAnimal.getZ(),
+                        5, assignedAnimal.getBbWidth() * 0.25, 0.1, assignedAnimal.getBbWidth() * 0.25, 0.04);
+                sLevel.playSound(null, this.blockPosition(), SoundEvents.WATER_AMBIENT, SoundSource.NEUTRAL, 0.5f, 1.2f);
+            }
+
+            if (bathingStepTicks >= 30) {
+                bathingStepTicks = 0;
+                net.zootycoon.animal.AnimalBathingManager.setWet(assignedAnimal, net.zootycoon.animal.AnimalBathingManager.WET_DURATION_TICKS);
+
+                sLevel.playSound(null, assignedAnimal.blockPosition(), SoundEvents.BUCKET_EMPTY, SoundSource.NEUTRAL, 1.0f, 1.2f);
+                sLevel.playSound(null, assignedAnimal.blockPosition(), SoundEvents.GENERIC_SPLASH, SoundSource.NEUTRAL, 0.8f, 1.0f);
+
+                net.zootycoon.animal.ZooInspectionService.notifyAnimalUpdated(assignedAnimal);
+                this.setBathingAction(0);
+                ItemStack brushItem = !brushStack.isEmpty() ? brushStack : new ItemStack(Items.BRUSH);
+                this.setItemSlot(EquipmentSlot.MAINHAND, brushItem.copy());
+            }
+        } else {
+            // Step 2: Scrub with brush
+            this.setBathingAction(2);
+            bathingStepTicks++;
+
+            if (bathingStepTicks % 5 == 0) {
+                sLevel.playSound(null, assignedAnimal.blockPosition(), SoundEvents.BRUSH_GENERIC, SoundSource.NEUTRAL, 0.8f, 1.0f + this.getRandom().nextFloat() * 0.2f);
+                sLevel.sendParticles(ParticleTypes.BUBBLE_POP, assignedAnimal.getX(), assignedAnimal.getY() + assignedAnimal.getBbHeight() * 0.5, assignedAnimal.getZ(),
+                        8, assignedAnimal.getBbWidth() * 0.35, assignedAnimal.getBbHeight() * 0.25, assignedAnimal.getBbWidth() * 0.35, 0.04);
+                sLevel.sendParticles(ParticleTypes.WAX_OFF, assignedAnimal.getX(), assignedAnimal.getY() + assignedAnimal.getBbHeight() * 0.5, assignedAnimal.getZ(),
+                        6, assignedAnimal.getBbWidth() * 0.35, assignedAnimal.getBbHeight() * 0.25, assignedAnimal.getBbWidth() * 0.35, 0.02);
+            }
+
+            if (bathingStepTicks >= 35) {
+                bathingStepTicks = 0;
+                ZooAnimalHungerManager.setCleanliness(assignedAnimal, ZooAnimalHungerManager.MAX_CLEANLINESS);
+
+                hurtBrush(1, sLevel);
+
+                sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, assignedAnimal.getX(), assignedAnimal.getY() + assignedAnimal.getBbHeight() * 0.8, assignedAnimal.getZ(),
+                        12, 0.3, 0.3, 0.3, 0.02);
+
+                stopBathing();
+                net.zootycoon.animal.ZooInspectionService.notifyAnimalUpdated(assignedAnimal);
+                for (ServerPlayer sp : sLevel.players()) {
+                    if (sp.distanceToSqr(assignedAnimal) <= 32 * 32) {
+                        ZooNetworkPayloads.sendAnimalSync(sp);
+                    }
+                }
+                actionCooldown = 40;
+            }
+        }
+    }
+
+    private void stopBathing() {
+        this.currentDutyState = "IDLE";
+        this.setBathingAction(0);
+        this.bathingStepTicks = 0;
+        this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
     }
 
     public void handleFoodTransfer(ServerPlayer player) {
@@ -777,6 +815,18 @@ public class ZooZookeeperEntity extends PathfinderMob {
     }
 
     public void handleBathingToolsTransfer(ServerPlayer player) {
+        LivingEntity animal = null;
+        if (assignedAnimalUuid != null && this.level() instanceof ServerLevel sLevel) {
+            Entity ent = sLevel.getEntity(assignedAnimalUuid);
+            if (ent instanceof LivingEntity l && l.isAlive()) animal = l;
+        }
+
+        int cleanlinessVal = (animal != null) ? ZooAnimalHungerManager.getCleanliness(animal) : 100;
+        if (cleanlinessVal > 60) {
+            // Animal is clean! Zookeeper does not need tools
+            return;
+        }
+
         ItemStack canFound = ItemStack.EMPTY;
         int canSlot = -1;
         ItemStack brushFound = ItemStack.EMPTY;
@@ -795,7 +845,7 @@ public class ZooZookeeperEntity extends PathfinderMob {
             }
         }
 
-        if (canSlot != -1 && brushSlot != -1) {
+        if (canSlot != -1 && brushSlot != -1 && canSlot != brushSlot) {
             ItemStack takenCan = canFound.split(1);
             ItemStack takenBrush = brushFound.split(1);
             this.hasWateringCan = true;
@@ -803,6 +853,10 @@ public class ZooZookeeperEntity extends PathfinderMob {
             this.brushStack = takenBrush;
             this.entityData.set(HAS_BATHING_TOOLS, true);
             player.getInventory().setChanged();
+
+            this.currentDutyState = "BATHING";
+            this.actionCooldown = 0;
+            this.bathingStepTicks = 0;
 
             this.playSound(SoundEvents.VILLAGER_YES, 1.0f, 1.0f);
             if (this.level() instanceof ServerLevel sl) {
@@ -820,6 +874,8 @@ public class ZooZookeeperEntity extends PathfinderMob {
             brushStack.hurtAndBreak(amount, this, EquipmentSlot.MAINHAND);
             if (brushStack.isEmpty()) {
                 sLevel.playSound(null, this.blockPosition(), SoundEvents.ITEM_BREAK, SoundSource.PLAYERS, 1.0f, 1.0f);
+                this.hasWateringCan = false;
+                this.wateringCanStack = ItemStack.EMPTY;
             }
             this.entityData.set(HAS_BATHING_TOOLS, hasBathingTools());
         }
