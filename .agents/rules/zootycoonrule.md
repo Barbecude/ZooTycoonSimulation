@@ -44,6 +44,7 @@ fungsi yang belum fix atau belum ada atau masih cacat (Dilarang mengerjakan semu
 13. Khusus Satwa yang perlu di kasi makan langsung dia akan di beri pakan langsung oleh zookeper (berkaitan dengan sistem lapar)
 14. ui dialog button action zookeper
 15. fungsi zookeper membersihkan satwa dengan alat
+16. hologram progress bar watering can dan brush
 
 fungsi yg belum ada atau masih cacat (jangan eksekusi fitur ini sebelum secara eksplisit diminta)
 

@@ -21,6 +21,7 @@ import net.zootycoon.animal.habitat.HabitatEvaluator;
 import net.zootycoon.animal.habitat.HabitatProfile;
 import net.zootycoon.animal.habitat.HabitatProfileLoader;
 import net.zootycoon.client.ZooTycoonClient;
+import net.zootycoon.client.inspect.HologramBarRenderer;
 import net.zootycoon.client.render.ZooAnimalHologramRenderer;
 import net.zootycoon.network.ZooNetworkPayloads;
 import net.zootycoon.util.ZooTranslations;
@@ -422,11 +423,15 @@ public class AnimalManagementTab {
         }
         int hp = (int) Math.ceil(selectedData.health());
         int maxHp = (int) Math.ceil(selectedData.maxHealth());
-        int hpTextX = infoX + (heartsToDraw * 10) + 6;
-        graphics.drawString(font, Component.literal(hp + "/" + maxHp + " HP").withStyle(ChatFormatting.RED), hpTextX, healthY + 1, 0xFFFFFFFF, false);
+        int statTextX = infoX + 106;
+
+        int hpPct = Math.round((selectedData.health() / Math.max(0.1f, selectedData.maxHealth())) * 100.0f);
+        int hpColor = HologramBarRenderer.getStatusColor((float) hpPct);
+        String hpStr = hp + "/" + maxHp + " HP (" + hpPct + "%)";
+        graphics.drawString(font, Component.literal(hpStr), statTextX, healthY + 1, hpColor, false);
         relY += 12;
 
-        // 2. Hunger (Food shanks - icon only, no % text)
+        // 2. Hunger (Food shanks + percentage)
         int hungerY = scrollAreaY + relY - detailsScrollOffset;
         int totalHalfShanks = 20;
         int filledHalfShanks = Math.clamp(Math.round((selectedData.hunger() / 100.0f) * totalHalfShanks), 0, totalHalfShanks);
@@ -440,12 +445,14 @@ public class AnimalManagementTab {
                 graphics.blitSprite(VANILLA_FOOD_HALF, sX, hungerY, 9, 9);
             }
         }
+        int hungerColor = HologramBarRenderer.getStatusColor((float) selectedData.hunger());
+        graphics.drawString(font, Component.literal(selectedData.hunger() + "%"), statTextX, hungerY + 1, hungerColor, false);
         if (inScrollArea && mouseX >= infoX && mouseX <= infoX + 100 && mouseY >= hungerY && mouseY <= hungerY + 10) {
             hoveredStatTooltip = Component.literal("Lapar: " + selectedData.hunger() + "%");
         }
         relY += 12;
 
-        // 3. Thirst (Water droplets - icon only, no % text)
+        // 3. Thirst (Water droplets + percentage)
         int thirstY = scrollAreaY + relY - detailsScrollOffset;
         int filledDroplets = Math.clamp(Math.round(selectedData.thirst() / 10.0f), 0, 10);
         for (int i = 0; i < 10; i++) {
@@ -458,12 +465,14 @@ public class AnimalManagementTab {
             graphics.blit(THIRST_ICON, sX, thirstY, 0, 0, 9, 9, 9, 9);
         }
         graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+        int thirstColor = HologramBarRenderer.getStatusColor((float) selectedData.thirst());
+        graphics.drawString(font, Component.literal(selectedData.thirst() + "%"), statTextX, thirstY + 1, thirstColor, false);
         if (inScrollArea && mouseX >= infoX && mouseX <= infoX + 100 && mouseY >= thirstY && mouseY <= thirstY + 10) {
             hoveredStatTooltip = Component.literal("Kehausan: " + selectedData.thirst() + "%");
         }
         relY += 12;
 
-        // 4. Cleanliness (Sparkle icons - icon only, no % text)
+        // 4. Cleanliness (Sparkle icons + percentage)
         int cleanY = scrollAreaY + relY - detailsScrollOffset;
         int filledClean = Math.clamp(Math.round(selectedData.cleanliness() / 10.0f), 0, 10);
         for (int i = 0; i < 10; i++) {
@@ -476,6 +485,8 @@ public class AnimalManagementTab {
             graphics.blit(CLEANLINESS_ICON, sX, cleanY, 0, 0, 9, 9, 9, 9);
         }
         graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+        int cleanColor = HologramBarRenderer.getStatusColor((float) selectedData.cleanliness());
+        graphics.drawString(font, Component.literal(selectedData.cleanliness() + "%"), statTextX, cleanY + 1, cleanColor, false);
         if (inScrollArea && mouseX >= infoX && mouseX <= infoX + 100 && mouseY >= cleanY && mouseY <= cleanY + 10) {
             hoveredStatTooltip = Component.literal("Kebersihan: " + selectedData.cleanliness() + "%");
         }
