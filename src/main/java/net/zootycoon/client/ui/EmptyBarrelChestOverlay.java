@@ -494,8 +494,7 @@ public class EmptyBarrelChestOverlay {
             List<Component> lines = new ArrayList<>();
             lines.add(hoveredStack.getHoverName());
             if ("CASHIER".equalsIgnoreCase(hoveredDto.staffType())) {
-                lines.add(Component.literal(ZooTranslations.get("zootycoon.warehouse.tooltip.raw_needed")).withStyle(ChatFormatting.YELLOW));
-                graphics.renderTooltip(
+w                graphics.renderTooltip(
                         font,
                         lines,
                         Optional.of(new RawIngredientsTooltipData(hoveredDto.rawIngredients())),
