@@ -24,6 +24,14 @@ public class HologramBarRenderer {
     public static final ResourceLocation VANILLA_HEART_SPRITE = ResourceLocation.withDefaultNamespace("hud/heart/full");
     public static final ResourceLocation VANILLA_HUNGER_SPRITE = ResourceLocation.withDefaultNamespace("hud/food_full");
 
+    public static final ResourceLocation VANILLA_HEART_CONTAINER = ResourceLocation.withDefaultNamespace("hud/heart/container");
+    public static final ResourceLocation VANILLA_HEART_FULL = ResourceLocation.withDefaultNamespace("hud/heart/full");
+    public static final ResourceLocation VANILLA_HEART_HALF = ResourceLocation.withDefaultNamespace("hud/heart/half");
+
+    public static final ResourceLocation VANILLA_FOOD_EMPTY = ResourceLocation.withDefaultNamespace("hud/food_empty");
+    public static final ResourceLocation VANILLA_FOOD_FULL = ResourceLocation.withDefaultNamespace("hud/food_full");
+    public static final ResourceLocation VANILLA_FOOD_HALF = ResourceLocation.withDefaultNamespace("hud/food_half");
+
     // Custom Zoo Tycoon 9x9 pixel-art icons for mechanics not present in vanilla Minecraft
     public static final ResourceLocation THIRST_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/inspect/thirst.png");
     public static final ResourceLocation CLEANLINESS_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/inspect/cleanliness.png");
@@ -150,10 +158,16 @@ public class HologramBarRenderer {
     }
 
     public static void drawTexturedIcon(MultiBufferSource buffer, Matrix4f matrix, ResourceLocation texture, float x, float y, float width, float height, int light, float alphaFactor) {
+        drawTexturedIcon(buffer, matrix, texture, x, y, width, height, light, alphaFactor, 1.0f, 1.0f, 1.0f);
+    }
+
+    public static void drawTexturedIcon(MultiBufferSource buffer, Matrix4f matrix, ResourceLocation texture, float x, float y, float width, float height, int light, float alphaFactor, float red, float green, float blue) {
         VertexConsumer consumer = buffer.getBuffer(RenderType.text(texture));
         float z = -0.005f;
         int a = Math.max(0, Math.min(255, Math.round(255 * Math.max(0.0f, Math.min(1.0f, alphaFactor)))));
-        int r = 255, g = 255, b = 255;
+        int r = Math.max(0, Math.min(255, Math.round(255 * red)));
+        int g = Math.max(0, Math.min(255, Math.round(255 * green)));
+        int b = Math.max(0, Math.min(255, Math.round(255 * blue)));
 
         // Front face (negative Y scale compliant)
         consumer.addVertex(matrix, x, y, z).setColor(r, g, b, a).setUv(0.0f, 0.0f).setLight(light);
@@ -172,17 +186,21 @@ public class HologramBarRenderer {
      * Draws a vanilla GUI atlas sprite with two-sided quads using RenderType.textSeeThrough.
      */
     public static void drawAtlasSprite(MultiBufferSource buffer, Matrix4f matrix, TextureAtlasSprite sprite, float x, float y, float width, float height, int light) {
-        drawAtlasSprite(buffer, matrix, sprite, x, y, width, height, light, 1.0f);
+        drawAtlasSprite(buffer, matrix, sprite, x, y, width, height, 0.0f, light, 1.0f);
     }
 
     public static void drawAtlasSprite(MultiBufferSource buffer, Matrix4f matrix, TextureAtlasSprite sprite, float x, float y, float width, float height, int light, float alphaFactor) {
+        drawAtlasSprite(buffer, matrix, sprite, x, y, width, height, 0.0f, light, alphaFactor);
+    }
+
+    public static void drawAtlasSprite(MultiBufferSource buffer, Matrix4f matrix, TextureAtlasSprite sprite, float x, float y, float width, float height, float zOffset, int light, float alphaFactor) {
         if (sprite == null) return;
         VertexConsumer consumer = buffer.getBuffer(RenderType.text(sprite.atlasLocation()));
         float u0 = sprite.getU0();
         float u1 = sprite.getU1();
         float v0 = sprite.getV0();
         float v1 = sprite.getV1();
-        float z = -0.005f;
+        float z = -0.005f + zOffset;
         int a = Math.max(0, Math.min(255, Math.round(255 * Math.max(0.0f, Math.min(1.0f, alphaFactor)))));
         int r = 255, g = 255, b = 255;
 
@@ -197,6 +215,92 @@ public class HologramBarRenderer {
         consumer.addVertex(matrix, x + width, y, z).setColor(r, g, b, a).setUv(u1, v0).setLight(light);
         consumer.addVertex(matrix, x + width, y + height, z).setColor(r, g, b, a).setUv(u1, v1).setLight(light);
         consumer.addVertex(matrix, x, y + height, z).setColor(r, g, b, a).setUv(u0, v1).setLight(light);
+    }
+
+    /**
+     * Draws the 10-heart health row matching the Animal Management Tab format.
+     */
+    public static void drawHeartRow(Minecraft mc, MultiBufferSource buffer, Matrix4f matrix, float startX, float y, float health, float maxHealth, int light, float alphaFactor) {
+        if (mc == null || mc.getGuiSprites() == null) return;
+        TextureAtlasSprite containerSprite = mc.getGuiSprites().getSprite(VANILLA_HEART_CONTAINER);
+        TextureAtlasSprite fullSprite = mc.getGuiSprites().getSprite(VANILLA_HEART_FULL);
+        TextureAtlasSprite halfSprite = mc.getGuiSprites().getSprite(VANILLA_HEART_HALF);
+
+        float safeMax = Math.max(0.1f, maxHealth);
+        float hpRatio = Math.clamp(health / safeMax, 0.0f, 1.0f);
+        float scaledHp = hpRatio * 20.0f;
+
+        for (int i = 0; i < 10; i++) {
+            float hX = startX + (i * 10.0f);
+            drawAtlasSprite(buffer, matrix, containerSprite, hX, y, 9.0f, 9.0f, 0.0f, light, alphaFactor);
+            float hpForHeart = scaledHp - (i * 2.0f);
+            if (hpForHeart >= 1.5f) {
+                drawAtlasSprite(buffer, matrix, fullSprite, hX, y, 9.0f, 9.0f, -0.001f, light, alphaFactor);
+            } else if (hpForHeart >= 0.5f) {
+                drawAtlasSprite(buffer, matrix, halfSprite, hX, y, 9.0f, 9.0f, -0.001f, light, alphaFactor);
+            }
+        }
+    }
+
+    /**
+     * Draws the 10-shank hunger row matching the Animal Management Tab format.
+     */
+    public static void drawHungerRow(Minecraft mc, MultiBufferSource buffer, Matrix4f matrix, float startX, float y, int hunger, boolean registered, int light, float alphaFactor) {
+        if (mc == null || mc.getGuiSprites() == null) return;
+        TextureAtlasSprite emptySprite = mc.getGuiSprites().getSprite(VANILLA_FOOD_EMPTY);
+        TextureAtlasSprite fullSprite = mc.getGuiSprites().getSprite(VANILLA_FOOD_FULL);
+        TextureAtlasSprite halfSprite = mc.getGuiSprites().getSprite(VANILLA_FOOD_HALF);
+
+        int totalHalfShanks = 20;
+        int safeHunger = (registered && hunger >= 0) ? Math.clamp(hunger, 0, 100) : 0;
+        int filledHalfShanks = Math.clamp(Math.round((safeHunger / 100.0f) * totalHalfShanks), 0, totalHalfShanks);
+
+        for (int i = 0; i < 10; i++) {
+            float sX = startX + (i * 10.0f);
+            drawAtlasSprite(buffer, matrix, emptySprite, sX, y, 9.0f, 9.0f, 0.0f, light, alphaFactor);
+            if (registered && hunger >= 0) {
+                int halfRemaining = filledHalfShanks - (i * 2);
+                if (halfRemaining >= 2) {
+                    drawAtlasSprite(buffer, matrix, fullSprite, sX, y, 9.0f, 9.0f, -0.001f, light, alphaFactor);
+                } else if (halfRemaining == 1) {
+                    drawAtlasSprite(buffer, matrix, halfSprite, sX, y, 9.0f, 9.0f, -0.001f, light, alphaFactor);
+                }
+            }
+        }
+    }
+
+    /**
+     * Draws the 10-droplet thirst row matching the Animal Management Tab format.
+     */
+    public static void drawThirstRow(MultiBufferSource buffer, Matrix4f matrix, float startX, float y, int thirst, boolean registered, int light, float alphaFactor) {
+        int safeThirst = (registered && thirst >= 0) ? Math.clamp(thirst, 0, 100) : 0;
+        int filledDroplets = Math.clamp(Math.round(safeThirst / 10.0f), 0, 10);
+
+        for (int i = 0; i < 10; i++) {
+            float sX = startX + (i * 10.0f);
+            if (registered && thirst >= 0 && i < filledDroplets) {
+                drawTexturedIcon(buffer, matrix, THIRST_ICON, sX, y, 9.0f, 9.0f, light, alphaFactor, 1.0f, 1.0f, 1.0f);
+            } else {
+                drawTexturedIcon(buffer, matrix, THIRST_ICON, sX, y, 9.0f, 9.0f, light, alphaFactor * 0.45f, 0.35f, 0.40f, 0.48f);
+            }
+        }
+    }
+
+    /**
+     * Draws the 10-sponge cleanliness row matching the Animal Management Tab format.
+     */
+    public static void drawCleanlinessRow(MultiBufferSource buffer, Matrix4f matrix, float startX, float y, int cleanliness, boolean registered, int light, float alphaFactor) {
+        int safeClean = (registered && cleanliness >= 0) ? Math.clamp(cleanliness, 0, 100) : 0;
+        int filledClean = Math.clamp(Math.round(safeClean / 10.0f), 0, 10);
+
+        for (int i = 0; i < 10; i++) {
+            float sX = startX + (i * 10.0f);
+            if (registered && cleanliness >= 0 && i < filledClean) {
+                drawTexturedIcon(buffer, matrix, CLEANLINESS_ICON, sX, y, 9.0f, 9.0f, light, alphaFactor, 1.0f, 1.0f, 1.0f);
+            } else {
+                drawTexturedIcon(buffer, matrix, CLEANLINESS_ICON, sX, y, 9.0f, 9.0f, light, alphaFactor * 0.40f, 0.38f, 0.38f, 0.38f);
+            }
+        }
     }
 
     /**
