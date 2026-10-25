@@ -219,6 +219,8 @@ public class HologramBarRenderer {
 
     /**
      * Draws the 10-heart health row matching the Animal Management Tab format.
+     * Prevents Z-fighting and flickering by rendering only one quad per slot (full or container)
+     * and applying clean Z-layering for half hearts.
      */
     public static void drawHeartRow(Minecraft mc, MultiBufferSource buffer, Matrix4f matrix, float startX, float y, float health, float maxHealth, int light, float alphaFactor) {
         if (mc == null || mc.getGuiSprites() == null) return;
@@ -232,18 +234,25 @@ public class HologramBarRenderer {
 
         for (int i = 0; i < 10; i++) {
             float hX = startX + (i * 10.0f);
-            drawAtlasSprite(buffer, matrix, containerSprite, hX, y, 9.0f, 9.0f, 0.0f, light, alphaFactor);
             float hpForHeart = scaledHp - (i * 2.0f);
             if (hpForHeart >= 1.5f) {
-                drawAtlasSprite(buffer, matrix, fullSprite, hX, y, 9.0f, 9.0f, -0.001f, light, alphaFactor);
+                // Full heart: render ONLY fullSprite (no container underneath to avoid Z-fighting)
+                drawAtlasSprite(buffer, matrix, fullSprite, hX, y, 9.0f, 9.0f, 0.0f, light, alphaFactor);
             } else if (hpForHeart >= 0.5f) {
-                drawAtlasSprite(buffer, matrix, halfSprite, hX, y, 9.0f, 9.0f, -0.001f, light, alphaFactor);
+                // Half heart: container at base Z and halfSprite layered on top
+                drawAtlasSprite(buffer, matrix, containerSprite, hX, y, 9.0f, 9.0f, 0.0f, light, alphaFactor);
+                drawAtlasSprite(buffer, matrix, halfSprite, hX, y, 9.0f, 9.0f, 0.002f, light, alphaFactor);
+            } else {
+                // Empty heart: render ONLY containerSprite
+                drawAtlasSprite(buffer, matrix, containerSprite, hX, y, 9.0f, 9.0f, 0.0f, light, alphaFactor);
             }
         }
     }
 
     /**
      * Draws the 10-shank hunger row matching the Animal Management Tab format.
+     * Prevents Z-fighting and flickering by rendering only one quad per slot (full or empty)
+     * and applying clean Z-layering for half shanks.
      */
     public static void drawHungerRow(Minecraft mc, MultiBufferSource buffer, Matrix4f matrix, float startX, float y, int hunger, boolean registered, int light, float alphaFactor) {
         if (mc == null || mc.getGuiSprites() == null) return;
@@ -257,14 +266,22 @@ public class HologramBarRenderer {
 
         for (int i = 0; i < 10; i++) {
             float sX = startX + (i * 10.0f);
-            drawAtlasSprite(buffer, matrix, emptySprite, sX, y, 9.0f, 9.0f, 0.0f, light, alphaFactor);
             if (registered && hunger >= 0) {
                 int halfRemaining = filledHalfShanks - (i * 2);
                 if (halfRemaining >= 2) {
-                    drawAtlasSprite(buffer, matrix, fullSprite, sX, y, 9.0f, 9.0f, -0.001f, light, alphaFactor);
+                    // Full shank: render ONLY fullSprite (no empty shank underneath to avoid Z-fighting)
+                    drawAtlasSprite(buffer, matrix, fullSprite, sX, y, 9.0f, 9.0f, 0.0f, light, alphaFactor);
                 } else if (halfRemaining == 1) {
-                    drawAtlasSprite(buffer, matrix, halfSprite, sX, y, 9.0f, 9.0f, -0.001f, light, alphaFactor);
+                    // Half shank: empty shank at base Z and halfSprite layered on top
+                    drawAtlasSprite(buffer, matrix, emptySprite, sX, y, 9.0f, 9.0f, 0.0f, light, alphaFactor);
+                    drawAtlasSprite(buffer, matrix, halfSprite, sX, y, 9.0f, 9.0f, 0.002f, light, alphaFactor);
+                } else {
+                    // Empty shank: render ONLY emptySprite
+                    drawAtlasSprite(buffer, matrix, emptySprite, sX, y, 9.0f, 9.0f, 0.0f, light, alphaFactor);
                 }
+            } else {
+                // Unregistered or negative: render ONLY emptySprite
+                drawAtlasSprite(buffer, matrix, emptySprite, sX, y, 9.0f, 9.0f, 0.0f, light, alphaFactor);
             }
         }
     }
