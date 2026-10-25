@@ -45,6 +45,11 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.world.Containers;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.damagesource.DamageSource;
 import net.zootycoon.animal.ZooAnimalHungerManager;
 import net.zootycoon.util.ZooTranslations;
 import net.minecraft.ChatFormatting;
@@ -72,17 +77,34 @@ public class ZooZookeeperEntity extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> HAS_ASSIGNED_ANIMAL =
             SynchedEntityData.defineId(ZooZookeeperEntity.class, EntityDataSerializers.BOOLEAN);
 
-    private static final String[] NAMES = new String[]{
-            "Siti Rahma", "Agus Setiawan", "Rudi Hartono", "Dewi Lestari",
-            "Bambang Pamungkas", "Nurul Hidayah", "Hendra Wijaya", "Indah Permata",
-            "Joko Supriyanto", "Rina Marlina"
-    };
+
+private static final String[] NAMES = new String[]{
+        "Siti Nurhalu",
+        "Putri Kerupuk",
+        "Dewi Galon",
+        "Tasya Tupperware",
+        "Nabila Nasi Padang",
+        "Salsa Sarden",
+        "Melati Microwave",
+        "Vina Vitamin",
+        "Lala Laler",
+        "Nana Nanas",
+        "Siska Sambalado",
+        "Kiki Kompor",
+        "Ratna Rice Cooker",
+        "Lilis Lemper",
+        "Margaret baskom"
+};
+
 
     private UUID ownerUuid = null;
     private UUID assignedAnimalUuid = null;
     private String currentDutyState = "IDLE"; // "REFILL", "NEED_FOOD", "SWEEPING", "BATHING", "IDLE"
     private int actionCooldown = 0;
     private int bathingStepTicks = 0;
+
+    private static final int FOOD_SLOTS = 8;
+    private final SimpleContainer foodInventory = new SimpleContainer(FOOD_SLOTS);
 
     private boolean hasWateringCan = false;
     private ItemStack wateringCanStack = ItemStack.EMPTY;
@@ -458,7 +480,8 @@ public class ZooZookeeperEntity extends PathfinderMob {
                 if (hunger <= 75) {
                     if (this.getFoodStock() > 0) {
                         currentDutyState = "FEEDING_ANIMAL";
-                        Item targetFoodItem = (diet != null && !diet.acceptedFoods.isEmpty()) ? diet.acceptedFoods.get(0) : Items.BEEF;
+                        ItemStack heldFood = this.peekFirstFood();
+                        Item targetFoodItem = !heldFood.isEmpty() ? heldFood.getItem() : ((diet != null && !diet.acceptedFoods.isEmpty()) ? diet.acceptedFoods.get(0) : Items.BEEF);
                         this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(targetFoodItem));
 
                         double distSq = this.distanceToSqr(assignedAnimal);
@@ -470,7 +493,8 @@ public class ZooZookeeperEntity extends PathfinderMob {
                             this.getLookControl().setLookAt(assignedAnimal, 30.0F, 30.0F);
                             this.swing(InteractionHand.MAIN_HAND);
 
-                            ItemStack throwStack = new ItemStack(targetFoodItem, 1);
+                            ItemStack takenFood = this.takeFirstFood(1);
+                            ItemStack throwStack = !takenFood.isEmpty() ? takenFood : new ItemStack(targetFoodItem, 1);
                             ItemEntity itemEntity = new ItemEntity(sLevel, this.getX(), this.getEyeY() - 0.2, this.getZ(), throwStack);
                             Vec3 targetPos = assignedAnimal.position().add(0, assignedAnimal.getBbHeight() * 0.25, 0);
                             Vec3 throwVec = targetPos.subtract(itemEntity.position()).normalize().scale(0.38);
@@ -479,7 +503,6 @@ public class ZooZookeeperEntity extends PathfinderMob {
                             sLevel.addFreshEntity(itemEntity);
 
                             sLevel.playSound(null, this.blockPosition(), SoundEvents.SNOWBALL_THROW, SoundSource.NEUTRAL, 0.6f, 0.9f + this.getRandom().nextFloat() * 0.2f);
-                            this.setFoodStock(this.getFoodStock() - 1);
                             actionCooldown = 40; // 2 seconds cooldown between throws
                             return;
                         }
@@ -489,14 +512,17 @@ public class ZooZookeeperEntity extends PathfinderMob {
                 }
             } else {
                 // Herbivores / Trough eaters: Refill feeding trough
-                Item targetFoodItem = Items.WHEAT;
-                if (diet != null && !diet.acceptedFoods.isEmpty()) {
-                    targetFoodItem = diet.acceptedFoods.get(0);
-                } else if (assignedAnimal instanceof net.minecraft.world.entity.animal.Animal a) {
-                    if (a.isFood(new ItemStack(Items.CARROT))) targetFoodItem = Items.CARROT;
-                    else if (a.isFood(new ItemStack(Items.WHEAT_SEEDS))) targetFoodItem = Items.WHEAT_SEEDS;
-                    else if (a.isFood(new ItemStack(Items.BAMBOO))) targetFoodItem = Items.BAMBOO;
-                    else if (a.isFood(new ItemStack(Items.APPLE))) targetFoodItem = Items.APPLE;
+                ItemStack availableFood = this.peekFirstFood();
+                Item targetFoodItem = !availableFood.isEmpty() ? availableFood.getItem() : Items.WHEAT;
+                if (availableFood.isEmpty()) {
+                    if (diet != null && !diet.acceptedFoods.isEmpty()) {
+                        targetFoodItem = diet.acceptedFoods.get(0);
+                    } else if (assignedAnimal instanceof net.minecraft.world.entity.animal.Animal a) {
+                        if (a.isFood(new ItemStack(Items.CARROT))) targetFoodItem = Items.CARROT;
+                        else if (a.isFood(new ItemStack(Items.WHEAT_SEEDS))) targetFoodItem = Items.WHEAT_SEEDS;
+                        else if (a.isFood(new ItemStack(Items.BAMBOO))) targetFoodItem = Items.BAMBOO;
+                        else if (a.isFood(new ItemStack(Items.APPLE))) targetFoodItem = Items.APPLE;
+                    }
                 }
 
                 BlockPos designatedTrough = null;
@@ -547,12 +573,24 @@ public class ZooZookeeperEntity extends PathfinderMob {
                             BlockEntity be = sLevel.getBlockEntity(needRefillTrough);
                             if (be instanceof ZooFeedingTroughBlockEntity troughBe) {
                                 int toInsert = Math.min(8, this.getFoodStock());
-                                boolean inserted = troughBe.insertFood(new ItemStack(targetFoodItem, toInsert), toInsert);
-                                if (inserted) {
-                                    this.setFoodStock(this.getFoodStock() - toInsert);
-                                    sLevel.playSound(null, needRefillTrough, SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.9f, 1.2f);
-                                    sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, needRefillTrough.getX() + 0.5, needRefillTrough.getY() + 0.8, needRefillTrough.getZ() + 0.5, 6, 0.2, 0.2, 0.2, 0.02);
-                                    actionCooldown = 40; // 2 seconds cooldown between refills
+                                ItemStack takenFood = this.takeFirstFood(toInsert);
+                                if (!takenFood.isEmpty()) {
+                                    int initialCount = takenFood.getCount();
+                                    boolean inserted = troughBe.insertFood(takenFood, initialCount);
+                                    if (inserted) {
+                                        if (!takenFood.isEmpty()) {
+                                            // Put back leftover if trough couldn't take all
+                                            this.foodInventory.addItem(takenFood);
+                                            updateFoodStockFromInventory();
+                                        }
+                                        sLevel.playSound(null, needRefillTrough, SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.9f, 1.2f);
+                                        sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, needRefillTrough.getX() + 0.5, needRefillTrough.getY() + 0.8, needRefillTrough.getZ() + 0.5, 6, 0.2, 0.2, 0.2, 0.02);
+                                        actionCooldown = 40; // 2 seconds cooldown between refills
+                                    } else {
+                                        // Put back if not inserted
+                                        this.foodInventory.addItem(takenFood);
+                                        updateFoodStockFromInventory();
+                                    }
                                 }
                             }
                         }
@@ -794,13 +832,18 @@ public class ZooZookeeperEntity extends PathfinderMob {
                 boolean valid = (animal != null) ? AnimalDietRegistry.isFoodValid(animal, st) : (AnimalDietRegistry.isAnyFood(st) || AnimalDietRegistry.isAnyTroughFood(st));
                 if (valid) {
                     int toTake = Math.min(st.getCount(), 32 - totalGiven);
-                    st.shrink(toTake);
-                    this.addFoodStock(toTake);
-                    totalGiven += toTake;
-                    if (totalGiven >= 32) break;
+                    ItemStack taken = st.split(toTake);
+                    ItemStack leftover = this.foodInventory.addItem(taken);
+                    int added = toTake - leftover.getCount();
+                    if (!leftover.isEmpty()) {
+                        st.grow(leftover.getCount());
+                    }
+                    totalGiven += added;
+                    if (totalGiven >= 32 || !leftover.isEmpty()) break;
                 }
             }
         }
+        updateFoodStockFromInventory();
         player.getInventory().setChanged();
 
         String anDesc = (animal != null) ? (animal.hasCustomName() ? animal.getCustomName().getString() : animal.getType().getDescription().getString()) : "satwa";
@@ -941,6 +984,48 @@ public class ZooZookeeperEntity extends PathfinderMob {
         return this.entityData.get(HAS_ASSIGNED_ANIMAL);
     }
 
+    public SimpleContainer getFoodInventory() {
+        return this.foodInventory;
+    }
+
+    public void updateFoodStockFromInventory() {
+        int total = 0;
+        for (int i = 0; i < FOOD_SLOTS; i++) {
+            ItemStack stack = this.foodInventory.getItem(i);
+            if (!stack.isEmpty()) {
+                total += stack.getCount();
+            }
+        }
+        this.entityData.set(FOOD_STOCK_DATA, total);
+    }
+
+    public ItemStack takeFirstFood(int maxCount) {
+        if (maxCount <= 0) return ItemStack.EMPTY;
+        for (int i = 0; i < FOOD_SLOTS; i++) {
+            ItemStack stack = this.foodInventory.getItem(i);
+            if (!stack.isEmpty()) {
+                int toTake = Math.min(stack.getCount(), maxCount);
+                ItemStack taken = stack.split(toTake);
+                if (stack.isEmpty()) {
+                    this.foodInventory.setItem(i, ItemStack.EMPTY);
+                }
+                updateFoodStockFromInventory();
+                return taken;
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
+    public ItemStack peekFirstFood() {
+        for (int i = 0; i < FOOD_SLOTS; i++) {
+            ItemStack stack = this.foodInventory.getItem(i);
+            if (!stack.isEmpty()) {
+                return stack;
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
     public int getFoodStock() {
         return this.entityData.get(FOOD_STOCK_DATA);
     }
@@ -1028,11 +1113,27 @@ public class ZooZookeeperEntity extends PathfinderMob {
     }
 
     @Override
+    protected void dropCustomDeathLoot(ServerLevel level, DamageSource damageSource, boolean recentlyHit) {
+        super.dropCustomDeathLoot(level, damageSource, recentlyHit);
+        Containers.dropContents(level, this, this.foodInventory);
+    }
+
+    @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         if (ownerUuid != null) tag.putString("OwnerUuid", ownerUuid.toString());
         if (assignedAnimalUuid != null) tag.putString("AssignedAnimalUuid", assignedAnimalUuid.toString());
         tag.putInt("FoodStock", getFoodStock());
+        ListTag foodTag = new ListTag();
+        for (int i = 0; i < FOOD_SLOTS; i++) {
+            ItemStack stack = this.foodInventory.getItem(i);
+            if (!stack.isEmpty()) {
+                CompoundTag slotTag = new CompoundTag();
+                slotTag.putByte("Slot", (byte) i);
+                foodTag.add(stack.save(this.registryAccess(), slotTag));
+            }
+        }
+        tag.put("FoodInventory", foodTag);
         tag.putString("DutyState", currentDutyState);
         tag.putBoolean("HasWateringCan", hasWateringCan);
         if (!wateringCanStack.isEmpty()) {
@@ -1061,7 +1162,20 @@ public class ZooZookeeperEntity extends PathfinderMob {
             try { this.assignedAnimalUuid = UUID.fromString(aStr); } catch (Exception ignored) {}
         }
         this.entityData.set(HAS_ASSIGNED_ANIMAL, this.assignedAnimalUuid != null);
-        this.setFoodStock(tag.getInt("FoodStock"));
+        this.foodInventory.clearContent();
+        if (tag.contains("FoodInventory", Tag.TAG_LIST)) {
+            ListTag foodTag = tag.getList("FoodInventory", Tag.TAG_COMPOUND);
+            for (int i = 0; i < foodTag.size(); i++) {
+                CompoundTag slotTag = foodTag.getCompound(i);
+                int slot = slotTag.getByte("Slot") & 255;
+                if (slot < FOOD_SLOTS) {
+                    this.foodInventory.setItem(slot, ItemStack.parseOptional(this.registryAccess(), slotTag));
+                }
+            }
+            updateFoodStockFromInventory();
+        } else if (tag.contains("FoodStock")) {
+            this.setFoodStock(tag.getInt("FoodStock"));
+        }
         if (tag.contains("DutyState")) {
             this.currentDutyState = tag.getString("DutyState");
         }
