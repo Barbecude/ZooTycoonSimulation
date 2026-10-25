@@ -221,10 +221,10 @@ public class EmptyBarrelChestOverlay {
         return Math.max(CARD_HEIGHT, actionBtnYOffset + actionBtnH + 4);
     }
 
-    private static int computeTotalContentHeight(int cardW) {
+    private static int computeTotalContentHeight(int colsCardW, int actualCardW) {
         int total = 0;
         for (int i = 0; i < activeRequests.size(); i++) {
-            total += getCardHeight(activeRequests.get(i), cardW);
+            total += getCardHeight(activeRequests.get(i), colsCardW);
             if (i < activeRequests.size() - 1) {
                 total += CARD_GAP;
             }
@@ -283,9 +283,9 @@ public class EmptyBarrelChestOverlay {
             return;
         }
 
-        int tentativeContentH = computeTotalContentHeight(listW);
-        int cardW = tentativeContentH > listH ? (listW - 6) : listW;
-        int totalContentH = cardW == listW ? tentativeContentH : computeTotalContentHeight(cardW);
+        int baseCardW = listW - 6;
+        int totalContentH = computeTotalContentHeight(baseCardW, baseCardW);
+        int cardW = totalContentH > listH ? (listW - 6) : listW;
         maxScroll = Math.max(0, totalContentH - listH);
         scrollOffset = Math.clamp(scrollOffset, 0.0f, (float) maxScroll);
 
@@ -298,7 +298,7 @@ public class EmptyBarrelChestOverlay {
         for (int i = 0; i < activeRequests.size(); i++) {
             WarehousePayloads.StaffRequestDto req = activeRequests.get(i);
             int cardY = curCardY;
-            int cardH = getCardHeight(req, cardW);
+            int cardH = getCardHeight(req, baseCardW);
             curCardY += cardH + CARD_GAP;
 
             if (cardY + cardH < listY || cardY > listY + listH) {
@@ -334,6 +334,7 @@ public class EmptyBarrelChestOverlay {
             // B. Right Column: Staff Name, Subtitle, Target Finished Food Icons, Toggle Button, and Ambil Resep Button
             int infoX = previewX + previewW + 5;
             int infoW = cardW - (infoX - listX) - 4;
+            int fixedColsW = baseCardW - (infoX - listX) - 4;
 
             // Row 1: Staff Name
             String staffName = req.staffName();
@@ -386,7 +387,7 @@ public class EmptyBarrelChestOverlay {
                     curX += slotSize + 4;
                 }
             } else {
-                int colsPerRow = Math.max(1, (infoW + slotGap) / (slotSize + slotGap));
+                int colsPerRow = Math.max(1, (fixedColsW + slotGap) / (slotSize + slotGap));
                 boolean hasMultipleFoodRows = targets.size() > colsPerRow;
                 boolean isExpanded = hasMultipleFoodRows && expandedFoodCards.contains(req.staffUuid());
                 int displayedCount = (isExpanded || !hasMultipleFoodRows) ? targets.size() : colsPerRow;
@@ -405,9 +406,6 @@ public class EmptyBarrelChestOverlay {
                     graphics.fill(sx, sy, sx + slotSize, sy + slotSize, slotHovered ? 0xFF1E2433 : 0xFF12151D);
                     graphics.renderOutline(sx, sy, slotSize, slotSize, slotHovered ? 0xFF58A6FF : 0xFF334155);
                     graphics.renderFakeItem(st, sx + 1, sy + 1);
-                    if (k == 0) {
-                        graphics.renderItemDecorations(font, st, sx + 1, sy + 1, "32");
-                    }
 
                     if (slotHovered) {
                         hoveredStack = st;
@@ -432,9 +430,7 @@ public class EmptyBarrelChestOverlay {
                     graphics.fill(toggleBtnX, toggleBtnY, toggleBtnX + toggleBtnW, toggleBtnY + toggleBtnH, tBtnBg);
                     graphics.renderOutline(toggleBtnX, toggleBtnY, toggleBtnW, toggleBtnH, tBtnBorder);
 
-                    String fullToggleText = isExpanded ? "▲ Sembunyikan" : "▼ Lihat Semua Makanan (" + targets.size() + ")";
-                    String shortToggleText = isExpanded ? "▲ Sembunyikan" : "▼ Lihat Makanan (" + targets.size() + ")";
-                    String toggleText = font.width(fullToggleText) <= toggleBtnW - 4 ? fullToggleText : shortToggleText;
+                    String toggleText = isExpanded ? "▲ Sembunyikan" : "▼ Lihat Semua";
                     int textW = font.width(toggleText);
                     graphics.drawString(
                             font,
@@ -494,7 +490,7 @@ public class EmptyBarrelChestOverlay {
             List<Component> lines = new ArrayList<>();
             lines.add(hoveredStack.getHoverName());
             if ("CASHIER".equalsIgnoreCase(hoveredDto.staffType())) {
-w                graphics.renderTooltip(
+                graphics.renderTooltip(
                         font,
                         lines,
                         Optional.of(new RawIngredientsTooltipData(hoveredDto.rawIngredients())),
@@ -524,8 +520,9 @@ w                graphics.renderTooltip(
         int listY = panelY + 29;
         int listH = panelH - 33;
         int listW = panelW - 10;
-        int tentativeContentH = computeTotalContentHeight(listW);
-        int cardW = tentativeContentH > listH ? (listW - 6) : listW;
+        int baseCardW = listW - 6;
+        int totalContentH = computeTotalContentHeight(baseCardW, baseCardW);
+        int cardW = totalContentH > listH ? (listW - 6) : listW;
 
         // Check click on scrollbar track
         if (maxScroll > 0 && mouseX >= panelX + panelW - 10 && mouseX <= panelX + panelW && mouseY >= listY && mouseY <= listY + listH) {
@@ -540,7 +537,7 @@ w                graphics.renderTooltip(
             for (int i = 0; i < activeRequests.size(); i++) {
                 WarehousePayloads.StaffRequestDto req = activeRequests.get(i);
                 int cardY = curCardY;
-                int cardH = getCardHeight(req, cardW);
+                int cardH = getCardHeight(req, baseCardW);
                 curCardY += cardH + CARD_GAP;
 
                 if (cardY + cardH < listY || cardY > listY + listH) continue;
@@ -548,6 +545,7 @@ w                graphics.renderTooltip(
                 int previewW = 34;
                 int infoX = listX + 3 + previewW + 5;
                 int infoW = cardW - (infoX - listX) - 4;
+                int fixedColsW = baseCardW - (infoX - listX) - 4;
                 int slotY = cardY + 25;
                 int slotSize = 18;
                 int slotGap = 2;
@@ -555,7 +553,7 @@ w                graphics.renderTooltip(
 
                 if (!"CASHIER".equalsIgnoreCase(req.staffType())) {
                     List<ItemStack> targets = req.targetItems();
-                    int colsPerRow = Math.max(1, (infoW + slotGap) / (slotSize + slotGap));
+                    int colsPerRow = Math.max(1, (fixedColsW + slotGap) / (slotSize + slotGap));
                     boolean hasMultipleFoodRows = targets.size() > colsPerRow;
                     boolean isExpanded = hasMultipleFoodRows && expandedFoodCards.contains(req.staffUuid());
                     int displayedCount = (isExpanded || !hasMultipleFoodRows) ? targets.size() : colsPerRow;
