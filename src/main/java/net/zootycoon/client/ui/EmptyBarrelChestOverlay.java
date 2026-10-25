@@ -200,15 +200,15 @@ public class EmptyBarrelChestOverlay {
         return (screen.height - CHEST_HEIGHT) / 2;
     }
 
+    private static final int ZOOKEEPER_FOOD_COLS = 5;
+
     private static int getCardHeight(WarehousePayloads.StaffRequestDto req, int cardW) {
         if ("CASHIER".equalsIgnoreCase(req.staffType())) {
             return CARD_HEIGHT;
         }
-        int previewW = 34;
-        int infoW = Math.max(20, cardW - (3 + previewW + 5) - 4);
         int slotSize = 18;
         int slotGap = 2;
-        int colsPerRow = Math.max(1, (infoW + slotGap) / (slotSize + slotGap));
+        int colsPerRow = ZOOKEEPER_FOOD_COLS;
         List<ItemStack> targets = req.targetItems();
         boolean hasMultipleFoodRows = targets.size() > colsPerRow;
         boolean isExpanded = hasMultipleFoodRows && expandedFoodCards.contains(req.staffUuid());
@@ -387,7 +387,7 @@ public class EmptyBarrelChestOverlay {
                     curX += slotSize + 4;
                 }
             } else {
-                int colsPerRow = Math.max(1, (fixedColsW + slotGap) / (slotSize + slotGap));
+                int colsPerRow = ZOOKEEPER_FOOD_COLS;
                 boolean hasMultipleFoodRows = targets.size() > colsPerRow;
                 boolean isExpanded = hasMultipleFoodRows && expandedFoodCards.contains(req.staffUuid());
                 int displayedCount = (isExpanded || !hasMultipleFoodRows) ? targets.size() : colsPerRow;
@@ -553,7 +553,7 @@ public class EmptyBarrelChestOverlay {
 
                 if (!"CASHIER".equalsIgnoreCase(req.staffType())) {
                     List<ItemStack> targets = req.targetItems();
-                    int colsPerRow = Math.max(1, (fixedColsW + slotGap) / (slotSize + slotGap));
+                    int colsPerRow = ZOOKEEPER_FOOD_COLS;
                     boolean hasMultipleFoodRows = targets.size() > colsPerRow;
                     boolean isExpanded = hasMultipleFoodRows && expandedFoodCards.contains(req.staffUuid());
                     int displayedCount = (isExpanded || !hasMultipleFoodRows) ? targets.size() : colsPerRow;
