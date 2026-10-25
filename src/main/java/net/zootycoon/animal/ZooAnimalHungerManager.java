@@ -9,6 +9,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -243,14 +245,11 @@ public class ZooAnimalHungerManager {
             }
 
             int currentClean = getCleanliness(animal);
-            // Negative impacts if dirty:
-            // 1. Poison effect when very dirty (<= 10)
-            if (currentClean <= 10) {
-                animal.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.POISON, 80, 0, false, false, true));
-                if (level.getGameTime() % 40 == 0) {
-                    level.sendParticles(ParticleTypes.ITEM_SLIME, animal.getX(), animal.getY() + animal.getBbHeight() * 0.5, animal.getZ(), 4, 0.2, 0.2, 0.2, 0.02);
-                }
-            }
+            int currentThirst = getThirst(animal);
+            int currentHunger = getHunger(animal);
+
+            // Universal Negative Minecraft Effects when stats drop to 0 or environment is uncomfortable
+            applyNegativeStatEffects(level, animal, currentHunger, currentThirst, currentClean);
 
             // Animal pathing to feeding trough and water source (ONLY registered animals)
             if (animal instanceof net.minecraft.world.entity.PathfinderMob pathfinderMob) {
@@ -275,7 +274,7 @@ public class ZooAnimalHungerManager {
             }
 
             ServerPlayer owner = ownerUuid != null ? level.getServer().getPlayerList().getPlayer(ownerUuid) : null;
-            int currentHunger = getHunger(animal);
+            currentHunger = getHunger(animal);
 
             // 2. Faster hunger decay when dirty (<= 25 decays 2x faster)
             boolean isDirty = currentClean <= 25;
@@ -302,15 +301,19 @@ public class ZooAnimalHungerManager {
                 }
             }
 
-            // Starvation death
+            // Starvation damage & death
             if (currentHunger <= 0) {
-                String name = animal.hasCustomName() ? animal.getCustomName().getString() : animal.getType().getDescription().getString();
-                if (owner != null) {
-                    ZooNetworkPayloads.sendToast(owner, "zootycoon.toast.title.error", "zootycoon.animal.starved_death", 3, name);
+                if (level.getGameTime() % 60 == 0) {
+                    animal.hurt(animal.damageSources().starve(), 1.0f);
                 }
-                level.playSound(null, animal.blockPosition(), SoundEvents.WITHER_DEATH, SoundSource.NEUTRAL, 0.6f, 0.8f);
-                level.sendParticles(ParticleTypes.SMOKE, animal.getX(), animal.getY() + 0.5, animal.getZ(), 15, 0.3, 0.3, 0.3, 0.05);
-                animal.kill();
+                if (!animal.isAlive()) {
+                    String name = animal.hasCustomName() ? animal.getCustomName().getString() : animal.getType().getDescription().getString();
+                    if (owner != null) {
+                        ZooNetworkPayloads.sendToast(owner, "zootycoon.toast.title.error", "zootycoon.animal.starved_death", 3, name);
+                    }
+                    level.playSound(null, animal.blockPosition(), SoundEvents.WITHER_DEATH, SoundSource.NEUTRAL, 0.6f, 0.8f);
+                    level.sendParticles(ParticleTypes.SMOKE, animal.getX(), animal.getY() + 0.5, animal.getZ(), 15, 0.3, 0.3, 0.3, 0.05);
+                }
             }
         }
 
@@ -318,6 +321,65 @@ public class ZooAnimalHungerManager {
         if (level.getGameTime() % 40 == 0) {
             for (ServerPlayer player : level.players()) {
                 ZooNetworkPayloads.sendAnimalSync(player);
+            }
+        }
+    }
+
+    private static void applyNegativeStatEffects(ServerLevel level, LivingEntity animal, int currentHunger, int currentThirst, int currentClean) {
+        // 1. Kebersihan (Cleanliness <= 0 -> Poison + Weakness)
+        if (currentClean <= 0) {
+            animal.addEffect(new MobEffectInstance(MobEffects.POISON, 80, 0, false, true, true));
+            animal.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80, 0, false, false, true));
+            if (level.getGameTime() % 40 == 0) {
+                level.sendParticles(ParticleTypes.ITEM_SLIME, animal.getX(), animal.getY() + animal.getBbHeight() * 0.5, animal.getZ(), 5, 0.2, 0.2, 0.2, 0.02);
+            }
+        } else if (currentClean <= 10) {
+            animal.addEffect(new MobEffectInstance(MobEffects.POISON, 80, 0, false, false, true));
+            if (level.getGameTime() % 40 == 0) {
+                level.sendParticles(ParticleTypes.ITEM_SLIME, animal.getX(), animal.getY() + animal.getBbHeight() * 0.5, animal.getZ(), 3, 0.2, 0.2, 0.2, 0.02);
+            }
+        }
+
+        // 2. Haus (Thirst <= 0 -> Slowness II + Weakness + dry-out damage)
+        if (currentThirst <= 0) {
+            animal.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 1, false, true, true));
+            animal.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80, 0, false, false, true));
+            if (level.getGameTime() % 60 == 0 && animal.getHealth() > 1.0f) {
+                animal.hurt(animal.damageSources().dryOut(), 1.0f);
+            }
+        } else if (currentThirst <= 15) {
+            animal.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 0, false, false, true));
+        }
+
+        // 3. Lapar (Hunger <= 0 -> Hunger II + Weakness II + Slowness)
+        if (currentHunger <= 0) {
+            animal.addEffect(new MobEffectInstance(MobEffects.HUNGER, 80, 1, false, true, true));
+            animal.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80, 1, false, true, true));
+            animal.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 0, false, false, true));
+        } else if (currentHunger <= 15) {
+            animal.addEffect(new MobEffectInstance(MobEffects.HUNGER, 80, 0, false, false, true));
+            animal.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80, 0, false, false, true));
+        }
+
+        // 4. Suhu / Iklim (Temperature discomfort -> Slowness/Freezing or Weakness/Heat)
+        var habitatProfile = net.zootycoon.animal.habitat.HabitatProfileLoader.getProfile(animal);
+        if (habitatProfile != null) {
+            float effectiveTemp = net.zootycoon.animal.ZooClimate.getEffectiveTemperature(level, animal.blockPosition());
+            if (effectiveTemp < habitatProfile.minTemperature()) {
+                // Too Cold: Slowness + Freezing Ticks
+                animal.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 1, false, true, true));
+                animal.setTicksFrozen(Math.min(animal.getTicksRequiredToFreeze() + 60, animal.getTicksFrozen() + 30));
+                if (effectiveTemp < habitatProfile.minTemperature() - 0.35f && level.getGameTime() % 80 == 0) {
+                    animal.hurt(animal.damageSources().freeze(), 1.0f);
+                }
+            } else if (effectiveTemp > habitatProfile.maxTemperature()) {
+                // Too Hot: Weakness + Hunger
+                animal.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80, 0, false, true, true));
+                animal.addEffect(new MobEffectInstance(MobEffects.HUNGER, 80, 0, false, false, true));
+                if (effectiveTemp > habitatProfile.maxTemperature() + 0.35f && level.getGameTime() % 80 == 0) {
+                    animal.hurt(animal.damageSources().onFire(), 1.0f);
+                    level.sendParticles(ParticleTypes.FLAME, animal.getX(), animal.getY() + animal.getBbHeight() * 0.5, animal.getZ(), 3, 0.1, 0.1, 0.1, 0.01);
+                }
             }
         }
     }

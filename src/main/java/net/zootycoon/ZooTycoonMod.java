@@ -117,22 +117,15 @@ public class ZooTycoonMod implements ModInitializer {
                 } else if (net.zootycoon.animal.AnimalBathingManager.isWateringCan(held)) {
                     if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)
                             && net.zootycoon.animal.ZooAnimalHungerManager.isTagged(living)) {
-                        boolean watered = net.zootycoon.animal.AnimalBathingManager.waterAnimal(living, sp, held, hand);
-                        if (watered) {
-                            return net.minecraft.world.InteractionResult.SUCCESS;
-                        }
+                        // Consumed: Bathing is driven by holding right-click with continuous progress bar
+                        return net.minecraft.world.InteractionResult.SUCCESS;
                     }
                 } else if (held.is(net.minecraft.world.item.Items.BRUSH)) {
                     if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)) {
-                        if (net.zootycoon.animal.ZooAnimalHungerManager.isTagged(living) && net.zootycoon.animal.AnimalBathingManager.isWet(living)) {
-                            boolean brushed = net.zootycoon.animal.AnimalBathingManager.brushAnimal(living, sp, held, hand);
-                            if (brushed) {
-                                return net.minecraft.world.InteractionResult.SUCCESS;
-                            }
-                        } else {
+                        if (!net.zootycoon.animal.AnimalBathingManager.isWet(living)) {
                             sp.displayClientMessage(net.minecraft.network.chat.Component.translatable("zootycoon.bathing.need_water"), true);
-                            return net.minecraft.world.InteractionResult.SUCCESS;
                         }
+                        return net.minecraft.world.InteractionResult.SUCCESS;
                     }
                 } else if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)
                         && net.zootycoon.animal.AnimalDietRegistry.isFoodValid(living, held)) {

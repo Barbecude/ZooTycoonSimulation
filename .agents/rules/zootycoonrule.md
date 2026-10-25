@@ -9,6 +9,13 @@ Wajib membaca docs/hologram/RULES.md dan docs/hologram/PROGRESS.md sebelum menge
 
 C:\Users\Zevaldo\AppData\Roaming\ModrinthApp\profiles\Fresh & Smooth\mods pindah mod ke sini kalo sudah beres build akhir
 
+mod source yg dipakai untuk mencari tau isi kode atau mixin:
+https://github.com/Codx-org/AlexsMobsContinued
+https://github.com/crispytwig/Naturalist
+
+data hewan:
+https://docs.google.com/document/d/1jJZwJqmeuR9pmZL68d9drwBwZZVqxTd8_w1RZepzcl4
+
 fungsi yang sudah ada jangan sampe rusak
 
 Scope guard yang ketat: Dilarang mengubah atau menyentuh file, class, dan komponen UI yang tidak disebutkan secara eksplisit dalam instruksi pengguna. Jika tugas hanya menyebut feeding trough, jangan pernah menyentuh file zookeeper, cashier, builder, atau file lainnya.
@@ -38,6 +45,8 @@ fungsi yang belum fix atau belum ada atau masih cacat (Dilarang mengerjakan semu
 14. ui dialog button action zookeper
 15. fungsi zookeper membersihkan satwa dengan alat
 
+fungsi yg belum ada atau masih cacat (jangan eksekusi fitur ini sebelum secara eksplisit diminta)
+
 - jika salah satu dari stats (haus, kebersihan, lapar, suhu) sampai 0 atau tidak nyaman maka hewan akan dapat effect minecraft negatif bisa berupa poison, hunger atau lainnya.
 -animasi  zookeper  membersihkan satwa menggunakan watering can dan brush
 - Sistem Rating Zoo Bangun formula perhitungan rating total 5 star dinamis berdasarkan rata-rata kesehatan satwa, kebersihan kandang, kelengkapan fasilitas, dan kepuasan pengunjung, serta tampilkan indikator rating di UI/HUD.
@@ -49,9 +58,3 @@ Sediakan pengaturan harga tiket dan makanan/minuman yang berdampak pada keputusa
 - Gudang (Warehouse dan Rantai Pasok)
 Bangun sistem gudang sentral untuk menyimpan stok pakan dan suplai grosir, serta integrasikan zookeeper, dan cashier untuk mengambil jatah pakan dari gudang tanpa memberi pakan awal otomatis.
 
-mod source yg dipakai untuk mencari tau isi kode atau mixin:
-https://github.com/Codx-org/AlexsMobsContinued
-https://github.com/crispytwig/Naturalist
-
-data hewan:
-https://docs.google.com/document/d/1jJZwJqmeuR9pmZL68d9drwBwZZVqxTd8_w1RZepzcl4

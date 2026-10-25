@@ -516,6 +516,7 @@ public class ZooTycoonClient implements ClientModInitializer {
             PlacementPreviewRenderer.render(context);
             net.zootycoon.client.render.ZooWorldIndicatorRenderer.render(context);
             net.zootycoon.client.render.ZooAnimalHologramRenderer.render(context);
+            net.zootycoon.client.render.PlayerBathingHologramRenderer.render(context);
         });
 
         // 5. Register client-tick particles and overlays + Right Shift menu opening
@@ -524,6 +525,7 @@ public class ZooTycoonClient implements ClientModInitializer {
             PlacementPreviewRenderer.clientTick(client);
             net.zootycoon.client.inspect.InspectionTargetTracker.tick(client);
             net.zootycoon.client.animation.PlayerBrushAnimationManager.clientTick();
+            net.zootycoon.client.bathing.PlayerBathingClientController.clientTick(client);
 
             // Open Zoo Management Menu on Right Shift (no stick required)
             boolean rShiftDown = (client.getWindow() != null) && InputConstants.isKeyDown(client.getWindow().getWindow(), InputConstants.KEY_RSHIFT);

@@ -15,8 +15,11 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.zootycoon.ZooTycoonMod;
@@ -1021,6 +1024,20 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // 29. Complete Player Bathing Payload (C2S)
+    public record CompletePlayerBathingPayload(int animalEntityId, int stage) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<CompletePlayerBathingPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("complete_player_bathing"));
+        public static final StreamCodec<FriendlyByteBuf, CompletePlayerBathingPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeInt(payload.animalEntityId);
+                    buf.writeInt(payload.stage);
+                },
+                buf -> new CompletePlayerBathingPayload(buf.readInt(), buf.readInt())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     public static void sendToast(ServerPlayer player, String titleKey, String msgKey, int toastType, Object... args) {
         if (player == null) return;
         List<String> strArgs = new ArrayList<>();
@@ -1066,6 +1083,7 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playC2S().register(DepositTroughFoodPayload.TYPE, DepositTroughFoodPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RefillGachaMachinePayload.TYPE, RefillGachaMachinePayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ExtractGachaPlushiePayload.TYPE, ExtractGachaPlushiePayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(CompletePlayerBathingPayload.TYPE, CompletePlayerBathingPayload.CODEC);
 
         PayloadTypeRegistry.playS2C().register(SyncClaimsPayload.TYPE, SyncClaimsPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncStudioStatePayload.TYPE, SyncStudioStatePayload.CODEC);
@@ -1882,6 +1900,28 @@ public class ZooNetworkPayloads {
                         }
                     }
                     ServerPlayNetworking.send(player, new OpenGachaMachineScreenPayload(payload.pos(), gachaBe.getTotalStock(), gachaBe.getSlotsList()));
+                }
+            });
+        });
+
+        // Handler: Complete Player Bathing
+        ServerPlayNetworking.registerGlobalReceiver(CompletePlayerBathingPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                net.minecraft.world.entity.Entity ent = player.serverLevel().getEntity(payload.animalEntityId());
+                if (ent instanceof LivingEntity animal && animal.isAlive() && player.distanceToSqr(animal) <= 49.0D) {
+                    ItemStack held = player.getMainHandItem();
+                    InteractionHand hand = InteractionHand.MAIN_HAND;
+                    if (payload.stage() == 1) { // Watering
+                        if (net.zootycoon.animal.AnimalBathingManager.isWateringCan(held)) {
+                            net.zootycoon.animal.AnimalBathingManager.waterAnimal(animal, player, held, hand);
+                        }
+                    } else if (payload.stage() == 2) { // Brushing
+                        if (held.is(Items.BRUSH) && net.zootycoon.animal.AnimalBathingManager.isWet(animal)) {
+                            net.zootycoon.animal.AnimalBathingManager.brushAnimal(animal, player, held, hand);
+                            net.zootycoon.animal.ZooAnimalHungerManager.setCleanliness(animal, 100);
+                        }
+                    }
                 }
             });
         });

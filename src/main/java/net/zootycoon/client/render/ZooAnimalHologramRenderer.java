@@ -353,7 +353,7 @@ public class ZooAnimalHologramRenderer {
             String cleanText;
             int cleanTextColor;
             if (isRegistered && cleanliness >= 0) {
-                cleanText = cleanliness + "%" + (isWet ? " (Basah)" : "");
+                cleanText = cleanliness + "%";
                 cleanTextColor = HologramBarRenderer.getStatusColor((float) cleanliness);
             } else {
                 cleanText = "-";
