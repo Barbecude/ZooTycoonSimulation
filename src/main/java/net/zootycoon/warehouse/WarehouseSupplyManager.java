@@ -237,8 +237,9 @@ public class WarehouseSupplyManager {
                     UUID animalId = keeper.getAssignedAnimalUuid();
                     LivingEntity animal = resolveAnimal(sLevel, animalId);
                     if (animal != null) {
+                        List<ItemStack> expectedFoods = AnimalDietRegistry.getFoodsForAnimal(animal);
                         StaffSupplyRequest existing = ACTIVE_REQUESTS.get(keeper.getUUID());
-                        if (existing == null || !animalId.equals(existing.animalUuid)) {
+                        if (existing == null || !animalId.equals(existing.animalUuid) || existing.targetItems.size() != expectedFoods.size()) {
                             StaffSupplyRequest created = createZookeeperRequest(keeper, animal);
                             ACTIVE_REQUESTS.put(keeper.getUUID(), created);
                         }
@@ -320,11 +321,11 @@ public class WarehouseSupplyManager {
         req.animalUuid = animal.getUUID();
         req.animalName = animalName;
 
-        var diet = AnimalDietRegistry.getDiet(animal);
-        if (diet != null && !diet.acceptedFoods.isEmpty()) {
-            for (Item food : diet.acceptedFoods) {
-                if (food != null && food != Items.AIR) {
-                    req.targetItems.add(new ItemStack(food, ZOOKEEPER_REQUIRED_FOOD));
+        List<ItemStack> allFoods = AnimalDietRegistry.getFoodsForAnimal(animal);
+        if (allFoods != null && !allFoods.isEmpty()) {
+            for (ItemStack foodSt : allFoods) {
+                if (foodSt != null && !foodSt.isEmpty()) {
+                    req.targetItems.add(new ItemStack(foodSt.getItem(), ZOOKEEPER_REQUIRED_FOOD));
                 }
             }
         }

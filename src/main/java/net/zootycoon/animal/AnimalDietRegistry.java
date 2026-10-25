@@ -83,15 +83,15 @@ public class AnimalDietRegistry {
 
     public static boolean isRawMeat(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
-        if (stack.is(RAW_MEAT_TAG) || stack.is(C_RAW_MEAT_TAG) || stack.is(C_RAW_MEATS_TAG)) return true;
         ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (id == null) return false;
+        String ns = id.getNamespace().toLowerCase(Locale.ROOT);
+        if (!SUPPORTED_FOOD_MODS.contains(ns)) return false;
+        if (stack.is(RAW_MEAT_TAG) || stack.is(C_RAW_MEAT_TAG) || stack.is(C_RAW_MEATS_TAG)) return true;
         String full = id.toString().toLowerCase(Locale.ROOT);
         if (EXPLICIT_RAW_MEAT_IDS.contains(full)) return true;
 
-        String ns = id.getNamespace().toLowerCase(Locale.ROOT);
         String path = id.getPath().toLowerCase(Locale.ROOT);
-        if (!SUPPORTED_FOOD_MODS.contains(ns)) return false;
         if (isCookedOrPreparedDish(path)) return false;
 
         return path.contains("raw_meat") || path.contains("minced_beef") || path.contains("chicken_cuts")
@@ -105,15 +105,15 @@ public class AnimalDietRegistry {
 
     public static boolean isRawFish(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
-        if (stack.is(RAW_FISH_TAG) || stack.is(C_RAW_FISH_TAG) || stack.is(C_RAW_FISHES_TAG)) return true;
         ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (id == null) return false;
+        String ns = id.getNamespace().toLowerCase(Locale.ROOT);
+        if (!SUPPORTED_FOOD_MODS.contains(ns)) return false;
+        if (stack.is(RAW_FISH_TAG) || stack.is(C_RAW_FISH_TAG) || stack.is(C_RAW_FISHES_TAG)) return true;
         String full = id.toString().toLowerCase(Locale.ROOT);
         if (EXPLICIT_RAW_FISH_IDS.contains(full)) return true;
 
-        String ns = id.getNamespace().toLowerCase(Locale.ROOT);
         String path = id.getPath().toLowerCase(Locale.ROOT);
-        if (!SUPPORTED_FOOD_MODS.contains(ns)) return false;
         if (isCookedOrPreparedDish(path)) return false;
 
         return path.equals("cod_slice") || path.equals("salmon_slice") || path.equals("catfish")
@@ -124,15 +124,15 @@ public class AnimalDietRegistry {
 
     public static boolean isModProduceOrCrop(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
-        if (stack.is(C_VEGETABLES_TAG) || stack.is(C_FRUITS_TAG) || stack.is(C_BERRIES_TAG)) return true;
         ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (id == null) return false;
+        String ns = id.getNamespace().toLowerCase(Locale.ROOT);
+        if (!SUPPORTED_FOOD_MODS.contains(ns)) return false;
+        if (stack.is(C_VEGETABLES_TAG) || stack.is(C_FRUITS_TAG) || stack.is(C_BERRIES_TAG)) return true;
         String full = id.toString().toLowerCase(Locale.ROOT);
         if (EXPLICIT_HERBIVORE_CROP_IDS.contains(full)) return true;
 
-        String ns = id.getNamespace().toLowerCase(Locale.ROOT);
         String path = id.getPath().toLowerCase(Locale.ROOT);
-        if (!SUPPORTED_FOOD_MODS.contains(ns)) return false;
         if (isCookedOrPreparedDish(path)) return false;
 
         return path.equals("cabbage") || path.equals("cabbage_leaf") || path.equals("tomato")
@@ -144,15 +144,15 @@ public class AnimalDietRegistry {
 
     public static boolean isSeedOrGrain(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
-        if (stack.is(ItemTags.VILLAGER_PLANTABLE_SEEDS) || stack.is(C_SEEDS_TAG)) return true;
         ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (id == null) return false;
+        String ns = id.getNamespace().toLowerCase(Locale.ROOT);
+        if (!SUPPORTED_FOOD_MODS.contains(ns)) return false;
+        if (stack.is(ItemTags.VILLAGER_PLANTABLE_SEEDS) || stack.is(C_SEEDS_TAG)) return true;
         String full = id.toString().toLowerCase(Locale.ROOT);
         if (EXPLICIT_SEED_IDS.contains(full)) return true;
 
-        String ns = id.getNamespace().toLowerCase(Locale.ROOT);
         String path = id.getPath().toLowerCase(Locale.ROOT);
-        if (!SUPPORTED_FOOD_MODS.contains(ns)) return false;
         return path.endsWith("_seeds") || path.equals("rice") || path.equals("kernels");
     }
 
@@ -609,6 +609,8 @@ public class AnimalDietRegistry {
             // 2. Probe all registered items for Animal.isFood()
             for (Item item : BuiltInRegistries.ITEM) {
                 if (item == null || item == Items.AIR || seen.contains(item)) continue;
+                ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(item);
+                if (itemId != null && "croptopia".equalsIgnoreCase(itemId.getNamespace())) continue;
                 try {
                     ItemStack testStack = new ItemStack(item);
                     if (a.isFood(testStack) && seen.add(item)) {
@@ -718,6 +720,8 @@ public class AnimalDietRegistry {
 
     public static boolean isFoodValid(Entity entity, ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
+        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        if (itemId != null && "croptopia".equalsIgnoreCase(itemId.getNamespace())) return false;
         if (entity instanceof Animal a) {
             try {
                 if (a.isFood(stack)) return true;

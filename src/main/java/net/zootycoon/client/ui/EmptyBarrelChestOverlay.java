@@ -27,9 +27,11 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public class EmptyBarrelChestOverlay {
@@ -37,6 +39,7 @@ public class EmptyBarrelChestOverlay {
     private static BlockPos activeBarrelPos = null;
     private static String activeCategory = "";
     private static List<WarehousePayloads.StaffRequestDto> activeRequests = new ArrayList<>();
+    private static final Set<UUID> expandedFoodCards = new HashSet<>();
     private static float scrollOffset = 0.0f;
     private static int maxScroll = 0;
     private static boolean isDraggingScrollbar = false;
@@ -98,6 +101,7 @@ public class EmptyBarrelChestOverlay {
         activeBarrelPos = pos;
         activeCategory = category != null ? category : "";
         activeRequests.clear();
+        expandedFoodCards.clear();
         scrollOffset = 0.0f;
         isDraggingScrollbar = false;
     }
@@ -112,6 +116,7 @@ public class EmptyBarrelChestOverlay {
         activeBarrelPos = null;
         activeCategory = "";
         activeRequests.clear();
+        expandedFoodCards.clear();
         dummyStaffCache.clear();
         scrollOffset = 0.0f;
         maxScroll = 0;
@@ -195,6 +200,38 @@ public class EmptyBarrelChestOverlay {
         return (screen.height - CHEST_HEIGHT) / 2;
     }
 
+    private static int getCardHeight(WarehousePayloads.StaffRequestDto req, int cardW) {
+        if ("CASHIER".equalsIgnoreCase(req.staffType())) {
+            return CARD_HEIGHT;
+        }
+        int previewW = 34;
+        int infoW = Math.max(20, cardW - (3 + previewW + 5) - 4);
+        int slotSize = 18;
+        int slotGap = 2;
+        int colsPerRow = Math.max(1, (infoW + slotGap) / (slotSize + slotGap));
+        List<ItemStack> targets = req.targetItems();
+        boolean hasMultipleFoodRows = targets.size() > colsPerRow;
+        boolean isExpanded = hasMultipleFoodRows && expandedFoodCards.contains(req.staffUuid());
+        int displayedCount = (isExpanded || !hasMultipleFoodRows) ? targets.size() : colsPerRow;
+        int foodRows = Math.max(1, (int) Math.ceil((double) Math.max(1, displayedCount) / colsPerRow));
+        int foodGridH = foodRows * slotSize + Math.max(0, foodRows - 1) * slotGap;
+        int toggleBtnH = 15;
+        int actionBtnYOffset = hasMultipleFoodRows ? (25 + foodGridH + 3 + toggleBtnH + 3) : (25 + foodGridH + 3);
+        int actionBtnH = 17;
+        return Math.max(CARD_HEIGHT, actionBtnYOffset + actionBtnH + 4);
+    }
+
+    private static int computeTotalContentHeight(int cardW) {
+        int total = 0;
+        for (int i = 0; i < activeRequests.size(); i++) {
+            total += getCardHeight(activeRequests.get(i), cardW);
+            if (i < activeRequests.size() - 1) {
+                total += CARD_GAP;
+            }
+        }
+        return total;
+    }
+
     private static void renderLeftRequestPanel(ContainerScreen screen, GuiGraphics graphics, int mouseX, int mouseY) {
         Minecraft mc = Minecraft.getInstance();
         Font font = mc.font;
@@ -246,34 +283,37 @@ public class EmptyBarrelChestOverlay {
             return;
         }
 
-        int totalContentH = activeRequests.size() * CARD_HEIGHT + Math.max(0, activeRequests.size() - 1) * CARD_GAP;
+        int tentativeContentH = computeTotalContentHeight(listW);
+        int cardW = tentativeContentH > listH ? (listW - 6) : listW;
+        int totalContentH = cardW == listW ? tentativeContentH : computeTotalContentHeight(cardW);
         maxScroll = Math.max(0, totalContentH - listH);
         scrollOffset = Math.clamp(scrollOffset, 0.0f, (float) maxScroll);
-
-        int cardW = maxScroll > 0 ? (listW - 6) : listW;
 
         ItemStack hoveredStack = null;
         WarehousePayloads.StaffRequestDto hoveredDto = null;
 
         graphics.enableScissor(panelX + 2, listY, panelX + panelW - 2, listY + listH);
 
+        int curCardY = listY - (int) scrollOffset;
         for (int i = 0; i < activeRequests.size(); i++) {
             WarehousePayloads.StaffRequestDto req = activeRequests.get(i);
-            int cardY = listY + i * (CARD_HEIGHT + CARD_GAP) - (int) scrollOffset;
+            int cardY = curCardY;
+            int cardH = getCardHeight(req, cardW);
+            curCardY += cardH + CARD_GAP;
 
-            if (cardY + CARD_HEIGHT < listY || cardY > listY + listH) {
+            if (cardY + cardH < listY || cardY > listY + listH) {
                 continue;
             }
 
             // Card container
-            graphics.fill(listX, cardY, listX + cardW, cardY + CARD_HEIGHT, 0xFF19202D);
-            graphics.renderOutline(listX, cardY, cardW, CARD_HEIGHT, 0xFF2A364B);
+            graphics.fill(listX, cardY, listX + cardW, cardY + cardH, 0xFF19202D);
+            graphics.renderOutline(listX, cardY, cardW, cardH, 0xFF2A364B);
 
             // A. Left Box: 3D Staff Skin Preview (Cashier or Zookeeper)
             int previewX = listX + 3;
             int previewY = cardY + 3;
             int previewW = 34;
-            int previewH = CARD_HEIGHT - 6;
+            int previewH = Math.min(cardH - 6, 79);
 
             graphics.fill(previewX, previewY, previewX + previewW, previewY + previewH, 0xFF12151D);
             graphics.renderOutline(previewX, previewY, previewW, previewH, 0xFF252D3C);
@@ -291,7 +331,7 @@ public class EmptyBarrelChestOverlay {
                 }
             }
 
-            // B. Right Column: Staff Name, Subtitle, Target Finished Food Icons, and Ambil Resep Button
+            // B. Right Column: Staff Name, Subtitle, Target Finished Food Icons, Toggle Button, and Ambil Resep Button
             int infoX = previewX + previewW + 5;
             int infoW = cardW - (infoX - listX) - 4;
 
@@ -315,7 +355,9 @@ public class EmptyBarrelChestOverlay {
             // Row 3: Target Menu / Food Items
             int slotY = cardY + 25;
             int slotSize = 18;
+            int slotGap = 2;
             List<ItemStack> targets = req.targetItems();
+            int actionBtnY = cardY + 46;
 
             if ("CASHIER".equalsIgnoreCase(req.staffType())) {
                 int maxVariants = Math.min(2, targets.size());
@@ -344,32 +386,74 @@ public class EmptyBarrelChestOverlay {
                     curX += slotSize + 4;
                 }
             } else {
-                int maxIcons = Math.min(targets.size(), Math.max(1, infoW / (slotSize + 2)));
-                int pageOffset = 0;
-                if (targets.size() > maxIcons) {
-                    pageOffset = (int) ((System.currentTimeMillis() / 1800L) % targets.size());
-                }
-                for (int k = 0; k < maxIcons; k++) {
-                    ItemStack st = targets.get((pageOffset + k) % targets.size());
-                    int sx = infoX + k * (slotSize + 2);
-                    graphics.fill(sx, slotY, sx + slotSize, slotY + slotSize, 0xFF12151D);
-                    graphics.renderOutline(sx, slotY, slotSize, slotSize, 0xFF334155);
-                    graphics.renderFakeItem(st, sx + 1, slotY + 1);
+                int colsPerRow = Math.max(1, (infoW + slotGap) / (slotSize + slotGap));
+                boolean hasMultipleFoodRows = targets.size() > colsPerRow;
+                boolean isExpanded = hasMultipleFoodRows && expandedFoodCards.contains(req.staffUuid());
+                int displayedCount = (isExpanded || !hasMultipleFoodRows) ? targets.size() : colsPerRow;
+
+                for (int k = 0; k < displayedCount; k++) {
+                    ItemStack st = targets.get(k);
+                    int col = k % colsPerRow;
+                    int row = k / colsPerRow;
+                    int sx = infoX + col * (slotSize + slotGap);
+                    int sy = slotY + row * (slotSize + slotGap);
+
+                    boolean slotHovered = mouseX >= sx && mouseX <= sx + slotSize
+                            && mouseY >= sy && mouseY <= sy + slotSize
+                            && mouseY >= listY && mouseY <= listY + listH;
+
+                    graphics.fill(sx, sy, sx + slotSize, sy + slotSize, slotHovered ? 0xFF1E2433 : 0xFF12151D);
+                    graphics.renderOutline(sx, sy, slotSize, slotSize, slotHovered ? 0xFF58A6FF : 0xFF334155);
+                    graphics.renderFakeItem(st, sx + 1, sy + 1);
                     if (k == 0) {
-                        graphics.renderItemDecorations(font, st, sx + 1, slotY + 1, "32");
+                        graphics.renderItemDecorations(font, st, sx + 1, sy + 1, "32");
                     }
 
-                    if (mouseX >= sx && mouseX <= sx + slotSize && mouseY >= slotY && mouseY <= slotY + slotSize
-                            && mouseY >= listY && mouseY <= listY + listH) {
+                    if (slotHovered) {
                         hoveredStack = st;
                         hoveredDto = req;
                     }
                 }
+
+                int foodRows = Math.max(1, (int) Math.ceil((double) Math.max(1, displayedCount) / colsPerRow));
+                int foodGridH = foodRows * slotSize + Math.max(0, foodRows - 1) * slotGap;
+
+                if (hasMultipleFoodRows) {
+                    int toggleBtnX = infoX;
+                    int toggleBtnY = slotY + foodGridH + 3;
+                    int toggleBtnW = infoW;
+                    int toggleBtnH = 15;
+                    boolean toggleHovered = mouseX >= toggleBtnX && mouseX <= toggleBtnX + toggleBtnW
+                            && mouseY >= toggleBtnY && mouseY <= toggleBtnY + toggleBtnH
+                            && mouseY >= listY && mouseY <= listY + listH;
+
+                    int tBtnBg = toggleHovered ? 0xFF263045 : 0xFF19202D;
+                    int tBtnBorder = toggleHovered ? 0xFF58A6FF : 0xFF354157;
+                    graphics.fill(toggleBtnX, toggleBtnY, toggleBtnX + toggleBtnW, toggleBtnY + toggleBtnH, tBtnBg);
+                    graphics.renderOutline(toggleBtnX, toggleBtnY, toggleBtnW, toggleBtnH, tBtnBorder);
+
+                    String fullToggleText = isExpanded ? "▲ Sembunyikan" : "▼ Lihat Semua Makanan (" + targets.size() + ")";
+                    String shortToggleText = isExpanded ? "▲ Sembunyikan" : "▼ Lihat Makanan (" + targets.size() + ")";
+                    String toggleText = font.width(fullToggleText) <= toggleBtnW - 4 ? fullToggleText : shortToggleText;
+                    int textW = font.width(toggleText);
+                    graphics.drawString(
+                            font,
+                            toggleText,
+                            toggleBtnX + (toggleBtnW - textW) / 2,
+                            toggleBtnY + (toggleBtnH - 8) / 2,
+                            toggleHovered ? 0xFFFFFFFF : 0xFFC0CAD8,
+                            false
+                    );
+
+                    actionBtnY = toggleBtnY + toggleBtnH + 3;
+                } else {
+                    actionBtnY = slotY + foodGridH + 3;
+                }
             }
 
-            // Row 4: Ambil Resep / Ambil Catatan Button
+            // Row 4 / 5: Ambil Resep / Ambil Catatan Button
             int btnX = infoX;
-            int btnY = cardY + 46;
+            int btnY = actionBtnY;
             int btnW = infoW;
             int btnH = 17;
 
@@ -441,7 +525,8 @@ public class EmptyBarrelChestOverlay {
         int listY = panelY + 29;
         int listH = panelH - 33;
         int listW = panelW - 10;
-        int cardW = maxScroll > 0 ? (listW - 6) : listW;
+        int tentativeContentH = computeTotalContentHeight(listW);
+        int cardW = tentativeContentH > listH ? (listW - 6) : listW;
 
         // Check click on scrollbar track
         if (maxScroll > 0 && mouseX >= panelX + panelW - 10 && mouseX <= panelX + panelW && mouseY >= listY && mouseY <= listY + listH) {
@@ -452,16 +537,55 @@ public class EmptyBarrelChestOverlay {
         }
 
         if (mouseY >= listY && mouseY <= listY + listH) {
+            int curCardY = listY - (int) scrollOffset;
             for (int i = 0; i < activeRequests.size(); i++) {
                 WarehousePayloads.StaffRequestDto req = activeRequests.get(i);
-                int cardY = listY + i * (CARD_HEIGHT + CARD_GAP) - (int) scrollOffset;
-                if (cardY + CARD_HEIGHT < listY || cardY > listY + listH) continue;
+                int cardY = curCardY;
+                int cardH = getCardHeight(req, cardW);
+                curCardY += cardH + CARD_GAP;
+
+                if (cardY + cardH < listY || cardY > listY + listH) continue;
 
                 int previewW = 34;
                 int infoX = listX + 3 + previewW + 5;
                 int infoW = cardW - (infoX - listX) - 4;
+                int slotY = cardY + 25;
+                int slotSize = 18;
+                int slotGap = 2;
+                int actionBtnY = cardY + 46;
+
+                if (!"CASHIER".equalsIgnoreCase(req.staffType())) {
+                    List<ItemStack> targets = req.targetItems();
+                    int colsPerRow = Math.max(1, (infoW + slotGap) / (slotSize + slotGap));
+                    boolean hasMultipleFoodRows = targets.size() > colsPerRow;
+                    boolean isExpanded = hasMultipleFoodRows && expandedFoodCards.contains(req.staffUuid());
+                    int displayedCount = (isExpanded || !hasMultipleFoodRows) ? targets.size() : colsPerRow;
+                    int foodRows = Math.max(1, (int) Math.ceil((double) Math.max(1, displayedCount) / colsPerRow));
+                    int foodGridH = foodRows * slotSize + Math.max(0, foodRows - 1) * slotGap;
+
+                    if (hasMultipleFoodRows) {
+                        int toggleBtnX = infoX;
+                        int toggleBtnY = slotY + foodGridH + 3;
+                        int toggleBtnW = infoW;
+                        int toggleBtnH = 15;
+
+                        if (mouseX >= toggleBtnX && mouseX <= toggleBtnX + toggleBtnW && mouseY >= toggleBtnY && mouseY <= toggleBtnY + toggleBtnH) {
+                            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                            if (isExpanded) {
+                                expandedFoodCards.remove(req.staffUuid());
+                            } else {
+                                expandedFoodCards.add(req.staffUuid());
+                            }
+                            return true;
+                        }
+                        actionBtnY = toggleBtnY + toggleBtnH + 3;
+                    } else {
+                        actionBtnY = slotY + foodGridH + 3;
+                    }
+                }
+
                 int btnX = infoX;
-                int btnY = cardY + 46;
+                int btnY = actionBtnY;
                 int btnW = infoW;
                 int btnH = 17;
 
