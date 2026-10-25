@@ -69,6 +69,9 @@ public class AnimalManagementTab {
     private boolean isDraggingSidebarScrollbar = false;
 
     private int scrollOffset = 0;
+    private int detailsScrollOffset = 0;
+    private boolean isDraggingDetailsScrollbar = false;
+    private int maxDetailsScroll = 0;
     private static final int ITEM_HEIGHT = 38;
 
     public AnimalManagementTab(MainManagementScreen screen) {
@@ -178,6 +181,7 @@ public class AnimalManagementTab {
                 if (forceTextReset || (selectedData.entityId() != lastSelectedEntityId && !nameInput.isFocused())) {
                     nameInput.setValue(selectedData.customName());
                     lastSelectedEntityId = selectedData.entityId();
+                    detailsScrollOffset = 0;
                 }
             } else {
                 nameInput.setValue("");
@@ -372,33 +376,58 @@ public class AnimalManagementTab {
 
         graphics.drawString(font, ZooTranslations.component("zootycoon.ui.animals.tag_label").withStyle(ChatFormatting.GRAY), infoX, contentY + 47, 0xFFFFFFFF, false);
 
-        int statusY = contentY + 104;
+        int scrollAreaX = infoX;
+        int scrollAreaY = contentY + 102;
+        int scrollAreaW = infoW;
+        int scrollAreaH = contentH - 106;
 
+        List<Component> redNeeds = getHabitatRedNeeds(previewEntity);
+        List<ItemStack> foods = previewEntity != null ? AnimalDietRegistry.getFoodsForAnimal(previewEntity) : List.of();
+
+        int slotSize = 22;
+        int gap = 4;
+        int availableW = infoW - 8;
+        int colsPerRow = Math.max(1, (availableW + gap) / (slotSize + gap));
+        int foodRows = (int) Math.ceil((double) foods.size() / colsPerRow);
+        int foodGridH = foods.isEmpty() ? 0 : foodRows * (slotSize + gap);
+
+        int habNeedsH = redNeeds.isEmpty() ? 13 : (11 + redNeeds.size() * 10 + 2);
+        int detailsTotalContentH = 12 + 12 + 12 + 12 + 13 + habNeedsH + 14 + foodGridH + 8;
+
+        this.maxDetailsScroll = Math.max(0, detailsTotalContentH - scrollAreaH);
+        this.detailsScrollOffset = Math.clamp(this.detailsScrollOffset, 0, this.maxDetailsScroll);
+
+        boolean inScrollArea = mouseX >= scrollAreaX && mouseX <= scrollAreaX + scrollAreaW && mouseY >= scrollAreaY && mouseY <= scrollAreaY + scrollAreaH;
         Component hoveredStatTooltip = null;
 
+        // Scissor clipping so content never overflows
+        graphics.enableScissor(contentX, scrollAreaY, contentX + contentW, scrollAreaY + scrollAreaH);
+
+        int relY = 0;
+
+        // 1. Health (Hearts)
+        int healthY = scrollAreaY + relY - detailsScrollOffset;
         int totalHearts = Math.max(1, (int) Math.ceil(selectedData.maxHealth() / 2.0f));
         int heartsToDraw = Math.min(totalHearts, 10);
 
         for (int i = 0; i < heartsToDraw; i++) {
             int hX = infoX + i * 10;
-            int hY = statusY;
-
-            graphics.blitSprite(VANILLA_HEART_CONTAINER, hX, hY, 9, 9);
-
+            graphics.blitSprite(VANILLA_HEART_CONTAINER, hX, healthY, 9, 9);
             float hpForHeart = selectedData.health() - (i * 2.0f);
             if (hpForHeart >= 1.5f) {
-                graphics.blitSprite(VANILLA_HEART_FULL, hX, hY, 9, 9);
+                graphics.blitSprite(VANILLA_HEART_FULL, hX, healthY, 9, 9);
             } else if (hpForHeart >= 0.5f) {
-                graphics.blitSprite(VANILLA_HEART_HALF, hX, hY, 9, 9);
+                graphics.blitSprite(VANILLA_HEART_HALF, hX, healthY, 9, 9);
             }
         }
         int hp = (int) Math.ceil(selectedData.health());
         int maxHp = (int) Math.ceil(selectedData.maxHealth());
         int hpTextX = infoX + (heartsToDraw * 10) + 6;
-        graphics.drawString(font, Component.literal(hp + "/" + maxHp + " HP").withStyle(ChatFormatting.RED), hpTextX, statusY + 1, 0xFFFFFFFF, false);
+        graphics.drawString(font, Component.literal(hp + "/" + maxHp + " HP").withStyle(ChatFormatting.RED), hpTextX, healthY + 1, 0xFFFFFFFF, false);
+        relY += 12;
 
         // 2. Hunger (Food shanks - icon only, no % text)
-        int hungerY = statusY + 12;
+        int hungerY = scrollAreaY + relY - detailsScrollOffset;
         int totalHalfShanks = 20;
         int filledHalfShanks = Math.clamp(Math.round((selectedData.hunger() / 100.0f) * totalHalfShanks), 0, totalHalfShanks);
         for (int i = 0; i < 10; i++) {
@@ -411,12 +440,13 @@ public class AnimalManagementTab {
                 graphics.blitSprite(VANILLA_FOOD_HALF, sX, hungerY, 9, 9);
             }
         }
-        if (mouseX >= infoX && mouseX <= infoX + 100 && mouseY >= hungerY && mouseY <= hungerY + 10) {
+        if (inScrollArea && mouseX >= infoX && mouseX <= infoX + 100 && mouseY >= hungerY && mouseY <= hungerY + 10) {
             hoveredStatTooltip = Component.literal("Lapar: " + selectedData.hunger() + "%");
         }
+        relY += 12;
 
         // 3. Thirst (Water droplets - icon only, no % text)
-        int thirstY = hungerY + 12;
+        int thirstY = scrollAreaY + relY - detailsScrollOffset;
         int filledDroplets = Math.clamp(Math.round(selectedData.thirst() / 10.0f), 0, 10);
         for (int i = 0; i < 10; i++) {
             int sX = infoX + i * 10;
@@ -428,12 +458,13 @@ public class AnimalManagementTab {
             graphics.blit(THIRST_ICON, sX, thirstY, 0, 0, 9, 9, 9, 9);
         }
         graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-        if (mouseX >= infoX && mouseX <= infoX + 100 && mouseY >= thirstY && mouseY <= thirstY + 10) {
+        if (inScrollArea && mouseX >= infoX && mouseX <= infoX + 100 && mouseY >= thirstY && mouseY <= thirstY + 10) {
             hoveredStatTooltip = Component.literal("Kehausan: " + selectedData.thirst() + "%");
         }
+        relY += 12;
 
         // 4. Cleanliness (Sparkle icons - icon only, no % text)
-        int cleanY = thirstY + 12;
+        int cleanY = scrollAreaY + relY - detailsScrollOffset;
         int filledClean = Math.clamp(Math.round(selectedData.cleanliness() / 10.0f), 0, 10);
         for (int i = 0; i < 10; i++) {
             int sX = infoX + i * 10;
@@ -445,12 +476,13 @@ public class AnimalManagementTab {
             graphics.blit(CLEANLINESS_ICON, sX, cleanY, 0, 0, 9, 9, 9, 9);
         }
         graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-        if (mouseX >= infoX && mouseX <= infoX + 100 && mouseY >= cleanY && mouseY <= cleanY + 10) {
+        if (inScrollArea && mouseX >= infoX && mouseX <= infoX + 100 && mouseY >= cleanY && mouseY <= cleanY + 10) {
             hoveredStatTooltip = Component.literal("Kebersihan: " + selectedData.cleanliness() + "%");
         }
+        relY += 12;
 
         // 5. Temperature (Thermometer icon + status)
-        int tempY = cleanY + 13;
+        int tempY = scrollAreaY + relY - detailsScrollOffset;
         graphics.blit(THERMOMETER_ICON, infoX, tempY, 9, 9, 0, 0, 16, 16, 16, 16);
         int celsius = ZooAnimalHologramRenderer.parseCelsiusFromCategory(selectedData.tempCategory());
         String tempText = celsius + "°C ";
@@ -469,9 +501,84 @@ public class AnimalManagementTab {
         } else {
             graphics.drawString(font, Component.literal("(Nyaman)").withStyle(ChatFormatting.GREEN), infoX + 13 + tempTextW, tempY + 1, 0xFF55FF55, false);
         }
+        relY += 13;
 
-        // 6. Habitat Needs (Same as Hologram)
-        int habY = tempY + 14;
+        // 6. Habitat Needs (EXACTLY matching Hologram format)
+        int habY = scrollAreaY + relY - detailsScrollOffset;
+        if (redNeeds.isEmpty()) {
+            graphics.drawString(font, Component.literal("Kebutuhan Habitat: Terpenuhi"), infoX, habY, 0xFF55FF55, false);
+            relY += 13;
+        } else {
+            graphics.drawString(font, Component.literal("Kebutuhan Habitat:"), infoX, habY, 0xFFFFFF55, false);
+            relY += 11;
+            for (Component need : redNeeds) {
+                int lineY = scrollAreaY + relY - detailsScrollOffset;
+                graphics.drawString(font, need.copy(), infoX + 4, lineY, 0xFFFF5555, false);
+                relY += 10;
+            }
+            relY += 2;
+        }
+
+        // 7. Favorite Food (Header + full grid with no limit)
+        int gridY = scrollAreaY + relY - detailsScrollOffset;
+        graphics.drawString(font, ZooTranslations.component("zootycoon.ui.animals.favorite_food").withStyle(ChatFormatting.YELLOW), infoX, gridY, 0xFFFFFFFF, false);
+        relY += 14;
+
+        int slotStartY = scrollAreaY + relY - detailsScrollOffset;
+        ItemStack hoveredFoodStack = ItemStack.EMPTY;
+
+        for (int i = 0; i < foods.size(); i++) {
+            ItemStack foodStack = foods.get(i);
+            int col = i % colsPerRow;
+            int row = i / colsPerRow;
+            int slotX = infoX + col * (slotSize + gap);
+            int slotY = slotStartY + row * (slotSize + gap);
+
+            boolean slotHovered = inScrollArea && mouseX >= slotX && mouseX <= slotX + slotSize && mouseY >= slotY && mouseY <= slotY + slotSize;
+            int slotBg = slotHovered ? 0xFF1E2433 : 0xFF141720;
+            int slotBorder = slotHovered ? 0xFF58A6FF : 0xFF2A3140;
+
+            graphics.fill(slotX, slotY, slotX + slotSize, slotY + slotSize, slotBg);
+            graphics.fill(slotX, slotY, slotX + slotSize, slotY + 1, slotBorder);
+            graphics.fill(slotX, slotY + slotSize - 1, slotX + slotSize, slotY + slotSize, slotBorder);
+            graphics.fill(slotX, slotY, slotX + 1, slotY + slotSize, slotBorder);
+            graphics.fill(slotX + slotSize - 1, slotY, slotX + slotSize, slotY + slotSize, slotBorder);
+
+            graphics.renderItem(foodStack, slotX + 3, slotY + 3);
+
+            if (slotHovered) {
+                hoveredFoodStack = foodStack;
+            }
+        }
+
+        graphics.disableScissor();
+
+        // Render scrollbar if content overflows
+        if (maxDetailsScroll > 0) {
+            int sbX = contentX + contentW - 6;
+            int sbW = 3;
+            graphics.fill(sbX, scrollAreaY, sbX + sbW, scrollAreaY + scrollAreaH, 0xFF151922);
+            int thumbH = Math.max(16, (int) ((float) scrollAreaH / detailsTotalContentH * scrollAreaH));
+            int thumbY = scrollAreaY + (int) ((float) detailsScrollOffset / maxDetailsScroll * (scrollAreaH - thumbH));
+            boolean sbHovered = mouseX >= sbX - 2 && mouseX <= sbX + sbW + 2 && mouseY >= scrollAreaY && mouseY <= scrollAreaY + scrollAreaH;
+            int thumbColor = (sbHovered || isDraggingDetailsScrollbar) ? 0xFF58A6FF : 0xFF3A4459;
+            graphics.fill(sbX, thumbY, sbX + sbW, thumbY + thumbH, thumbColor);
+        }
+
+        if (!hoveredFoodStack.isEmpty()) {
+            graphics.renderTooltip(font, hoveredFoodStack.getHoverName(), mouseX, mouseY);
+        } else if (hoveredStatTooltip != null && !zookeeperDropdownOpen) {
+            graphics.renderTooltip(font, hoveredStatTooltip, mouseX, mouseY);
+        }
+
+        if (zookeeperDropdownOpen && selectedData != null) {
+            renderZookeeperDropdown(graphics, mouseX, mouseY, font);
+        }
+    }
+
+    private List<Component> getHabitatRedNeeds(LivingEntity previewEntity) {
+        if (selectedData == null) return List.of();
+        var habParsed = ZooAnimalHologramRenderer.HabitatParsedInfo.parse(selectedData.habitatNeeds(), selectedData.habitatStatus());
         List<Component> redNeeds = new ArrayList<>();
         if (!habParsed.serverUnmet().isEmpty()) {
             for (String item : habParsed.serverUnmet()) {
@@ -495,75 +602,13 @@ public class AnimalManagementTab {
             List<String> biomes = ZooAnimalHologramRenderer.getBiomeListEnglish(profile);
             List<String> validBiomes = biomes.stream().filter(s -> !"Any".equalsIgnoreCase(s) && !s.isBlank()).toList();
             if (!validBiomes.isEmpty()) {
-                redNeeds.add(Component.literal("• Bioma: " + String.join(", ", validBiomes)));
-            }
-        }
-
-        if (redNeeds.isEmpty()) {
-            graphics.drawString(font, Component.literal("✔ Kebutuhan Habitat: Terpenuhi").withStyle(ChatFormatting.GREEN), infoX, habY, 0xFF55FF55, false);
-            habY += 12;
-        } else {
-            graphics.drawString(font, Component.literal("✖ Kebutuhan Habitat:").withStyle(ChatFormatting.YELLOW), infoX, habY, 0xFFFFFF55, false);
-            habY += 10;
-            int maxLines = 3;
-            for (int i = 0; i < Math.min(redNeeds.size(), maxLines); i++) {
-                graphics.drawString(font, redNeeds.get(i).copy().withStyle(ChatFormatting.RED), infoX + 4, habY, 0xFFFF5555, false);
-                habY += 10;
-            }
-            if (redNeeds.size() > maxLines) {
-                graphics.drawString(font, Component.literal("• ...dan " + (redNeeds.size() - maxLines) + " lainnya").withStyle(ChatFormatting.RED), infoX + 4, habY, 0xFFFF5555, false);
-                habY += 10;
-            }
-        }
-
-        int gridY = habY + 4;
-        graphics.drawString(font, ZooTranslations.component("zootycoon.ui.animals.favorite_food").withStyle(ChatFormatting.YELLOW), infoX, gridY, 0xFFFFFFFF, false);
-
-        if (previewEntity != null) {
-            List<ItemStack> foods = AnimalDietRegistry.getFoodsForAnimal(previewEntity);
-            int slotSize = 22;
-            int gap = 4;
-            int slotStartY = gridY + 12;
-            int colsPerRow = Math.max(1, (infoW + gap) / (slotSize + gap));
-            ItemStack hoveredFoodStack = ItemStack.EMPTY;
-
-            for (int i = 0; i < foods.size(); i++) {
-                ItemStack foodStack = foods.get(i);
-                int col = i % colsPerRow;
-                int row = i / colsPerRow;
-                int slotX = infoX + col * (slotSize + gap);
-                int slotY = slotStartY + row * (slotSize + gap);
-                if (slotY + slotSize > contentY + contentH - 6) break;
-
-                boolean slotHovered = mouseX >= slotX && mouseX <= slotX + slotSize && mouseY >= slotY && mouseY <= slotY + slotSize;
-                int slotBg = slotHovered ? 0xFF1E2433 : 0xFF141720;
-                int slotBorder = slotHovered ? 0xFF58A6FF : 0xFF2A3140;
-
-                graphics.fill(slotX, slotY, slotX + slotSize, slotY + slotSize, slotBg);
-                graphics.fill(slotX, slotY, slotX + slotSize, slotY + 1, slotBorder);
-                graphics.fill(slotX, slotY + slotSize - 1, slotX + slotSize, slotY + slotSize, slotBorder);
-                graphics.fill(slotX, slotY, slotX + 1, slotY + slotSize, slotBorder);
-                graphics.fill(slotX + slotSize - 1, slotY, slotX + slotSize, slotY + slotSize, slotBorder);
-
-                graphics.renderItem(foodStack, slotX + 3, slotY + 3);
-
-                if (slotHovered) {
-                    hoveredFoodStack = foodStack;
+                redNeeds.add(Component.literal("• Bioma yang cocok:"));
+                for (String b : validBiomes) {
+                    redNeeds.add(Component.literal("  - " + b));
                 }
             }
-
-            if (!hoveredFoodStack.isEmpty()) {
-                graphics.renderTooltip(font, hoveredFoodStack.getHoverName(), mouseX, mouseY);
-            }
         }
-
-        if (hoveredStatTooltip != null && !zookeeperDropdownOpen) {
-            graphics.renderTooltip(font, hoveredStatTooltip, mouseX, mouseY);
-        }
-
-        if (zookeeperDropdownOpen && selectedData != null) {
-            renderZookeeperDropdown(graphics, mouseX, mouseY, font);
-        }
+        return redNeeds;
     }
 
     private LivingEntity resolveLivingEntity(Minecraft mc, ZooNetworkPayloads.AnimalSyncData data) {
@@ -837,6 +882,7 @@ public class AnimalManagementTab {
                 if (clickedIdx >= 0 && clickedIdx < animals.size()) {
                     this.selectedData = animals.get(clickedIdx);
                     this.lastSelectedEntityId = selectedData.entityId();
+                    this.detailsScrollOffset = 0;
                     if (nameInput != null) {
                         nameInput.setValue(selectedData.customName());
                     }
@@ -859,29 +905,58 @@ public class AnimalManagementTab {
         }
 
         if (selectedData != null) {
+            int contentH = screen.height - contentY - 14;
+            int scrollAreaY = contentY + 102;
+            int scrollAreaH = contentH - 106;
+
+            // Check scrollbar drag start
+            if (maxDetailsScroll > 0) {
+                int sbX = contentX + contentW - 6;
+                if (mouseX >= sbX - 4 && mouseX <= sbX + 6 && mouseY >= scrollAreaY && mouseY <= scrollAreaY + scrollAreaH) {
+                    this.isDraggingDetailsScrollbar = true;
+                    Minecraft mc = Minecraft.getInstance();
+                    LivingEntity previewEntity = resolveLivingEntity(mc, selectedData);
+                    List<Component> redNeeds = getHabitatRedNeeds(previewEntity);
+                    List<ItemStack> foods = previewEntity != null ? AnimalDietRegistry.getFoodsForAnimal(previewEntity) : List.of();
+                    int slotSize = 22;
+                    int gap = 4;
+                    int availableW = infoW - 8;
+                    int colsPerRow = Math.max(1, (availableW + gap) / (slotSize + gap));
+                    int foodRows = (int) Math.ceil((double) foods.size() / colsPerRow);
+                    int foodGridH = foods.isEmpty() ? 0 : foodRows * (slotSize + gap);
+                    int habNeedsH = redNeeds.isEmpty() ? 13 : (11 + redNeeds.size() * 10 + 2);
+                    int totalContentH = 12 + 12 + 12 + 12 + 13 + habNeedsH + 14 + foodGridH + 8;
+                    int thumbH = Math.max(16, (int) ((float) scrollAreaH / totalContentH * scrollAreaH));
+                    int availableTrack = scrollAreaH - thumbH;
+                    if (availableTrack > 0) {
+                        double progress = Math.clamp((mouseY - scrollAreaY - thumbH / 2.0) / availableTrack, 0.0, 1.0);
+                        this.detailsScrollOffset = (int) (progress * maxDetailsScroll);
+                    }
+                    return true;
+                }
+            }
+
             Minecraft mc = Minecraft.getInstance();
             LivingEntity previewEntity = resolveLivingEntity(mc, selectedData);
             if (previewEntity != null) {
                 List<ItemStack> foods = AnimalDietRegistry.getFoodsForAnimal(previewEntity);
-                int totalHearts = Math.max(1, (int) Math.ceil(selectedData.maxHealth() / 2.0f));
-                int heartsToDraw = Math.min(totalHearts, 20);
-                int rowsOfHearts = (int) Math.ceil(heartsToDraw / 10.0);
-                int statusY = contentY + 104;
-                int hungerY = statusY + (rowsOfHearts * 11) + 3;
-                int gridY = hungerY + 16;
-                int slotStartY = gridY + 12;
+                List<Component> redNeeds = getHabitatRedNeeds(previewEntity);
+                int habNeedsH = redNeeds.isEmpty() ? 13 : (11 + redNeeds.size() * 10 + 2);
+                int relY = 12 + 12 + 12 + 12 + 13 + habNeedsH + 14;
+                int slotStartY = scrollAreaY + relY - detailsScrollOffset;
                 int slotSize = 22;
                 int gap = 4;
-                int contentH = screen.height - contentY - 14;
-                int colsPerRow = Math.max(1, (infoW + gap) / (slotSize + gap));
+                int availableW = infoW - 8;
+                int colsPerRow = Math.max(1, (availableW + gap) / (slotSize + gap));
 
                 for (int i = 0; i < foods.size(); i++) {
                     int col = i % colsPerRow;
                     int row = i / colsPerRow;
                     int slotX = infoX + col * (slotSize + gap);
                     int slotY = slotStartY + row * (slotSize + gap);
-                    if (slotY + slotSize > contentY + contentH - 6) break;
-                    if (mouseX >= slotX && mouseX <= slotX + slotSize && mouseY >= slotY && mouseY <= slotY + slotSize) {
+                    if (mouseY >= scrollAreaY && mouseY <= scrollAreaY + scrollAreaH
+                            && mouseX >= slotX && mouseX <= slotX + slotSize
+                            && mouseY >= slotY && mouseY <= slotY + slotSize) {
                         ClientPlayNetworking.send(new ZooNetworkPayloads.FeedAnimalFromGuiPayload(selectedData.entityId()));
                         return true;
                     }
@@ -943,6 +1018,20 @@ public class AnimalManagementTab {
                 return true;
             }
         }
+
+        int width = screen.width;
+        int contentX = sidebarX + sidebarW + 16;
+        int contentY = 48;
+        int contentW = width - contentX - 14;
+        int contentH = screen.height - contentY - 14;
+
+        if (mouseX >= contentX && mouseX <= contentX + contentW && mouseY >= contentY && mouseY <= contentY + contentH) {
+            if (maxDetailsScroll > 0) {
+                this.detailsScrollOffset = Math.clamp(this.detailsScrollOffset - (int) (verticalAmount * 20), 0, maxDetailsScroll);
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -959,11 +1048,49 @@ public class AnimalManagementTab {
                 return true;
             }
         }
+
+        if (isDraggingDetailsScrollbar && selectedData != null) {
+            int sidebarX = 14;
+            int sidebarW = 160;
+            int contentX = sidebarX + sidebarW + 16;
+            int contentY = 48;
+            int contentW = screen.width - contentX - 14;
+            int contentH = screen.height - contentY - 14;
+            int previewX = contentX + 14;
+            int previewW = 140;
+            int infoW = contentW - (previewX + previewW + 16 - contentX) - 14;
+
+            int scrollAreaY = contentY + 102;
+            int scrollAreaH = contentH - 106;
+
+            if (maxDetailsScroll > 0 && scrollAreaH > 0) {
+                Minecraft mc = Minecraft.getInstance();
+                LivingEntity previewEntity = resolveLivingEntity(mc, selectedData);
+                List<Component> redNeeds = getHabitatRedNeeds(previewEntity);
+                List<ItemStack> foods = previewEntity != null ? AnimalDietRegistry.getFoodsForAnimal(previewEntity) : List.of();
+                int slotSize = 22;
+                int gap = 4;
+                int availableW = infoW - 8;
+                int colsPerRow = Math.max(1, (availableW + gap) / (slotSize + gap));
+                int foodRows = (int) Math.ceil((double) foods.size() / colsPerRow);
+                int foodGridH = foods.isEmpty() ? 0 : foodRows * (slotSize + gap);
+                int habNeedsH = redNeeds.isEmpty() ? 13 : (11 + redNeeds.size() * 10 + 2);
+                int totalContentH = 12 + 12 + 12 + 12 + 13 + habNeedsH + 14 + foodGridH + 8;
+                int thumbH = Math.max(16, (int) ((float) scrollAreaH / totalContentH * scrollAreaH));
+                int availableTrack = scrollAreaH - thumbH;
+                if (availableTrack > 0) {
+                    double progress = Math.clamp((mouseY - scrollAreaY - thumbH / 2.0) / availableTrack, 0.0, 1.0);
+                    this.detailsScrollOffset = (int) (progress * maxDetailsScroll);
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         this.isDraggingSidebarScrollbar = false;
+        this.isDraggingDetailsScrollbar = false;
         return false;
     }
 }
