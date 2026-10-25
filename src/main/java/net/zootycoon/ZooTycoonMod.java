@@ -115,8 +115,12 @@ public class ZooTycoonMod implements ModInitializer {
                     // Do not swing arm or cancel item use; allow normal scoping/zooming
                     return net.minecraft.world.InteractionResult.PASS;
                 } else if (net.zootycoon.animal.AnimalBathingManager.isWateringCan(held)) {
-                    if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)
-                            && net.zootycoon.animal.ZooAnimalHungerManager.isTagged(living)) {
+                    if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)) {
+                        int clean = net.zootycoon.animal.ZooAnimalHungerManager.getCleanliness(living);
+                        if (clean >= 100) {
+                            // Already 100% clean: do nothing!
+                            return net.minecraft.world.InteractionResult.SUCCESS;
+                        }
                         if (net.zootycoon.animal.AnimalBathingManager.isWet(living)) {
                             ZooNetworkPayloads.sendToast(sp, "zootycoon.toast.title.animal", "zootycoon.bathing.already_watered", 0);
                         }
@@ -126,7 +130,11 @@ public class ZooTycoonMod implements ModInitializer {
                 } else if (held.is(net.minecraft.world.item.Items.BRUSH)) {
                     if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)) {
                         int currentClean = net.zootycoon.animal.ZooAnimalHungerManager.getCleanliness(living);
-                        if (!net.zootycoon.animal.AnimalBathingManager.isWet(living) && currentClean < 100) {
+                        if (currentClean >= 100) {
+                            // Already 100% clean: do nothing!
+                            return net.minecraft.world.InteractionResult.SUCCESS;
+                        }
+                        if (!net.zootycoon.animal.AnimalBathingManager.isWet(living)) {
                             sp.displayClientMessage(net.minecraft.network.chat.Component.translatable("zootycoon.bathing.need_water"), true);
                         }
                         return net.minecraft.world.InteractionResult.SUCCESS;

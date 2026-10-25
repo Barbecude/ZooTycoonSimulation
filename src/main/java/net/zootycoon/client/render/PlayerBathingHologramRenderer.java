@@ -35,7 +35,7 @@ public class PlayerBathingHologramRenderer {
         }
 
         LivingEntity target = PlayerBathingClientController.getTargetAnimal();
-        if (target == null || !target.isAlive()) {
+        if (target == null || !target.isAlive() || PlayerBathingClientController.isAnimalClean(target)) {
             return;
         }
 

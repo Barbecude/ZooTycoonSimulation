@@ -120,7 +120,7 @@ public class ZooInspectionService {
         }
     }
 
-    private static void sendSnapshot(ServerPlayer player, LivingEntity animal) {
+    public static void sendSnapshot(ServerPlayer player, LivingEntity animal) {
         boolean registered = ZooAnimalHungerManager.isTagged(animal);
         int hunger = -1;
         int thirst = -1;

@@ -106,9 +106,7 @@ public class AnimalBathingManager {
             return false;
         }
 
-        int currentClean = ZooAnimalHungerManager.getCleanliness(animal);
-        int newClean = Math.min(ZooAnimalHungerManager.MAX_CLEANLINESS, currentClean + 35);
-        ZooAnimalHungerManager.setCleanliness(animal, newClean);
+        ZooAnimalHungerManager.setCleanliness(animal, ZooAnimalHungerManager.MAX_CLEANLINESS);
 
         if (!player.getAbilities().instabuild) {
             held.hurtAndBreak(1, player, LivingEntity.getSlotForHand(hand));

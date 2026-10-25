@@ -1940,6 +1940,10 @@ public class ZooNetworkPayloads {
                     }
                     if (payload.stage() == 1) { // Watering
                         if (net.zootycoon.animal.AnimalBathingManager.isWateringCan(held)) {
+                            int clean = net.zootycoon.animal.ZooAnimalHungerManager.getCleanliness(animal);
+                            if (clean >= 100) {
+                                return;
+                            }
                             if (!net.zootycoon.animal.AnimalBathingManager.isWet(animal)) {
                                 net.zootycoon.animal.AnimalBathingManager.waterAnimal(animal, player, held, hand);
                             } else {
@@ -1947,9 +1951,19 @@ public class ZooNetworkPayloads {
                             }
                         }
                     } else if (payload.stage() == 2) { // Brushing
-                        if (held.is(Items.BRUSH) && net.zootycoon.animal.AnimalBathingManager.isWet(animal)) {
+                        if (held.is(Items.BRUSH)) {
                             net.zootycoon.animal.AnimalBathingManager.brushAnimal(animal, player, held, hand);
                             net.zootycoon.animal.ZooAnimalHungerManager.setCleanliness(animal, 100);
+                            net.zootycoon.animal.AnimalBathingManager.setWet(animal, 0);
+
+                            for (ServerPlayer sp2 : player.serverLevel().players()) {
+                                if (sp2.distanceToSqr(animal) <= 4096.0D) {
+                                    ServerPlayNetworking.send(sp2, new ZooNetworkPayloads.SyncAnimalWetPayload(animal.getId(), false));
+                                }
+                            }
+                            net.zootycoon.animal.ZooInspectionService.notifyAnimalUpdated(animal);
+                            net.zootycoon.animal.ZooInspectionService.sendSnapshot(player, animal);
+                            sendAnimalSync(player);
                         }
                     }
                 }

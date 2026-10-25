@@ -42,8 +42,19 @@ public class PlayerBathingClientController {
 
     public static boolean isAnimalClean(LivingEntity target) {
         if (target == null) return false;
-        if (target.getId() == justCleanedEntityId && (System.currentTimeMillis() - justCleanedTimestamp) < 10000L) {
+        if (target.getId() == justCleanedEntityId && (System.currentTimeMillis() - justCleanedTimestamp) < 30000L) {
             return true;
+        }
+        for (String tag : target.getTags()) {
+            if ("zoo_cleanliness_100".equals(tag)) {
+                return true;
+            }
+            if (tag.startsWith("zoo_cleanliness_")) {
+                try {
+                    int val = Integer.parseInt(tag.substring("zoo_cleanliness_".length()));
+                    if (val >= 100) return true;
+                } catch (Exception ignored) {}
+            }
         }
         ZooNetworkPayloads.AnimalSyncData sync = ZooTycoonClient.clientAnimalMap.get(target.getId());
         if (sync != null && sync.cleanliness() >= 100) {
@@ -114,6 +125,22 @@ public class PlayerBathingClientController {
         LivingEntity target = findLookTargetAnimal(mc, 5.0D);
         if (!isValidAnimalTarget(target)) {
             reset();
+            return;
+        }
+
+        // When cleanliness is already 100%: do nothing, no hologram, no notification
+        if (isAnimalClean(target)) {
+            reset();
+            if (isCan) {
+                mc.player.swing(InteractionHand.MAIN_HAND);
+                if (mc.level.random.nextInt(3) == 0) {
+                    double ox = (mc.level.random.nextDouble() - 0.5) * target.getBbWidth() * 0.8;
+                    double oz = (mc.level.random.nextDouble() - 0.5) * target.getBbWidth() * 0.8;
+                    double oy = target.getBbHeight() * 0.65;
+                    mc.level.addParticle(ParticleTypes.SPLASH, target.getX() + ox, target.getY() + oy, target.getZ() + oz, 0, 0.1, 0);
+                    mc.level.addParticle(ParticleTypes.DRIPPING_WATER, target.getX() + ox, target.getY() + oy, target.getZ() + oz, 0, 0, 0);
+                }
+            }
             return;
         }
 
@@ -207,6 +234,8 @@ public class PlayerBathingClientController {
                 justCleanedTimestamp = System.currentTimeMillis();
                 warningCooldown = 60;
                 AnimalBathingManager.setWet(target, 0);
+                target.getTags().removeIf(t -> t.startsWith("zoo_cleanliness_"));
+                target.addTag("zoo_cleanliness_100");
                 ClientPlayNetworking.send(new ZooNetworkPayloads.CompletePlayerBathingPayload(targetId, 2));
                 mc.level.playLocalSound(target.getX(), target.getY(), target.getZ(),
                         SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.7f, 1.4f, false);
