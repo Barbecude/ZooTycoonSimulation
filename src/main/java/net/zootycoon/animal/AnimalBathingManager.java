@@ -88,6 +88,12 @@ public class AnimalBathingManager {
 
         net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player, new ZooNetworkPayloads.PlayBrushAnimationPayload());
 
+        for (ServerPlayer sp2 : sl.players()) {
+            if (sp2.distanceToSqr(animal) <= 4096.0D) {
+                net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(sp2, new ZooNetworkPayloads.SyncAnimalWetPayload(animal.getId(), true));
+            }
+        }
+
         // Notify active inspectors to immediately update hologram
         ZooInspectionService.notifyAnimalUpdated(animal);
         ZooNetworkPayloads.sendAnimalSync(player);
@@ -118,6 +124,12 @@ public class AnimalBathingManager {
                 8, animal.getBbWidth() * 0.3, 0.1, animal.getBbWidth() * 0.3, 0.05);
 
         player.swing(hand, true);
+
+        for (ServerPlayer sp2 : sl.players()) {
+            if (sp2.distanceToSqr(animal) <= 4096.0D) {
+                net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(sp2, new ZooNetworkPayloads.SyncAnimalWetPayload(animal.getId(), false));
+            }
+        }
 
         // Notify active inspectors to immediately update hologram
         ZooInspectionService.notifyAnimalUpdated(animal);

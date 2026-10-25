@@ -1038,6 +1038,20 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // 30. Sync Animal Wet Status Payload (S2C)
+    public record SyncAnimalWetPayload(int animalEntityId, boolean isWet) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<SyncAnimalWetPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("sync_animal_wet"));
+        public static final StreamCodec<FriendlyByteBuf, SyncAnimalWetPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeInt(payload.animalEntityId);
+                    buf.writeBoolean(payload.isWet);
+                },
+                buf -> new SyncAnimalWetPayload(buf.readInt(), buf.readBoolean())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     public static void sendToast(ServerPlayer player, String titleKey, String msgKey, int toastType, Object... args) {
         if (player == null) return;
         List<String> strArgs = new ArrayList<>();
@@ -1101,6 +1115,7 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playS2C().register(SyncRatingPayload.TYPE, SyncRatingPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(ShowToastPayload.TYPE, ShowToastPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(PlayBrushAnimationPayload.TYPE, PlayBrushAnimationPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(SyncAnimalWetPayload.TYPE, SyncAnimalWetPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(RequestClientSelectionSavePayload.TYPE, RequestClientSelectionSavePayload.CODEC);
 
         // Handler: Claim Land (Old / Direct)
@@ -1912,6 +1927,10 @@ public class ZooNetworkPayloads {
                 if (ent instanceof LivingEntity animal && animal.isAlive() && player.distanceToSqr(animal) <= 49.0D) {
                     ItemStack held = player.getMainHandItem();
                     InteractionHand hand = InteractionHand.MAIN_HAND;
+                    if (held.isEmpty() || (!net.zootycoon.animal.AnimalBathingManager.isWateringCan(held) && !held.is(Items.BRUSH))) {
+                        held = player.getOffhandItem();
+                        hand = InteractionHand.OFF_HAND;
+                    }
                     if (payload.stage() == 1) { // Watering
                         if (net.zootycoon.animal.AnimalBathingManager.isWateringCan(held)) {
                             net.zootycoon.animal.AnimalBathingManager.waterAnimal(animal, player, held, hand);

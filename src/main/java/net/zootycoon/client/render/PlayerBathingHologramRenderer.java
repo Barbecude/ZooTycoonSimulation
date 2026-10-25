@@ -9,7 +9,6 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import net.zootycoon.client.bathing.PlayerBathingClientController;
@@ -32,8 +31,8 @@ public class PlayerBathingHologramRenderer {
             return;
         }
 
-        Entity targetEnt = mc.level.getEntity(PlayerBathingClientController.getTargetEntityId());
-        if (!(targetEnt instanceof LivingEntity target) || !target.isAlive()) {
+        LivingEntity target = PlayerBathingClientController.getTargetAnimal();
+        if (target == null || !target.isAlive()) {
             return;
         }
 
@@ -49,29 +48,26 @@ public class PlayerBathingHologramRenderer {
         double ey = Mth.lerp(partialTick, target.yOld, target.getY());
         double ez = Mth.lerp(partialTick, target.zOld, target.getZ());
 
-        double renderY = ey + target.getBbHeight() + 0.35D;
+        double renderY = ey + target.getBbHeight() + 0.45D;
 
         float progress = PlayerBathingClientController.getProgress();
         int stage = PlayerBathingClientController.getCurrentStage();
 
         String title;
-        int barColorLeft;
-        int barColorRight;
+        int barColor;
 
         if (stage == PlayerBathingClientController.STAGE_WATERING) {
             title = ZooTranslations.get("zootycoon.bathing.progress.watering");
-            if (title.equals("zootycoon.bathing.progress.watering")) {
+            if (title == null || title.equals("zootycoon.bathing.progress.watering")) {
                 title = "Menyiram...";
             }
-            barColorLeft = 0xFF0288D1;
-            barColorRight = 0xFF4FC3F7;
+            barColor = 0xFF29B6F6;
         } else {
             title = ZooTranslations.get("zootycoon.bathing.progress.brushing");
-            if (title.equals("zootycoon.bathing.progress.brushing")) {
+            if (title == null || title.equals("zootycoon.bathing.progress.brushing")) {
                 title = "Menyikat...";
             }
-            barColorLeft = 0xFF2E7D32;
-            barColorRight = 0xFF81C784;
+            barColor = 0xFF26A69A;
         }
 
         String percentText = (int) (progress * 100.0f) + "%";
@@ -82,9 +78,9 @@ public class PlayerBathingHologramRenderer {
         poseStack.scale(HOLO_SCALE, -HOLO_SCALE, HOLO_SCALE);
 
         Matrix4f matrix = poseStack.last().pose();
-        int light = 0xF000F0; // Fully bright billboard
+        int light = 0xF000F0; // Full brightness
 
-        float boxWidth = 90.0f;
+        float boxWidth = 92.0f;
         float boxHeight = 26.0f;
         float minX = -boxWidth / 2.0f;
         float maxX = boxWidth / 2.0f;
@@ -144,7 +140,7 @@ public class PlayerBathingHologramRenderer {
         float trackX = minX + 5.0f;
         float trackW = boxWidth - 10.0f;
         float trackY = minY + 16.0f;
-        float trackH = 6.0f;
+        float trackH = 5.0f;
 
         // Dark track border & background
         HologramBarRenderer.drawRect(bgConsumer, matrix, trackX - 1.0f, trackY - 1.0f, trackX + trackW + 1.0f, trackY + trackH + 1.0f, -0.015f, 0xFF05070A, light);
@@ -153,12 +149,16 @@ public class PlayerBathingHologramRenderer {
         // Progress Fill
         float fillW = trackW * progress;
         if (fillW > 0.5f) {
-            HologramBarRenderer.drawRect(bgConsumer, matrix, trackX, trackY, trackX + fillW, trackY + trackH, -0.010f, barColorRight, light);
+            HologramBarRenderer.drawRect(bgConsumer, matrix, trackX, trackY, trackX + fillW, trackY + trackH, -0.010f, barColor, light);
             // Subtle 1px top highlight
-            HologramBarRenderer.drawRect(bgConsumer, matrix, trackX, trackY, trackX + fillW, trackY + 1.0f, -0.008f, 0x70FFFFFF, light);
+            HologramBarRenderer.drawRect(bgConsumer, matrix, trackX, trackY, trackX + fillW, trackY + 1.0f, -0.008f, 0x80FFFFFF, light);
+        }
+
+        // 6. Explicitly flush buffer so the hologram is rendered immediately to GPU!
+        if (buffer instanceof MultiBufferSource.BufferSource bs) {
+            bs.endBatch();
         }
 
         poseStack.popPose();
     }
 }
-

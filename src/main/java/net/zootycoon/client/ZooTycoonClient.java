@@ -233,6 +233,21 @@ public class ZooTycoonClient implements ClientModInitializer {
             context.client().execute(net.zootycoon.client.animation.PlayerBrushAnimationManager::startBrushing);
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.SyncAnimalWetPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                if (context.client().level != null) {
+                    net.minecraft.world.entity.Entity ent = context.client().level.getEntity(payload.animalEntityId());
+                    if (ent instanceof net.minecraft.world.entity.LivingEntity living) {
+                        if (payload.isWet()) {
+                            net.zootycoon.animal.AnimalBathingManager.setWet(living, net.zootycoon.animal.AnimalBathingManager.WET_DURATION_TICKS);
+                        } else {
+                            net.zootycoon.animal.AnimalBathingManager.setWet(living, 0);
+                        }
+                    }
+                }
+            });
+        });
+
         ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.ShowToastPayload.TYPE, (payload, context) -> {
             context.client().execute(() -> {
                 Object[] fmtArgs = payload.args() != null ? payload.args().toArray() : new Object[0];
@@ -591,13 +606,11 @@ public class ZooTycoonClient implements ClientModInitializer {
         HudRenderCallback.EVENT.register(ZooHudOverlay::render);
 
         net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
-            if (world.isClientSide() && hand == net.minecraft.world.InteractionHand.MAIN_HAND && entity instanceof net.minecraft.world.entity.LivingEntity living) {
+            if (world.isClientSide() && entity instanceof net.minecraft.world.entity.LivingEntity living) {
                 net.minecraft.world.item.ItemStack held = player.getItemInHand(hand);
-                if (held.is(net.minecraft.world.item.Items.BRUSH)) {
-                    if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)
-                            && net.zootycoon.animal.ZooAnimalHungerManager.isTagged(living)
-                            && net.zootycoon.animal.AnimalBathingManager.isWet(living)) {
-                        net.zootycoon.client.animation.PlayerBrushAnimationManager.startBrushing();
+                if (net.zootycoon.animal.AnimalBathingManager.isWateringCan(held) || held.is(net.minecraft.world.item.Items.BRUSH)) {
+                    if (net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living)) {
+                        return net.minecraft.world.InteractionResult.SUCCESS;
                     }
                 }
             }
