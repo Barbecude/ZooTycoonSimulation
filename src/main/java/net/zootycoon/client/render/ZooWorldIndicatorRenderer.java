@@ -7,16 +7,22 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
 import net.zootycoon.ZooTycoonMod;
+import net.zootycoon.animal.AnimalBathingManager;
 import net.zootycoon.client.ZooTycoonClient;
+import net.zootycoon.entity.ZooBuilderEntity;
+import net.zootycoon.entity.ZooCashierEntity;
+import net.zootycoon.entity.ZooVisitorEntity;
 import net.zootycoon.entity.ZooZookeeperEntity;
 import net.zootycoon.network.ZooNetworkPayloads;
+import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
 public class ZooWorldIndicatorRenderer {
@@ -63,11 +69,21 @@ public class ZooWorldIndicatorRenderer {
             if (distSqr > maxDistSqr) continue;
 
             // 1. Zookeeper indicator: orange exclamation mark if out of food stock
+            // Do NOT show exclamation mark if unassigned to an animal or currently cleaning/sweeping/bathing
             if (living instanceof ZooZookeeperEntity keeper) {
+                boolean isCleaning = keeper.isSweeping()
+                        || keeper.getBathingAction() != 0
+                        || keeper.getMainHandItem().is(Items.BRUSH)
+                        || AnimalBathingManager.isWateringCan(keeper.getMainHandItem());
+
+                if (!keeper.hasAssignedAnimal() || isCleaning) {
+                    continue;
+                }
+
                 if (keeper.getFoodStock() <= 0) {
                     double renderY = (ey + keeper.getBbHeight() + 1.25D + bob) - camPos.y;
                     renderBillboard(
-                            buffer, poseStack, RenderType.entityCutout(EXCLAMATION_TEXTURE),
+                            buffer, poseStack, EXCLAMATION_TEXTURE,
                             dx, renderY, dz,
                             0.20f, 0.28f,
                             camRot,
@@ -78,11 +94,11 @@ public class ZooWorldIndicatorRenderer {
             }
 
             // 1b. Builder indicator: orange exclamation mark if needing tools, materials, or wage payment
-            if (living instanceof net.zootycoon.entity.ZooBuilderEntity builder) {
+            if (living instanceof ZooBuilderEntity builder) {
                 if (builder.needsSomething()) {
                     double renderY = (ey + builder.getBbHeight() + 1.25D + bob) - camPos.y;
                     renderBillboard(
-                            buffer, poseStack, RenderType.entityCutout(EXCLAMATION_TEXTURE),
+                            buffer, poseStack, EXCLAMATION_TEXTURE,
                             dx, renderY, dz,
                             0.20f, 0.28f,
                             camRot,
@@ -93,11 +109,11 @@ public class ZooWorldIndicatorRenderer {
             }
 
             // 1b-2. Cashier indicator: exclamation mark if stock is empty
-            if (living instanceof net.zootycoon.entity.ZooCashierEntity cashier) {
+            if (living instanceof ZooCashierEntity cashier) {
                 if (cashier.isOutOfStock()) {
                     double renderY = (ey + cashier.getBbHeight() + 1.25D + bob) - camPos.y;
                     renderBillboard(
-                            buffer, poseStack, RenderType.entityCutout(EXCLAMATION_TEXTURE),
+                            buffer, poseStack, EXCLAMATION_TEXTURE,
                             dx, renderY, dz,
                             0.20f, 0.28f,
                             camRot,
@@ -108,12 +124,12 @@ public class ZooWorldIndicatorRenderer {
             }
 
             // 1c. Visitor mood icon: cleanly billboarded to camera at natural height just above head (hidden when leaving)
-            if (living instanceof net.zootycoon.entity.ZooVisitorEntity visitor) {
+            if (living instanceof ZooVisitorEntity visitor) {
                 if (visitor.isLeaving() || visitor.isTimeToLeave()) {
                     continue;
                 }
                 var mood = visitor.getMood();
-                if (mood != null && mood != net.zootycoon.entity.ZooVisitorEntity.VisitorMood.NEUTRAL) {
+                if (mood != null && mood != ZooVisitorEntity.VisitorMood.NEUTRAL) {
                     ResourceLocation tex = switch (mood) {
                         case TOILET -> ZooTycoonMod.id("textures/gui/moods/mood_toilet.png");
                         case AMAZED -> ZooTycoonMod.id("textures/gui/moods/mood_amazed.png");
@@ -123,10 +139,10 @@ public class ZooWorldIndicatorRenderer {
                         default -> null;
                     };
                     if (tex != null) {
-                        double hatOffset = visitor.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).isEmpty() ? 0.65D : 1.05D;
+                        double hatOffset = visitor.getItemBySlot(EquipmentSlot.HEAD).isEmpty() ? 0.65D : 1.05D;
                         double renderY = (ey + visitor.getBbHeight() + hatOffset + bob) - camPos.y;
                         renderBillboard(
-                                buffer, poseStack, RenderType.entityCutout(tex),
+                                buffer, poseStack, tex,
                                 dx, renderY, dz,
                                 0.20f, 0.20f,
                                 camRot,
@@ -154,7 +170,7 @@ public class ZooWorldIndicatorRenderer {
                     }
 
                     renderBillboard(
-                            buffer, poseStack, RenderType.entityCutout(HUNGER_TEXTURE),
+                            buffer, poseStack, HUNGER_TEXTURE,
                             dx, renderY, dz,
                             halfSize, halfSize,
                             camRot,
@@ -163,12 +179,17 @@ public class ZooWorldIndicatorRenderer {
                 }
             }
         }
+
+        // Flush see-through render type immediately during world render pass
+        if (buffer instanceof MultiBufferSource.BufferSource bs) {
+            bs.endBatch();
+        }
     }
 
     private static void renderBillboard(
             MultiBufferSource buffer,
             PoseStack poseStack,
-            RenderType renderType,
+            ResourceLocation texture,
             double x, double y, double z,
             float halfW, float halfH,
             Quaternionf cameraRotation,
@@ -178,36 +199,21 @@ public class ZooWorldIndicatorRenderer {
         poseStack.translate(x, y, z);
         poseStack.mulPose(cameraRotation);
 
-        VertexConsumer consumer = buffer.getBuffer(renderType);
+        VertexConsumer consumer = buffer.getBuffer(RenderType.textSeeThrough(texture));
         var pose = poseStack.last();
+        Matrix4f matrix = pose.pose();
 
-        consumer.addVertex(pose, -halfW, -halfH, 0.0f)
-                .setColor(r, g, b, a)
-                .setUv(0.0f, 1.0f)
-                .setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(0xF000F0)
-                .setNormal(pose, 0.0f, 0.0f, 1.0f);
+        // Front face (facing camera)
+        consumer.addVertex(matrix, -halfW, -halfH, 0.0f).setColor(r, g, b, a).setUv(0.0f, 1.0f).setLight(0xF000F0);
+        consumer.addVertex(matrix, halfW, -halfH, 0.0f).setColor(r, g, b, a).setUv(1.0f, 1.0f).setLight(0xF000F0);
+        consumer.addVertex(matrix, halfW, halfH, 0.0f).setColor(r, g, b, a).setUv(1.0f, 0.0f).setLight(0xF000F0);
+        consumer.addVertex(matrix, -halfW, halfH, 0.0f).setColor(r, g, b, a).setUv(0.0f, 0.0f).setLight(0xF000F0);
 
-        consumer.addVertex(pose, halfW, -halfH, 0.0f)
-                .setColor(r, g, b, a)
-                .setUv(1.0f, 1.0f)
-                .setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(0xF000F0)
-                .setNormal(pose, 0.0f, 0.0f, 1.0f);
-
-        consumer.addVertex(pose, halfW, halfH, 0.0f)
-                .setColor(r, g, b, a)
-                .setUv(1.0f, 0.0f)
-                .setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(0xF000F0)
-                .setNormal(pose, 0.0f, 0.0f, 1.0f);
-
-        consumer.addVertex(pose, -halfW, halfH, 0.0f)
-                .setColor(r, g, b, a)
-                .setUv(0.0f, 0.0f)
-                .setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(0xF000F0)
-                .setNormal(pose, 0.0f, 0.0f, 1.0f);
+        // Back face (so it never culls regardless of winding)
+        consumer.addVertex(matrix, -halfW, -halfH, 0.0f).setColor(r, g, b, a).setUv(0.0f, 1.0f).setLight(0xF000F0);
+        consumer.addVertex(matrix, -halfW, halfH, 0.0f).setColor(r, g, b, a).setUv(0.0f, 0.0f).setLight(0xF000F0);
+        consumer.addVertex(matrix, halfW, halfH, 0.0f).setColor(r, g, b, a).setUv(1.0f, 0.0f).setLight(0xF000F0);
+        consumer.addVertex(matrix, halfW, -halfH, 0.0f).setColor(r, g, b, a).setUv(1.0f, 1.0f).setLight(0xF000F0);
 
         poseStack.popPose();
     }

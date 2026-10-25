@@ -69,6 +69,8 @@ public class ZooZookeeperEntity extends PathfinderMob {
             SynchedEntityData.defineId(ZooZookeeperEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Integer> BATHING_ACTION =
             SynchedEntityData.defineId(ZooZookeeperEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> HAS_ASSIGNED_ANIMAL =
+            SynchedEntityData.defineId(ZooZookeeperEntity.class, EntityDataSerializers.BOOLEAN);
 
     private static final String[] NAMES = new String[]{
             "Siti Rahma", "Agus Setiawan", "Rudi Hartono", "Dewi Lestari",
@@ -99,6 +101,7 @@ public class ZooZookeeperEntity extends PathfinderMob {
         builder.define(SWEEPING, false);
         builder.define(HAS_BATHING_TOOLS, false);
         builder.define(BATHING_ACTION, 0);
+        builder.define(HAS_ASSIGNED_ANIMAL, false);
     }
 
     public ZooZookeeperEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
@@ -346,6 +349,7 @@ public class ZooZookeeperEntity extends PathfinderMob {
             } else {
                 // If animal is dead or gone, clear assignment
                 this.assignedAnimalUuid = null;
+                this.entityData.set(HAS_ASSIGNED_ANIMAL, false);
             }
         }
 
@@ -930,6 +934,11 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
     public void setAssignedAnimalUuid(UUID uuid) {
         this.assignedAnimalUuid = uuid;
+        this.entityData.set(HAS_ASSIGNED_ANIMAL, uuid != null);
+    }
+
+    public boolean hasAssignedAnimal() {
+        return this.entityData.get(HAS_ASSIGNED_ANIMAL);
     }
 
     public int getFoodStock() {
@@ -1051,6 +1060,7 @@ public class ZooZookeeperEntity extends PathfinderMob {
         if (!aStr.isEmpty()) {
             try { this.assignedAnimalUuid = UUID.fromString(aStr); } catch (Exception ignored) {}
         }
+        this.entityData.set(HAS_ASSIGNED_ANIMAL, this.assignedAnimalUuid != null);
         this.setFoodStock(tag.getInt("FoodStock"));
         if (tag.contains("DutyState")) {
             this.currentDutyState = tag.getString("DutyState");

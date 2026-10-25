@@ -21,6 +21,7 @@
 | 16 | Zookeeper Lempar Pakan, Animasi Mandi & Brush First-Person | SELESAI | 2026-10-24 | AI lempar pakan zookeeper untuk karnivora, dialog dinamis pakan lempar vs palung, animasi model penyiram & sikat zookeeper, dan animasi first-person brush player |
 | 17 | Detail Jenis Pohon Habitat (Bahasa Inggris) | SELESAI | 2026-10-25 | Mengganti label generic pepohonan dan istilah terjemahan menjadi nama spesifik jenis pohon dalam bahasa Inggris (Pohon Jungle, Pohon Oak, Pohon Acacia, Pohon Spruce, dll) |
 | 18 | Perbaikan Mandi Satwa Zookeeper & Kebersihan 100% | SELESAI | 2026-10-25 | Ticking per-tick aksi mandi zookeeper, jarak adaptif, pemulihan kebersihan 100%, dan filter dialog alat mandi hanya saat satwa kotor |
+| 19 | Indikator Tembus Blok & Filter Peringatan Zookeeper | SELESAI | 2026-10-25 | Indikator billboard (emoji pengunjung, tanda seru staf) menembus blok via textSeeThrough dan penyembunyian tanda seru untuk zookeeper yang sedang bersih-bersih atau belum punya satwa binaan |
 
 ## Keputusan
 - Koreksi CONTEXT.md poin T5: Sync periodik sebenarnya ada di server tick setiap 40 tick (2 detik) melalui `ZooNetworkPayloads.sendAnimalSync(player)`. Namun, method ini HANYA mengirimkan hewan yang sudah terdaftar (`isTagged`) dan dimiliki pemain (`isOwnedBy`). Hewan yang belum terdaftar tidak pernah masuk payload sehingga client renderer selalu menerima null dan jatuh ke nilai palsu (80/80/100). Mekanisme request inspeksi on-demand per target belum ada.
@@ -260,17 +261,27 @@
      - Jika satwa bersih (`cleanliness > 60`), zookeeper tidak meminta alat mandi, dan `handleBathingToolsTransfer` menolak penyerahan alat jika satwa tidak kotor.
      - Saat sikat rusak/habis, inventaris zookeeper direset bersih sehingga zookeeper tidak memiliki alat awal apa pun ("jangan kasih zookeeper apapun") hingga satwa kotor kembali.
 
+- Indikator In-World Tembus Blok & Filter Peringatan Zookeeper (Fase 19):
+  1. Rendering Indikator Tembus Blok (X-Ray / See-Through):
+     - Memperbarui `renderBillboard` pada `ZooWorldIndicatorRenderer` untuk menggunakan `RenderType.textSeeThrough(texture)`.
+     - Tipe render ini menonaktifkan depth test (mirip nametag vanilla), memungkinkan ikon emoji mood pengunjung, tanda seru kebutuhan staf, dan indikator lapar terlihat menembus blok/dinding dengan tingkat kecerahan penuh (`0xF000F0`).
+     - Menghadirkan two-sided quad (sisi depan dan belakang) dengan format verteks `DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP` dan pemanggilan `bs.endBatch()` di akhir pass untuk memastikan visual ter-flush instan di fase rendering in-world.
+  2. Filter Tanda Seru Zookeeper:
+     - Menambahkan sinkronisasi status hewan binaan `HAS_ASSIGNED_ANIMAL` (`SynchedEntityData<Boolean>`) pada `ZooZookeeperEntity` sehingga sisi client dapat mengetahui apakah zookeeper memiliki satwa asuh.
+     - Menyembunyikan tanda seru di atas kepala zookeeper jika zookeeper belum memiliki satwa binaan (`!keeper.hasAssignedAnimal()`).
+     - Menyembunyikan tanda seru jika zookeeper sedang melakukan tugas kebersihan atau mandi (`keeper.isSweeping()`, `keeper.getBathingAction() != 0`, memegang sikat, atau memegang penyiram air).
+
 ## Bukti Selesai
 - Seluruh kode terkompilasi bersih tanpa error dengan `compileJava` dan `build`.
 - File jar `zootycoon-1.0.0.jar` telah tersalin ke direktori mods profil Modrinth.
-- Zookeeper menjalankan `tickBathingDuty` setiap tick, memandikan satwa dalam 3.25 detik, dan memulihkan kebersihan ke 100%.
-- Filter dialog alat mandi hanya muncul saat satwa kotor (`<= 60%`).
+- Indikator in-world kini menggunakan `textSeeThrough` sehingga menembus blok.
+- Zookeeper yang sedang menyapu, memandikan satwa, atau belum memiliki satwa binaan tidak menampilkan tanda seru.
 
 ## Blocker
 - Tidak ada blocker.
 
 ## File yang diubah
-- src/main/java/net/zootycoon/animal/AnimalBathingManager.java
+- src/main/java/net/zootycoon/client/render/ZooWorldIndicatorRenderer.java
 - src/main/java/net/zootycoon/entity/ZooZookeeperEntity.java
 - docs/hologram/PROGRESS.md
 
