@@ -381,7 +381,7 @@ public class ZooAnimalHologramRenderer {
             Component titleComp = entity.getDisplayName();
             float scaledTitleWidth = font.width(titleComp) * TITLE_SCALE;
 
-            Component dietSubtitleComp = Component.literal(AnimalDietRegistry.getDietCategorySubtitle(entity));
+            Component dietSubtitleComp = AnimalDietRegistry.getDietCategorySubtitleComponent(entity);
             float dietSubtitleWidth = font.width(dietSubtitleComp);
 
             float statRowWidth = maxLabelWidth + GAP_LABEL_TO_ICON + ICON_WIDTH + GAP_ICON_TO_VALUE + maxValueWidth;
@@ -752,7 +752,7 @@ public class ZooAnimalHologramRenderer {
             poseStack.popPose();
 
             // Subtitle: Category & Feeding Method (Left-aligned, Light Gray)
-            font.drawInBatch(cached.dietSubtitleComp, leftX, curY + 13.0f, HologramBarRenderer.applyAlpha(0xFFAAAAAA, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            font.drawInBatch(cached.dietSubtitleComp, leftX, curY + 13.0f, HologramBarRenderer.applyAlpha(0xFFFFFFFF, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 
             curY += cached.headerHeight;
 

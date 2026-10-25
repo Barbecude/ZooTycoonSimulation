@@ -17,7 +17,9 @@ Sesuai arahan desain visual Minecraft vanilla:
 | **Hunger** | `minecraft:hud/food_full` | 9x9 | Vanilla Sprite Atlas | Ikon paha ayam resmi Minecraft vanilla HUD (*food bar full*). | Mojang / Minecraft Vanilla | SELESAI (Fase 5) |
 | **Thirst** | `assets/zootycoon/textures/gui/inspect/thirst.png` | 9x9 | PNG (RGBA 32-bit) | Ikon tetesan air (*water droplet*) dengan outline gelap `#12325c`, gradasi biru laut `#2c8be8`, bayangan `#1a5ea6`, dan pantulan cahaya putih `#ffffff`. | MIT (Orisinal Zoo Tycoon) | SELESAI (Fase 5) |
 | **Cleanliness** | `assets/zootycoon/textures/gui/inspect/cleanliness.png` | 9x9 | PNG (RGBA 32-bit) | Ikon gelembung berkilau (*sparkling bubble*) dengan outline teal `#0f4a54`, warna dasar cyan `#39c2d1`, dan kilau putih `#ffffff`. | MIT (Orisinal Zoo Tycoon) | SELESAI (Fase 5) |
-| **Temperature** | `assets/zootycoon/textures/gui/inspect/thermometer.png` | 16x16 | PNG (RGBA 32-bit) | Ikon termometer dial dial bulat resmi dari Legendary Survival Overhaul (`textures/item/thermometer/thermometer_15.png`). | LGPL-3.0 (Legendary Survival Overhaul) | SELESAI |
+| **Temperature** | `assets/zootycoon/textures/gui/inspect/thermometer.png` | 16x16 | PNG (RGBA 32-bit) | Ikon termometer dial bulat resmi dari Legendary Survival Overhaul (`textures/item/thermometer/thermometer_15.png`). | LGPL-3.0 (Legendary Survival Overhaul) | SELESAI |
+| **Temp Hot Alert** | `assets/zootycoon/textures/gui/icons/temp_fire.png` | 16x16 | PNG (RGBA 32-bit) | Ikon api status panas dari Legendary Survival Overhaul (`textures/gui/overlay.png` Slot 4). | LGPL-3.0 (Legendary Survival Overhaul) | SELESAI |
+| **Temp Cold Alert** | `assets/zootycoon/textures/gui/icons/temp_ice.png` | 16x16 | PNG (RGBA 32-bit) | Ikon kristal es status dingin dari Legendary Survival Overhaul (`textures/gui/overlay.png` Slot 5). | LGPL-3.0 (Legendary Survival Overhaul) | SELESAI |
 
 ---
 

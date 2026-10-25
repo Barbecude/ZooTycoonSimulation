@@ -22,6 +22,7 @@
 | 17 | Detail Jenis Pohon Habitat (Bahasa Inggris) | SELESAI | 2026-10-25 | Mengganti label generic pepohonan dan istilah terjemahan menjadi nama spesifik jenis pohon dalam bahasa Inggris (Pohon Jungle, Pohon Oak, Pohon Acacia, Pohon Spruce, dll) |
 | 18 | Perbaikan Mandi Satwa Zookeeper & Kebersihan 100% | SELESAI | 2026-10-25 | Ticking per-tick aksi mandi zookeeper, jarak adaptif, pemulihan kebersihan 100%, dan filter dialog alat mandi hanya saat satwa kotor |
 | 19 | Indikator Tembus Blok & Filter Peringatan Zookeeper | SELESAI | 2026-10-25 | Indikator billboard (emoji pengunjung, tanda seru staf) menembus blok via textSeeThrough dan penyembunyian tanda seru untuk zookeeper yang sedang bersih-bersih atau belum punya satwa binaan |
+| 20 | Subtitle Ungu, Indikator Overhead Komprehensif & Evaluasi Habitat | SELESAI | 2026-10-25 | Subtitle kategori diet ungu di hologram, indikator overhead 5 stat (health, hunger, thirst, clean, thermal LSO api & es getar berjejer), dan perbaikan komprehensif scanner bunga, dasar akuatik, & terumbu karang |
 
 ## Keputusan
 - Koreksi CONTEXT.md poin T5: Sync periodik sebenarnya ada di server tick setiap 40 tick (2 detik) melalui `ZooNetworkPayloads.sendAnimalSync(player)`. Namun, method ini HANYA mengirimkan hewan yang sudah terdaftar (`isTagged`) dan dimiliki pemain (`isOwnedBy`). Hewan yang belum terdaftar tidak pernah masuk payload sehingga client renderer selalu menerima null dan jatuh ke nilai palsu (80/80/100). Mekanisme request inspeksi on-demand per target belum ada.
@@ -271,22 +272,41 @@
      - Menyembunyikan tanda seru di atas kepala zookeeper jika zookeeper belum memiliki satwa binaan (`!keeper.hasAssignedAnimal()`).
      - Menyembunyikan tanda seru jika zookeeper sedang melakukan tugas kebersihan atau mandi (`keeper.isSweeping()`, `keeper.getBathingAction() != 0`, memegang sikat, atau memegang penyiram air).
 
+- Subtitle Ungu, Indikator Overhead Komprehensif & Evaluasi Habitat (Fase 20):
+  1. Subtitle Kategori Pakan Berwarna Ungu Lavender di Hologram:
+     - Memperbarui `AnimalDietRegistry.getDietCategorySubtitleComponent` untuk menyusun `Component` terformat: bagian kategori hewan (`Herbivora`, `Karnivora`, dll) diberi warna ungu lavender lembut (`0xFFBD6DFF`), sedangkan metode makan (` (Perlu Palung Makanan)` atau ` (Lempar Makanan)`) tetap abu-abu lembut (`0xFFAAAAAA`).
+     - `ZooAnimalHologramRenderer` merender teks bertingkat ini dengan pelestarian warna gaya component dan alpha fade smooth.
+  2. Indikator Overhead Komprehensif di Atas Kepala Satwa (ZooWorldIndicatorRenderer):
+     - Memperluas indikator visual overhead satwa terdaftar: Kesehatan (Heart), Lapar (Hunger Indicator), Haus (`thirst.png`), dan Kebersihan (`cleanliness.png`) muncul saat nilai status <= 50%.
+     - Menambahkan indikator termal musiman LSO: Suhu Panas (ikon api `temp_fire.png` dengan denyut lembut) dan Suhu Dingin (ikon kristal es `temp_ice.png` dengan getaran menggigil horizontal `shiverX/shiverY`).
+     - Seluruh alert aktif ditata berjejer secara horizontal simetris di atas kepala satwa tanpa tumpang tindih.
+  3. Pemenuhan Komprehensif Habitat (Bunga, Dasar Kerikil/Pasir, & Karang di HabitatEvaluator):
+     - Tanaman Bunga: Memperluas deteksi scanner mencakup tag konvensi mod `#c:flowers`, bunga kecil dan tinggi vanilla, `flowering_azalea`, `flowering_azalea_leaves`, `pink_petals`, `spore_blossom`, `torchflower`, `pitcher_plant`, `chorus_flower`, dan pot bunga.
+     - Terumbu Karang: Memperbaiki bug di mana blok kubus karang terlewat dengan menambahkan `BlockTags.CORAL_BLOCKS`, varian dead coral blocks, tall seagrass, kelp, dan sea lantern.
+     - Dasar Lautan / Kerikil: Memperluas jangkauan pemindaian vertikal ke bawah dari minDy -6 menjadi -16 sehingga dasar akuarium/kolam dalam tetap terdeteksi oleh satwa yang berenang di permukaan, serta memasukkan lantai oseanarium seperti prismarine, dark prismarine, prismarine bricks, dan sea lantern ke dalam `natural_ground`.
+
 ## Bukti Selesai
 - Seluruh kode terkompilasi bersih tanpa error dengan `compileJava` dan `build`.
 - File jar `zootycoon-1.0.0.jar` telah tersalin ke direktori mods profil Modrinth.
-- Indikator in-world kini menggunakan `textSeeThrough` sehingga menembus blok.
-- Zookeeper yang sedang menyapu, memandikan satwa, atau belum memiliki satwa binaan tidak menampilkan tanda seru.
+- Kategori diet pada subtitle hologram satwa tampil berwarna ungu lavender lembut (`0xFFBD6DFF`) dan metode pakan tetap abu-abu (`0xFFAAAAAA`).
+- Indikator overhead satwa kini mendukung 5 stat (Health, Hunger, Thirst, Cleanliness, Suhu Api/Es getar) berjejer horizontal.
+- Scanner blok habitat kini mengenali bunga mod/variatif, blok kubus karang, dan dasar kerikil/pasir/prismarine di kedalaman air hingga 16 blok.
 
 ## Blocker
 - Tidak ada blocker.
 
 ## File yang diubah
+- src/main/java/net/zootycoon/animal/AnimalDietRegistry.java
+- src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java
 - src/main/java/net/zootycoon/client/render/ZooWorldIndicatorRenderer.java
-- src/main/java/net/zootycoon/entity/ZooZookeeperEntity.java
+- src/main/java/net/zootycoon/animal/habitat/HabitatEvaluator.java
+- src/main/resources/assets/zootycoon/textures/gui/icons/temp_fire.png
+- src/main/resources/assets/zootycoon/textures/gui/icons/temp_ice.png
+- docs/hologram/ASSETS.md
 - docs/hologram/PROGRESS.md
 
 ## Butuh izin user
 - Tidak ada.
 
 ## Belum terverifikasi
-- Pengujian in-game langsung oleh pengguna untuk memeriksa zookeeper membersihkan satwa dan persentase kebersihan naik menjadi 100%.
+- Pengujian visual in-game oleh pengguna saat satwa berada di kandang berbunga, kandang berdasar kerikil, dan oseanarium berkarang.

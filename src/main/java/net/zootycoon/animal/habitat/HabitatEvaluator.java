@@ -34,6 +34,10 @@ public class HabitatEvaluator {
     }
 
     public static final TagKey<Block> NATURAL_GROUND = TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath("zootycoon", "natural_ground"));
+    public static final TagKey<Block> C_GRAVEL = TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath("c", "gravel"));
+    public static final TagKey<Block> C_SAND = TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath("c", "sand"));
+    public static final TagKey<Block> C_DIRT = TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath("c", "dirt"));
+    public static final TagKey<Block> C_FLOWERS = TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath("c", "flowers"));
 
     public record HabitatResult(
             HabitatStatus status,
@@ -305,8 +309,8 @@ public class HabitatEvaluator {
     private static Map<String, Integer> scanSurroundingBlocks(ServerLevel level, BlockPos center) {
         Map<String, Integer> counts = new HashMap<>();
         int radius = 24;
-        int minDy = -6;
-        int maxDy = 6;
+        int minDy = -16;
+        int maxDy = 12;
 
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
         for (int dx = -radius; dx <= radius; dx++) {
@@ -320,11 +324,15 @@ public class HabitatEvaluator {
                     if (state.isAir()) continue;
 
                     // Natural Ground: checks NATURAL_GROUND tag AND all common natural surface blocks
-                    if (state.is(NATURAL_GROUND) || state.is(BlockTags.DIRT) || state.is(BlockTags.SAND)
+                    if (state.is(NATURAL_GROUND) || state.is(C_DIRT) || state.is(C_SAND) || state.is(C_GRAVEL)
+                            || state.is(BlockTags.DIRT) || state.is(BlockTags.SAND)
                             || state.is(BlockTags.TERRACOTTA) || state.is(Blocks.GRAVEL)
                             || state.is(Blocks.MUD) || state.is(Blocks.PACKED_MUD) || state.is(Blocks.CLAY)
                             || state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.PODZOL) || state.is(Blocks.COARSE_DIRT)
-                            || state.is(Blocks.ROOTED_DIRT) || state.is(Blocks.MYCELIUM) || state.is(BlockTags.SNOW)) {
+                            || state.is(Blocks.ROOTED_DIRT) || state.is(Blocks.MYCELIUM) || state.is(BlockTags.SNOW)
+                            || state.is(Blocks.SUSPICIOUS_GRAVEL) || state.is(Blocks.SUSPICIOUS_SAND)
+                            || state.is(Blocks.PRISMARINE) || state.is(Blocks.DARK_PRISMARINE) || state.is(Blocks.PRISMARINE_BRICKS)
+                            || state.is(Blocks.SEA_LANTERN) || state.is(BlockTags.CORAL_BLOCKS)) {
                         counts.merge("natural_ground", 1, Integer::sum);
                     }
 
@@ -437,7 +445,19 @@ public class HabitatEvaluator {
                     }
 
                     // Flowers
-                    if (state.is(BlockTags.FLOWERS)) {
+                    if (state.is(BlockTags.FLOWERS)
+                            || state.is(C_FLOWERS)
+                            || state.is(BlockTags.SMALL_FLOWERS)
+                            || state.is(BlockTags.TALL_FLOWERS)
+                            || state.is(Blocks.FLOWERING_AZALEA)
+                            || state.is(Blocks.FLOWERING_AZALEA_LEAVES)
+                            || state.is(Blocks.PINK_PETALS)
+                            || state.is(Blocks.SPORE_BLOSSOM)
+                            || state.is(Blocks.TORCHFLOWER)
+                            || state.is(Blocks.PITCHER_PLANT)
+                            || state.is(Blocks.PITCHER_CROP)
+                            || state.is(Blocks.CHORUS_FLOWER)
+                            || state.is(BlockTags.FLOWER_POTS)) {
                         counts.merge("flowers", 1, Integer::sum);
                     }
 
@@ -493,7 +513,13 @@ public class HabitatEvaluator {
                     }
 
                     // Coral & Ocean Rocks
-                    if (state.is(BlockTags.CORALS) || state.is(BlockTags.WALL_CORALS) || state.is(Blocks.SEA_PICKLE)
+                    if (state.is(BlockTags.CORALS) || state.is(BlockTags.WALL_CORALS) || state.is(BlockTags.CORAL_BLOCKS)
+                            || state.is(BlockTags.CORAL_PLANTS) || state.is(Blocks.SEA_PICKLE)
+                            || state.is(Blocks.TALL_SEAGRASS) || state.is(Blocks.KELP) || state.is(Blocks.KELP_PLANT)
+                            || state.is(Blocks.SEA_LANTERN)
+                            || state.is(Blocks.DEAD_TUBE_CORAL_BLOCK) || state.is(Blocks.DEAD_BRAIN_CORAL_BLOCK)
+                            || state.is(Blocks.DEAD_BUBBLE_CORAL_BLOCK) || state.is(Blocks.DEAD_FIRE_CORAL_BLOCK)
+                            || state.is(Blocks.DEAD_HORN_CORAL_BLOCK)
                             || state.is(Blocks.SEAGRASS) || state.is(Blocks.PRISMARINE) || state.is(Blocks.DARK_PRISMARINE)
                             || state.is(Blocks.PRISMARINE_BRICKS)) {
                         counts.merge("coral", 1, Integer::sum);
@@ -601,7 +627,7 @@ public class HabitatEvaluator {
             String lower = item.toLowerCase(Locale.ROOT);
             if (lower.contains("rumput") || lower.contains("pasir") || lower.contains("salju")
                     || lower.contains("lumpur") || lower.contains("podzol") || lower.contains("miselium")
-                    || lower.contains("terracotta") || lower.contains("es")) {
+                    || lower.contains("terracotta") || lower.contains("es") || lower.contains("kerikil")) {
                 return true;
             }
         }

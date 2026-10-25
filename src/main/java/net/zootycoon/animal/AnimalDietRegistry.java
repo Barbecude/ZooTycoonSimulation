@@ -1,6 +1,7 @@
 package net.zootycoon.animal;
 
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
@@ -409,6 +410,20 @@ public class AnimalDietRegistry {
 
     public static void register(String entityTypeId, FeedingType feedingType, String dietCategory, String description, boolean acceptsRawMeat, boolean acceptsRawFish, Item... foods) {
         DIET_REGISTRY.put(entityTypeId.toLowerCase(Locale.ROOT), new AnimalDiet(feedingType, dietCategory, description, acceptsRawMeat, acceptsRawFish, false, foods));
+    }
+
+    public static final int COLOR_DIET_CATEGORY = 0xFFBD6DFF; // Soft Lavender Purple
+    public static final int COLOR_FEEDING_METHOD = 0xFFAAAAAA; // Soft Gray
+
+    public static Component getDietCategorySubtitleComponent(LivingEntity entity) {
+        AnimalDiet diet = (entity != null) ? getDiet(entity) : null;
+        String category = (diet != null && diet.dietCategory != null) ? diet.dietCategory : "Herbivora";
+        String method = (diet != null && diet.feedingType != null) ? diet.feedingType.getLabel() : "Perlu Palung Makanan";
+
+        return Component.literal(category)
+                .withStyle(style -> style.withColor(COLOR_DIET_CATEGORY))
+                .append(Component.literal(" (" + method + ")")
+                        .withStyle(style -> style.withColor(COLOR_FEEDING_METHOD)));
     }
 
     public static String getDietCategorySubtitle(LivingEntity entity) {
