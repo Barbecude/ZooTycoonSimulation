@@ -77,7 +77,7 @@ public class AnimalManagementTab {
     private boolean isDraggingDetailsScrollbar = false;
     private int maxDetailsScroll = 0;
     private boolean showAllFoods = false;
-    private static final int ITEM_HEIGHT = 24;
+    private static final int ITEM_HEIGHT = 26;
 
     public AnimalManagementTab(MainManagementScreen screen) {
         this.screen = screen;
@@ -287,10 +287,7 @@ public class AnimalManagementTab {
 
                 int cardRight = sidebarX + sidebarW - itemRightMargin;
 
-                // 1. Animal Name in normal white
-                String displayName = a.customName().isEmpty() ? formatSpecies(a.entityTypeId()) : a.customName();
-
-                // 2. Check problem conditions: no zookeeper OR stats / habitat problem
+                // 1. Check problem conditions: no zookeeper OR stats / habitat problem
                 boolean hasNoZk = !a.hasZookeeper();
                 boolean isHpLow = (a.health() / Math.max(0.1f, a.maxHealth())) <= 0.5f;
                 boolean isHungry = a.hunger() <= 50;
@@ -301,14 +298,42 @@ public class AnimalManagementTab {
                 boolean isHabProblem = !habParsed.serverUnmet().isEmpty();
                 boolean hasProblem = hasNoZk || isHpLow || isHungry || isThirsty || isDirty || isTempProblem || isHabProblem;
 
-                int maxNameW = hasProblem ? (cardRight - (sidebarX + 10) - 16) : (cardRight - (sidebarX + 10) - 4);
-                String trimmedName = font.plainSubstrByWidth(displayName, maxNameW);
-                int textX = isSelected ? (sidebarX + 9) : (sidebarX + 7);
-                graphics.drawString(font, Component.literal(trimmedName).withStyle(ChatFormatting.WHITE), textX, curY + 6, 0xFFFFFFFF, false);
+                // 2. Animal Name in normal white
+                String displayName = a.customName().isEmpty() ? formatSpecies(a.entityTypeId()) : a.customName();
+                int modelSize = 22;
+                int modelX = cardRight - 14 - modelSize - 3;
+                int modelY = curY + 1;
 
+                int textX = isSelected ? (sidebarX + 9) : (sidebarX + 7);
+                int maxNameW = Math.max(20, modelX - textX - 4);
+                String trimmedName = font.plainSubstrByWidth(displayName, maxNameW);
+                graphics.drawString(font, Component.literal(trimmedName).withStyle(ChatFormatting.WHITE), textX, curY + 8, 0xFFFFFFFF, false);
+
+                // 3. Mini 3D Animal Model (di samping kanan nama satwa)
+                LivingEntity miniEntity = resolveLivingEntity(mc, a);
+                if (miniEntity != null) {
+                    try {
+                        float bbH = Math.max(0.4f, miniEntity.getBbHeight());
+                        float bbW = Math.max(0.4f, miniEntity.getBbWidth());
+                        float maxDim = Math.max(bbH, bbW * 0.8f);
+                        int miniScale = (int) Math.clamp(12.0f / maxDim, 4, 15);
+                        if (modelY >= sidebarY + 1 && modelY + modelSize <= sidebarY + sidebarH - 1) {
+                            InventoryScreen.renderEntityInInventoryFollowsMouse(
+                                    graphics,
+                                    modelX, modelY, modelX + modelSize, modelY + modelSize,
+                                    miniScale, 0.0f, (float) mouseX, (float) mouseY, miniEntity
+                            );
+                            graphics.enableScissor(sidebarX + 1, sidebarY + 1, sidebarX + sidebarW - 1, sidebarY + sidebarH - 1);
+                        }
+                    } catch (Throwable ignored) {
+                        graphics.enableScissor(sidebarX + 1, sidebarY + 1, sidebarX + sidebarW - 1, sidebarY + sidebarH - 1);
+                    }
+                }
+
+                // 4. Alert Exclamation Mark (align kanan)
                 if (hasProblem) {
                     int exX = cardRight - 14;
-                    int exY = curY + 6;
+                    int exY = curY + 7;
                     graphics.blit(EXCLAMATION_ICON, exX, exY, 0, 0, 10, 10, 64, 64);
                     if (mouseX >= exX && mouseX <= exX + 10 && mouseY >= exY && mouseY <= exY + 10) {
                         List<Component> problems = new ArrayList<>();
@@ -420,8 +445,8 @@ public class AnimalManagementTab {
         int zkBtnH = 18;
 
         boolean zkBtnHovered = mouseX >= zkBtnX && mouseX <= zkBtnX + zkBtnW && mouseY >= zkBtnY && mouseY <= zkBtnY + zkBtnH;
-        int btnBg = zkBtnHovered ? 0xFF243048 : 0xFF181C26;
-        int btnBorder = (zkBtnHovered || zookeeperDropdownOpen) ? 0xFF58A6FF : 0xFF2A3140;
+        int btnBg = zkBtnHovered ? 0xFF222B3A : 0xFF181C26;
+        int btnBorder = (zkBtnHovered || zookeeperDropdownOpen) ? 0xFF4E5D78 : 0xFF2A3140;
 
         graphics.fill(zkBtnX, zkBtnY, zkBtnX + zkBtnW, zkBtnY + zkBtnH, btnBg);
         graphics.fill(zkBtnX, zkBtnY, zkBtnX + zkBtnW, zkBtnY + 1, btnBorder);
@@ -433,7 +458,7 @@ public class AnimalManagementTab {
         ChatFormatting keeperColor;
         if (selectedData.hasZookeeper()) {
             keeperLabel = "Zookeeper: " + selectedData.zookeeperName();
-            keeperColor = ChatFormatting.GREEN;
+            keeperColor = ChatFormatting.WHITE;
         } else {
             keeperLabel = "Pilih Zookeeper...";
             keeperColor = ChatFormatting.GRAY;
@@ -444,7 +469,7 @@ public class AnimalManagementTab {
         graphics.drawString(font, Component.literal(trimmedLabel).withStyle(keeperColor), zkBtnX + 6, zkBtnY + 5, 0xFFFFFFFF, false);
 
         String arrow = zookeeperDropdownOpen ? "▲" : "▼";
-        graphics.drawString(font, Component.literal(arrow).withStyle(ChatFormatting.GOLD), zkBtnX + zkBtnW - 12, zkBtnY + 5, 0xFFFFFFFF, false);
+        graphics.drawString(font, Component.literal(arrow).withStyle(ChatFormatting.GRAY), zkBtnX + zkBtnW - 12, zkBtnY + 5, 0xFFFFFFFF, false);
 
         if (!selectedData.hasZookeeper()) {
             int exX = zkBtnX + zkBtnW + 5;
@@ -862,12 +887,13 @@ public class AnimalManagementTab {
         graphics.pose().translate(0, 0, 500);
 
         // Border & background
-        graphics.fill(dx - 1, dy - 1, dx + zkDropdownW + 1, dy + zkDropdownH + 1, 0xFF58A6FF);
+        graphics.fill(dx - 1, dy - 1, dx + zkDropdownW + 1, dy + zkDropdownH + 1, 0xFF354157);
         graphics.fill(dx, dy, dx + zkDropdownW, dy + zkDropdownH, 0xF5141720);
 
         // Header
-        graphics.fill(dx, dy, dx + zkDropdownW, dy + headerH, 0xFF1C2230);
-        graphics.drawString(font, Component.literal("Pilih Zookeeper:").withStyle(ChatFormatting.AQUA), dx + 8, dy + 5, 0xFFFFFFFF, false);
+        graphics.fill(dx, dy, dx + zkDropdownW, dy + headerH, 0xFF181D27);
+        graphics.fill(dx, dy + headerH - 1, dx + zkDropdownW, dy + headerH, 0xFF2A3444);
+        graphics.drawString(font, Component.literal("Pilih Zookeeper:").withStyle(ChatFormatting.GRAY), dx + 8, dy + 5, 0xFFFFFFFF, false);
 
         int listStartY = dy + headerH + 2;
         graphics.enableScissor(dx + 1, listStartY, dx + zkDropdownW - 1, listStartY + listH);
@@ -880,9 +906,9 @@ public class AnimalManagementTab {
                 boolean noneHovered = mouseX >= dx && mouseX <= dx + (maxScroll > 0 ? zkDropdownW - 5 : zkDropdownW)
                         && mouseY >= curY && mouseY <= curY + itemH && mouseY >= listStartY && mouseY <= listStartY + listH;
                 if (noneHovered) {
-                    graphics.fill(dx + 2, curY, dx + zkDropdownW - (maxScroll > 0 ? 7 : 2), curY + itemH, 0xFF243048);
+                    graphics.fill(dx + 2, curY, dx + zkDropdownW - (maxScroll > 0 ? 7 : 2), curY + itemH, 0xFF222B3A);
                 }
-                ChatFormatting noneColor = noneHovered ? ChatFormatting.YELLOW : ChatFormatting.GRAY;
+                ChatFormatting noneColor = noneHovered ? ChatFormatting.WHITE : ChatFormatting.GRAY;
                 graphics.drawString(font, Component.literal("— Lepas Zookeeper —").withStyle(noneColor), dx + 8, curY + 5, 0xFFFFFFFF, false);
             }
             curY += itemH;
@@ -898,13 +924,12 @@ public class AnimalManagementTab {
                     boolean rowHovered = mouseX >= dx && mouseX <= dx + (maxScroll > 0 ? zkDropdownW - 5 : zkDropdownW)
                             && mouseY >= curY && mouseY <= curY + itemH && mouseY >= listStartY && mouseY <= listStartY + listH;
                     if (rowHovered) {
-                        graphics.fill(dx + 2, curY, dx + zkDropdownW - (maxScroll > 0 ? 7 : 2), curY + itemH, 0xFF243048);
+                        graphics.fill(dx + 2, curY, dx + zkDropdownW - (maxScroll > 0 ? 7 : 2), curY + itemH, 0xFF222B3A);
                     }
                     boolean isCurrent = selectedData.hasZookeeper() && zk.name().equals(selectedData.zookeeperName());
-                    ChatFormatting nameColor = isCurrent ? ChatFormatting.GREEN : (rowHovered ? ChatFormatting.GOLD : ChatFormatting.WHITE);
                     String label = (isCurrent ? "✓ " : "• ") + zk.name();
                     String trimmedZkName = font.plainSubstrByWidth(label, zkDropdownW - (maxScroll > 0 ? 20 : 14));
-                    graphics.drawString(font, Component.literal(trimmedZkName).withStyle(nameColor), dx + 8, curY + 5, 0xFFFFFFFF, false);
+                    graphics.drawString(font, Component.literal(trimmedZkName).withStyle(ChatFormatting.WHITE), dx + 8, curY + 5, 0xFFFFFFFF, false);
                 }
                 curY += itemH;
             }
@@ -916,11 +941,11 @@ public class AnimalManagementTab {
         if (maxScroll > 0) {
             int barX = dx + zkDropdownW - 5;
             int barY = listStartY;
-            graphics.fill(barX, barY, barX + 3, barY + listH, 0xFF1C2230);
+            graphics.fill(barX, barY, barX + 3, barY + listH, 0xFF161B24);
             float ratio = (float) listH / (float) totalContentH;
             int thumbH = Math.max(12, (int) (listH * ratio));
             int thumbY = barY + (int) ((listH - thumbH) * ((float) zkScrollOffset / (float) maxScroll));
-            graphics.fill(barX, thumbY, barX + 3, thumbY + thumbH, 0xFF58A6FF);
+            graphics.fill(barX, thumbY, barX + 3, thumbY + thumbH, 0xFF4E5D78);
         }
 
         graphics.pose().popPose();
