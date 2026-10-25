@@ -515,13 +515,11 @@ private static final String[] NAMES = new String[]{
                 ItemStack availableFood = this.peekFirstFood();
                 Item targetFoodItem = !availableFood.isEmpty() ? availableFood.getItem() : Items.WHEAT;
                 if (availableFood.isEmpty()) {
-                    if (diet != null && !diet.acceptedFoods.isEmpty()) {
+                    var validFoods = AnimalDietRegistry.getFoodsForAnimal(assignedAnimal);
+                    if (!validFoods.isEmpty()) {
+                        targetFoodItem = validFoods.get(0).getItem();
+                    } else if (diet != null && !diet.acceptedFoods.isEmpty()) {
                         targetFoodItem = diet.acceptedFoods.get(0);
-                    } else if (assignedAnimal instanceof net.minecraft.world.entity.animal.Animal a) {
-                        if (a.isFood(new ItemStack(Items.CARROT))) targetFoodItem = Items.CARROT;
-                        else if (a.isFood(new ItemStack(Items.WHEAT_SEEDS))) targetFoodItem = Items.WHEAT_SEEDS;
-                        else if (a.isFood(new ItemStack(Items.BAMBOO))) targetFoodItem = Items.BAMBOO;
-                        else if (a.isFood(new ItemStack(Items.APPLE))) targetFoodItem = Items.APPLE;
                     }
                 }
 
@@ -540,15 +538,16 @@ private static final String[] NAMES = new String[]{
                     if (be instanceof ZooFeedingTroughBlockEntity troughBe) {
                         if (troughBe.hasWater()) continue;
                         ItemStack foodInTrough = troughBe.getFoodStack();
-                        boolean needsFood = foodInTrough.isEmpty() || (foodInTrough.is(targetFoodItem) && foodInTrough.getCount() < 32);
+                        boolean canRefillWithMyFood = foodInTrough.isEmpty()
+                                || (foodInTrough.getCount() < 32 && (this.hasMatchingFoodForTrough(foodInTrough) || (!availableFood.isEmpty() && foodInTrough.is(availableFood.getItem())) || foodInTrough.is(targetFoodItem)));
 
-                        if (needsFood) {
+                        if (canRefillWithMyFood) {
                             if (troughBe.isAssignedTo(assignedAnimal)) {
                                 if (distSq < minAssignedDistSq) {
                                     minAssignedDistSq = distSq;
                                     designatedTrough = troughPos;
                                 }
-                            } else if (!troughBe.isAssigned() && assignedAnimal.blockPosition().distSqr(troughPos) <= 24 * 24) {
+                            } else if (!troughBe.isAssigned() && (assignedAnimal.blockPosition().distSqr(troughPos) <= 32 * 32 || distSq <= 32 * 32)) {
                                 if (distSq < minFallbackDistSq) {
                                     minFallbackDistSq = distSq;
                                     fallbackTrough = troughPos;
@@ -563,7 +562,13 @@ private static final String[] NAMES = new String[]{
                 if (needRefillTrough != null) {
                     if (this.getFoodStock() > 0) {
                         currentDutyState = "REFILL";
-                        this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(targetFoodItem));
+                        BlockEntity targetBe = sLevel.getBlockEntity(needRefillTrough);
+                        ItemStack heldItem = availableFood;
+                        if (targetBe instanceof ZooFeedingTroughBlockEntity tBe && !tBe.getFoodStack().isEmpty()) {
+                            heldItem = this.peekMatchingFood(tBe.getFoodStack());
+                        }
+                        Item itemToHold = !heldItem.isEmpty() ? heldItem.getItem() : targetFoodItem;
+                        this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(itemToHold));
 
                         double distSq = this.distanceToSqr(needRefillTrough.getX() + 0.5, needRefillTrough.getY(), needRefillTrough.getZ() + 0.5);
                         if (distSq > 2.5 * 2.5) {
@@ -573,7 +578,8 @@ private static final String[] NAMES = new String[]{
                             BlockEntity be = sLevel.getBlockEntity(needRefillTrough);
                             if (be instanceof ZooFeedingTroughBlockEntity troughBe) {
                                 int toInsert = Math.min(8, this.getFoodStock());
-                                ItemStack takenFood = this.takeFirstFood(toInsert);
+                                ItemStack currentInTrough = troughBe.getFoodStack();
+                                ItemStack takenFood = !currentInTrough.isEmpty() ? this.takeMatchingFood(currentInTrough, toInsert) : this.takeFirstFood(toInsert);
                                 if (!takenFood.isEmpty()) {
                                     int initialCount = takenFood.getCount();
                                     boolean inserted = troughBe.insertFood(takenFood, initialCount);
@@ -1014,6 +1020,46 @@ private static final String[] NAMES = new String[]{
             }
         }
         return ItemStack.EMPTY;
+    }
+
+    public boolean hasMatchingFoodForTrough(ItemStack troughStack) {
+        if (troughStack == null || troughStack.isEmpty()) return false;
+        for (int i = 0; i < FOOD_SLOTS; i++) {
+            ItemStack stack = this.foodInventory.getItem(i);
+            if (!stack.isEmpty() && (stack.is(troughStack.getItem()) || ItemStack.isSameItemSameComponents(stack, troughStack))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public ItemStack peekMatchingFood(ItemStack troughStack) {
+        if (troughStack == null || troughStack.isEmpty()) return peekFirstFood();
+        for (int i = 0; i < FOOD_SLOTS; i++) {
+            ItemStack stack = this.foodInventory.getItem(i);
+            if (!stack.isEmpty() && (stack.is(troughStack.getItem()) || ItemStack.isSameItemSameComponents(stack, troughStack))) {
+                return stack;
+            }
+        }
+        return peekFirstFood();
+    }
+
+    public ItemStack takeMatchingFood(ItemStack troughStack, int maxCount) {
+        if (maxCount <= 0) return ItemStack.EMPTY;
+        if (troughStack == null || troughStack.isEmpty()) return takeFirstFood(maxCount);
+        for (int i = 0; i < FOOD_SLOTS; i++) {
+            ItemStack stack = this.foodInventory.getItem(i);
+            if (!stack.isEmpty() && (stack.is(troughStack.getItem()) || ItemStack.isSameItemSameComponents(stack, troughStack))) {
+                int toTake = Math.min(stack.getCount(), maxCount);
+                ItemStack taken = stack.split(toTake);
+                if (stack.isEmpty()) {
+                    this.foodInventory.setItem(i, ItemStack.EMPTY);
+                }
+                updateFoodStockFromInventory();
+                return taken;
+            }
+        }
+        return takeFirstFood(maxCount);
     }
 
     public ItemStack peekFirstFood() {

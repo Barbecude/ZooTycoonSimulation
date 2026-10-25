@@ -51,8 +51,8 @@ public class AnimalEatFromTroughGoal extends MoveToBlockGoal {
         }
 
         int hunger = ZooAnimalHungerManager.getHunger(this.mob);
-        // Triggers when animal hunger drops to 90 or below
-        if (hunger > 90) {
+        // Triggers when animal hunger drops to 90 or below and not already full
+        if (hunger >= ZooAnimalHungerManager.MAX_HUNGER || hunger > 90) {
             return false;
         }
 
@@ -63,6 +63,7 @@ public class AnimalEatFromTroughGoal extends MoveToBlockGoal {
     @Override
     public boolean canContinueToUse() {
         if (!this.mob.isAlive()) return false;
+        if (ZooAnimalHungerManager.getHunger(this.mob) >= ZooAnimalHungerManager.MAX_HUNGER) return false;
         if (this.tryTicks > 200) return false; // 10-second timeout if blocked
         if (this.eatTicks > 40) return false;
         return super.canContinueToUse();
