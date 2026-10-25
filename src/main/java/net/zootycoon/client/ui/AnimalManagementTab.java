@@ -17,7 +17,11 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.zootycoon.ZooTycoonMod;
 import net.zootycoon.animal.AnimalDietRegistry;
+import net.zootycoon.animal.habitat.HabitatEvaluator;
+import net.zootycoon.animal.habitat.HabitatProfile;
+import net.zootycoon.animal.habitat.HabitatProfileLoader;
 import net.zootycoon.client.ZooTycoonClient;
+import net.zootycoon.client.render.ZooAnimalHologramRenderer;
 import net.zootycoon.network.ZooNetworkPayloads;
 import net.zootycoon.util.ZooTranslations;
 
@@ -31,6 +35,12 @@ public class AnimalManagementTab {
     private static final ResourceLocation EXCLAMATION_ICON = ZooTycoonMod.id("textures/gui/icons/exclamation_point.png");
     private static final ResourceLocation TRASH_ICON = ZooTycoonMod.id("textures/gui/icons/trash_can.png");
     private static final ResourceLocation PENCIL_ICON = ZooTycoonMod.id("textures/gui/icons/pencil.png");
+
+    private static final ResourceLocation THIRST_ICON = ZooTycoonMod.id("textures/gui/inspect/thirst.png");
+    private static final ResourceLocation CLEANLINESS_ICON = ZooTycoonMod.id("textures/gui/inspect/cleanliness.png");
+    private static final ResourceLocation THERMOMETER_ICON = ZooTycoonMod.id("textures/gui/inspect/thermometer.png");
+    private static final ResourceLocation TEMP_HOT_ICON = ZooTycoonMod.id("textures/gui/icons/temp_fire.png");
+    private static final ResourceLocation TEMP_COLD_ICON = ZooTycoonMod.id("textures/gui/icons/temp_ice.png");
 
     private static final ResourceLocation VANILLA_HEART_CONTAINER = ResourceLocation.withDefaultNamespace("hud/heart/container");
     private static final ResourceLocation VANILLA_HEART_FULL = ResourceLocation.withDefaultNamespace("hud/heart/full");
@@ -102,7 +112,8 @@ public class AnimalManagementTab {
                 selectedData = new ZooNetworkPayloads.AnimalSyncData(
                         selectedData.entityId(), selectedData.entityTypeId(), newName,
                         selectedData.hunger(), selectedData.thirst(), selectedData.cleanliness(), selectedData.health(), selectedData.maxHealth(),
-                        selectedData.hasZookeeper(), selectedData.zookeeperName()
+                        selectedData.hasZookeeper(), selectedData.zookeeperName(),
+                        selectedData.habitatStatus(), selectedData.habitatNeeds(), selectedData.tempCategory()
                 );
             }
         }).setCustomIcon(PENCIL_ICON, 12, 12).asPrimary();
@@ -363,15 +374,14 @@ public class AnimalManagementTab {
 
         int statusY = contentY + 104;
 
+        Component hoveredStatTooltip = null;
+
         int totalHearts = Math.max(1, (int) Math.ceil(selectedData.maxHealth() / 2.0f));
-        int heartsToDraw = Math.min(totalHearts, 20);
-        int rowsOfHearts = (int) Math.ceil(heartsToDraw / 10.0);
+        int heartsToDraw = Math.min(totalHearts, 10);
 
         for (int i = 0; i < heartsToDraw; i++) {
-            int row = i / 10;
-            int col = i % 10;
-            int hX = infoX + col * 10;
-            int hY = statusY + row * 11;
+            int hX = infoX + i * 10;
+            int hY = statusY;
 
             graphics.blitSprite(VANILLA_HEART_CONTAINER, hX, hY, 9, 9);
 
@@ -384,10 +394,11 @@ public class AnimalManagementTab {
         }
         int hp = (int) Math.ceil(selectedData.health());
         int maxHp = (int) Math.ceil(selectedData.maxHealth());
-        int hpTextX = infoX + (Math.min(heartsToDraw, 10) * 10) + 6;
+        int hpTextX = infoX + (heartsToDraw * 10) + 6;
         graphics.drawString(font, Component.literal(hp + "/" + maxHp + " HP").withStyle(ChatFormatting.RED), hpTextX, statusY + 1, 0xFFFFFFFF, false);
 
-        int hungerY = statusY + (rowsOfHearts * 11) + 3;
+        // 2. Hunger (Food shanks - icon only, no % text)
+        int hungerY = statusY + 12;
         int totalHalfShanks = 20;
         int filledHalfShanks = Math.clamp(Math.round((selectedData.hunger() / 100.0f) * totalHalfShanks), 0, totalHalfShanks);
         for (int i = 0; i < 10; i++) {
@@ -400,10 +411,112 @@ public class AnimalManagementTab {
                 graphics.blitSprite(VANILLA_FOOD_HALF, sX, hungerY, 9, 9);
             }
         }
-        int hungerColor = selectedData.hunger() > 60 ? 0xFF2ECC71 : (selectedData.hunger() > 25 ? 0xFFF1C40F : 0xFFE74C3C);
-        graphics.drawString(font, Component.literal(selectedData.hunger() + "%"), infoX + 106, hungerY + 1, hungerColor, false);
+        if (mouseX >= infoX && mouseX <= infoX + 100 && mouseY >= hungerY && mouseY <= hungerY + 10) {
+            hoveredStatTooltip = Component.literal("Lapar: " + selectedData.hunger() + "%");
+        }
 
-        int gridY = hungerY + 16;
+        // 3. Thirst (Water droplets - icon only, no % text)
+        int thirstY = hungerY + 12;
+        int filledDroplets = Math.clamp(Math.round(selectedData.thirst() / 10.0f), 0, 10);
+        for (int i = 0; i < 10; i++) {
+            int sX = infoX + i * 10;
+            if (i < filledDroplets) {
+                graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+            } else {
+                graphics.setColor(0.35f, 0.40f, 0.48f, 0.45f);
+            }
+            graphics.blit(THIRST_ICON, sX, thirstY, 0, 0, 9, 9, 9, 9);
+        }
+        graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+        if (mouseX >= infoX && mouseX <= infoX + 100 && mouseY >= thirstY && mouseY <= thirstY + 10) {
+            hoveredStatTooltip = Component.literal("Kehausan: " + selectedData.thirst() + "%");
+        }
+
+        // 4. Cleanliness (Sparkle icons - icon only, no % text)
+        int cleanY = thirstY + 12;
+        int filledClean = Math.clamp(Math.round(selectedData.cleanliness() / 10.0f), 0, 10);
+        for (int i = 0; i < 10; i++) {
+            int sX = infoX + i * 10;
+            if (i < filledClean) {
+                graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+            } else {
+                graphics.setColor(0.38f, 0.38f, 0.38f, 0.40f);
+            }
+            graphics.blit(CLEANLINESS_ICON, sX, cleanY, 0, 0, 9, 9, 9, 9);
+        }
+        graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+        if (mouseX >= infoX && mouseX <= infoX + 100 && mouseY >= cleanY && mouseY <= cleanY + 10) {
+            hoveredStatTooltip = Component.literal("Kebersihan: " + selectedData.cleanliness() + "%");
+        }
+
+        // 5. Temperature (Thermometer icon + status)
+        int tempY = cleanY + 13;
+        graphics.blit(THERMOMETER_ICON, infoX, tempY, 9, 9, 0, 0, 16, 16, 16, 16);
+        int celsius = ZooAnimalHologramRenderer.parseCelsiusFromCategory(selectedData.tempCategory());
+        String tempText = celsius + "°C ";
+        graphics.drawString(font, Component.literal(tempText), infoX + 13, tempY + 1, 0xFFFFFFFF, false);
+        int tempTextW = font.width(tempText);
+
+        var habParsed = ZooAnimalHologramRenderer.HabitatParsedInfo.parse(selectedData.habitatNeeds(), selectedData.habitatStatus());
+        if ("HEATER".equalsIgnoreCase(habParsed.tempStatus())) {
+            graphics.drawString(font, Component.literal("(Butuh Heater)").withStyle(ChatFormatting.RED), infoX + 13 + tempTextW, tempY + 1, 0xFFFF5555, false);
+            int labelW = font.width("(Butuh Heater) ");
+            graphics.blit(TEMP_COLD_ICON, infoX + 13 + tempTextW + labelW, tempY, 9, 9, 0, 0, 16, 16, 16, 16);
+        } else if ("COOLER".equalsIgnoreCase(habParsed.tempStatus())) {
+            graphics.drawString(font, Component.literal("(Butuh Cooler Box)").withStyle(ChatFormatting.RED), infoX + 13 + tempTextW, tempY + 1, 0xFFFF5555, false);
+            int labelW = font.width("(Butuh Cooler Box) ");
+            graphics.blit(TEMP_HOT_ICON, infoX + 13 + tempTextW + labelW, tempY, 9, 9, 0, 0, 16, 16, 16, 16);
+        } else {
+            graphics.drawString(font, Component.literal("(Nyaman)").withStyle(ChatFormatting.GREEN), infoX + 13 + tempTextW, tempY + 1, 0xFF55FF55, false);
+        }
+
+        // 6. Habitat Needs (Same as Hologram)
+        int habY = tempY + 14;
+        List<Component> redNeeds = new ArrayList<>();
+        if (!habParsed.serverUnmet().isEmpty()) {
+            for (String item : habParsed.serverUnmet()) {
+                if (item.startsWith("Bioma:") || item.startsWith("Butuh Heater") || item.startsWith("Butuh Cooler Box")) {
+                    continue;
+                }
+                redNeeds.add(Component.literal("• " + item));
+            }
+        } else {
+            if ("NO".equalsIgnoreCase(habParsed.waterStatus())) {
+                redNeeds.add(Component.literal("• Butuh Air"));
+            }
+            if (!habParsed.groundOk() && previewEntity != null) {
+                HabitatProfile profile = HabitatProfileLoader.getProfile(previewEntity);
+                redNeeds.add(Component.literal("• Butuh " + HabitatEvaluator.getSpecificGroundLabel(profile)));
+            }
+        }
+
+        if (!habParsed.biomeOk() && previewEntity != null) {
+            HabitatProfile profile = HabitatProfileLoader.getProfile(previewEntity);
+            List<String> biomes = ZooAnimalHologramRenderer.getBiomeListEnglish(profile);
+            List<String> validBiomes = biomes.stream().filter(s -> !"Any".equalsIgnoreCase(s) && !s.isBlank()).toList();
+            if (!validBiomes.isEmpty()) {
+                redNeeds.add(Component.literal("• Bioma: " + String.join(", ", validBiomes)));
+            }
+        }
+
+        if (redNeeds.isEmpty()) {
+            graphics.drawString(font, Component.literal("✔ Kebutuhan Habitat: Terpenuhi").withStyle(ChatFormatting.GREEN), infoX, habY, 0xFF55FF55, false);
+            habY += 12;
+        } else {
+            graphics.drawString(font, Component.literal("✖ Kebutuhan Habitat:").withStyle(ChatFormatting.YELLOW), infoX, habY, 0xFFFFFF55, false);
+            habY += 10;
+            int maxLines = 3;
+            for (int i = 0; i < Math.min(redNeeds.size(), maxLines); i++) {
+                graphics.drawString(font, redNeeds.get(i).copy().withStyle(ChatFormatting.RED), infoX + 4, habY, 0xFFFF5555, false);
+                habY += 10;
+            }
+            if (redNeeds.size() > maxLines) {
+                graphics.drawString(font, Component.literal("• ...dan " + (redNeeds.size() - maxLines) + " lainnya").withStyle(ChatFormatting.RED), infoX + 4, habY, 0xFFFF5555, false);
+                habY += 10;
+            }
+        }
+
+        int gridY = habY + 4;
         graphics.drawString(font, ZooTranslations.component("zootycoon.ui.animals.favorite_food").withStyle(ChatFormatting.YELLOW), infoX, gridY, 0xFFFFFFFF, false);
 
         if (previewEntity != null) {
@@ -442,6 +555,10 @@ public class AnimalManagementTab {
             if (!hoveredFoodStack.isEmpty()) {
                 graphics.renderTooltip(font, hoveredFoodStack.getHoverName(), mouseX, mouseY);
             }
+        }
+
+        if (hoveredStatTooltip != null && !zookeeperDropdownOpen) {
+            graphics.renderTooltip(font, hoveredStatTooltip, mouseX, mouseY);
         }
 
         if (zookeeperDropdownOpen && selectedData != null) {

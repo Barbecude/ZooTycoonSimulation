@@ -496,7 +496,10 @@ public class ZooNetworkPayloads {
             float health,
             float maxHealth,
             boolean hasZookeeper,
-            String zookeeperName
+            String zookeeperName,
+            String habitatStatus,
+            String habitatNeeds,
+            String tempCategory
     ) {}
 
     public record SyncAnimalsPayload(List<AnimalSyncData> animals) implements CustomPacketPayload {
@@ -514,7 +517,10 @@ public class ZooNetworkPayloads {
                         buf.writeFloat(d.health());
                         buf.writeFloat(d.maxHealth());
                         buf.writeBoolean(d.hasZookeeper());
-                        buf.writeUtf(d.zookeeperName());
+                        buf.writeUtf(d.zookeeperName() != null ? d.zookeeperName() : "");
+                        buf.writeUtf(d.habitatStatus() != null ? d.habitatStatus() : "");
+                        buf.writeUtf(d.habitatNeeds() != null ? d.habitatNeeds() : "");
+                        buf.writeUtf(d.tempCategory() != null ? d.tempCategory() : "");
                     }
                 },
                 buf -> {
@@ -524,7 +530,8 @@ public class ZooNetworkPayloads {
                         list.add(new AnimalSyncData(
                                 buf.readInt(), buf.readUtf(), buf.readUtf(), buf.readInt(), buf.readInt(), buf.readInt(),
                                 buf.readFloat(), buf.readFloat(),
-                                buf.readBoolean(), buf.readUtf()
+                                buf.readBoolean(), buf.readUtf(),
+                                buf.readUtf(), buf.readUtf(), buf.readUtf()
                         ));
                     }
                     return new SyncAnimalsPayload(list);
@@ -1999,7 +2006,18 @@ public class ZooNetworkPayloads {
                     float health = animal.getHealth();
                     float maxHealth = animal.getMaxHealth();
                     int cleanliness = net.zootycoon.animal.ZooAnimalHungerManager.getCleanliness(animal);
-                    list.add(new AnimalSyncData(animal.getId(), typeId, name, hunger, thirst, cleanliness, health, maxHealth, hasZk, zkName));
+
+                    net.zootycoon.animal.habitat.HabitatEvaluator.HabitatResult habitat =
+                            net.zootycoon.animal.habitat.HabitatEvaluator.evaluate(sLevel, animal);
+                    String habitatStatus = habitat.status().name();
+                    String habitatNeeds = habitat.encodePayloadString();
+                    float temp = net.zootycoon.animal.ZooClimate.getEffectiveTemperature(animal);
+                    String tempCategory = net.zootycoon.animal.ZooClimate.getCategory(temp).key;
+
+                    list.add(new AnimalSyncData(
+                            animal.getId(), typeId, name, hunger, thirst, cleanliness, health, maxHealth,
+                            hasZk, zkName, habitatStatus, habitatNeeds, tempCategory
+                    ));
                 }
             }
         }
