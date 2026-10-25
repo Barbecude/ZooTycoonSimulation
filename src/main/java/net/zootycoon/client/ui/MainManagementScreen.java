@@ -233,4 +233,12 @@ public class MainManagementScreen extends Screen {
         }
         return super.mouseReleased(mouseX, mouseY, button);
     }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (currentView == ViewState.ANIMAL_MANAGEMENT) {
+            if (animalTab.keyPressed(keyCode, scanCode, modifiers)) return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
 }

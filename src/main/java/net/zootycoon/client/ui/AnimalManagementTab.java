@@ -56,10 +56,11 @@ public class AnimalManagementTab {
     private int lastSelectedEntityId = -1;
     private final Map<String, LivingEntity> clientDummyCache = new HashMap<>();
 
-    private EditBox nameInput;
-    private ZooButton renameButton;
+    private EditBox modalNameInput;
+    private ZooButton modalSaveButton;
+    private ZooButton modalCancelButton;
     private ZooButton removeButton;
-    private ZooButton refreshButton;
+    private boolean renameModalOpen = false;
 
     private boolean zookeeperDropdownOpen = false;
     private int zkDropdownX = 0;
@@ -73,7 +74,7 @@ public class AnimalManagementTab {
     private int detailsScrollOffset = 0;
     private boolean isDraggingDetailsScrollbar = false;
     private int maxDetailsScroll = 0;
-    private static final int ITEM_HEIGHT = 38;
+    private static final int ITEM_HEIGHT = 44;
 
     public AnimalManagementTab(MainManagementScreen screen) {
         this.screen = screen;
@@ -83,7 +84,11 @@ public class AnimalManagementTab {
         clientDummyCache.clear();
         requestSync();
 
+        renameModalOpen = false;
+        zookeeperDropdownOpen = false;
+
         int width = screen.width;
+        int height = screen.height;
 
         int sidebarX = 14;
         int sidebarW = 160;
@@ -91,39 +96,14 @@ public class AnimalManagementTab {
         int contentY = 48;
         int contentW = width - contentX - 14;
 
-        refreshButton = new ZooButton(sidebarX, 48, sidebarW, 20, ZooTranslations.component("zootycoon.ui.animals.btn_refresh"), b -> {
-            requestSync();
-        });
-        screen.addWidgetPublic(refreshButton);
-
         int previewX = contentX + 14;
         int previewW = 140;
         int infoX = previewX + previewW + 16;
         int infoW = contentW - (infoX - contentX) - 14;
 
-        int inputY = contentY + 58;
-        nameInput = new EditBox(screen.getFont(), infoX, inputY, infoW, 18, ZooTranslations.component("zootycoon.ui.animals.input_hint"));
-        nameInput.setMaxLength(32);
-        screen.addWidgetPublic(nameInput);
-
-        int btnY = inputY + 22;
-        int halfW = (infoW - 6) / 2;
-
-        renameButton = new ZooButton(infoX, btnY, halfW, 18, ZooTranslations.component("zootycoon.ui.animals.btn_save"), b -> {
-            if (selectedData != null && nameInput != null && !nameInput.getValue().trim().isEmpty()) {
-                String newName = nameInput.getValue().trim();
-                ClientPlayNetworking.send(new ZooNetworkPayloads.RenameAnimalPayload(selectedData.entityId(), newName));
-                selectedData = new ZooNetworkPayloads.AnimalSyncData(
-                        selectedData.entityId(), selectedData.entityTypeId(), newName,
-                        selectedData.hunger(), selectedData.thirst(), selectedData.cleanliness(), selectedData.health(), selectedData.maxHealth(),
-                        selectedData.hasZookeeper(), selectedData.zookeeperName(),
-                        selectedData.habitatStatus(), selectedData.habitatNeeds(), selectedData.tempCategory()
-                );
-            }
-        }).setCustomIcon(PENCIL_ICON, 12, 12).asPrimary();
-        screen.addWidgetPublic(renameButton);
-
-        removeButton = new ZooButton(infoX + halfW + 6, btnY, halfW, 18, ZooTranslations.component("zootycoon.ui.animals.btn_remove"), b -> {
+        int removeBtnY = contentY + 65;
+        int removeBtnW = 100;
+        removeButton = new ZooButton(infoX, removeBtnY, removeBtnW, 18, ZooTranslations.component("zootycoon.ui.animals.btn_remove"), b -> {
             if (selectedData != null) {
                 int idToRemove = selectedData.entityId();
                 ClientPlayNetworking.send(new ZooNetworkPayloads.UnregisterAnimalPayload(idToRemove));
@@ -134,7 +114,73 @@ public class AnimalManagementTab {
         }).setCustomIcon(TRASH_ICON, 12, 12).asDanger();
         screen.addWidgetPublic(removeButton);
 
+        // Rename modal widgets
+        int modalW = 220;
+        int modalH = 96;
+        int modalX = (width - modalW) / 2;
+        int modalY = (height - modalH) / 2;
+
+        modalNameInput = new EditBox(screen.getFont(), modalX + 14, modalY + 32, modalW - 28, 18, ZooTranslations.component("zootycoon.ui.animals.input_hint"));
+        modalNameInput.setMaxLength(32);
+        modalNameInput.setVisible(false);
+        screen.addWidgetPublic(modalNameInput);
+
+        int modalBtnW = 88;
+        modalSaveButton = new ZooButton(modalX + 14, modalY + 62, modalBtnW, 20, ZooTranslations.component("zootycoon.ui.animals.btn_save"), b -> {
+            commitRename();
+        }).setCustomIcon(PENCIL_ICON, 12, 12).asPrimary();
+        modalSaveButton.visible = false;
+        screen.addWidgetPublic(modalSaveButton);
+
+        modalCancelButton = new ZooButton(modalX + modalW - 14 - modalBtnW, modalY + 62, modalBtnW, 20, Component.literal("Batal"), b -> {
+            closeRenameModal();
+        }).asSecondary();
+        modalCancelButton.visible = false;
+        screen.addWidgetPublic(modalCancelButton);
+
         updateSelectedData(false);
+    }
+
+    private void commitRename() {
+        if (selectedData != null && modalNameInput != null) {
+            String newName = modalNameInput.getValue().trim();
+            ClientPlayNetworking.send(new ZooNetworkPayloads.RenameAnimalPayload(selectedData.entityId(), newName));
+            selectedData = new ZooNetworkPayloads.AnimalSyncData(
+                    selectedData.entityId(), selectedData.entityTypeId(), newName,
+                    selectedData.hunger(), selectedData.thirst(), selectedData.cleanliness(), selectedData.health(), selectedData.maxHealth(),
+                    selectedData.hasZookeeper(), selectedData.zookeeperName(),
+                    selectedData.habitatStatus(), selectedData.habitatNeeds(), selectedData.tempCategory()
+            );
+            closeRenameModal();
+            requestSync();
+        }
+    }
+
+    private void openRenameModal() {
+        if (selectedData == null) return;
+        this.renameModalOpen = true;
+        this.zookeeperDropdownOpen = false;
+        if (modalNameInput != null) {
+            modalNameInput.setValue(selectedData.customName());
+            modalNameInput.setVisible(true);
+            modalNameInput.setFocused(true);
+            screen.setFocused(modalNameInput);
+        }
+        if (modalSaveButton != null) modalSaveButton.visible = true;
+        if (modalCancelButton != null) modalCancelButton.visible = true;
+        if (removeButton != null) removeButton.visible = false;
+    }
+
+    private void closeRenameModal() {
+        this.renameModalOpen = false;
+        if (modalNameInput != null) {
+            modalNameInput.setVisible(false);
+            modalNameInput.setFocused(false);
+        }
+        if (modalSaveButton != null) modalSaveButton.visible = false;
+        if (modalCancelButton != null) modalCancelButton.visible = false;
+        if (removeButton != null) removeButton.visible = (selectedData != null);
+        screen.setFocused(null);
     }
 
     public void requestSync() {
@@ -173,24 +219,20 @@ public class AnimalManagementTab {
             }
         }
 
-        if (nameInput != null) {
-            if (selectedData != null) {
-                nameInput.setVisible(true);
-                renameButton.visible = true;
+        if (selectedData != null) {
+            if (removeButton != null && !renameModalOpen) {
                 removeButton.visible = true;
-
-                if (forceTextReset || (selectedData.entityId() != lastSelectedEntityId && !nameInput.isFocused())) {
-                    nameInput.setValue(selectedData.customName());
-                    lastSelectedEntityId = selectedData.entityId();
-                    detailsScrollOffset = 0;
-                }
-            } else {
-                nameInput.setValue("");
-                nameInput.setVisible(false);
-                renameButton.visible = false;
-                removeButton.visible = false;
-                lastSelectedEntityId = -1;
             }
+            if (forceTextReset || selectedData.entityId() != lastSelectedEntityId) {
+                lastSelectedEntityId = selectedData.entityId();
+                detailsScrollOffset = 0;
+            }
+        } else {
+            if (removeButton != null) {
+                removeButton.visible = false;
+            }
+            lastSelectedEntityId = -1;
+            closeRenameModal();
         }
     }
 
@@ -204,7 +246,7 @@ public class AnimalManagementTab {
 
         int sidebarX = 14;
         int sidebarW = 160;
-        int sidebarY = 72;
+        int sidebarY = 48;
         int sidebarH = height - sidebarY - 14;
 
         int contentX = sidebarX + sidebarW + 16;
@@ -224,6 +266,8 @@ public class AnimalManagementTab {
         int maxScroll = Math.max(0, totalContentH - sidebarH);
         scrollOffset = Math.clamp(scrollOffset, 0, maxScroll);
 
+        Component hoveredSidebarTooltip = null;
+
         graphics.enableScissor(sidebarX + 1, sidebarY + 1, sidebarX + sidebarW - 1, sidebarY + sidebarH - 1);
 
         int itemRightMargin = maxScroll > 0 ? 8 : 3;
@@ -234,42 +278,93 @@ public class AnimalManagementTab {
                 int itemBg = isSelected ? 0xFF243048 : 0xFF181C26;
                 graphics.fill(sidebarX + 3, curY, sidebarX + sidebarW - itemRightMargin, curY + ITEM_HEIGHT - 2, itemBg);
 
-                String displayName = a.customName().isEmpty() ? formatSpecies(a.entityTypeId()) : a.customName();
-                graphics.drawString(font, Component.literal(displayName).withStyle(isSelected ? ChatFormatting.GOLD : ChatFormatting.WHITE), sidebarX + 8, curY + 6, 0xFFFFFFFF, false);
-
-                graphics.blitSprite(VANILLA_HEART_FULL, sidebarX + 8, curY + 20, 9, 9);
-                int hp = (int) Math.ceil(a.health());
-                int maxHp = (int) Math.ceil(a.maxHealth());
-                graphics.drawString(font, Component.literal(hp + "/" + maxHp), sidebarX + 20, curY + 21, 0xFFE06C75, false);
-
-                // Colored hunger percentage (Red when <= 25%, Yellow when <= 60%, Green when > 60%)
-                graphics.blitSprite(VANILLA_FOOD_FULL, sidebarX + 68, curY + 20, 9, 9);
-                int tagColor = a.hunger() > 60 ? 0xFF2ECC71 : (a.hunger() > 25 ? 0xFFF1C40F : 0xFFE74C3C);
-                graphics.drawString(font, Component.literal(a.hunger() + "%"), sidebarX + 80, curY + 21, tagColor, false);
-
                 int cardRight = sidebarX + sidebarW - itemRightMargin;
-                int badgeX = cardRight - 13;
-                int badgeY = curY + 5;
 
-                if (!a.hasZookeeper()) {
-                    graphics.blit(EXCLAMATION_ICON, badgeX, badgeY, 0, 0, 10, 10, 64, 64);
-                    if (mouseX >= badgeX && mouseX <= badgeX + 10 && mouseY >= badgeY && mouseY <= badgeY + 10) {
-                        graphics.renderTooltip(font, ZooTranslations.component("zootycoon.ui.animals.no_zookeeper_tooltip").withStyle(ChatFormatting.RED), mouseX, mouseY);
+                // 1. Animal Name & Exclamation mark (aligned right)
+                String displayName = a.customName().isEmpty() ? formatSpecies(a.entityTypeId()) : a.customName();
+                boolean showExclamation = !a.hasZookeeper();
+                int maxNameW = showExclamation ? (cardRight - (sidebarX + 8) - 18) : (cardRight - (sidebarX + 8) - 4);
+                String trimmedName = font.plainSubstrByWidth(displayName, maxNameW);
+                graphics.drawString(font, Component.literal(trimmedName).withStyle(isSelected ? ChatFormatting.GOLD : ChatFormatting.WHITE), sidebarX + 8, curY + 5, 0xFFFFFFFF, false);
+
+                if (showExclamation) {
+                    int exX = cardRight - 14;
+                    int exY = curY + 4;
+                    graphics.blit(EXCLAMATION_ICON, exX, exY, 0, 0, 10, 10, 64, 64);
+                    if (mouseX >= exX && mouseX <= exX + 10 && mouseY >= exY && mouseY <= exY + 10) {
+                        hoveredSidebarTooltip = ZooTranslations.component("zootycoon.ui.animals.no_zookeeper_tooltip").withStyle(ChatFormatting.RED);
                     }
-                    badgeX -= 13;
                 }
 
-                if (a.hunger() <= 50) {
-                    graphics.blitSprite(VANILLA_FOOD_FULL, badgeX, badgeY + 3, 9, 9);
-                    if (mouseX >= badgeX && mouseX <= badgeX + 9 && mouseY >= badgeY + 3 && mouseY <= badgeY + 12) {
-                        graphics.renderTooltip(font, ZooTranslations.component("zootycoon.ui.animals.hungry_tooltip", a.hunger()).withStyle(ChatFormatting.GOLD), mouseX, mouseY);
-                    }
+                // 2. Row 2: Health, Hunger, Thirst
+                int row2Y = curY + 18;
+
+                // Health
+                graphics.blitSprite(VANILLA_HEART_FULL, sidebarX + 8, row2Y, 9, 9);
+                int hpPct = Math.round((a.health() / Math.max(0.1f, a.maxHealth())) * 100.0f);
+                int hpColor = HologramBarRenderer.getStatusColor((float) hpPct);
+                graphics.drawString(font, Component.literal(hpPct + "%"), sidebarX + 19, row2Y + 1, hpColor, false);
+                if (mouseX >= sidebarX + 8 && mouseX <= sidebarX + 46 && mouseY >= row2Y && mouseY <= row2Y + 10) {
+                    int hp = (int) Math.ceil(a.health());
+                    int maxHp = (int) Math.ceil(a.maxHealth());
+                    hoveredSidebarTooltip = Component.literal("Darah: " + hp + "/" + maxHp + " HP (" + hpPct + "%)");
+                }
+
+                // Hunger
+                graphics.blitSprite(VANILLA_FOOD_FULL, sidebarX + 54, row2Y, 9, 9);
+                int hungerColor = HologramBarRenderer.getStatusColor((float) a.hunger());
+                graphics.drawString(font, Component.literal(a.hunger() + "%"), sidebarX + 65, row2Y + 1, hungerColor, false);
+                if (mouseX >= sidebarX + 54 && mouseX <= sidebarX + 92 && mouseY >= row2Y && mouseY <= row2Y + 10) {
+                    hoveredSidebarTooltip = Component.literal("Lapar: " + a.hunger() + "%");
+                }
+
+                // Thirst
+                graphics.blit(THIRST_ICON, sidebarX + 100, row2Y, 0, 0, 9, 9, 9, 9);
+                int thirstColor = HologramBarRenderer.getStatusColor((float) a.thirst());
+                graphics.drawString(font, Component.literal(a.thirst() + "%"), sidebarX + 111, row2Y + 1, thirstColor, false);
+                if (mouseX >= sidebarX + 100 && mouseX <= sidebarX + 140 && mouseY >= row2Y && mouseY <= row2Y + 10) {
+                    hoveredSidebarTooltip = Component.literal("Kehausan: " + a.thirst() + "%");
+                }
+
+                // 3. Row 3: Cleanliness, Temperature
+                int row3Y = curY + 30;
+
+                // Cleanliness
+                graphics.blit(CLEANLINESS_ICON, sidebarX + 8, row3Y, 0, 0, 9, 9, 9, 9);
+                int cleanColor = HologramBarRenderer.getStatusColor((float) a.cleanliness());
+                graphics.drawString(font, Component.literal(a.cleanliness() + "%"), sidebarX + 19, row3Y + 1, cleanColor, false);
+                if (mouseX >= sidebarX + 8 && mouseX <= sidebarX + 46 && mouseY >= row3Y && mouseY <= row3Y + 10) {
+                    hoveredSidebarTooltip = Component.literal("Kebersihan: " + a.cleanliness() + "%");
+                }
+
+                // Temperature
+                graphics.blit(THERMOMETER_ICON, sidebarX + 54, row3Y, 9, 9, 0, 0, 16, 16, 16, 16);
+                int celsius = ZooAnimalHologramRenderer.parseCelsiusFromCategory(a.tempCategory());
+                var habParsed = ZooAnimalHologramRenderer.HabitatParsedInfo.parse(a.habitatNeeds(), a.habitatStatus());
+                boolean tempOk = !"HEATER".equalsIgnoreCase(habParsed.tempStatus()) && !"COOLER".equalsIgnoreCase(habParsed.tempStatus());
+                int tempColor = tempOk ? 0xFF55FF55 : 0xFFFF5555;
+                graphics.drawString(font, Component.literal(celsius + "°C"), sidebarX + 65, row3Y + 1, tempColor, false);
+
+                int celsiusW = font.width(celsius + "°C");
+                if ("HEATER".equalsIgnoreCase(habParsed.tempStatus())) {
+                    graphics.blit(TEMP_COLD_ICON, sidebarX + 67 + celsiusW, row3Y, 9, 9, 0, 0, 16, 16, 16, 16);
+                } else if ("COOLER".equalsIgnoreCase(habParsed.tempStatus())) {
+                    graphics.blit(TEMP_HOT_ICON, sidebarX + 67 + celsiusW, row3Y, 9, 9, 0, 0, 16, 16, 16, 16);
+                }
+
+                if (mouseX >= sidebarX + 54 && mouseX <= sidebarX + 120 && mouseY >= row3Y && mouseY <= row3Y + 10) {
+                    String statusStr = tempOk ? "(Nyaman)" : ("HEATER".equalsIgnoreCase(habParsed.tempStatus()) ? "(Butuh Heater)" : "(Butuh Cooler Box)");
+                    hoveredSidebarTooltip = Component.literal("Suhu: " + celsius + "°C " + statusStr);
                 }
             }
             curY += ITEM_HEIGHT;
         }
 
         graphics.disableScissor();
+
+        if (hoveredSidebarTooltip != null && !renameModalOpen && !zookeeperDropdownOpen) {
+            graphics.renderTooltip(font, hoveredSidebarTooltip, mouseX, mouseY);
+        }
 
         if (maxScroll > 0) {
             int barX = sidebarX + sidebarW - 5;
@@ -329,13 +424,28 @@ public class AnimalManagementTab {
         int infoX = previewX + previewW + 16;
         int infoW = contentW - (infoX - contentX) - 14;
 
-        // Species Title (Normal font, no BOLD)
-        String rawSpecies = formatSpecies(selectedData.entityTypeId());
-        graphics.drawString(font, Component.literal(rawSpecies).withStyle(ChatFormatting.GOLD), infoX, contentY + 14, 0xFFFFFFFF, false);
+        // 1. Animal Name & Pencil Icon
+        String displayName = selectedData.customName().isEmpty() ? formatSpecies(selectedData.entityTypeId()) : selectedData.customName();
+        graphics.drawString(font, Component.literal(displayName).withStyle(ChatFormatting.GOLD), infoX, contentY + 14, 0xFFFFFFFF, false);
 
-        // Zookeeper Dropdown Selector Button (at red circled location)
+        int nameW = font.width(displayName);
+        int pencilX = infoX + nameW + 6;
+        int pencilY = contentY + 13;
+        int pencilSize = 12;
+        boolean pencilHovered = !renameModalOpen && !zookeeperDropdownOpen && mouseX >= pencilX - 2 && mouseX <= pencilX + pencilSize + 2 && mouseY >= pencilY - 2 && mouseY <= pencilY + pencilSize + 2;
+        if (pencilHovered) {
+            graphics.fill(pencilX - 2, pencilY - 2, pencilX + pencilSize + 2, pencilY + pencilSize + 2, 0x4058A6FF);
+        }
+        graphics.blit(PENCIL_ICON, pencilX, pencilY, 0, 0, pencilSize, pencilSize, 16, 16);
+
+        // 2. Jenis Hewan / Diet Category Subtitle (Warna ungu sama seperti hologram)
+        int dietY = contentY + 28;
+        Component dietComp = AnimalDietRegistry.getDietCategorySubtitleComponent(previewEntity);
+        graphics.drawString(font, dietComp, infoX, dietY, 0xFFFFFFFF, false);
+
+        // 3. Zookeeper Dropdown Selector Button (at red circled location)
         int zkBtnX = infoX;
-        int zkBtnY = contentY + 26;
+        int zkBtnY = contentY + 43;
         int zkBtnW = Math.min(170, infoW);
         int zkBtnH = 18;
 
@@ -370,17 +480,15 @@ public class AnimalManagementTab {
             int exX = zkBtnX + zkBtnW + 5;
             int exY = zkBtnY + 4;
             graphics.blit(EXCLAMATION_ICON, exX, exY, 0, 0, 10, 10, 64, 64);
-            if (mouseX >= exX && mouseX <= exX + 10 && mouseY >= exY && mouseY <= exY + 10) {
+            if (!renameModalOpen && !zookeeperDropdownOpen && mouseX >= exX && mouseX <= exX + 10 && mouseY >= exY && mouseY <= exY + 10) {
                 graphics.renderTooltip(font, ZooTranslations.component("zootycoon.ui.animals.no_zookeeper_tooltip").withStyle(ChatFormatting.RED), mouseX, mouseY);
             }
         }
 
-        graphics.drawString(font, ZooTranslations.component("zootycoon.ui.animals.tag_label").withStyle(ChatFormatting.GRAY), infoX, contentY + 47, 0xFFFFFFFF, false);
-
         int scrollAreaX = infoX;
-        int scrollAreaY = contentY + 102;
+        int scrollAreaY = contentY + 87;
         int scrollAreaW = infoW;
-        int scrollAreaH = contentH - 106;
+        int scrollAreaH = contentH - 91;
 
         List<Component> redNeeds = getHabitatRedNeeds(previewEntity);
         List<ItemStack> foods = previewEntity != null ? AnimalDietRegistry.getFoodsForAnimal(previewEntity) : List.of();
@@ -577,15 +685,41 @@ public class AnimalManagementTab {
             graphics.fill(sbX, thumbY, sbX + sbW, thumbY + thumbH, thumbColor);
         }
 
-        if (!hoveredFoodStack.isEmpty()) {
+        if (!hoveredFoodStack.isEmpty() && !renameModalOpen && !zookeeperDropdownOpen) {
             graphics.renderTooltip(font, hoveredFoodStack.getHoverName(), mouseX, mouseY);
-        } else if (hoveredStatTooltip != null && !zookeeperDropdownOpen) {
+        } else if (hoveredStatTooltip != null && !zookeeperDropdownOpen && !renameModalOpen) {
             graphics.renderTooltip(font, hoveredStatTooltip, mouseX, mouseY);
         }
 
-        if (zookeeperDropdownOpen && selectedData != null) {
+        if (zookeeperDropdownOpen && selectedData != null && !renameModalOpen) {
             renderZookeeperDropdown(graphics, mouseX, mouseY, font);
         }
+
+        if (renameModalOpen) {
+            renderRenameModal(graphics, mouseX, mouseY, font, width, height);
+        }
+    }
+
+    private void renderRenameModal(GuiGraphics graphics, int mouseX, int mouseY, Font font, int width, int height) {
+        if (!renameModalOpen) return;
+
+        // Dark dim backdrop covering full screen
+        graphics.fill(0, 0, width, height, 0x90000000);
+
+        int modalW = 220;
+        int modalH = 96;
+        int modalX = (width - modalW) / 2;
+        int modalY = (height - modalH) / 2;
+
+        // Modal Box Background & 1px Borders
+        graphics.fill(modalX, modalY, modalX + modalW, modalY + modalH, 0xF5121620);
+        graphics.fill(modalX, modalY, modalX + modalW, modalY + 1, 0xFF384357);
+        graphics.fill(modalX, modalY + modalH - 1, modalX + modalW, modalY + modalH, 0xFF384357);
+        graphics.fill(modalX, modalY + 1, modalX + 1, modalY + modalH, 0xFF384357);
+        graphics.fill(modalX + modalW - 1, modalY, modalX + modalW, modalY + modalH, 0xFF384357);
+
+        // Modal Title
+        graphics.drawString(font, Component.literal("Ubah Nama Satwa").withStyle(ChatFormatting.GOLD), modalX + 14, modalY + 14, 0xFFFFFFFF, false);
     }
 
     private List<Component> getHabitatRedNeeds(LivingEntity previewEntity) {
@@ -798,6 +932,28 @@ public class AnimalManagementTab {
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         int width = screen.width;
+        int height = screen.height;
+
+        if (renameModalOpen) {
+            int modalW = 220;
+            int modalH = 96;
+            int modalX = (width - modalW) / 2;
+            int modalY = (height - modalH) / 2;
+
+            if (modalSaveButton != null && modalSaveButton.visible && modalSaveButton.mouseClicked(mouseX, mouseY, button)) return true;
+            if (modalCancelButton != null && modalCancelButton.visible && modalCancelButton.mouseClicked(mouseX, mouseY, button)) return true;
+            if (modalNameInput != null && modalNameInput.visible && modalNameInput.mouseClicked(mouseX, mouseY, button)) {
+                screen.setFocused(modalNameInput);
+                modalNameInput.setFocused(true);
+                return true;
+            }
+
+            if (mouseX < modalX || mouseX > modalX + modalW || mouseY < modalY || mouseY > modalY + modalH) {
+                closeRenameModal();
+            }
+            return true;
+        }
+
         int sidebarX = 14;
         int sidebarW = 160;
         int contentX = sidebarX + sidebarW + 16;
@@ -809,9 +965,22 @@ public class AnimalManagementTab {
         int infoX = previewX + previewW + 16;
         int infoW = contentW - (infoX - contentX) - 14;
         int zkBtnX = infoX;
-        int zkBtnY = contentY + 26;
+        int zkBtnY = contentY + 43;
         int zkBtnW = Math.min(170, infoW);
         int zkBtnH = 18;
+
+        // Pencil Icon clicked -> open rename modal
+        if (selectedData != null && !zookeeperDropdownOpen) {
+            String displayName = selectedData.customName().isEmpty() ? formatSpecies(selectedData.entityTypeId()) : selectedData.customName();
+            int nameW = screen.getFont().width(displayName);
+            int pencilX = infoX + nameW + 6;
+            int pencilY = contentY + 13;
+            int pencilSize = 12;
+            if (mouseX >= pencilX - 2 && mouseX <= pencilX + pencilSize + 2 && mouseY >= pencilY - 2 && mouseY <= pencilY + pencilSize + 2) {
+                openRenameModal();
+                return true;
+            }
+        }
 
         if (zookeeperDropdownOpen && selectedData != null) {
             var availableKeepers = getAvailableKeepers();
@@ -870,7 +1039,7 @@ public class AnimalManagementTab {
             return true;
         }
 
-        int sidebarY = 72;
+        int sidebarY = 48;
         int sidebarH = screen.height - sidebarY - 14;
 
         // Check if clicked sidebar scrollbar thumb/track
@@ -895,31 +1064,17 @@ public class AnimalManagementTab {
                     this.selectedData = animals.get(clickedIdx);
                     this.lastSelectedEntityId = selectedData.entityId();
                     this.detailsScrollOffset = 0;
-                    if (nameInput != null) {
-                        nameInput.setValue(selectedData.customName());
-                    }
                     this.zookeeperDropdownOpen = false;
+                    closeRenameModal();
                     return true;
                 }
             }
         }
 
-        if (nameInput != null && nameInput.visible) {
-            int ix = nameInput.getX();
-            int iy = nameInput.getY();
-            int iw = nameInput.getWidth();
-            int ih = nameInput.getHeight();
-            if (mouseX >= ix && mouseX <= ix + iw && mouseY >= iy && mouseY <= iy + ih) {
-                screen.setFocused(nameInput);
-                nameInput.setFocused(true);
-                return false;
-            }
-        }
-
         if (selectedData != null) {
             int contentH = screen.height - contentY - 14;
-            int scrollAreaY = contentY + 102;
-            int scrollAreaH = contentH - 106;
+            int scrollAreaY = contentY + 87;
+            int scrollAreaH = contentH - 91;
 
             // Check scrollbar drag start
             if (maxDetailsScroll > 0) {
@@ -980,6 +1135,8 @@ public class AnimalManagementTab {
     }
 
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (renameModalOpen) return true;
+
         if (zookeeperDropdownOpen && selectedData != null) {
             int width = screen.width;
             int sidebarX = 14;
@@ -992,7 +1149,7 @@ public class AnimalManagementTab {
             int infoX = previewX + previewW + 16;
             int infoW = contentW - (infoX - contentX) - 14;
             int zkBtnX = infoX;
-            int zkBtnY = contentY + 26;
+            int zkBtnY = contentY + 43;
 
             int dx = zkBtnX;
             int dy = zkBtnY + 18 + 2;
@@ -1018,7 +1175,7 @@ public class AnimalManagementTab {
 
         int sidebarX = 14;
         int sidebarW = 160;
-        int sidebarY = 72;
+        int sidebarY = 48;
         int sidebarH = screen.height - sidebarY - 14;
 
         if (mouseX >= sidebarX && mouseX <= sidebarX + sidebarW && mouseY >= sidebarY && mouseY <= sidebarY + sidebarH) {
@@ -1048,8 +1205,10 @@ public class AnimalManagementTab {
     }
 
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (renameModalOpen) return true;
+
         if (isDraggingSidebarScrollbar) {
-            int sidebarY = 72;
+            int sidebarY = 48;
             int sidebarH = screen.height - sidebarY - 14;
             List<ZooNetworkPayloads.AnimalSyncData> animals = getValidAnimals();
             int totalContentH = animals.size() * ITEM_HEIGHT + 8;
@@ -1072,8 +1231,8 @@ public class AnimalManagementTab {
             int previewW = 140;
             int infoW = contentW - (previewX + previewW + 16 - contentX) - 14;
 
-            int scrollAreaY = contentY + 102;
-            int scrollAreaH = contentH - 106;
+            int scrollAreaY = contentY + 87;
+            int scrollAreaH = contentH - 91;
 
             if (maxDetailsScroll > 0 && scrollAreaH > 0) {
                 Minecraft mc = Minecraft.getInstance();
@@ -1103,6 +1262,24 @@ public class AnimalManagementTab {
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         this.isDraggingSidebarScrollbar = false;
         this.isDraggingDetailsScrollbar = false;
+        return false;
+    }
+
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (renameModalOpen) {
+            if (keyCode == 256) { // GLFW_KEY_ESCAPE
+                closeRenameModal();
+                return true;
+            }
+            if (keyCode == 257 || keyCode == 335) { // GLFW_KEY_ENTER / NUMPAD_ENTER
+                commitRename();
+                return true;
+            }
+            if (modalNameInput != null && modalNameInput.keyPressed(keyCode, scanCode, modifiers)) {
+                return true;
+            }
+            return true; // Block other inputs while modal is active
+        }
         return false;
     }
 }
