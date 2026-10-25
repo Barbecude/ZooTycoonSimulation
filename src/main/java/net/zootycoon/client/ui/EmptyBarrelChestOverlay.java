@@ -1,9 +1,9 @@
 package net.zootycoon.client.ui;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -12,21 +12,19 @@ import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.zootycoon.block.EmptyBarrelBlockEntity;
 import net.zootycoon.entity.ZooEntities;
 import net.zootycoon.network.WarehousePayloads;
 import net.zootycoon.util.ZooTranslations;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 public class EmptyBarrelChestOverlay {
@@ -36,6 +34,7 @@ public class EmptyBarrelChestOverlay {
     private static List<WarehousePayloads.StaffRequestDto> activeRequests = new ArrayList<>();
     private static float scrollOffset = 0.0f;
     private static int maxScroll = 0;
+    private static boolean isDraggingScrollbar = false;
 
     private static final Map<UUID, LivingEntity> dummyStaffCache = new HashMap<>();
 
@@ -49,6 +48,7 @@ public class EmptyBarrelChestOverlay {
         activeCategory = category != null ? category : "";
         activeRequests.clear();
         scrollOffset = 0.0f;
+        isDraggingScrollbar = false;
     }
 
     public static void onSyncRequests(WarehousePayloads.SyncBarrelRequestsPayload payload) {
@@ -64,33 +64,55 @@ public class EmptyBarrelChestOverlay {
         dummyStaffCache.clear();
         scrollOffset = 0.0f;
         maxScroll = 0;
+        isDraggingScrollbar = false;
     }
 
     public static void register() {
         ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
-            if (screen instanceof ContainerScreen containerScreen && isBarrelContainer(containerScreen)) {
+            if (screen instanceof ContainerScreen) {
                 ScreenEvents.afterRender(screen).register((scr, graphics, mouseX, mouseY, tickDelta) -> {
-                    renderLeftRequestPanel((ContainerScreen) scr, graphics, mouseX, mouseY);
+                    ContainerScreen cs = (ContainerScreen) scr;
+                    if (isBarrelContainer(cs)) {
+                        renderLeftRequestPanel(cs, graphics, mouseX, mouseY);
+                    }
                 });
 
                 ScreenMouseEvents.allowMouseClick(screen).register((scr, mouseX, mouseY, button) -> {
-                    return !handleMouseClicked((ContainerScreen) scr, mouseX, mouseY, button);
+                    ContainerScreen cs = (ContainerScreen) scr;
+                    if (!isBarrelContainer(cs)) return true;
+                    return !handleMouseClicked(cs, mouseX, mouseY, button);
                 });
 
                 ScreenMouseEvents.allowMouseScroll(screen).register((scr, mouseX, mouseY, horizontalAmount, verticalAmount) -> {
-                    return !handleMouseScrolled((ContainerScreen) scr, mouseX, mouseY, verticalAmount);
+                    ContainerScreen cs = (ContainerScreen) scr;
+                    if (!isBarrelContainer(cs)) return true;
+                    return !handleMouseScrolled(cs, mouseX, mouseY, verticalAmount);
                 });
 
                 ScreenEvents.remove(screen).register(scr -> {
-                    activeBarrelPos = null;
-                    activeRequests.clear();
-                    scrollOffset = 0.0f;
+                    ContainerScreen cs = (ContainerScreen) scr;
+                    if (isBarrelContainer(cs)) {
+                        activeBarrelPos = null;
+                        activeRequests.clear();
+                        scrollOffset = 0.0f;
+                        isDraggingScrollbar = false;
+                    }
                 });
             }
         });
     }
 
-    private static boolean isBarrelContainer(ContainerScreen screen) {
+    public static boolean onGlobalMouseScroll(double verticalAmount) {
+        Minecraft mc = Minecraft.getInstance();
+        if (!(mc.screen instanceof ContainerScreen cs) || !isBarrelContainer(cs)) {
+            return false;
+        }
+        double mouseX = mc.mouseHandler.xpos() * (double) mc.getWindow().getGuiScaledWidth() / (double) mc.getWindow().getScreenWidth();
+        double mouseY = mc.mouseHandler.ypos() * (double) mc.getWindow().getGuiScaledHeight() / (double) mc.getWindow().getScreenHeight();
+        return handleMouseScrolled(cs, mouseX, mouseY, verticalAmount);
+    }
+
+    public static boolean isBarrelContainer(ContainerScreen screen) {
         if (activeBarrelPos != null) {
             return true;
         }
@@ -123,6 +145,19 @@ public class EmptyBarrelChestOverlay {
         int panelX = getPanelX(screen);
         int panelY = getPanelY(screen);
         int panelH = CHEST_HEIGHT;
+
+        // Handle active scrollbar dragging
+        if (isDraggingScrollbar) {
+            long window = mc.getWindow().getWindow();
+            if (GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) != GLFW.GLFW_PRESS) {
+                isDraggingScrollbar = false;
+            } else if (maxScroll > 0) {
+                int listY = panelY + 29;
+                int listH = panelH - 33;
+                float rel = (float) (mouseY - listY) / (float) Math.max(1, listH);
+                scrollOffset = Math.clamp(rel * maxScroll, 0.0f, (float) maxScroll);
+            }
+        }
 
         // 1. Main Slate Frame (matching EasyNpcDialogScreen & MainManagementScreen)
         graphics.fill(panelX, panelY, panelX + panelW, panelY + panelH, 0xF212151D);
@@ -225,7 +260,6 @@ public class EmptyBarrelChestOverlay {
             List<ItemStack> targets = req.targetItems();
 
             if ("CASHIER".equalsIgnoreCase(req.staffType())) {
-                // Cashier: display max 2 menu variants with their item icon and name/count
                 int maxVariants = Math.min(2, targets.size());
                 int curX = infoX;
                 for (int v = 0; v < maxVariants; v++) {
@@ -252,7 +286,6 @@ public class EmptyBarrelChestOverlay {
                     curX += slotSize + 4;
                 }
             } else {
-                // Zookeeper: show up to 5 accepted food icons (cycling smoothly if more than 5)
                 int maxIcons = Math.min(targets.size(), Math.max(1, infoW / (slotSize + 2)));
                 int pageOffset = 0;
                 if (targets.size() > maxIcons) {
@@ -310,23 +343,84 @@ public class EmptyBarrelChestOverlay {
             graphics.fill(trackX, trackY, trackX + 3, trackY + trackH, 0xFF12151D);
             int thumbH = Math.max(18, (int) ((float) listH / totalContentH * trackH));
             int thumbY = trackY + (int) ((scrollOffset / maxScroll) * (trackH - thumbH));
-            graphics.fill(trackX, thumbY, trackX + 3, thumbY + thumbH, 0xFF475569);
+            boolean scrollHover = mouseX >= trackX - 2 && mouseX <= trackX + 5 && mouseY >= trackY && mouseY <= trackY + trackH;
+            graphics.fill(trackX, thumbY, trackX + 3, thumbY + thumbH, (scrollHover || isDraggingScrollbar) ? 0xFF94A3B8 : 0xFF475569);
         }
 
-        // 5. Tooltip when hovering over requested item
+        // 5. Custom Tooltip with real 16x16 raw ingredient icons replacing the '-' dash
         if (hoveredStack != null && hoveredDto != null) {
-            List<Component> lines = new ArrayList<>();
-            lines.add(hoveredStack.getHoverName());
-            if ("CASHIER".equalsIgnoreCase(hoveredDto.staffType())) {
-                lines.add(Component.literal(ZooTranslations.get("zootycoon.warehouse.tooltip.raw_needed")).withStyle(ChatFormatting.YELLOW));
-                for (ItemStack raw : hoveredDto.rawIngredients()) {
-                    lines.add(Component.literal("- " + raw.getCount() + "x " + raw.getHoverName().getString()).withStyle(ChatFormatting.GRAY));
-                }
-            } else {
-                lines.add(Component.literal(ZooTranslations.get("zootycoon.warehouse.tooltip.zookeeper_food")).withStyle(ChatFormatting.GRAY));
-            }
-            graphics.renderTooltip(font, lines, Optional.empty(), mouseX, mouseY);
+            renderCustomIngredientTooltip(screen, graphics, font, hoveredStack, hoveredDto, mouseX, mouseY);
         }
+    }
+
+    private static void renderCustomIngredientTooltip(
+            Screen screen,
+            GuiGraphics graphics,
+            Font font,
+            ItemStack hoveredStack,
+            WarehousePayloads.StaffRequestDto dto,
+            int mouseX,
+            int mouseY
+    ) {
+        String title = hoveredStack.getHoverName().getString();
+        boolean isCashier = "CASHIER".equalsIgnoreCase(dto.staffType());
+        String subHeader = isCashier
+                ? ZooTranslations.get("zootycoon.warehouse.tooltip.raw_needed")
+                : ZooTranslations.get("zootycoon.warehouse.tooltip.zookeeper_food");
+
+        List<ItemStack> itemsToShow = isCashier ? dto.rawIngredients() : List.of();
+
+        int maxW = Math.max(font.width(title), font.width(subHeader));
+        for (ItemStack raw : itemsToShow) {
+            String rowText = raw.getCount() + "x " + raw.getHoverName().getString();
+            maxW = Math.max(maxW, 16 + font.width(rowText));
+        }
+
+        int pad = 6;
+        int rowH = 15;
+        int boxW = maxW + pad * 2;
+        int boxH = pad * 2 + 12 + 12 + (itemsToShow.size() * rowH);
+
+        int bx = mouseX + 12;
+        int by = mouseY - 12;
+        if (bx + boxW > screen.width - 4) {
+            bx = Math.max(4, mouseX - boxW - 8);
+        }
+        if (by + boxH > screen.height - 4) {
+            by = Math.max(4, screen.height - boxH - 4);
+        }
+        if (by < 4) {
+            by = 4;
+        }
+
+        graphics.pose().pushPose();
+        graphics.pose().translate(0.0f, 0.0f, 400.0f);
+
+        // Vanilla/Slate tooltip box background & border
+        graphics.fill(bx, by, bx + boxW, by + boxH, 0xF0100010);
+        graphics.renderOutline(bx, by, boxW, boxH, 0xFF5000FF);
+
+        int curY = by + pad;
+        graphics.drawString(font, title, bx + pad, curY, 0xFFFFFFFF, true);
+        curY += 12;
+
+        graphics.drawString(font, subHeader, bx + pad, curY, isCashier ? 0xFFFFFF55 : 0xFFAAAAAA, true);
+        curY += 12;
+
+        for (ItemStack raw : itemsToShow) {
+            // Render real 16x16 item icon scaled cleanly to 12x12 inline instead of '-' dash
+            graphics.pose().pushPose();
+            graphics.pose().translate(bx + pad, curY - 1, 0.0f);
+            graphics.pose().scale(0.75f, 0.75f, 1.0f);
+            graphics.renderFakeItem(raw, 0, 0);
+            graphics.pose().popPose();
+
+            String rowText = raw.getCount() + "x " + raw.getHoverName().getString();
+            graphics.drawString(font, rowText, bx + pad + 15, curY + 1, 0xFFAAAAAA, true);
+            curY += rowH;
+        }
+
+        graphics.pose().popPose();
     }
 
     private static boolean handleMouseClicked(ContainerScreen screen, double mouseX, double mouseY, int button) {
@@ -346,6 +440,14 @@ public class EmptyBarrelChestOverlay {
         int listH = panelH - 33;
         int listW = panelW - 10;
         int cardW = maxScroll > 0 ? (listW - 6) : listW;
+
+        // Check click on scrollbar track
+        if (maxScroll > 0 && mouseX >= panelX + panelW - 10 && mouseX <= panelX + panelW && mouseY >= listY && mouseY <= listY + listH) {
+            isDraggingScrollbar = true;
+            float rel = (float) (mouseY - listY) / (float) Math.max(1, listH);
+            scrollOffset = Math.clamp(rel * maxScroll, 0.0f, (float) maxScroll);
+            return true;
+        }
 
         if (mouseY >= listY && mouseY <= listY + listH) {
             for (int i = 0; i < activeRequests.size(); i++) {
@@ -370,7 +472,6 @@ public class EmptyBarrelChestOverlay {
             }
         }
 
-        // Consume click inside left panel so ContainerScreen doesn't treat it as an outside drop click
         return true;
     }
 

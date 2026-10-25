@@ -22,6 +22,11 @@ public class WarehouseRecipeResolver {
     private static List<Item> cachedBurgerItems = null;
     private static List<Item> cachedDrinkItems = null;
 
+    public static void reset() {
+        cachedBurgerItems = null;
+        cachedDrinkItems = null;
+    }
+
     public static List<Item> getAvailableMenuItems(ServerLevel level, String role) {
         if ("BURGER".equalsIgnoreCase(role)) {
             if (cachedBurgerItems == null || cachedBurgerItems.isEmpty()) {
@@ -139,6 +144,14 @@ public class WarehouseRecipeResolver {
     }
 
     private static boolean isContainerRemainderOnly(Item item, String role) {
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
+        if (id != null) {
+            String path = id.getPath().toLowerCase(Locale.ROOT);
+            if (path.equals("food_press") || path.equals("frying_pan") || path.equals("cooking_pot")
+                    || path.contains("knife") || path.equals("mortar_and_pestle") || path.equals("skillet")) {
+                return true;
+            }
+        }
         if ("BURGER".equalsIgnoreCase(role)) {
             return item == Items.BOWL || item == Items.BUCKET || item == Items.GLASS_BOTTLE;
         }
@@ -167,7 +180,7 @@ public class WarehouseRecipeResolver {
         ItemStack[] stacks = ingredient.getItems();
         if (stacks == null || stacks.length == 0) return null;
 
-        // Prefer vanilla or common farming mods so ingredients are familiar to gather
+        // Prefer vanilla or common farming mods so ingredients are familiar to gather (never pick croptopia unless no other option exists)
         for (String prefNs : new String[]{"minecraft", "farmersdelight", "farm_and_charm", "moredelight", "naturalist"}) {
             for (ItemStack st : stacks) {
                 if (st != null && !st.isEmpty()) {
@@ -175,6 +188,14 @@ public class WarehouseRecipeResolver {
                     if (id != null && prefNs.equals(id.getNamespace())) {
                         return st.getItem();
                     }
+                }
+            }
+        }
+        for (ItemStack st : stacks) {
+            if (st != null && !st.isEmpty()) {
+                ResourceLocation id = BuiltInRegistries.ITEM.getKey(st.getItem());
+                if (id != null && !"croptopia".equals(id.getNamespace())) {
+                    return st.getItem();
                 }
             }
         }
@@ -238,6 +259,15 @@ public class WarehouseRecipeResolver {
             if (milkBottle != Items.AIR && item == Items.MILK_BUCKET) {
                 return milkBottle;
             }
+        }
+        // Potion / water bottle in tea recipes -> glass bottle
+        if (item == Items.POTION || path.equals("water_bottle")) {
+            return Items.GLASS_BOTTLE;
+        }
+        // Cheese -> milk bottle or sugar/wheat
+        if (path.contains("cheese")) {
+            Item milkBottle = BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath("farmersdelight", "milk_bottle"));
+            if (milkBottle != Items.AIR) return milkBottle;
         }
         return item;
     }

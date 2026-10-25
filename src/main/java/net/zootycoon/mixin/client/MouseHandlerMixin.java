@@ -17,6 +17,10 @@ public class MouseHandlerMixin {
     @Inject(method = "onScroll", at = @At("HEAD"), cancellable = true, require = 0)
     private void onMouseScroll(long window, double horizontal, double vertical, CallbackInfo ci) {
         Minecraft mc = Minecraft.getInstance();
+        if (mc.screen != null && net.zootycoon.client.ui.EmptyBarrelChestOverlay.onGlobalMouseScroll(vertical)) {
+            ci.cancel();
+            return;
+        }
         if (mc.screen != null || mc.player == null) return;
 
         boolean holdingTool = mc.player.getMainHandItem().is(net.minecraft.world.item.Items.STICK)

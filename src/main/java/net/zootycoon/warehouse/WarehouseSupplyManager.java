@@ -81,6 +81,7 @@ public class WarehouseSupplyManager {
 
     public static void reset() {
         ACTIVE_REQUESTS.clear();
+        WarehouseRecipeResolver.reset();
     }
 
     public static void tickBarrel(ServerLevel sLevel, EmptyBarrelBlockEntity barrel) {
@@ -193,7 +194,15 @@ public class WarehouseSupplyManager {
             }
             req.staffEntityId = ent.getId();
             if (ent instanceof ZooCashierEntity cashier) {
-                if (!cashier.isRoleAssigned()
+                boolean invalidMenuPresent = false;
+                for (ItemStack targetSt : req.targetItems) {
+                    if (!ZooCashierEntity.isValidItemForRole(cashier.getCashierRole(), targetSt)) {
+                        invalidMenuPresent = true;
+                        break;
+                    }
+                }
+                if (invalidMenuPresent
+                        || !cashier.isRoleAssigned()
                         || !req.category.equalsIgnoreCase(cashier.getCashierRole())
                         || cashier.getTotalStockCount() > CASHIER_LOW_STOCK_THRESHOLD) {
                     it.remove();

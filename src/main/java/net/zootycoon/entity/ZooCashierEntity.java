@@ -299,7 +299,18 @@ public class ZooCashierEntity extends PathfinderMob {
         String namespace = id.getNamespace().toLowerCase(Locale.ROOT);
         String path = id.getPath().toLowerCase(Locale.ROOT);
 
+        // Croptopia rule: only juice from croptopia is accepted (for DRINK); reject all other croptopia items
+        if ("croptopia".equals(namespace)) {
+            if ("DRINK".equalsIgnoreCase(role) || "ICE_CREAM".equalsIgnoreCase(role)) {
+                return path.endsWith("_juice");
+            }
+            return false;
+        }
+
         if ("BURGER".equalsIgnoreCase(role)) {
+            if (stack.getItem() instanceof net.minecraft.world.item.BlockItem) {
+                return false;
+            }
             if (path.contains("burger")) {
                 return true;
             }
@@ -307,26 +318,34 @@ public class ZooCashierEntity extends PathfinderMob {
         }
 
         if ("DRINK".equalsIgnoreCase(role) || "ICE_CREAM".equalsIgnoreCase(role)) {
-            if (path.contains("oil") || path.contains("sauce") || path.contains("molasses")
-                    || path.contains("vinegar") || path.contains("bucket") || path.contains("dough")) {
+            if (stack.getItem() instanceof net.minecraft.world.item.BlockItem) {
                 return false;
             }
-            if (stack.getUseAnimation() == UseAnim.DRINK) {
+            if (path.contains("oil") || path.contains("sauce") || path.contains("molasses")
+                    || path.contains("vinegar") || path.contains("bucket") || path.contains("dough")
+                    || path.contains("potion") || path.contains("ominous") || path.contains("spawn_egg")
+                    || path.equals("water_bottle") || path.equals("milk_bottle") || path.contains("bottle_of")
+                    || path.contains("steamed") || path.contains("steak") || path.contains("stew")
+                    || path.contains("soup") || path.contains("broth") || path.contains("curry")
+                    || path.contains("leaves") || path.contains("seed") || path.contains("beans")
+                    || path.contains("powder") || path.contains("cup") || path.contains("sandwich")
+                    || path.contains("burger") || path.contains("pie") || path.contains("cake")) {
+                return false;
+            }
+            String[] tokens = path.split("_");
+            for (String token : tokens) {
+                if (token.equals("juice") || token.equals("smoothie") || token.equals("tea")
+                        || token.equals("coffee") || token.equals("latte") || token.equals("soda")
+                        || token.equals("lemonade") || token.equals("limeade") || token.equals("horchata")
+                        || token.equals("cider") || token.equals("cocoa") || token.equals("milkshake")
+                        || token.equals("wine") || token.equals("beer") || token.equals("mead")) {
+                    return true;
+                }
+            }
+            if (stack.getUseAnimation() == UseAnim.DRINK && stack.has(DataComponents.FOOD)) {
                 return true;
             }
-            if (path.contains("juice") || path.contains("smoothie") || path.contains("tea")
-                    || path.contains("coffee") || path.contains("latte") || path.contains("milk")
-                    || path.contains("soda") || path.contains("lemonade") || path.contains("limeade")
-                    || path.contains("horchata") || path.contains("cider") || path.contains("cocoa")
-                    || path.contains("wine") || path.contains("beer") || path.contains("rum")
-                    || path.contains("mead") || path.contains("water_bottle") || path.contains("drink")
-                    || path.contains("beverage")) {
-                return true;
-            }
-            return stack.getTags().anyMatch(t -> {
-                String p = t.location().getPath().toLowerCase(Locale.ROOT);
-                return p.contains("drink") || p.contains("juice") || p.contains("smoothie") || p.contains("tea") || p.contains("beverage");
-            });
+            return false;
         }
 
         return false;
