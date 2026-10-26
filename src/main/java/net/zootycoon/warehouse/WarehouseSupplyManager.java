@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
@@ -424,11 +425,64 @@ public class WarehouseSupplyManager {
         return false;
     }
 
+    public static boolean isRawIngredientMatching(ItemStack stack, Item targetItem) {
+        if (stack == null || stack.isEmpty() || targetItem == null || targetItem == Items.AIR) return false;
+        if (stack.is(targetItem)) return true;
+
+        ResourceLocation stackId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        ResourceLocation targetId = BuiltInRegistries.ITEM.getKey(targetItem);
+        if (stackId == null || targetId == null) return false;
+
+        String stackPath = stackId.getPath().toLowerCase(Locale.ROOT);
+        String targetPath = targetId.getPath().toLowerCase(Locale.ROOT);
+
+        // 1. Direct path match across different mod namespaces (e.g. croptopia:tomato == farmersdelight:tomato)
+        if (stackPath.equals(targetPath)) {
+            return true;
+        }
+
+        // 2. Singular/plural and common crop aliases (e.g., onion/onions, tomato/tomatoes, cabbage/cabbages)
+        if (isCropAliasMatch(stackPath, targetPath)) {
+            return true;
+        }
+
+        // 3. Shared Fabric / Forge convention tags (c:crops/tomato, c:tomatoes, c:onions, etc.)
+        for (var stackTag : stack.getTags().toList()) {
+            String ns = stackTag.location().getNamespace();
+            if ("c".equals(ns) || "forge".equals(ns)) {
+                if (BuiltInRegistries.ITEM.getOrCreateTag(stackTag).contains(BuiltInRegistries.ITEM.wrapAsHolder(targetItem))) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static boolean isCropAliasMatch(String a, String b) {
+        String cleanA = normalizeCropName(a);
+        String cleanB = normalizeCropName(b);
+        return cleanA.equals(cleanB);
+    }
+
+    private static String normalizeCropName(String name) {
+        if (name == null) return "";
+        String s = name.toLowerCase(Locale.ROOT);
+        if (s.endsWith("_crop")) s = s.substring(0, s.length() - 5);
+        if (s.endsWith("_leaf")) s = s.substring(0, s.length() - 5);
+        if (s.endsWith("tomatoes")) return "tomato";
+        if (s.endsWith("potatoes")) return "potato";
+        if (s.endsWith("berries")) return "berry";
+        if (s.endsWith("onions")) return "onion";
+        if (s.endsWith("cabbages")) return "cabbage";
+        return s;
+    }
+
     private static int countItemInBarrel(EmptyBarrelBlockEntity barrel, Item item) {
         int total = 0;
         for (int i = 0; i < barrel.getContainerSize(); i++) {
             ItemStack st = barrel.getItem(i);
-            if (!st.isEmpty() && st.is(item)) {
+            if (!st.isEmpty() && isRawIngredientMatching(st, item)) {
                 total += st.getCount();
             }
         }
@@ -439,7 +493,7 @@ public class WarehouseSupplyManager {
         int remaining = amount;
         for (int i = 0; i < barrel.getContainerSize() && remaining > 0; i++) {
             ItemStack st = barrel.getItem(i);
-            if (!st.isEmpty() && st.is(item)) {
+            if (!st.isEmpty() && isRawIngredientMatching(st, item)) {
                 int take = Math.min(remaining, st.getCount());
                 st.shrink(take);
                 remaining -= take;
