@@ -51,6 +51,7 @@ fungsi yang belum fix atau belum ada atau masih cacat (Dilarang mengerjakan semu
 15. ui hologram satwa
 17. hologram progress bar watering can dan brush (tapi icon nya belum)
 18. magnifying glass logic
+19. Gudang. empty barrel
 
 fungsi yg belum ada atau masih cacat (jangan eksekusi fitur ini sebelum secara eksplisit diminta)
 
@@ -60,8 +61,8 @@ fungsi yg belum ada atau masih cacat (jangan eksekusi fitur ini sebelum secara e
 Perbarui spawner pengunjung agar kapasitas maksimal dan frekuensi kedatangan berskala dinamis mengikuti rating kebun binatang dan jumlah fasilitas/satwa aktif.
 - Finansial dan Penetapan Harga (Tiket, Makanan, Gaji Pegawai)
 Sediakan pengaturan harga tiket dan makanan/minuman yang berdampak pada keputusan pengunjung, serta terapkan pemotongan gaji berkala (biaya operasional harian) untuk seluruh staf zoo.
-- Gudang (Warehouse dan Rantai Pasok)
-Bangun sistem gudang sentral untuk menyimpan stok pakan dan suplai grosir, serta integrasikan zookeeper, dan cashier untuk mengambil jatah pakan dari gudang tanpa memberi pakan awal otomatis.
+
+
 - Alasan Kepuasan Pengunjung Ringkas (Single-Reason Visitor Feedback)
 - kendaraan untuk menangkap hewan
 - mob bag logic
