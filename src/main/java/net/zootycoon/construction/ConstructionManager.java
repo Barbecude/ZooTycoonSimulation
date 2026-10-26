@@ -485,7 +485,7 @@ public class ConstructionManager {
     private static void notifyCompletion(ServerLevel level, ConstructionSite site) {
         ServerPlayer player = level.getServer().getPlayerList().getPlayer(site.getOwnerUuid());
         int totalBlocks = site.getTotalBlocks();
-        int wageDue = net.zootycoon.economy.EconomyConfig.calculateBuilderWage(totalBlocks);
+        int wageDue = net.zootycoon.economy.ZooEconomyEngine.calculateBuilderWage(totalBlocks);
 
         net.zootycoon.entity.ZooBuilderEntity builderEntity = null;
         if (site.getBuilderUuid() != null) {

@@ -363,32 +363,36 @@ public class ZooCashierEntity extends PathfinderMob {
         return path.contains("plushie");
     }
 
-    public static int getItemPrice(String role, ItemStack stack) {
-        if ("BURGER".equalsIgnoreCase(role)) {
-            FoodProperties food = stack != null ? stack.get(DataComponents.FOOD) : null;
-            if (food != null && food.nutrition() >= 10) {
-                return 4;
+    public int getTicketPrice() {
+        if (this.level() instanceof ServerLevel sLevel) {
+            ZooClaimManager claimManager = ZooClaimManager.get(sLevel);
+            var targetClaim = claimManager.getClaimAt(this.blockPosition());
+            UUID ownerUuid = (targetClaim.isPresent() && targetClaim.get().getOwnerUuid() != null)
+                    ? targetClaim.get().getOwnerUuid()
+                    : null;
+            if (ownerUuid != null) {
+                return claimManager.getTicketPrice(ownerUuid);
             }
-            return 3;
-        }
-        if ("DRINK".equalsIgnoreCase(role) || "ICE_CREAM".equalsIgnoreCase(role)) {
-            if (stack != null && !stack.isEmpty()) {
-                ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
-                if (id != null) {
-                    String path = id.getPath().toLowerCase(Locale.ROOT);
-                    if (path.contains("smoothie") || path.contains("milkshake") || path.contains("latte")
-                            || path.contains("wine") || path.contains("mead") || path.contains("beer")
-                            || path.contains("rum") || path.contains("cider") || path.contains("cocoa")) {
-                        return 3;
-                    }
-                }
-            }
-            return 2;
-        }
-        if ("TICKET".equalsIgnoreCase(role)) {
-            return 2;
         }
         return 2;
+    }
+
+    public boolean isOnStrike() {
+        if (this.level() instanceof ServerLevel sLevel) {
+            ZooClaimManager claimManager = ZooClaimManager.get(sLevel);
+            var targetClaim = claimManager.getClaimAt(this.blockPosition());
+            UUID ownerUuid = (targetClaim.isPresent() && targetClaim.get().getOwnerUuid() != null)
+                    ? targetClaim.get().getOwnerUuid()
+                    : null;
+            if (ownerUuid != null) {
+                return net.zootycoon.economy.ZooStaffManager.get(sLevel).areStaffOnStrike(ownerUuid);
+            }
+        }
+        return false;
+    }
+
+    public static int getItemPrice(String role, ItemStack stack) {
+        return net.zootycoon.economy.ZooEconomyEngine.getFoodDrinkPrice(role, stack);
     }
 
     /**
@@ -518,6 +522,15 @@ public class ZooCashierEntity extends PathfinderMob {
         if (serveCooldown > 0) serveCooldown--;
         if (fomoCooldown > 0) fomoCooldown--;
 
+        if (isOnStrike()) {
+            if (this.tickCount % 60 == 0 && this.level() instanceof ServerLevel sLevel) {
+                sLevel.sendParticles(ParticleTypes.ANGRY_VILLAGER, this.getX(), this.getY() + 1.2D, this.getZ(), 1, 0.1, 0.1, 0.1, 0.0);
+            }
+            servingCustomerUuid = null;
+            serviceTicks = 0;
+            return;
+        }
+
         if (this.tickCount % 20 == 0) {
             updateStockStatus();
         }
@@ -546,7 +559,10 @@ public class ZooCashierEntity extends PathfinderMob {
                         if (serviceTicks <= 0) {
                             removeFromQueue(customer.getUUID());
                             customer.addTag("ticket_purchased");
-                            creditOwner(sLevel, getItemPrice("TICKET", ItemStack.EMPTY));
+                            int ticketPrice = getTicketPrice();
+                            if (ticketPrice > 0) {
+                                creditOwner(sLevel, ticketPrice);
+                            }
                             sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.8F, 1.1F);
                             sLevel.playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.7F, 1.2F);
                             sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
@@ -672,6 +688,7 @@ public class ZooCashierEntity extends PathfinderMob {
 
     public void sendScreenToPlayer(ServerPlayer sp) {
         boolean open = false;
+        int ticketPrice = 2;
         if (this.level() instanceof ServerLevel sLevel) {
             ZooClaimManager claimManager = ZooClaimManager.get(sLevel);
             var targetClaim = claimManager.getClaimAt(this.blockPosition());
@@ -679,13 +696,15 @@ public class ZooCashierEntity extends PathfinderMob {
                     ? targetClaim.get().getOwnerUuid()
                     : sp.getUUID();
             open = claimManager.isZooOpen(ownerUuid);
+            ticketPrice = claimManager.getTicketPrice(ownerUuid);
         }
         ServerPlayNetworking.send(sp, new ZooNetworkPayloads.OpenCashierScreenPayload(
                 this.getId(),
                 this.getCashierRole(),
                 this.getName().getString(),
                 this.getStockItemsList(),
-                open
+                open,
+                ticketPrice
         ));
     }
 

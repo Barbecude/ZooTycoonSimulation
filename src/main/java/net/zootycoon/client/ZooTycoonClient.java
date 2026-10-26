@@ -55,6 +55,10 @@ public class ZooTycoonClient implements ClientModInitializer {
     public static int clientCashiers = 0;
     public static int clientEmeraldBalance = 0;
     public static int clientZooRating = 50;
+
+    public static double getClientStarRating() {
+        return Math.clamp(clientZooRating / 20.0D, 0.0D, 5.0D);
+    }
     public static java.util.List<ZooNetworkPayloads.AnimalSyncData> clientAnimals = new java.util.ArrayList<>();
     public static java.util.List<ZooNetworkPayloads.ZookeeperSyncData> clientZookeeperList = new java.util.ArrayList<>();
     public static final java.util.Map<Integer, ZooNetworkPayloads.AnimalSyncData> clientAnimalMap = new java.util.concurrent.ConcurrentHashMap<>();
@@ -362,13 +366,15 @@ public class ZooTycoonClient implements ClientModInitializer {
                         && existing.getCurrentRole().equalsIgnoreCase(payload.currentRole())) {
                     existing.updateStockItems(payload.stockItems());
                     existing.updateZooOpenState(payload.isZooOpen());
+                    existing.updateTicketPrice(payload.ticketPrice());
                 } else {
                     mc.setScreen(new net.zootycoon.client.ui.CashierDialogScreen(
                             payload.entityId(),
                             payload.currentRole(),
                             payload.cashierName(),
                             payload.stockItems(),
-                            payload.isZooOpen()
+                            payload.isZooOpen(),
+                            payload.ticketPrice()
                     ));
                 }
             });
@@ -429,6 +435,7 @@ public class ZooTycoonClient implements ClientModInitializer {
         });
 
         net.zootycoon.client.ui.EmptyBarrelChestOverlay.register();
+        net.zootycoon.client.ui.CashierDialogScreen.register();
 
         // Reset client static state when disconnecting from world or joining a new server
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {

@@ -2,6 +2,7 @@
 trigger: model_decision
 description: When i working on zooTycoonSimulation minecraft mod
 ---
+use C:\Users\Zevaldo\Documents\my mods\zooTycoonSimulation\.agents\skills\explore-index
 
 commit & push Setiap fitur baru commit layaknya profesional
 no bold font, no emoji. jangan over info jangan terlalu banyak info duplikats di dialog atau toast. no over colored font. Jangan ubah dialog kecuali memang di minta
@@ -12,6 +13,9 @@ C:\Users\Zevaldo\AppData\Roaming\ModrinthApp\profiles\Fresh & Smooth\mods pindah
 mod source yg dipakai untuk mencari tau isi kode atau mixin:
 https://github.com/Codx-org/AlexsMobsContinued
 https://github.com/crispytwig/Naturalist
+https://github.com/axperty/moredelight
+https://github.com/MehVahdJukaar/FarmersDelightRefabricated
+https://github.com/Let-s-Do-Collection/FarmAndCharm
 
 data hewan:
 https://docs.google.com/document/d/1jJZwJqmeuR9pmZL68d9drwBwZZVqxTd8_w1RZepzcl4

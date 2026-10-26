@@ -1405,6 +1405,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         private ZooCashierEntity targetTicketCashier;
         private int repathTimer = 0;
         private int lastQueueIndex = -1;
+        private boolean hasEvaluatedPrice = false;
 
         public BuyTicketAtEntranceGoal(ZooVisitorEntity visitor) {
             this.visitor = visitor;
@@ -1454,6 +1455,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         public void start() {
             this.repathTimer = 0;
             this.lastQueueIndex = -1;
+            this.hasEvaluatedPrice = false;
         }
 
         @Override
@@ -1485,6 +1487,37 @@ public class ZooVisitorEntity extends PathfinderMob {
             if (qIdx != lastQueueIndex) {
                 lastQueueIndex = qIdx;
                 repathTimer = 0;
+            }
+
+            // Price evaluation check when visitor approaches front of queue
+            if ((qIdx == 0 || distToCashierSq <= 9.0D) && !hasEvaluatedPrice) {
+                hasEvaluatedPrice = true;
+                int ticketPrice = targetTicketCashier.getTicketPrice();
+                if (targetTicketCashier.level() instanceof net.minecraft.server.level.ServerLevel sLevel && sLevel.getServer() != null) {
+                    net.zootycoon.claim.ZooClaimManager claimManager = net.zootycoon.claim.ZooClaimManager.get(sLevel);
+                    var targetClaim = claimManager.getClaimAt(targetTicketCashier.blockPosition());
+                    UUID ownerUuid = (targetClaim.isPresent() && targetClaim.get().getOwnerUuid() != null)
+                            ? targetClaim.get().getOwnerUuid()
+                            : null;
+                    if (ownerUuid != null) {
+                        double starRating = net.zootycoon.economy.ZooRatingManager.get(sLevel.getServer()).getStarRating(ownerUuid);
+                        double zooQuality = net.zootycoon.economy.ZooEconomyEngine.calculateZooQuality(sLevel, ownerUuid);
+                        net.zootycoon.economy.ZooEconomyEngine.TicketDecision decision =
+                                net.zootycoon.economy.ZooEconomyEngine.evaluateTicketPurchase(ticketPrice, starRating, zooQuality, visitor.getRandom());
+
+                        if (decision != net.zootycoon.economy.ZooEconomyEngine.TicketDecision.PURCHASE) {
+                            targetTicketCashier.removeFromQueue(visitor.getUUID());
+                            sLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.ANGRY_VILLAGER, visitor.getX(), visitor.getY() + 1.2D, visitor.getZ(), 4, 0.2, 0.2, 0.2, 0.02);
+                            sLevel.playSound(null, visitor.blockPosition(), SoundEvents.VILLAGER_NO, net.minecraft.sounds.SoundSource.NEUTRAL, 0.8F, 1.0F);
+
+                            if (decision == net.zootycoon.economy.ZooEconomyEngine.TicketDecision.REJECT_ANGRY_PENALTY_RATING) {
+                                net.zootycoon.economy.ZooEconomyEngine.applyOverpricedTicketPenalty(sLevel, ownerUuid);
+                            }
+                            visitor.forceLeave();
+                            return;
+                        }
+                    }
+                }
             }
 
             double dx = visitor.getX() - (targetSlot.getX() + 0.5D);

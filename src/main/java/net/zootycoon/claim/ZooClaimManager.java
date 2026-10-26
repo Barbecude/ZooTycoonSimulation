@@ -41,6 +41,7 @@ public class ZooClaimManager {
     private static ZooClaimManager instance;
     private final Map<UUID, ZooClaim> claims = new ConcurrentHashMap<>();
     private final Set<UUID> openZoos = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final Map<UUID, Integer> ticketPrices = new ConcurrentHashMap<>();
     private MinecraftServer server;
 
     public ZooClaimManager() {
@@ -59,6 +60,7 @@ public class ZooClaimManager {
         if (instance != null) {
             instance.claims.clear();
             instance.openZoos.clear();
+            instance.ticketPrices.clear();
             instance.server = null;
             instance = null;
         }
@@ -88,6 +90,15 @@ public class ZooClaimManager {
                     openZoos.add(openList.getCompound(i).getUUID("player"));
                 }
             }
+            if (tag.contains("ticket_prices", Tag.TAG_COMPOUND)) {
+                CompoundTag priceTag = tag.getCompound("ticket_prices");
+                ticketPrices.clear();
+                for (String key : priceTag.getAllKeys()) {
+                    try {
+                        ticketPrices.put(UUID.fromString(key), priceTag.getInt(key));
+                    } catch (Exception ignored) {}
+                }
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -112,10 +123,31 @@ public class ZooClaimManager {
             }
             tag.put("open_zoos", openList);
 
+            CompoundTag priceTag = new CompoundTag();
+            for (var entry : ticketPrices.entrySet()) {
+                priceTag.putInt(entry.getKey().toString(), entry.getValue());
+            }
+            tag.put("ticket_prices", priceTag);
+
             NbtIo.writeCompressed(tag, path);
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public int getTicketPrice(UUID playerUuid) {
+        if (playerUuid == null) return 2;
+        return ticketPrices.getOrDefault(playerUuid, 2);
+    }
+
+    public void setTicketPrice(UUID playerUuid, int price) {
+        if (playerUuid == null) return;
+        ticketPrices.put(playerUuid, Math.clamp(price, 0, 20));
+        // Also update individual claims
+        for (ZooClaim claim : getClaimsForPlayer(playerUuid)) {
+            claim.setTicketPrice(price);
+        }
+        saveToFile();
     }
 
     public boolean isZooOpen(UUID playerUuid) {

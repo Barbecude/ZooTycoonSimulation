@@ -23,6 +23,7 @@ public class ZooButton extends AbstractWidget {
     private int customTexW = 0;
     private int customTexH = 0;
     private ItemStack itemIcon = ItemStack.EMPTY;
+    private boolean iconAfter = false;
 
     // Palette Colors (Essential-Mod Minimalist Slate Aesthetic)
     private int bgColor = 0xFF14171F;
@@ -78,6 +79,11 @@ public class ZooButton extends AbstractWidget {
 
     public ZooButton setItemIcon(ItemStack stack) {
         this.itemIcon = stack != null ? stack : ItemStack.EMPTY;
+        return this;
+    }
+
+    public ZooButton setIconAfter(boolean iconAfter) {
+        this.iconAfter = iconAfter;
         return this;
     }
 
@@ -172,15 +178,24 @@ public class ZooButton extends AbstractWidget {
             int iW = 16;
             int iH = 16;
             int iconY = y + (h - iH) / 2;
-            if (leftAligned) {
-                graphics.renderFakeItem(itemIcon, x + 6, iconY);
-                graphics.drawString(mc.font, msg, x + 6 + iW + 4, textY, text, false);
+            int textW = mc.font.width(msg);
+            if (iconAfter) {
+                int totalW = textW > 0 ? (textW + 2 + iW) : iW;
+                int startX = leftAligned ? (x + 6) : (x + (w - totalW) / 2);
+                if (textW > 0) {
+                    graphics.drawString(mc.font, msg, startX, textY, text, false);
+                }
+                graphics.renderFakeItem(itemIcon, startX + textW + 2, iconY);
             } else {
-                int textW = mc.font.width(msg);
-                int totalW = iW + 5 + textW;
-                int startX = x + (w - totalW) / 2;
-                graphics.renderFakeItem(itemIcon, startX, iconY);
-                graphics.drawString(mc.font, msg, startX + iW + 5, textY, text, false);
+                if (leftAligned) {
+                    graphics.renderFakeItem(itemIcon, x + 6, iconY);
+                    graphics.drawString(mc.font, msg, x + 6 + iW + 4, textY, text, false);
+                } else {
+                    int totalW = iW + 5 + textW;
+                    int startX = x + (w - totalW) / 2;
+                    graphics.renderFakeItem(itemIcon, startX, iconY);
+                    graphics.drawString(mc.font, msg, startX + iW + 5, textY, text, false);
+                }
             }
         } else if (customIcon != null) {
             int iW = customIconW > 0 ? customIconW : 16;

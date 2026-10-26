@@ -15,7 +15,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
-import net.zootycoon.economy.EconomyConfig;
 import net.zootycoon.economy.TransactionHelper;
 import net.zootycoon.schematic.ZooSchematic;
 

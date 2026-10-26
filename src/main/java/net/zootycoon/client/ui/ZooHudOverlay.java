@@ -54,6 +54,13 @@ public class ZooHudOverlay {
     private static final List<EssentialToast> activeToasts = new CopyOnWriteArrayList<>();
     private static final ItemStack VANILLA_EMERALD_ITEM = new ItemStack(Items.EMERALD);
 
+    private static final net.minecraft.resources.ResourceLocation STAR_FILLED =
+            net.zootycoon.ZooTycoonMod.id("textures/gui/icons/star_filled.png");
+    private static final net.minecraft.resources.ResourceLocation STAR_HALF =
+            net.zootycoon.ZooTycoonMod.id("textures/gui/icons/star_half.png");
+    private static final net.minecraft.resources.ResourceLocation STAR_EMPTY =
+            net.zootycoon.ZooTycoonMod.id("textures/gui/icons/star_empty.png");
+
     public static void addDelta(int delta) {
         if (delta != 0) {
             floatingDeltas.add(new FloatingDelta(delta));
@@ -84,10 +91,13 @@ public class ZooHudOverlay {
         Player player = mc.player;
         if (player == null || mc.level == null) return;
 
-        // 0. Permanent Emerald Balance Indicator on Screen (Top-Right)
+        // 0a. Permanent 5-Star Zoo Rating Indicator on Screen (Top-Right)
+        renderPermanentRatingHud(graphics, mc);
+
+        // 0b. Permanent Emerald Balance Indicator on Screen (Top-Right)
         renderPermanentEmeraldHud(graphics, mc);
 
-        // 0b. Essential-Mod Style Toast Notifications (Top-Right below Emerald Pill)
+        // 0c. Essential-Mod Style Toast Notifications (Top-Right below Indicators)
         renderEssentialToasts(graphics, mc);
 
         // 1. Placement Preview Mode
@@ -117,7 +127,7 @@ public class ZooHudOverlay {
         Font font = mc.font;
         int screenW = mc.getWindow().getGuiScaledWidth();
         int toastW = 210;
-        int curY = 60;
+        int curY = 56;
         long now = System.currentTimeMillis();
 
         for (EssentialToast toast : activeToasts) {
@@ -175,6 +185,53 @@ public class ZooHudOverlay {
         }
     }
 
+    private static void renderPermanentRatingHud(GuiGraphics graphics, Minecraft mc) {
+        Player player = mc.player;
+        if (player == null) return;
+
+        double starRating = ZooTycoonClient.getClientStarRating();
+        String ratingText = String.format(java.util.Locale.ROOT, "%.1f", starRating);
+
+        Font font = mc.font;
+        int textW = font.width(ratingText);
+        int starsW = 5 * 11 + 4 * 2; // 63px
+        int badgeW = 6 + starsW + 6 + textW + 6;
+        int badgeH = 18;
+
+        int screenW = mc.getWindow().getGuiScaledWidth();
+        int x = screenW - badgeW - 12;
+        int y = 8;
+
+        // Sleek Minimalist Pill Card
+        graphics.fill(x, y, x + badgeW, y + badgeH, 0xD012151D);
+        graphics.fill(x, y, x + badgeW, y + 1, 0xFF2A3140);
+        graphics.fill(x, y + badgeH - 1, x + badgeW, y + badgeH, 0xFF2A3140);
+        graphics.fill(x, y + 1, x + 1, y + badgeH, 0xFF2A3140);
+        graphics.fill(x + badgeW - 1, y, x + badgeW, y + badgeH, 0xFF2A3140);
+
+        // Render 5 stars
+        int starStartX = x + 6;
+        int starY = y + 3;
+        for (int i = 0; i < 5; i++) {
+            int sx = starStartX + i * 13;
+            double starFloor = (double) i;
+            net.minecraft.resources.ResourceLocation starTex;
+            if (starRating >= starFloor + 0.75D) {
+                starTex = STAR_FILLED;
+            } else if (starRating >= starFloor + 0.25D) {
+                starTex = STAR_HALF;
+            } else {
+                starTex = STAR_EMPTY;
+            }
+            graphics.blit(starTex, sx, starY, 11, 11, 0.0f, 0.0f, 16, 16, 16, 16);
+        }
+
+        // Render rating text (Clean golden-yellow, normal font, no bold)
+        int textX = starStartX + starsW + 6;
+        int textY = y + 5;
+        graphics.drawString(font, Component.literal(ratingText), textX, textY, 0xFFF1C40F, false);
+    }
+
     private static void renderPermanentEmeraldHud(GuiGraphics graphics, Minecraft mc) {
         Player player = mc.player;
         if (player == null) return;
@@ -189,7 +246,7 @@ public class ZooHudOverlay {
 
         int screenW = mc.getWindow().getGuiScaledWidth();
         int x = screenW - badgeW - 12;
-        int y = 32;
+        int y = 29;
 
         // Sleek Minimalist Pill Card
         graphics.fill(x, y, x + badgeW, y + badgeH, 0xD012151D);

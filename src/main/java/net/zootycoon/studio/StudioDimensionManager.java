@@ -1,5 +1,6 @@
 package net.zootycoon.studio;
 
+import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -151,6 +152,29 @@ public class StudioDimensionManager {
                         }
                         return 0;
                     }))
+                    .then(Commands.literal("rating")
+                            .executes(ctx -> {
+                                ServerPlayer player = ctx.getSource().getPlayer();
+                                if (player != null) {
+                                    double star = net.zootycoon.economy.ZooRatingManager.get(player.server).getStarRating(player.getUUID());
+                                    int raw = net.zootycoon.economy.ZooRatingManager.get(player.server).getRating(player.getUUID());
+                                    player.sendSystemMessage(Component.literal(String.format("Rating Kebun Binatang: %.1f Bintang (Skor: %d/100)", star, raw)).withStyle(ChatFormatting.GOLD));
+                                    return 1;
+                                }
+                                return 0;
+                            })
+                            .then(Commands.argument("bintang", DoubleArgumentType.doubleArg(0.0, 5.0)).executes(ctx -> {
+                                ServerPlayer player = ctx.getSource().getPlayer();
+                                if (player != null) {
+                                    double newStar = DoubleArgumentType.getDouble(ctx, "bintang");
+                                    net.zootycoon.economy.ZooRatingManager.get(player.server).setStarRating(player.getUUID(), newStar, player);
+                                    player.sendSystemMessage(Component.literal(String.format("Rating Kebun Binatang berhasil diatur ke %.1f Bintang!", newStar)).withStyle(ChatFormatting.GREEN));
+                                    net.zootycoon.network.ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.rating_up", "zootycoon.toast.rating.debug_set", 1, (int) Math.round(newStar * 20));
+                                    return 1;
+                                }
+                                return 0;
+                            }))
+                    )
             );
 
             // 3. /zootycoon command tree
@@ -183,6 +207,29 @@ public class StudioDimensionManager {
                         }
                         return 0;
                     }))
+                    .then(Commands.literal("rating")
+                            .executes(ctx -> {
+                                ServerPlayer player = ctx.getSource().getPlayer();
+                                if (player != null) {
+                                    double star = net.zootycoon.economy.ZooRatingManager.get(player.server).getStarRating(player.getUUID());
+                                    int raw = net.zootycoon.economy.ZooRatingManager.get(player.server).getRating(player.getUUID());
+                                    player.sendSystemMessage(Component.literal(String.format("Rating Kebun Binatang: %.1f Bintang (Skor: %d/100)", star, raw)).withStyle(ChatFormatting.GOLD));
+                                    return 1;
+                                }
+                                return 0;
+                            })
+                            .then(Commands.argument("bintang", DoubleArgumentType.doubleArg(0.0, 5.0)).executes(ctx -> {
+                                ServerPlayer player = ctx.getSource().getPlayer();
+                                if (player != null) {
+                                    double newStar = DoubleArgumentType.getDouble(ctx, "bintang");
+                                    net.zootycoon.economy.ZooRatingManager.get(player.server).setStarRating(player.getUUID(), newStar, player);
+                                    player.sendSystemMessage(Component.literal(String.format("Rating Kebun Binatang berhasil diatur ke %.1f Bintang!", newStar)).withStyle(ChatFormatting.GREEN));
+                                    net.zootycoon.network.ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.rating_up", "zootycoon.toast.rating.debug_set", 1, (int) Math.round(newStar * 20));
+                                    return 1;
+                                }
+                                return 0;
+                            }))
+                    )
             );
 
             // 4. Command: /kandang [nama kandang] -> Save design into "enclosures"

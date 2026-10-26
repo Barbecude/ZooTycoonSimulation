@@ -238,6 +238,13 @@ private static final String[] NAMES = new String[]{
         if (this.level().isClientSide()) return;
         ServerLevel sLevel = (ServerLevel) this.level();
 
+        if (this.ownerUuid != null && net.zootycoon.economy.ZooStaffManager.get(sLevel).areStaffOnStrike(this.ownerUuid)) {
+            if (this.tickCount % 60 == 0) {
+                sLevel.sendParticles(ParticleTypes.ANGRY_VILLAGER, this.getX(), this.getY() + 1.2D, this.getZ(), 1, 0.1, 0.1, 0.1, 0.0);
+            }
+            return;
+        }
+
         if (actionCooldown > 0) actionCooldown--;
 
         // Temporary dirt expiration countdown

@@ -716,7 +716,7 @@ public class ZooNetworkPayloads {
     }
 
     // 20. Open Cashier Screen Payload (S2C)
-    public record OpenCashierScreenPayload(int entityId, String currentRole, String cashierName, List<ItemStack> stockItems, boolean isZooOpen) implements CustomPacketPayload {
+    public record OpenCashierScreenPayload(int entityId, String currentRole, String cashierName, List<ItemStack> stockItems, boolean isZooOpen, int ticketPrice) implements CustomPacketPayload {
         public static final CustomPacketPayload.Type<OpenCashierScreenPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("open_cashier_screen"));
         public static final StreamCodec<FriendlyByteBuf, OpenCashierScreenPayload> CODEC = CustomPacketPayload.codec(
                 (payload, buf) -> {
@@ -724,6 +724,7 @@ public class ZooNetworkPayloads {
                     buf.writeUtf(payload.currentRole != null ? payload.currentRole : "UNASSIGNED");
                     buf.writeUtf(payload.cashierName != null ? payload.cashierName : "");
                     buf.writeBoolean(payload.isZooOpen);
+                    buf.writeInt(payload.ticketPrice);
                     List<ItemStack> items = payload.stockItems != null ? payload.stockItems : List.of();
                     buf.writeInt(items.size());
                     for (ItemStack st : items) {
@@ -742,6 +743,7 @@ public class ZooNetworkPayloads {
                     String role = buf.readUtf();
                     String name = buf.readUtf();
                     boolean isZooOpen = buf.readBoolean();
+                    int ticketPrice = buf.readInt();
                     int size = buf.readInt();
                     List<ItemStack> items = new ArrayList<>(size);
                     for (int i = 0; i < size; i++) {
@@ -758,7 +760,7 @@ public class ZooNetworkPayloads {
                             }
                         }
                     }
-                    return new OpenCashierScreenPayload(entityId, role, name, items, isZooOpen);
+                    return new OpenCashierScreenPayload(entityId, role, name, items, isZooOpen, ticketPrice);
                 }
         );
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
@@ -811,6 +813,19 @@ public class ZooNetworkPayloads {
         public static final StreamCodec<FriendlyByteBuf, ToggleZooOpenPayload> CODEC = CustomPacketPayload.codec(
                 (payload, buf) -> buf.writeInt(payload.entityId),
                 buf -> new ToggleZooOpenPayload(buf.readInt())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 21e. Set Ticket Price Payload (C2S)
+    public record SetTicketPricePayload(int entityId, int price) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<SetTicketPricePayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("set_ticket_price"));
+        public static final StreamCodec<FriendlyByteBuf, SetTicketPricePayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeInt(payload.entityId);
+                    buf.writeInt(payload.price);
+                },
+                buf -> new SetTicketPricePayload(buf.readInt(), buf.readInt())
         );
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
@@ -1098,6 +1113,7 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playC2S().register(CashierSlotClickPayload.TYPE, CashierSlotClickPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RotateCashierPayload.TYPE, RotateCashierPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ToggleZooOpenPayload.TYPE, ToggleZooOpenPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPricePayload.CODEC);
         PayloadTypeRegistry.playC2S().register(AssignZookeeperPayload.TYPE, AssignZookeeperPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SelectFeedingTroughAnimalPayload.TYPE, SelectFeedingTroughAnimalPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ClearFeedingTroughAnimalPayload.TYPE, ClearFeedingTroughAnimalPayload.CODEC);
@@ -1624,6 +1640,28 @@ public class ZooNetworkPayloads {
                     player.playNotifySound(net.minecraft.sounds.SoundEvents.NOTE_BLOCK_BASS.value(), net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 0.8F);
                 }
 
+                if (ent instanceof net.zootycoon.entity.ZooCashierEntity cashier) {
+                    cashier.sendScreenToPlayer(player);
+                }
+            });
+        });
+
+        // Handler: Set Ticket Price from GUI
+        ServerPlayNetworking.registerGlobalReceiver(SetTicketPricePayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            net.minecraft.server.level.ServerLevel level = (net.minecraft.server.level.ServerLevel) player.level();
+            context.server().execute(() -> {
+                net.minecraft.world.entity.Entity ent = level.getEntity(payload.entityId());
+                ZooClaimManager claimManager = ZooClaimManager.get(level);
+                UUID ownerUuid = player.getUUID();
+                if (ent instanceof net.zootycoon.entity.ZooCashierEntity cashier) {
+                    var claim = claimManager.getClaimAt(cashier.blockPosition());
+                    if (claim.isPresent() && claim.get().getOwnerUuid() != null) {
+                        ownerUuid = claim.get().getOwnerUuid();
+                    }
+                }
+                int newPrice = Math.clamp(payload.price(), 0, 20);
+                claimManager.setTicketPrice(ownerUuid, newPrice);
                 if (ent instanceof net.zootycoon.entity.ZooCashierEntity cashier) {
                     cashier.sendScreenToPlayer(player);
                 }

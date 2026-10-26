@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ZooStaffManager {
     public static class StaffRecord {
-        public int builders = 1; // 1 free starter builder for every player
+        public int builders = 0; 
         public int zookeepers = 0;
         public int security = 0;
         public int cashiers = 0;
@@ -41,8 +41,15 @@ public class ZooStaffManager {
         }
     }
 
+    public static final int ZOOKEEPER_DAILY_WAGE = ZooEconomyEngine.ZOOKEEPER_DAILY_WAGE;
+    public static final int SECURITY_DAILY_WAGE = ZooEconomyEngine.SECURITY_DAILY_WAGE;
+    public static final int CASHIER_DAILY_WAGE = ZooEconomyEngine.CASHIER_DAILY_WAGE;
+    public static final int BUILDER_DAILY_WAGE = ZooEconomyEngine.BUILDER_DAILY_WAGE;
+
     private static ZooStaffManager instance;
     private final Map<UUID, StaffRecord> staffMap = new ConcurrentHashMap<>();
+    private final java.util.Set<UUID> staffOnStrike = java.util.Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final Map<UUID, Long> lastSalaryDayMap = new ConcurrentHashMap<>();
     private MinecraftServer server;
 
     public static synchronized ZooStaffManager get(ServerLevel level) {
@@ -66,6 +73,8 @@ public class ZooStaffManager {
     public static synchronized void reset() {
         if (instance != null) {
             instance.staffMap.clear();
+            instance.staffOnStrike.clear();
+            instance.lastSalaryDayMap.clear();
             instance.server = null;
             instance = null;
         }
@@ -100,6 +109,13 @@ public class ZooStaffManager {
                     }
                 }
             }
+            if (root.contains("staff_on_strike", Tag.TAG_LIST)) {
+                ListTag strikeList = root.getList("staff_on_strike", Tag.TAG_COMPOUND);
+                staffOnStrike.clear();
+                for (int i = 0; i < strikeList.size(); i++) {
+                    staffOnStrike.add(strikeList.getCompound(i).getUUID("player"));
+                }
+            }
             ZooTycoonMod.LOGGER.info("Loaded {} staff records from file.", staffMap.size());
         } catch (Exception e) {
             ZooTycoonMod.LOGGER.error("Failed to load staff records", e);
@@ -122,9 +138,106 @@ public class ZooStaffManager {
                 list.add(tag);
             }
             root.put("staff_records", list);
+
+            ListTag strikeList = new ListTag();
+            for (UUID id : staffOnStrike) {
+                CompoundTag ct = new CompoundTag();
+                ct.putUUID("player", id);
+                strikeList.add(ct);
+            }
+            root.put("staff_on_strike", strikeList);
+
             NbtIo.writeCompressed(root, path);
         } catch (Exception e) {
             ZooTycoonMod.LOGGER.error("Failed to save staff records", e);
+        }
+    }
+
+    public boolean areStaffOnStrike(UUID playerUuid) {
+        if (playerUuid == null) return false;
+        return staffOnStrike.contains(playerUuid);
+    }
+
+    public void setStaffOnStrike(UUID playerUuid, boolean strike) {
+        if (playerUuid == null) return;
+        if (strike) {
+            staffOnStrike.add(playerUuid);
+        } else {
+            staffOnStrike.remove(playerUuid);
+        }
+        saveToFile();
+    }
+
+    public int calculateDailyWage(UUID playerUuid) {
+        StaffRecord rec = getRecord(playerUuid);
+        return ZooEconomyEngine.calculateDailyWages(rec.zookeepers, rec.security, rec.cashiers);
+    }
+
+    public int getTotalStaffCount(UUID playerUuid) {
+        StaffRecord rec = getRecord(playerUuid);
+        return rec.builders + rec.zookeepers + rec.security + rec.cashiers;
+    }
+
+    public void processDailyWages(ServerLevel level) {
+        long dayTime = level.getDayTime() % 24000L;
+        if (dayTime < 1000L || dayTime > 1050L) {
+            return;
+        }
+
+        long currentDay = level.getDayTime() / 24000L;
+        ZooEconomyManager eco = ZooEconomyManager.get(level.getServer());
+
+        for (var entry : staffMap.entrySet()) {
+            UUID playerUuid = entry.getKey();
+            Long lastDay = lastSalaryDayMap.get(playerUuid);
+            if (lastDay != null && lastDay == currentDay) {
+                continue;
+            }
+            lastSalaryDayMap.put(playerUuid, currentDay);
+
+            int totalWage = calculateDailyWage(playerUuid);
+            int staffCount = getTotalStaffCount(playerUuid);
+            if (totalWage <= 0) {
+                setStaffOnStrike(playerUuid, false);
+                continue;
+            }
+
+            ServerPlayer player = level.getServer().getPlayerList().getPlayer(playerUuid);
+            int currentBal = eco.getBalance(playerUuid);
+
+            if (currentBal >= totalWage) {
+                eco.deductBalance(playerUuid, totalWage, player);
+                setStaffOnStrike(playerUuid, false);
+                if (player != null) {
+                    ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.info", "zootycoon.toast.salary.paid", 0, String.valueOf(totalWage), String.valueOf(staffCount));
+                }
+            } else {
+                setStaffOnStrike(playerUuid, true);
+                if (player != null) {
+                    ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.warning", "zootycoon.toast.salary.unpaid", 2);
+                }
+            }
+        }
+    }
+
+    public void checkStrikeResolutionOnDeposit(UUID playerUuid, ServerPlayer player) {
+        if (playerUuid == null || !areStaffOnStrike(playerUuid)) {
+            return;
+        }
+        int totalWage = calculateDailyWage(playerUuid);
+        if (totalWage <= 0) {
+            setStaffOnStrike(playerUuid, false);
+            return;
+        }
+        if (server == null) return;
+        ZooEconomyManager eco = ZooEconomyManager.get(server);
+        int currentBal = eco.getBalance(playerUuid);
+        if (currentBal >= totalWage) {
+            eco.deductBalance(playerUuid, totalWage, player);
+            setStaffOnStrike(playerUuid, false);
+            if (player != null) {
+                ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.toast.salary.resolved", 1);
+            }
         }
     }
 
@@ -150,13 +263,7 @@ public class ZooStaffManager {
 
     public boolean hireStaff(ServerPlayer player, String type) {
         StaffRecord rec = getRecord(player.getUUID());
-        int cost = switch (type.toLowerCase()) {
-            case "builder", "kuli" -> 15;
-            case "zookeeper" -> 25;
-            case "security", "satpam" -> 30;
-            case "cashier", "kasir" -> 20;
-            default -> 0;
-        };
+        int cost = ZooEconomyEngine.getStaffHiringCost(type);
 
         if (cost <= 0) return false;
 

@@ -87,6 +87,14 @@ public class ZooRatingManager {
         return ratings.getOrDefault(playerUuid, DEFAULT_RATING);
     }
 
+    public double getStarRating(UUID playerUuid) {
+        return Math.clamp(getRating(playerUuid) / 20.0D, 0.0D, 5.0D);
+    }
+
+    public void setStarRating(UUID playerUuid, double starRating, ServerPlayer player) {
+        setRating(playerUuid, (int) Math.round(starRating * 20.0D), player);
+    }
+
     public void setRating(UUID playerUuid, int rating, ServerPlayer player) {
         if (playerUuid == null) return;
         int clamped = Math.clamp(rating, MIN_RATING, MAX_RATING);

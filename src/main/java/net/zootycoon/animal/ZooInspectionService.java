@@ -143,6 +143,15 @@ public class ZooInspectionService {
         String habitatStatus = habitat.status().name();
         String habitatNeeds = habitat.encodePayloadString();
 
+        if (ZooAnimalHungerManager.isAnimalOvercrowded(animal)) {
+            String ocText = net.zootycoon.util.ZooTranslations.get("zootycoon.animal.overcrowded");
+            if (habitatNeeds.contains("unmet=")) {
+                habitatNeeds = habitatNeeds.replace("unmet=", "unmet=" + ocText + "|");
+            } else {
+                habitatNeeds += ";unmet=" + ocText;
+            }
+        }
+
         long timestamp = System.currentTimeMillis();
         InspectionPayloads.InspectionSnapshotPayload payload = new InspectionPayloads.InspectionSnapshotPayload(
                 animal.getId(),

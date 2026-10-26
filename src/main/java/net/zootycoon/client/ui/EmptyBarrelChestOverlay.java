@@ -51,25 +51,41 @@ public class EmptyBarrelChestOverlay {
     private static final int CARD_HEIGHT = 68;
     private static final int CARD_GAP = 5;
 
-    public record RawIngredientsTooltipData(List<ItemStack> ingredients) implements TooltipComponent {
+    public record RawIngredientsTooltipData(
+            String recipeName,
+            int totalEmeraldReward,
+            List<ItemStack> ingredients
+    ) implements TooltipComponent {
     }
 
     public static class RawIngredientsClientTooltip implements ClientTooltipComponent {
+        private final String recipeName;
+        private final int totalEmeraldReward;
         private final List<ItemStack> ingredients;
         private static final int ROW_HEIGHT = 14;
+        private static final int HEADER_HEIGHT = 16;
+        private static final ItemStack EMERALD_STACK = new ItemStack(net.minecraft.world.item.Items.EMERALD);
 
         public RawIngredientsClientTooltip(RawIngredientsTooltipData data) {
+            this.recipeName = data.recipeName();
+            this.totalEmeraldReward = data.totalEmeraldReward();
             this.ingredients = data.ingredients();
         }
 
         @Override
         public int getHeight() {
-            return ingredients.size() * ROW_HEIGHT + 2;
+            int headerH = (recipeName != null && !recipeName.isEmpty()) ? HEADER_HEIGHT : 0;
+            return headerH + ingredients.size() * ROW_HEIGHT + 2;
         }
 
         @Override
         public int getWidth(Font font) {
             int maxW = 0;
+            if (recipeName != null && !recipeName.isEmpty()) {
+                String rewardStr = "+" + totalEmeraldReward;
+                int headerW = font.width(recipeName) + 6 + font.width(rewardStr) + 2 + 13;
+                maxW = Math.max(maxW, headerW);
+            }
             for (ItemStack raw : ingredients) {
                 String text = raw.getCount() + "x " + raw.getHoverName().getString();
                 maxW = Math.max(maxW, 14 + font.width(text));
@@ -80,6 +96,30 @@ public class EmptyBarrelChestOverlay {
         @Override
         public void renderImage(Font font, int x, int y, GuiGraphics graphics) {
             int curY = y;
+            if (recipeName != null && !recipeName.isEmpty()) {
+                // Recipe Name
+                graphics.pose().pushPose();
+                graphics.pose().translate(0.0f, 0.0f, 400.0f);
+                graphics.drawString(font, recipeName, x, curY + 2, 0xFFFFFFFF, true);
+
+                // +Emerald Reward Text
+                int nameW = font.width(recipeName);
+                String rewardStr = "+" + totalEmeraldReward;
+                graphics.drawString(font, rewardStr, x + nameW + 5, curY + 2, 0xFF55FF55, true);
+                graphics.pose().popPose();
+
+                // Emerald Item Icon
+                int rewardW = font.width(rewardStr);
+                int emX = x + nameW + 5 + rewardW + 2;
+                graphics.pose().pushPose();
+                graphics.pose().translate(emX, curY, 400.0f);
+                graphics.pose().scale(0.75f, 0.75f, 1.0f);
+                graphics.renderFakeItem(EMERALD_STACK, 0, 0);
+                graphics.pose().popPose();
+
+                curY += HEADER_HEIGHT;
+            }
+
             for (ItemStack raw : ingredients) {
                 graphics.pose().pushPose();
                 graphics.pose().translate(x, curY - 1, 400.0f);
@@ -487,17 +527,25 @@ public class EmptyBarrelChestOverlay {
 
         // 5. Vanilla Tooltip with real food icons inline via TooltipComponent
         if (hoveredStack != null && hoveredDto != null) {
-            List<Component> lines = new ArrayList<>();
-            lines.add(hoveredStack.getHoverName());
             if ("CASHIER".equalsIgnoreCase(hoveredDto.staffType())) {
+                String menuName = hoveredStack.getHoverName().getString();
+                String role = (activeCategory != null && !activeCategory.isEmpty())
+                        ? activeCategory
+                        : (hoveredDto.subtitle().toLowerCase().contains("burger") ? "BURGER" : "DRINK");
+                int unitPrice = net.zootycoon.economy.ZooEconomyEngine.getFoodDrinkPrice(role, hoveredStack);
+                int totalUnits = Math.max(1, hoveredStack.getCount());
+                int totalReward = unitPrice * totalUnits;
+
                 graphics.renderTooltip(
                         font,
-                        lines,
-                        Optional.of(new RawIngredientsTooltipData(hoveredDto.rawIngredients())),
+                        List.of(),
+                        Optional.of(new RawIngredientsTooltipData(menuName, totalReward, hoveredDto.rawIngredients())),
                         mouseX,
                         mouseY
                 );
             } else {
+                List<Component> lines = new ArrayList<>();
+                lines.add(hoveredStack.getHoverName());
                 lines.add(Component.literal(ZooTranslations.get("zootycoon.warehouse.tooltip.zookeeper_food")).withStyle(ChatFormatting.GRAY));
                 graphics.renderTooltip(font, lines, Optional.empty(), mouseX, mouseY);
             }

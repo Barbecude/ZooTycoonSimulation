@@ -1,6 +1,7 @@
 package net.zootycoon.client.ui;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -14,6 +15,7 @@ import net.zootycoon.util.ZooTranslations;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class CashierDialogScreen extends EasyNpcDialogScreen {
 
@@ -21,7 +23,63 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
     private final String currentRole;
     private final List<ItemStack> stockItems = new ArrayList<>(ZooCashierEntity.STOCK_SLOTS);
     private boolean isZooOpen;
+    private int ticketPrice = 2;
     private ZooButton toggleZooBtn;
+    private final List<ZooButton> tierButtons = new ArrayList<>();
+    private float ticketInfoScroll = 0.0f;
+    private int ticketInfoMaxScroll = 0;
+    private boolean isDraggingTicketScroll = false;
+    private static final ItemStack EMERALD_ITEM_ICON = new ItemStack(net.minecraft.world.item.Items.EMERALD);
+
+    public record CashierPriceTooltipData(Component name, int price) implements net.minecraft.world.inventory.tooltip.TooltipComponent {}
+
+    public static class CashierPriceClientTooltip implements net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent {
+        private final Component name;
+        private final int price;
+        private static final ItemStack EMERALD_ICON = new ItemStack(net.minecraft.world.item.Items.EMERALD);
+
+        public CashierPriceClientTooltip(CashierPriceTooltipData data) {
+            this.name = data.name();
+            this.price = data.price();
+        }
+
+        @Override
+        public int getHeight() {
+            return 26;
+        }
+
+        @Override
+        public int getWidth(net.minecraft.client.gui.Font font) {
+            int w1 = font.width(name);
+            int w2 = font.width("Harga Jual: " + price) + 16;
+            return Math.max(w1, w2);
+        }
+
+        @Override
+        public void renderImage(net.minecraft.client.gui.Font font, int x, int y, GuiGraphics graphics) {
+            graphics.pose().pushPose();
+            graphics.pose().translate(0.0f, 0.0f, 400.0f);
+            graphics.drawString(font, name, x, y + 2, 0xFFFFFFFF, true);
+
+            String priceLabel = "Harga Jual: " + price;
+            graphics.drawString(font, priceLabel, x, y + 14, 0xFF55FF55, true);
+            int labelW = font.width(priceLabel);
+
+            graphics.pose().translate(x + labelW + 3, y + 10, 0.0f);
+            graphics.pose().scale(0.75f, 0.75f, 1.0f);
+            graphics.renderFakeItem(EMERALD_ICON, 0, 0);
+            graphics.pose().popPose();
+        }
+    }
+
+    public static void register() {
+        net.fabricmc.fabric.api.client.rendering.v1.TooltipComponentCallback.EVENT.register(data -> {
+            if (data instanceof CashierPriceTooltipData pData) {
+                return new CashierPriceClientTooltip(pData);
+            }
+            return null;
+        });
+    }
 
     // Layout coordinates for the 5 cashier stock slots and 36 player inventory slots
     private int stockStartX;
@@ -41,7 +99,7 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
     private double dragOriginX = 0;
     private double dragOriginY = 0;
 
-    public CashierDialogScreen(int entityId, String currentRole, String cashierName, List<ItemStack> initialStock, boolean isZooOpen) {
+    public CashierDialogScreen(int entityId, String currentRole, String cashierName, List<ItemStack> initialStock, boolean isZooOpen, int ticketPrice) {
         super(
                 Component.literal(cashierName.isEmpty() ? ZooTranslations.get("zootycoon.dialog.cashier.default_name") : cashierName),
                 Component.literal(cashierName.isEmpty() ? ZooTranslations.get("zootycoon.dialog.cashier.title") : cashierName),
@@ -52,11 +110,16 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
         this.entityId = entityId;
         this.currentRole = currentRole != null ? currentRole : "UNASSIGNED";
         this.isZooOpen = isZooOpen;
+        this.ticketPrice = Math.clamp(ticketPrice, 0, 20);
         updateStockItems(initialStock);
     }
 
+    public CashierDialogScreen(int entityId, String currentRole, String cashierName, List<ItemStack> initialStock, boolean isZooOpen) {
+        this(entityId, currentRole, cashierName, initialStock, isZooOpen, 2);
+    }
+
     public CashierDialogScreen(int entityId, String currentRole, String cashierName, List<ItemStack> initialStock) {
-        this(entityId, currentRole, cashierName, initialStock, false);
+        this(entityId, currentRole, cashierName, initialStock, false, 2);
     }
 
     public int getEntityId() {
@@ -65,6 +128,41 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
 
     public String getCurrentRole() {
         return this.currentRole;
+    }
+
+    public int getTicketPrice() {
+        return this.ticketPrice;
+    }
+
+    public void updateTicketPrice(int price) {
+        this.ticketPrice = Math.clamp(price, 0, 20);
+        updateTierButtonsStyle();
+    }
+
+    private void setTicketPrice(int newPrice) {
+        this.ticketPrice = Math.clamp(newPrice, 0, 20);
+        ClientPlayNetworking.send(new ZooNetworkPayloads.SetTicketPricePayload(this.entityId, this.ticketPrice));
+        updateTierButtonsStyle();
+    }
+
+    private void updateTierButtonsStyle() {
+        int[] tiers = net.zootycoon.economy.ZooEconomyEngine.TICKET_PRICE_TIERS;
+        for (int i = 0; i < tierButtons.size() && i < tiers.length; i++) {
+            if (tiers[i] == this.ticketPrice) {
+                tierButtons.get(i).asPrimary();
+            } else {
+                tierButtons.get(i).asSecondary();
+            }
+        }
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if ("TICKET".equalsIgnoreCase(this.currentRole) && ticketInfoMaxScroll > 0) {
+            ticketInfoScroll = (float) Math.clamp(ticketInfoScroll - (float) verticalAmount * 12.0f, 0, ticketInfoMaxScroll);
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
 
     public void updateZooOpenState(boolean isZooOpen) {
@@ -210,6 +308,38 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
             }).asPrimary();
             addRenderableWidget(closeBtn);
         } else if ("TICKET".equalsIgnoreCase(currentRole)) {
+            int bubbleH = getSpeechBubbleHeight();
+            int contentY = startY + 39 + bubbleH + 6;
+            int buttonsY = contentY + 2;
+
+            int[] tiers = net.zootycoon.economy.ZooEconomyEngine.TICKET_PRICE_TIERS;
+            this.tierButtons.clear();
+            int gap = 4;
+            int btnCount = tiers.length;
+            int gratisW = 48;
+            int otherW = (rightW - gratisW - (btnCount - 1) * gap) / (btnCount - 1);
+
+            int curBtnX = rightX;
+            for (int i = 0; i < btnCount; i++) {
+                int tierPrice = tiers[i];
+                int w = (i == 0) ? gratisW : otherW;
+                String label = (tierPrice == 0) ? "Gratis" : String.valueOf(tierPrice);
+                var btn = new ZooButton(curBtnX, buttonsY, w, 20, Component.literal(label), b -> {
+                    setTicketPrice(tierPrice);
+                });
+                if (tierPrice > 0) {
+                    btn.setItemIcon(EMERALD_ITEM_ICON).setIconAfter(true);
+                }
+                if (tierPrice == this.ticketPrice) {
+                    btn.asPrimary();
+                } else {
+                    btn.asSecondary();
+                }
+                this.tierButtons.add(btn);
+                addRenderableWidget(btn);
+                curBtnX += w + gap;
+            }
+
             // Role is TICKET: toggle open/close zoo button replaces "Selesai" button
             int btnH = 20;
             int closeY = startY + panelHeight - btnH - 8;
@@ -257,11 +387,77 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
         if (isStockRole()) {
             return 120;
         }
+        if ("TICKET".equalsIgnoreCase(currentRole)) {
+            return 96;
+        }
         return 48;
     }
 
     @Override
     protected void renderDialogContent(GuiGraphics graphics, int contentX, int contentY, int contentW, int contentH, int mouseX, int mouseY, float delta) {
+        if ("TICKET".equalsIgnoreCase(currentRole)) {
+            int cardY = contentY + 25;
+            int btnH = 20;
+            int closeY = startY + panelHeight - btnH - 8;
+            int cardH = Math.max(50, closeY - cardY - 6);
+            graphics.fill(contentX, cardY, contentX + contentW, cardY + cardH, 0xD012151D);
+            graphics.fill(contentX, cardY, contentX + contentW, cardY + 1, 0xFF2A3140);
+            graphics.fill(contentX, cardY + cardH - 1, contentX + contentW, cardY + cardH, 0xFF2A3140);
+            graphics.fill(contentX, cardY + 1, contentX + 1, cardY + cardH, 0xFF2A3140);
+            graphics.fill(contentX + contentW - 1, cardY, contentX + contentW, cardY + cardH, 0xFF2A3140);
+
+            double starRating = net.zootycoon.client.ZooTycoonClient.getClientStarRating();
+            var pred = net.zootycoon.economy.ZooEconomyEngine.getTicketPrediction(this.ticketPrice, starRating);
+
+            // Compute lines of advice wrapped to card width
+            var adviceLines = this.font.split(Component.literal(pred.advice()), contentW - 20);
+            int totalContentH = 14 + 13 + (adviceLines.size() * 11) + 4;
+            this.ticketInfoMaxScroll = Math.max(0, totalContentH - (cardH - 6));
+            this.ticketInfoScroll = Math.clamp(this.ticketInfoScroll, 0, this.ticketInfoMaxScroll);
+
+            graphics.enableScissor(contentX + 2, cardY + 2, contentX + contentW - 2, cardY + cardH - 2);
+            int curY = cardY + 5 - (int) this.ticketInfoScroll;
+
+            // Row 1: Selected Price + Emerald Icon
+            String valLabel = "Tiket: " + (this.ticketPrice == 0 ? "Gratis (Free Admission)" : String.valueOf(this.ticketPrice));
+            int valColor = this.ticketPrice == 0 ? 0xFF388BFD : 0xFF55FF55;
+            graphics.drawString(this.font, valLabel, contentX + 8, curY, valColor, false);
+            if (this.ticketPrice > 0) {
+                int labelW = this.font.width(valLabel);
+                graphics.pose().pushPose();
+                graphics.pose().translate(contentX + 8 + labelW + 2, curY - 2, 0.0f);
+                graphics.pose().scale(0.75f, 0.75f, 1.0f);
+                graphics.renderFakeItem(EMERALD_ITEM_ICON, 0, 0);
+                graphics.pose().popPose();
+            }
+            curY += 13;
+
+            // Row 2: Crowd Prediction
+            graphics.drawString(this.font, pred.crowdLevel(), contentX + 8, curY, pred.crowdColor(), false);
+            curY += 13;
+
+            // Row 3..N: Advice lines (scrollable)
+            for (var line : adviceLines) {
+                graphics.drawString(this.font, line, contentX + 8, curY, 0xFF94A3B8, false);
+                curY += 11;
+            }
+
+            graphics.disableScissor();
+
+            // Render scrollbar if scrollable
+            if (this.ticketInfoMaxScroll > 0) {
+                int trackX = contentX + contentW - 5;
+                int trackY = cardY + 3;
+                int trackH = cardH - 6;
+                graphics.fill(trackX, trackY, trackX + 3, trackY + trackH, 0xFF12151D);
+                int thumbH = Math.max(12, (int) ((float) trackH / totalContentH * trackH));
+                int thumbY = trackY + (int) ((this.ticketInfoScroll / this.ticketInfoMaxScroll) * (trackH - thumbH));
+                boolean scrollHover = mouseX >= trackX - 2 && mouseX <= trackX + 5 && mouseY >= trackY && mouseY <= trackY + trackH;
+                graphics.fill(trackX, thumbY, trackX + 3, thumbY + thumbH, (scrollHover || isDraggingTicketScroll) ? 0xFF94A3B8 : 0xFF475569);
+            }
+            return;
+        }
+
         if (!isStockRole()) {
             return;
         }
@@ -296,11 +492,32 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
             }
         }
 
-        // Price label next to the 5 stock slots
-        int priceLabelX = stockStartX + ZooCashierEntity.STOCK_SLOTS * (STOCK_SLOT_SIZE + STOCK_SLOT_GAP) + 4;
-        int basePrice = ZooCashierEntity.getItemPrice(currentRole, ItemStack.EMPTY);
-        String priceStr = ZooTranslations.get("zootycoon.dialog.cashier.price_label", basePrice);
-        graphics.drawString(this.font, priceStr, priceLabelX, stockStartY + 6, 0xFFA0AEC0, false);
+        // Price label next to the 5 stock slots depending on items currently in stock
+        int priceLabelX = stockStartX + ZooCashierEntity.STOCK_SLOTS * (STOCK_SLOT_SIZE + STOCK_SLOT_GAP) + 6;
+        int minPrice = Integer.MAX_VALUE;
+        int maxPrice = Integer.MIN_VALUE;
+        int validCount = 0;
+        for (ItemStack st : this.stockItems) {
+            if (st != null && !st.isEmpty() && ZooCashierEntity.isValidItemForRole(this.currentRole, st)) {
+                int p = ZooCashierEntity.getItemPrice(this.currentRole, st);
+                if (p < minPrice) minPrice = p;
+                if (p > maxPrice) maxPrice = p;
+                validCount++;
+            }
+        }
+
+        if (validCount > 0) {
+            String priceStr = (minPrice == maxPrice) ? ("Harga: " + minPrice) : ("Harga: " + minPrice + "-" + maxPrice);
+            graphics.drawString(this.font, priceStr, priceLabelX, stockStartY + 6, 0xFF55FF55, false);
+            int textW = this.font.width(priceStr);
+            graphics.pose().pushPose();
+            graphics.pose().translate(priceLabelX + textW + 2, stockStartY + 2, 0.0f);
+            graphics.pose().scale(0.75f, 0.75f, 1.0f);
+            graphics.renderFakeItem(EMERALD_ITEM_ICON, 0, 0);
+            graphics.pose().popPose();
+        } else {
+            graphics.drawString(this.font, "Harga: - (Stok Kosong)", priceLabelX, stockStartY + 6, 0xFFA0AEC0, false);
+        }
 
         // 2. Render Player Inventory Grid (3x9 main + 1x9 hotbar) so player can input items directly
         this.invStartX = contentX;
@@ -341,7 +558,18 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
                 graphics.pose().popPose();
             }
         } else if (!hoveredTooltipStack.isEmpty()) {
-            graphics.renderTooltip(this.font, hoveredTooltipStack, mouseX, mouseY);
+            if (ZooCashierEntity.isValidItemForRole(this.currentRole, hoveredTooltipStack)) {
+                int unitPrice = ZooCashierEntity.getItemPrice(this.currentRole, hoveredTooltipStack);
+                graphics.renderTooltip(
+                        this.font,
+                        List.of(),
+                        Optional.of(new CashierPriceTooltipData(hoveredTooltipStack.getHoverName(), unitPrice)),
+                        mouseX,
+                        mouseY
+                );
+            } else {
+                graphics.renderTooltip(this.font, hoveredTooltipStack, mouseX, mouseY);
+            }
         }
     }
 
@@ -403,6 +631,28 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if ("TICKET".equalsIgnoreCase(this.currentRole) && this.ticketInfoMaxScroll > 0 && button == 0) {
+            int rightX = startX + 114 + 14;
+            int rightW = panelWidth - (rightX - startX) - 12;
+            int bubbleH = getSpeechBubbleHeight();
+            int contentY = startY + 39 + bubbleH + 6;
+            int cardY = contentY + 25;
+            int btnH = 20;
+            int closeY = startY + panelHeight - btnH - 8;
+            int cardH = Math.max(50, closeY - cardY - 6);
+
+            int trackX = rightX + rightW - 5;
+            int trackY = cardY + 3;
+            int trackH = cardH - 6;
+
+            if (mouseX >= trackX - 2 && mouseX <= trackX + 6 && mouseY >= trackY && mouseY <= trackY + trackH) {
+                this.isDraggingTicketScroll = true;
+                float rel = (float) (mouseY - trackY) / (float) Math.max(1, trackH);
+                this.ticketInfoScroll = Math.clamp(rel * this.ticketInfoMaxScroll, 0.0f, (float) this.ticketInfoMaxScroll);
+                return true;
+            }
+        }
+
         if (isStockRole() && (button == 0 || button == 1)) {
             int cSlot = getCashierSlotAt(mouseX, mouseY);
             if (cSlot != -1) {
@@ -433,6 +683,21 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (this.isDraggingTicketScroll && this.ticketInfoMaxScroll > 0) {
+            int bubbleH = getSpeechBubbleHeight();
+            int contentY = startY + 39 + bubbleH + 6;
+            int cardY = contentY + 25;
+            int btnH = 20;
+            int closeY = startY + panelHeight - btnH - 8;
+            int cardH = Math.max(50, closeY - cardY - 6);
+
+            int trackY = cardY + 3;
+            int trackH = cardH - 6;
+            float rel = (float) (mouseY - trackY) / (float) Math.max(1, trackH);
+            this.ticketInfoScroll = Math.clamp(rel * this.ticketInfoMaxScroll, 0.0f, (float) this.ticketInfoMaxScroll);
+            return true;
+        }
+
         if (this.draggedPlayerSlot != -1) {
             double distSq = (mouseX - dragOriginX) * (mouseX - dragOriginX) + (mouseY - dragOriginY) * (mouseY - dragOriginY);
             if (distSq > 16.0D) {
@@ -445,6 +710,11 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (this.isDraggingTicketScroll) {
+            this.isDraggingTicketScroll = false;
+            return true;
+        }
+
         if (this.draggedPlayerSlot != -1) {
             int sourcePlayerSlot = this.draggedPlayerSlot;
             boolean single = (this.dragButton == 1);

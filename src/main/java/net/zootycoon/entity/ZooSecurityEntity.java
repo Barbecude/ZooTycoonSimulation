@@ -171,6 +171,15 @@ public class ZooSecurityEntity extends PathfinderMob {
                 }
             }
 
+            if (this.ownerUuid != null && net.zootycoon.economy.ZooStaffManager.get(sLevel).areStaffOnStrike(this.ownerUuid)) {
+                if (this.tickCount % 60 == 0) {
+                    sLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.ANGRY_VILLAGER, this.getX(), this.getY() + 1.2D, this.getZ(), 1, 0.1, 0.1, 0.1, 0.0);
+                }
+                this.setTarget(null);
+                this.getNavigation().stop();
+                return;
+            }
+
             // When not actively chasing a hunter/target, strictly stay inside the claimed zoo area
             if (getTarget() == null || !getTarget().isAlive()) {
                 net.minecraft.core.BlockPos currentPos = this.blockPosition();

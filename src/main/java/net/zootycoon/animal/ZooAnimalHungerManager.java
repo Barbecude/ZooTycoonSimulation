@@ -1,4 +1,4 @@
-package net.zootycoon.animal;
+ package net.zootycoon.animal;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ItemParticleOption;
@@ -202,6 +202,10 @@ public class ZooAnimalHungerManager {
         }
     }
 
+    public static boolean isAnimalOvercrowded(LivingEntity animal) {
+        return net.zootycoon.economy.ZooEconomyEngine.isAnimalOvercrowded(animal);
+    }
+
     public static void tickServer(ServerLevel level) {
         // Spyglass & Field Guide long-range scoping detection
         tickVanillaSpyglassScoping(level);
@@ -250,6 +254,20 @@ public class ZooAnimalHungerManager {
 
             // Universal Negative Minecraft Effects when stats drop to 0 or environment is uncomfortable
             applyNegativeStatEffects(level, animal, currentHunger, currentThirst, currentClean);
+
+            // Overcrowding detection & subtle stress particles
+            if (isAnimalOvercrowded(animal)) {
+                if (level.getGameTime() % 40 == 0) {
+                    level.sendParticles(ParticleTypes.SMOKE, animal.getX(), animal.getY() + animal.getBbHeight() + 0.2D, animal.getZ(), 2, 0.15, 0.1, 0.15, 0.01);
+                }
+                if (level.getGameTime() % net.zootycoon.economy.ZooEconomyEngine.OVERCROWDING_RATING_PENALTY_TICKS == 0) {
+                    UUID owner = getOwnerUuid(animal);
+                    if (owner != null && level.getServer() != null) {
+                        ServerPlayer sp = level.getServer().getPlayerList().getPlayer(owner);
+                        net.zootycoon.economy.ZooRatingManager.get(level.getServer()).deductRating(owner, net.zootycoon.economy.ZooEconomyEngine.OVERCROWDING_RATING_PENALTY, sp);
+                    }
+                }
+            }
 
             // Animal pathing to feeding trough and water source (ONLY registered animals)
             if (animal instanceof net.minecraft.world.entity.PathfinderMob pathfinderMob) {

@@ -61,7 +61,7 @@ public class ZooVisitorManager {
         }
 
         long currentTick = level.getGameTime();
-        if (currentTick - lastSpawnTick < 200) { // Check every 10 seconds
+        if (currentTick - lastSpawnTick < 100) { // Check every 5 seconds for responsive crowd dynamics
             return;
         }
         lastSpawnTick = currentTick;
@@ -116,10 +116,17 @@ public class ZooVisitorManager {
                     ZooVisitorEntity.class, zooArea, Entity::isAlive
             );
 
-            // Calculate visitor capacity based on zoo cashiers
-            int baseCapacity = 4;
-            int cashierBonus = allCashiers.size() * 3;
-            int maxCapacity = Math.min(20, baseCapacity + cashierBonus);
+            double starRating = net.zootycoon.economy.ZooRatingManager.get(level.getServer()).getStarRating(player.getUUID());
+            int expectedPrice = net.zootycoon.economy.ZooEconomyEngine.getExpectedTicketPrice(starRating);
+            int ticketPrice = claimManager.getTicketPrice(player.getUUID());
+
+            // Throttle spawning if tickets are overpriced for current rating
+            if (net.zootycoon.economy.ZooEconomyEngine.shouldThrottleSpawn(ticketPrice, expectedPrice, starRating, currentTick)) {
+                continue;
+            }
+
+            // Calculate visitor capacity based on zoo cashiers, ticket price, and star rating
+            int maxCapacity = net.zootycoon.economy.ZooEconomyEngine.calculateMaxVisitorCapacity(allCashiers.size(), starRating, ticketPrice);
 
             if (currentVisitors.size() >= maxCapacity) {
                 continue;
@@ -136,8 +143,9 @@ public class ZooVisitorManager {
                     visitor.getNavigation().moveTo(ticketCashier, 1.05D);
                 }
 
-                // 30% chance to spawn an accompanying child visitor
-                if (level.getRandom().nextFloat() < 0.30f && currentVisitors.size() + 1 < maxCapacity) {
+                // Chance to spawn an accompanying child visitor (higher during free admission)
+                float childChance = net.zootycoon.economy.ZooEconomyEngine.getChildSpawnChance(ticketPrice);
+                if (level.getRandom().nextFloat() < childChance && currentVisitors.size() + 1 < maxCapacity) {
                     Vec3 childVec = spawnVec.add(level.getRandom().nextDouble() - 0.5, 0, level.getRandom().nextDouble() - 0.5);
                     ZooVisitorEntity child = spawnVisitor(level, childVec, spawnPos);
                     if (child != null) {

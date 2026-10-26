@@ -9,7 +9,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.zootycoon.claim.ZooClaimManager;
 import net.zootycoon.construction.ConstructionManager;
-import net.zootycoon.economy.EconomyConfig;
 import net.zootycoon.item.ZooItems;
 import net.zootycoon.network.ZooNetworkPayloads;
 import net.zootycoon.schematic.ZooSchematicRegistry;
@@ -63,12 +62,15 @@ public class ZooTycoonMod implements ModInitializer {
                 net.zootycoon.claim.ZooClaimManager.tickServer(level);
                 net.zootycoon.hunter.ZooHunterManager.tickServer(level);
                 net.zootycoon.visitor.ZooVisitorManager.tickServer(level);
+                net.zootycoon.economy.ZooStaffManager.get(level).processDailyWages(level);
             }
             net.zootycoon.animal.ZooAnimalHungerManager.tickServer(level);
             if (level.getServer() != null) {
                 var eco = net.zootycoon.economy.ZooEconomyManager.get(level.getServer());
+                var staffMgr = net.zootycoon.economy.ZooStaffManager.get(level.getServer());
                 for (var player : level.players()) {
                     eco.absorbPlayerEmeralds(player);
+                    staffMgr.checkStrikeResolutionOnDeposit(player.getUUID(), player);
                 }
             }
         });

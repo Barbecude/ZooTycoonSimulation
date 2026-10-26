@@ -137,7 +137,7 @@ public class ZooEconomyManager {
         UUID uuid = player.getUUID();
         // Give starter emerald balance on first join if not recorded
         if (!balances.containsKey(uuid)) {
-            int starter = EconomyConfig.getStarterEmeralds();
+            int starter = ZooEconomyEngine.getStarterEmeralds();
             balances.put(uuid, starter);
             saveToFile();
             ServerPlayNetworking.send(player, new ZooNetworkPayloads.SyncEmeraldBalancePayload(starter, starter));

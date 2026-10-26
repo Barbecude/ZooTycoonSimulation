@@ -13,6 +13,7 @@ public class ZooClaim {
     private final BoundingBox box;
     private final ClaimTier tier;
     private final long createdAt;
+    private int ticketPrice = 2;
 
     public ZooClaim(UUID claimId, UUID ownerUuid, String ownerName, BoundingBox box, ClaimTier tier, long createdAt) {
         this.claimId = claimId;
@@ -21,6 +22,14 @@ public class ZooClaim {
         this.box = box;
         this.tier = tier;
         this.createdAt = createdAt;
+    }
+
+    public int getTicketPrice() {
+        return ticketPrice;
+    }
+
+    public void setTicketPrice(int ticketPrice) {
+        this.ticketPrice = Math.clamp(ticketPrice, 0, 20);
     }
 
     public static ZooClaim create(UUID ownerUuid, String ownerName, BlockPos center, ClaimTier tier) {
@@ -90,6 +99,7 @@ public class ZooClaim {
         tag.putInt("maxY", box.maxY());
         tag.putString("tier", tier.name());
         tag.putLong("createdAt", createdAt);
+        tag.putInt("ticketPrice", ticketPrice);
         return tag;
     }
 
@@ -106,7 +116,11 @@ public class ZooClaim {
         BoundingBox box = new BoundingBox(minX, minY, minZ, maxX, maxY, maxZ);
         ClaimTier tier = tag.contains("tier") ? ClaimTier.valueOf(tag.getString("tier")) : ClaimTier.TIER_1_SMALL;
         long createdAt = tag.contains("createdAt") ? tag.getLong("createdAt") : System.currentTimeMillis();
-        return new ZooClaim(claimId, ownerUuid, ownerName, box, tier, createdAt);
+        ZooClaim claim = new ZooClaim(claimId, ownerUuid, ownerName, box, tier, createdAt);
+        if (tag.contains("ticketPrice")) {
+            claim.setTicketPrice(tag.getInt("ticketPrice"));
+        }
+        return claim;
     }
 }
 
