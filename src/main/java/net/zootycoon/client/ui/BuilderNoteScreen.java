@@ -72,6 +72,34 @@ public class BuilderNoteScreen extends Screen {
     private float scrollOffset = 0.0f;
     private int maxScroll = 0;
 
+    public interface NoteDisplayRow {
+        int getHeight();
+    }
+
+    public static class SectionHeaderRow implements NoteDisplayRow {
+        public final String title;
+        public SectionHeaderRow(String title) {
+            this.title = title;
+        }
+        @Override
+        public int getHeight() {
+            return 16;
+        }
+    }
+
+    public static class ItemRow implements NoteDisplayRow {
+        public final NoteEntry entry;
+        public final int originalIndex;
+        public ItemRow(NoteEntry entry, int originalIndex) {
+            this.entry = entry;
+            this.originalIndex = originalIndex;
+        }
+        @Override
+        public int getHeight() {
+            return 22;
+        }
+    }
+
     public static class NoteEntry {
         public final Item item;
         public final String itemId;
@@ -90,6 +118,8 @@ public class BuilderNoteScreen extends Screen {
         Minecraft.getInstance().setScreen(new BuilderNoteScreen(stack, hand));
     }
 
+    private final List<NoteDisplayRow> displayRows = new ArrayList<>();
+
     public BuilderNoteScreen(ItemStack noteStack, InteractionHand hand) {
         super(Component.translatable("zootycoon.note.title"));
         this.noteStack = noteStack;
@@ -99,6 +129,7 @@ public class BuilderNoteScreen extends Screen {
 
     private void loadFromStack() {
         entries.clear();
+        displayRows.clear();
         CustomData cd = noteStack.get(DataComponents.CUSTOM_DATA);
         if (cd != null) {
             CompoundTag tag = cd.copyTag();
@@ -110,16 +141,24 @@ public class BuilderNoteScreen extends Screen {
             }
             if (tag.contains("Materials", 9)) {
                 ListTag list = tag.getList("Materials", 10);
+                String lastSection = null;
                 for (int i = 0; i < list.size(); i++) {
                     CompoundTag itemTag = list.getCompound(i);
                     String idStr = itemTag.getString("id");
                     int needed = itemTag.getInt("needed");
                     boolean checked = itemTag.getBoolean("checked");
+                    String section = itemTag.contains("section") ? itemTag.getString("section") : "";
 
                     ResourceLocation key = ResourceLocation.tryParse(idStr);
                     Item item = (key != null) ? BuiltInRegistries.ITEM.get(key) : Items.AIR;
                     if (item != null && item != Items.AIR) {
-                        entries.add(new NoteEntry(item, idStr, needed, checked));
+                        if (!section.isEmpty() && !section.equals(lastSection)) {
+                            displayRows.add(new SectionHeaderRow(section));
+                            lastSection = section;
+                        }
+                        NoteEntry entry = new NoteEntry(item, idStr, needed, checked);
+                        entries.add(entry);
+                        displayRows.add(new ItemRow(entry, i));
                     }
                 }
             }
@@ -179,12 +218,19 @@ public class BuilderNoteScreen extends Screen {
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
 
+    private int computeTotalContentHeight() {
+        int total = 0;
+        for (NoteDisplayRow row : displayRows) {
+            total += row.getHeight();
+        }
+        return total;
+    }
+
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == 0) {
             int listY = startY + 38;
             int listH = panelHeight - 66;
-            int rowH = 22;
 
             if (maxScroll > 0 && mouseX >= startX + panelWidth - 22 && mouseX <= startX + panelWidth - 14 && mouseY >= listY && mouseY <= listY + listH) {
                 float rel = (float) (mouseY - listY) / (float) listH;
@@ -193,15 +239,18 @@ public class BuilderNoteScreen extends Screen {
             }
 
             if (mouseX >= startX + 16 && mouseX <= startX + panelWidth - 18 && mouseY >= listY && mouseY <= listY + listH) {
-                for (int i = 0; i < entries.size(); i++) {
-                    int rowY = listY + (i * rowH) - (int) scrollOffset;
-                    if (mouseY >= rowY && mouseY <= rowY + rowH) {
-                        NoteEntry entry = entries.get(i);
-                        entry.checked = !entry.checked;
-                        Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
-                        saveAndSync(i, entry.checked);
-                        return true;
+                int curRowY = listY - (int) scrollOffset;
+                for (NoteDisplayRow dRow : displayRows) {
+                    int rowH = dRow.getHeight();
+                    if (mouseY >= curRowY && mouseY <= curRowY + rowH) {
+                        if (dRow instanceof ItemRow itemRow) {
+                            itemRow.entry.checked = !itemRow.entry.checked;
+                            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
+                            saveAndSync(itemRow.originalIndex, itemRow.entry.checked);
+                            return true;
+                        }
                     }
+                    curRowY += rowH;
                 }
             }
         }
@@ -255,9 +304,8 @@ public class BuilderNoteScreen extends Screen {
         // 4. Checklist content area
         int listY = startY + 38;
         int listH = panelHeight - 66;
-        int rowH = 22;
 
-        int totalContentH = entries.size() * rowH;
+        int totalContentH = computeTotalContentHeight();
         maxScroll = Math.max(0, totalContentH - listH);
         scrollOffset = Math.clamp(scrollOffset, 0, maxScroll);
 
@@ -265,77 +313,89 @@ public class BuilderNoteScreen extends Screen {
 
         graphics.enableScissor(startX + 16, listY, startX + panelWidth - 18, listY + listH);
 
-        if (entries.isEmpty()) {
+        if (displayRows.isEmpty()) {
             String emptyText = "Tidak ada daftar kebutuhan bahan.";
             int emptyW = font.width(emptyText);
             graphics.drawString(this.font, emptyText, startX + (panelWidth - emptyW) / 2, listY + 30, 0xFF7A6B5B, false);
         }
 
-        for (int i = 0; i < entries.size(); i++) {
-            NoteEntry entry = entries.get(i);
-            int rowY = listY + (i * rowH) - (int) scrollOffset;
+        int curRowY = listY - (int) scrollOffset;
+        for (int r = 0; r < displayRows.size(); r++) {
+            NoteDisplayRow dRow = displayRows.get(r);
+            int rowH = dRow.getHeight();
 
-            if (rowY + rowH < listY || rowY > listY + listH) {
-                continue;
+            if (curRowY + rowH >= listY && curRowY <= listY + listH) {
+                if (dRow instanceof SectionHeaderRow header) {
+                    int headerY = curRowY + 3;
+                    graphics.drawString(this.font, header.title, startX + 20, headerY, 0xFF5C381E, false);
+                    int textW = this.font.width(header.title);
+                    int lineX = startX + 22 + textW + 4;
+                    int lineEnd = startX + panelWidth - 22;
+                    if (lineEnd > lineX) {
+                        graphics.fill(lineX, headerY + 4, lineEnd, headerY + 5, 0x403A2410);
+                    }
+                } else if (dRow instanceof ItemRow itemRow) {
+                    NoteEntry entry = itemRow.entry;
+                    boolean isHovered = mouseX >= startX + 16 && mouseX <= startX + panelWidth - 20 && mouseY >= curRowY && mouseY <= curRowY + rowH;
+                    if (isHovered) {
+                        graphics.fill(startX + 18, curRowY, startX + panelWidth - 22, curRowY + rowH - 1, 0x14000000);
+                    }
+
+                    // A. Checkbox box
+                    int boxX = startX + 20;
+                    int boxY = curRowY + 5;
+                    int boxSize = 12;
+
+                    graphics.fill(boxX, boxY, boxX + boxSize, boxY + boxSize, 0xFF5A432D);
+                    graphics.fill(boxX + 1, boxY + 1, boxX + boxSize - 1, boxY + boxSize - 1, entry.checked ? 0xFF2ECC71 : 0xFFF5EEDB);
+
+                    if (entry.checked) {
+                        graphics.fill(boxX + 3, boxY + 5, boxX + 5, boxY + 7, 0xFFFFFFFF);
+                        graphics.fill(boxX + 4, boxY + 6, boxX + 6, boxY + 8, 0xFFFFFFFF);
+                        graphics.fill(boxX + 5, boxY + 7, boxX + 7, boxY + 9, 0xFFFFFFFF);
+                        graphics.fill(boxX + 6, boxY + 5, boxX + 8, boxY + 7, 0xFFFFFFFF);
+                        graphics.fill(boxX + 7, boxY + 3, boxX + 9, boxY + 5, 0xFFFFFFFF);
+                    }
+
+                    // B. 3D Item / Block icon
+                    ItemStack iconStack = new ItemStack(entry.item);
+                    int iconX = startX + 36;
+                    int iconY = curRowY + 3;
+
+                    graphics.renderFakeItem(iconStack, iconX, iconY);
+                    graphics.renderItemDecorations(this.font, iconStack, iconX, iconY, "");
+
+                    if (mouseX >= iconX && mouseX <= iconX + 16 && mouseY >= iconY && mouseY <= iconY + 16) {
+                        hoveredItem = iconStack;
+                    }
+
+                    // C. Item Name & Ratio (e.g. Oak Planks — 19/8)
+                    int textX = startX + 56;
+                    int textY = curRowY + 7;
+                    int maxW = panelWidth - 56 - 22; // 146 px available
+
+                    int inInv = countPlayerItem(entry.item);
+                    int invColor = getRatioColor(inInv, entry.needed);
+                    int titleColor = entry.checked ? 0xFF8C7B6B : 0xFF2B1909;
+
+                    String countStr = inInv + "/" + entry.needed;
+                    String dash = " — ";
+
+                    int countW = this.font.width(countStr);
+                    int dashW = this.font.width(dash);
+                    int maxNameW = maxW - countW - dashW;
+
+                    String displayName = entry.item.getDescription().getString();
+                    if (this.font.width(displayName) > maxNameW) {
+                        displayName = this.font.plainSubstrByWidth(displayName, maxNameW - this.font.width("...")) + "...";
+                    }
+
+                    graphics.drawString(this.font, displayName + dash, textX, textY, titleColor, false);
+                    int countX = textX + this.font.width(displayName + dash);
+                    graphics.drawString(this.font, countStr, countX, textY, invColor, false);
+                }
             }
-
-            boolean isHovered = mouseX >= startX + 16 && mouseX <= startX + panelWidth - 20 && mouseY >= rowY && mouseY <= rowY + rowH;
-            if (isHovered) {
-                graphics.fill(startX + 18, rowY, startX + panelWidth - 22, rowY + rowH - 1, 0x14000000);
-            }
-
-            // A. Checkbox box
-            int boxX = startX + 20;
-            int boxY = rowY + 5;
-            int boxSize = 12;
-
-            graphics.fill(boxX, boxY, boxX + boxSize, boxY + boxSize, 0xFF5A432D);
-            graphics.fill(boxX + 1, boxY + 1, boxX + boxSize - 1, boxY + boxSize - 1, entry.checked ? 0xFF2ECC71 : 0xFFF5EEDB);
-
-            if (entry.checked) {
-                graphics.fill(boxX + 3, boxY + 5, boxX + 5, boxY + 7, 0xFFFFFFFF);
-                graphics.fill(boxX + 4, boxY + 6, boxX + 6, boxY + 8, 0xFFFFFFFF);
-                graphics.fill(boxX + 5, boxY + 7, boxX + 7, boxY + 9, 0xFFFFFFFF);
-                graphics.fill(boxX + 6, boxY + 5, boxX + 8, boxY + 7, 0xFFFFFFFF);
-                graphics.fill(boxX + 7, boxY + 3, boxX + 9, boxY + 5, 0xFFFFFFFF);
-            }
-
-            // B. 3D Item / Block icon
-            ItemStack iconStack = new ItemStack(entry.item);
-            int iconX = startX + 36;
-            int iconY = rowY + 3;
-
-            graphics.renderFakeItem(iconStack, iconX, iconY);
-            graphics.renderItemDecorations(this.font, iconStack, iconX, iconY, "");
-
-            if (mouseX >= iconX && mouseX <= iconX + 16 && mouseY >= iconY && mouseY <= iconY + 16) {
-                hoveredItem = iconStack;
-            }
-
-            // C. Item Name & Ratio (e.g. Oak Planks — 19/8)
-            int textX = startX + 56;
-            int textY = rowY + 7;
-            int maxW = panelWidth - 56 - 22; // 146 px available
-
-            int inInv = countPlayerItem(entry.item);
-            int invColor = getRatioColor(inInv, entry.needed);
-            int titleColor = entry.checked ? 0xFF8C7B6B : 0xFF2B1909;
-
-            String countStr = inInv + "/" + entry.needed;
-            String dash = " — ";
-
-            int countW = this.font.width(countStr);
-            int dashW = this.font.width(dash);
-            int maxNameW = maxW - countW - dashW;
-
-            String displayName = entry.item.getDescription().getString();
-            if (this.font.width(displayName) > maxNameW) {
-                displayName = this.font.plainSubstrByWidth(displayName, maxNameW - this.font.width("...")) + "...";
-            }
-
-            graphics.drawString(this.font, displayName + dash, textX, textY, titleColor, false);
-            int countX = textX + this.font.width(displayName + dash);
-            graphics.drawString(this.font, countStr, countX, textY, invColor, false);
+            curRowY += rowH;
         }
 
         graphics.disableScissor();

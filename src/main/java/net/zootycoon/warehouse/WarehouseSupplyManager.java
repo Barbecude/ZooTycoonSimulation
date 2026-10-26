@@ -128,12 +128,9 @@ public class WarehouseSupplyManager {
         List<WarehousePayloads.StaffRequestDto> dtos = new ArrayList<>();
 
         for (StaffSupplyRequest req : matching) {
-            // Request immediately disappears from UI as soon as the barrel is filled with sufficient items
-            if (canBarrelFulfill(sLevel, barrel, req)) {
-                if (req.readySinceGameTime < 0L) {
-                    req.readySinceGameTime = sLevel.getGameTime();
-                }
-                continue;
+            boolean allReady = canBarrelFulfill(sLevel, barrel, req);
+            if (allReady && req.readySinceGameTime < 0L) {
+                req.readySinceGameTime = sLevel.getGameTime();
             }
 
             List<ItemStack> targets = new ArrayList<>();
@@ -141,15 +138,34 @@ public class WarehouseSupplyManager {
                 targets.add(st.copy());
             }
 
-            List<ItemStack> raws = new ArrayList<>();
+            List<WarehousePayloads.MenuItemRequestDto> menuDtos = new ArrayList<>();
             int currentCount = 0;
             int requiredCount = 0;
 
             if ("CASHIER".equals(req.staffType)) {
+                for (ItemStack targetSt : req.targetItems) {
+                    Map<Item, Integer> singleRaws = WarehouseRecipeResolver.resolveRawIngredientsForSingleItem(sLevel, req.category, targetSt.getItem());
+                    List<WarehousePayloads.RawIngredientItemDto> rawDtos = new ArrayList<>();
+                    boolean itemReady = true;
+
+                    for (Map.Entry<Item, Integer> entry : singleRaws.entrySet()) {
+                        int needed = entry.getValue() * targetSt.getCount();
+                        int have = countItemInBarrel(barrel, entry.getKey());
+                        boolean inBarrel = (have >= needed);
+                        if (!inBarrel) {
+                            itemReady = false;
+                        }
+                        rawDtos.add(new WarehousePayloads.RawIngredientItemDto(new ItemStack(entry.getKey(), needed), inBarrel));
+                    }
+                    if (singleRaws.isEmpty()) {
+                        itemReady = false;
+                    }
+                    menuDtos.add(new WarehousePayloads.MenuItemRequestDto(targetSt.copy(), rawDtos, itemReady));
+                }
+
                 for (Map.Entry<Item, Integer> e : req.requiredRawIngredients.entrySet()) {
                     int need = e.getValue();
                     int have = countItemInBarrel(barrel, e.getKey());
-                    raws.add(new ItemStack(e.getKey(), need));
                     requiredCount += need;
                     currentCount += Math.min(have, need);
                 }
@@ -157,9 +173,6 @@ public class WarehouseSupplyManager {
                 requiredCount = ZOOKEEPER_REQUIRED_FOOD;
                 LivingEntity animal = resolveAnimal(sLevel, req.animalUuid);
                 currentCount = Math.min(requiredCount, countValidAnimalFoodInBarrel(barrel, animal, req.targetItems));
-                for (ItemStack foodIcon : req.targetItems) {
-                    raws.add(new ItemStack(foodIcon.getItem(), ZOOKEEPER_REQUIRED_FOOD));
-                }
             }
 
             dtos.add(new WarehousePayloads.StaffRequestDto(
@@ -169,9 +182,10 @@ public class WarehouseSupplyManager {
                     req.staffName,
                     req.subtitle,
                     targets,
-                    raws,
+                    menuDtos,
                     currentCount,
-                    requiredCount
+                    requiredCount,
+                    allReady
             ));
         }
 
@@ -536,6 +550,22 @@ public class WarehouseSupplyManager {
         return (ent instanceof LivingEntity living && living.isAlive()) ? living : null;
     }
 
+    public static void fulfillStaffRequestManually(ServerLevel sLevel, ServerPlayer player, BlockPos barrelPos, UUID staffUuid) {
+        if (sLevel == null || player == null || barrelPos == null || staffUuid == null) return;
+        if (player.blockPosition().distSqr(barrelPos) > 64.0D) return;
+        if (!(sLevel.getBlockEntity(barrelPos) instanceof EmptyBarrelBlockEntity barrel)) return;
+
+        StaffSupplyRequest req = ACTIVE_REQUESTS.get(staffUuid);
+        if (req != null && canBarrelFulfill(sLevel, barrel, req)) {
+            if (consumeAndFulfill(sLevel, barrel, req)) {
+                ACTIVE_REQUESTS.remove(req.staffUuid);
+                barrel.syncToViewingPlayers(sLevel);
+                sLevel.playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.PLAYERS, 0.9F, 1.0F);
+                ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.warehouse.fulfilled", 1);
+            }
+        }
+    }
+
     public static void giveRecipeNoteToPlayer(ServerLevel sLevel, ServerPlayer player, BlockPos barrelPos, UUID staffUuid) {
         if (sLevel.getBlockEntity(barrelPos) instanceof EmptyBarrelBlockEntity barrel) {
             refreshStaffRequests(sLevel, barrel, barrel.getCategory());
@@ -559,20 +589,27 @@ public class WarehouseSupplyManager {
             }
             tag.putString("SchematicName", menuTitle.toString());
 
-            for (Map.Entry<Item, Integer> entry : req.requiredRawIngredients.entrySet()) {
-                ResourceLocation key = BuiltInRegistries.ITEM.getKey(entry.getKey());
-                if (key != null) {
-                    CompoundTag itemTag = new CompoundTag();
-                    itemTag.putString("id", key.toString());
-                    itemTag.putInt("needed", entry.getValue());
-                    itemTag.putBoolean("checked", false);
-                    materialsList.add(itemTag);
+            // Distinct sections per menu item: Bahan [Menu 1] and Bahan [Menu 2]
+            for (ItemStack menuSt : req.targetItems) {
+                String sectionTitle = "Bahan " + menuSt.getHoverName().getString() + " (" + menuSt.getCount() + "x)";
+                Map<Item, Integer> singleRaws = WarehouseRecipeResolver.resolveRawIngredientsForSingleItem(sLevel, req.category, menuSt.getItem());
+                for (Map.Entry<Item, Integer> entry : singleRaws.entrySet()) {
+                    ResourceLocation key = BuiltInRegistries.ITEM.getKey(entry.getKey());
+                    if (key != null) {
+                        CompoundTag itemTag = new CompoundTag();
+                        itemTag.putString("id", key.toString());
+                        itemTag.putInt("needed", entry.getValue() * menuSt.getCount());
+                        itemTag.putBoolean("checked", false);
+                        itemTag.putString("section", sectionTitle);
+                        materialsList.add(itemTag);
+                    }
                 }
             }
         } else {
             String title = "Pakan " + (req.animalName != null ? req.animalName : "Satwa") + " (Min. 32)";
             tag.putString("SchematicName", title);
 
+            String sectionTitle = "Pakan " + (req.animalName != null ? req.animalName : "Satwa");
             for (ItemStack foodStack : req.targetItems) {
                 ResourceLocation key = BuiltInRegistries.ITEM.getKey(foodStack.getItem());
                 if (key != null) {
@@ -580,6 +617,7 @@ public class WarehouseSupplyManager {
                     itemTag.putString("id", key.toString());
                     itemTag.putInt("needed", ZOOKEEPER_REQUIRED_FOOD);
                     itemTag.putBoolean("checked", false);
+                    itemTag.putString("section", sectionTitle);
                     materialsList.add(itemTag);
                 }
             }

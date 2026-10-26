@@ -54,14 +54,14 @@ public class EmptyBarrelChestOverlay {
     public record RawIngredientsTooltipData(
             String recipeName,
             int totalEmeraldReward,
-            List<ItemStack> ingredients
+            List<WarehousePayloads.RawIngredientItemDto> ingredients
     ) implements TooltipComponent {
     }
 
     public static class RawIngredientsClientTooltip implements ClientTooltipComponent {
         private final String recipeName;
         private final int totalEmeraldReward;
-        private final List<ItemStack> ingredients;
+        private final List<WarehousePayloads.RawIngredientItemDto> ingredients;
         private static final int ROW_HEIGHT = 14;
         private static final int HEADER_HEIGHT = 16;
         private static final ItemStack EMERALD_STACK = new ItemStack(net.minecraft.world.item.Items.EMERALD);
@@ -86,9 +86,10 @@ public class EmptyBarrelChestOverlay {
                 int headerW = font.width(recipeName) + 6 + font.width(rewardStr) + 2 + 13;
                 maxW = Math.max(maxW, headerW);
             }
-            for (ItemStack raw : ingredients) {
-                String text = raw.getCount() + "x " + raw.getHoverName().getString();
-                maxW = Math.max(maxW, 14 + font.width(text));
+            for (WarehousePayloads.RawIngredientItemDto raw : ingredients) {
+                String text = raw.stack().getCount() + "x " + raw.stack().getHoverName().getString();
+                int rowW = 14 + font.width(text) + (raw.inBarrel() ? 10 : 0);
+                maxW = Math.max(maxW, rowW);
             }
             return maxW;
         }
@@ -120,17 +121,30 @@ public class EmptyBarrelChestOverlay {
                 curY += HEADER_HEIGHT;
             }
 
-            for (ItemStack raw : ingredients) {
+            for (WarehousePayloads.RawIngredientItemDto raw : ingredients) {
                 graphics.pose().pushPose();
                 graphics.pose().translate(x, curY - 1, 400.0f);
                 graphics.pose().scale(0.75f, 0.75f, 1.0f);
-                graphics.renderFakeItem(raw, 0, 0);
+                graphics.renderFakeItem(raw.stack(), 0, 0);
                 graphics.pose().popPose();
 
-                String text = raw.getCount() + "x " + raw.getHoverName().getString();
+                String text = raw.stack().getCount() + "x " + raw.stack().getHoverName().getString();
+                int textW = font.width(text);
                 graphics.pose().pushPose();
                 graphics.pose().translate(0.0f, 0.0f, 400.0f);
-                graphics.drawString(font, text, x + 14, curY + 1, 0xFFAAAAAA, true);
+                int textColor = raw.inBarrel() ? 0xFFFFFFFF : 0xFFAAAAAA;
+                graphics.drawString(font, text, x + 14, curY + 1, textColor, true);
+
+                // Pixelated green checkmark if ingredient is already in the empty barrel
+                if (raw.inBarrel()) {
+                    int chkX = x + 14 + textW + 4;
+                    int chkY = curY + 2;
+                    graphics.fill(chkX + 0, chkY + 2, chkX + 1, chkY + 4, 0xFF55FF55);
+                    graphics.fill(chkX + 1, chkY + 3, chkX + 2, chkY + 5, 0xFF55FF55);
+                    graphics.fill(chkX + 2, chkY + 2, chkX + 3, chkY + 4, 0xFF55FF55);
+                    graphics.fill(chkX + 3, chkY + 1, chkX + 4, chkY + 3, 0xFF55FF55);
+                    graphics.fill(chkX + 4, chkY + 0, chkX + 5, chkY + 2, 0xFF55FF55);
+                }
                 graphics.pose().popPose();
                 curY += ROW_HEIGHT;
             }
@@ -331,6 +345,8 @@ public class EmptyBarrelChestOverlay {
 
         ItemStack hoveredStack = null;
         WarehousePayloads.StaffRequestDto hoveredDto = null;
+        int hoveredVariantIndex = -1;
+        WarehousePayloads.StaffRequestDto hoveredCheckDto = null;
 
         graphics.enableScissor(panelX + 2, listY, panelX + panelW - 2, listY + listH);
 
@@ -410,10 +426,24 @@ public class EmptyBarrelChestOverlay {
                     graphics.renderFakeItem(st, curX + 1, slotY + 1);
                     graphics.renderItemDecorations(font, st, curX + 1, slotY + 1, String.valueOf(st.getCount()));
 
+                    // Check badge on top-right of slot if that menu item's ingredients are complete in the barrel!
+                    boolean itemReady = (v < req.menuItems().size()) && req.menuItems().get(v).isReadyInBarrel();
+                    if (itemReady) {
+                        int bX = curX + slotSize - 6;
+                        int bY = slotY - 1;
+                        graphics.fill(bX, bY, bX + 6, bY + 6, 0xFF163821);
+                        graphics.renderOutline(bX, bY, 6, 6, 0xFF38A169);
+                        graphics.fill(bX + 1, bY + 2, bX + 2, bY + 4, 0xFF55FF55);
+                        graphics.fill(bX + 2, bY + 3, bX + 3, bY + 5, 0xFF55FF55);
+                        graphics.fill(bX + 3, bY + 2, bX + 4, bY + 4, 0xFF55FF55);
+                        graphics.fill(bX + 4, bY + 1, bX + 5, bY + 3, 0xFF55FF55);
+                    }
+
                     if (mouseX >= curX && mouseX <= curX + slotSize && mouseY >= slotY && mouseY <= slotY + slotSize
                             && mouseY >= listY && mouseY <= listY + listH) {
                         hoveredStack = st;
                         hoveredDto = req;
+                        hoveredVariantIndex = v;
                     }
 
                     if (maxVariants == 1) {
@@ -487,28 +517,58 @@ public class EmptyBarrelChestOverlay {
                 }
             }
 
-            // Row 4 / 5: Ambil Resep / Ambil Catatan Button
-            int btnX = infoX;
+            // Row 4 / 5: Ambil Resep / Ambil Catatan Button + Square Checklist Delivery Button
             int btnY = actionBtnY;
-            int btnW = infoW;
             int btnH = 17;
+            int checkBtnSize = 17; // STRICTLY SQUARE 17x17
+            int btnGap = 3;
+            int ambilResepW = infoW - checkBtnSize - btnGap;
+            int ambilResepX = infoX;
+            int checkBtnX = infoX + ambilResepW + btnGap;
 
-            boolean btnHovered = mouseX >= btnX && mouseX <= btnX + btnW
+            boolean ambilHovered = mouseX >= ambilResepX && mouseX <= ambilResepX + ambilResepW
                     && mouseY >= btnY && mouseY <= btnY + btnH
                     && mouseY >= listY && mouseY <= listY + listH;
 
-            int bgColor = btnHovered ? 0xFF252D3D : 0xFF14171F;
-            int borderColor = btnHovered ? 0xFFFFFFFF : 0xFF3A4456;
-            int txtColor = btnHovered ? 0xFFFFFFFF : 0xFFD0D7DE;
+            int ambilBg = ambilHovered ? 0xFF252D3D : 0xFF14171F;
+            int ambilBorder = ambilHovered ? 0xFFFFFFFF : 0xFF3A4456;
+            int ambilTxt = ambilHovered ? 0xFFFFFFFF : 0xFFD0D7DE;
 
-            graphics.fill(btnX, btnY, btnX + btnW, btnY + btnH, bgColor);
-            graphics.renderOutline(btnX, btnY, btnW, btnH, borderColor);
+            graphics.fill(ambilResepX, btnY, ambilResepX + ambilResepW, btnY + btnH, ambilBg);
+            graphics.renderOutline(ambilResepX, btnY, ambilResepW, btnH, ambilBorder);
 
             String btnLabel = "CASHIER".equalsIgnoreCase(req.staffType())
                     ? ZooTranslations.get("zootycoon.warehouse.btn.take_recipe")
                     : ZooTranslations.get("zootycoon.warehouse.btn.take_food_note");
             int lblW = font.width(btnLabel);
-            graphics.drawString(font, btnLabel, btnX + (btnW - lblW) / 2, btnY + (btnH - 8) / 2, txtColor, false);
+            graphics.drawString(font, btnLabel, ambilResepX + (ambilResepW - lblW) / 2, btnY + (btnH - 8) / 2, ambilTxt, false);
+
+            // Square Checklist Button [✓]
+            boolean checkHovered = mouseX >= checkBtnX && mouseX <= checkBtnX + checkBtnSize
+                    && mouseY >= btnY && mouseY <= btnY + btnH
+                    && mouseY >= listY && mouseY <= listY + listH;
+
+            if (checkHovered) {
+                hoveredCheckDto = req;
+            }
+
+            boolean isReady = req.allReadyToFulfill();
+            int checkBg = isReady ? (checkHovered ? 0xFF1F4E2E : 0xFF163821) : (checkHovered ? 0xFF1A1F29 : 0xFF14171F);
+            int checkBorder = isReady ? (checkHovered ? 0xFF58D68D : 0xFF38A169) : (checkHovered ? 0xFF3F4A5C : 0xFF2D3748);
+            int checkColor = isReady ? (checkHovered ? 0xFFFFFFFF : 0xFF48BB78) : 0xFF4A5568;
+
+            graphics.fill(checkBtnX, btnY, checkBtnX + checkBtnSize, btnY + btnH, checkBg);
+            graphics.renderOutline(checkBtnX, btnY, checkBtnSize, btnH, checkBorder);
+
+            // Pixelated vanilla-style checkmark centered in 17x17 square
+            int cx = checkBtnX + 5;
+            int cy = btnY + 5;
+            graphics.fill(cx + 0, cy + 3, cx + 2, cy + 5, checkColor);
+            graphics.fill(cx + 1, cy + 4, cx + 3, cy + 6, checkColor);
+            graphics.fill(cx + 2, cy + 5, cx + 4, cy + 7, checkColor);
+            graphics.fill(cx + 3, cy + 4, cx + 5, cy + 6, checkColor);
+            graphics.fill(cx + 4, cy + 2, cx + 6, cy + 4, checkColor);
+            graphics.fill(cx + 5, cy + 0, cx + 7, cy + 2, checkColor);
         }
 
         graphics.disableScissor();
@@ -525,8 +585,13 @@ public class EmptyBarrelChestOverlay {
             graphics.fill(trackX, thumbY, trackX + 3, thumbY + thumbH, (scrollHover || isDraggingScrollbar) ? 0xFF94A3B8 : 0xFF475569);
         }
 
-        // 5. Vanilla Tooltip with real food icons inline via TooltipComponent
-        if (hoveredStack != null && hoveredDto != null) {
+        // 5. Tooltips
+        if (hoveredCheckDto != null) {
+            String checkTip = hoveredCheckDto.allReadyToFulfill()
+                    ? ("CASHIER".equalsIgnoreCase(hoveredCheckDto.staffType()) ? "Kirim Bahan Mentah ke Kasir" : "Kirim Pakan ke Zookeeper")
+                    : "Bahan Mentah di Barrel Belum Lengkap";
+            graphics.renderTooltip(font, Component.literal(checkTip), mouseX, mouseY);
+        } else if (hoveredStack != null && hoveredDto != null) {
             if ("CASHIER".equalsIgnoreCase(hoveredDto.staffType())) {
                 String menuName = hoveredStack.getHoverName().getString();
                 String role = (activeCategory != null && !activeCategory.isEmpty())
@@ -536,10 +601,15 @@ public class EmptyBarrelChestOverlay {
                 int totalUnits = Math.max(1, hoveredStack.getCount());
                 int totalReward = unitPrice * totalUnits;
 
+                List<WarehousePayloads.RawIngredientItemDto> raws = List.of();
+                if (hoveredVariantIndex >= 0 && hoveredVariantIndex < hoveredDto.menuItems().size()) {
+                    raws = hoveredDto.menuItems().get(hoveredVariantIndex).rawIngredients();
+                }
+
                 graphics.renderTooltip(
                         font,
                         List.of(),
-                        Optional.of(new RawIngredientsTooltipData(menuName, totalReward, hoveredDto.rawIngredients())),
+                        Optional.of(new RawIngredientsTooltipData(menuName, totalReward, raws)),
                         mouseX,
                         mouseY
                 );
@@ -629,12 +699,28 @@ public class EmptyBarrelChestOverlay {
                     }
                 }
 
-                int btnX = infoX;
                 int btnY = actionBtnY;
-                int btnW = infoW;
                 int btnH = 17;
+                int checkBtnSize = 17;
+                int btnGap = 3;
+                int ambilResepW = infoW - checkBtnSize - btnGap;
+                int ambilResepX = infoX;
+                int checkBtnX = infoX + ambilResepW + btnGap;
 
-                if (mouseX >= btnX && mouseX <= btnX + btnW && mouseY >= btnY && mouseY <= btnY + btnH) {
+                // Square Checklist Delivery Button [✓]
+                if (mouseX >= checkBtnX && mouseX <= checkBtnX + checkBtnSize && mouseY >= btnY && mouseY <= btnY + btnH) {
+                    if (req.allReadyToFulfill()) {
+                        Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                        BlockPos posToSend = activeBarrelPos != null ? activeBarrelPos : BlockPos.ZERO;
+                        ClientPlayNetworking.send(new WarehousePayloads.FulfillStaffRequestPayload(posToSend, req.staffUuid()));
+                    } else {
+                        Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.DISPENSER_FAIL, 1.2F));
+                    }
+                    return true;
+                }
+
+                // Ambil Resep / Ambil Catatan Button
+                if (mouseX >= ambilResepX && mouseX <= ambilResepX + ambilResepW && mouseY >= btnY && mouseY <= btnY + btnH) {
                     Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
                     BlockPos posToSend = activeBarrelPos != null ? activeBarrelPos : BlockPos.ZERO;
                     ClientPlayNetworking.send(new WarehousePayloads.RequestBarrelRecipeNotePayload(posToSend, req.staffUuid()));

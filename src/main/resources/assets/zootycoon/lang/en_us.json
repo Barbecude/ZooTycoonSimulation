@@ -621,5 +621,7 @@
   "zootycoon.warehouse.note.food_name": "Catatan Pakan: %s",
   "zootycoon.warehouse.note_taken": "Catatan kebutuhan bahan berhasil diambil!",
   "zootycoon.warehouse.tooltip.raw_needed": "Bahan Mentah Dibutuhkan:",
-  "zootycoon.warehouse.tooltip.zookeeper_food": "Bebas masukkan kombinasi pakan ini (Min. 32)"
+  "zootycoon.warehouse.tooltip.zookeeper_food": "Bebas masukkan kombinasi pakan ini (Min. 32)",
+  "zootycoon.warehouse.fulfilled": "Materials successfully delivered to staff!",
+  "zootycoon.warehouse.not_ready": "Raw materials in barrel not complete!"
 }

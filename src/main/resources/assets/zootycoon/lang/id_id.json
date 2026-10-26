@@ -280,7 +280,7 @@
   "zootycoon.toast.salary.paid": "Gaji staf harian: -%s Emerald (%s staf)",
   "zootycoon.toast.salary.unpaid": "Kas tidak cukup. Sebagian staf mogok kerja.",
   "zootycoon.toast.salary.resolved": "Gaji terbayar. Staf kembali bekerja.",
-  "zootycoon.animal.overcrowded": "Terlalu Ramai",
+  "zootycoon.animal.overcrowded": "Satwa stress karena terlalu ramai oleh pengunjung",
   "zootycoon.dialog.cashier.btn.done": "Selesai",
   "zootycoon.dialog.cashier.btn.open_zoo": "Buka Kebun Binatang",
   "zootycoon.dialog.cashier.btn.close_zoo": "Tutup Kebun Binatang",
@@ -625,5 +625,7 @@
   "zootycoon.warehouse.note.food_name": "Catatan Pakan: %s",
   "zootycoon.warehouse.note_taken": "Catatan kebutuhan bahan berhasil diambil!",
   "zootycoon.warehouse.tooltip.raw_needed": "Bahan Mentah Dibutuhkan:",
-  "zootycoon.warehouse.tooltip.zookeeper_food": "Bebas masukkan kombinasi pakan ini (Min. 32)"
+  "zootycoon.warehouse.tooltip.zookeeper_food": "Bebas masukkan kombinasi pakan ini (Min. 32)",
+  "zootycoon.warehouse.fulfilled": "Bahan berhasil dikirimkan ke kasir!",
+  "zootycoon.warehouse.not_ready": "Bahan mentah di barrel belum lengkap!"
 }

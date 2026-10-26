@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -229,6 +230,54 @@ public final class ZooEconomyEngine {
             }
         } catch (Throwable t) {
             return new TicketPrediction("Pengunjung: Normal", 0xFFA0AEC0, "Kondisi standar.");
+        }
+    }
+
+    /**
+     * Menghasilkan teks dialog natural dan santai dari kasir tiket ('Bos...')
+     * yang bereaksi langsung terhadap harga tiket yang dipilih serta rating kebun binatang.
+     */
+    public static Component getTicketCashierSpeech(int ticketPrice, double starRating, boolean isZooOpen) {
+        if (!isZooOpen) {
+            return Component.literal("Kebun binatang lagi TUTUP Bos! Loket belum melayani pengunjung. Klik tombol di bawah kalau mau buka kebun binatang.");
+        }
+
+        try {
+            int expected = getExpectedTicketPrice(starRating);
+
+            // 1. Tiket Gratis (0)
+            if (ticketPrice <= 0) {
+                if (starRating >= 4.0D) {
+                    return Component.literal(String.format(Locale.ROOT, "Tiket gratis Bos? Zoo kita udah bintang %.1f! Pengunjung bakal super membludak serbu kebun binatang, siap-siap kewalahan!", starRating));
+                }
+                return Component.literal("Tiket gratis Bos? Pengunjung bakal membludak serbu kebun binatang kita, tapi kita nggak dapet uang tiket masuk!");
+            }
+
+            // 2. Bintang 5 / World Class Zoo
+            if (starRating >= HIGH_RATING_PRICE_TOLERANCE_THRESHOLD) {
+                if (ticketPrice >= 80) {
+                    return Component.literal(String.format(Locale.ROOT, "Mantap Bos! Zoo kita udah bintang %.1f legendaris, pengunjung dengan senang hati bayar tiket VIP segini demi satwa kita!", starRating));
+                }
+                return Component.literal(String.format(Locale.ROOT, "Tiket %d Emerald murah banget untuk zoo bintang %.1f kita! Pengunjung bakal ramai dan puas banget.", ticketPrice, starRating));
+            }
+
+            // 3. Normal / Fair Price
+            if (ticketPrice <= expected) {
+                if (starRating >= 3.5D && ticketPrice <= 20) {
+                    return Component.literal(String.format(Locale.ROOT, "Kemurahan Bos! Rating kita udah %.1f bintang, sayang banget tiket cuma %d Emerald. Harusnya bisa dinaikkan!", starRating, ticketPrice));
+                }
+                return Component.literal(String.format(Locale.ROOT, "Harga pas Bos! Sesuai sama reputasi bintang %.1f kita, pengunjung bakal ramai dan tertib.", starRating));
+            }
+
+            // 4. Overpriced comparison
+            int diff = ticketPrice - expected;
+            if (diff <= 30) {
+                return Component.literal(String.format(Locale.ROOT, "Agak mahal nih Bos untuk rating bintang %.1f. Pengunjung mungkin agak mikir, pastikan fasilitas zoo kita terawat ya!", starRating));
+            } else {
+                return Component.literal(String.format(Locale.ROOT, "Kemahalan Bos! Rating aja cuma %.1f bintang, yang dateng nanti sedikit dan kalau kondisi zoo kurang bagus rating kita makin anjlok!", starRating));
+            }
+        } catch (Throwable t) {
+            return Component.literal("Loket tiket siap melayani pengunjung Bos!");
         }
     }
 

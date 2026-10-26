@@ -1660,7 +1660,7 @@ public class ZooNetworkPayloads {
                         ownerUuid = claim.get().getOwnerUuid();
                     }
                 }
-                int newPrice = Math.clamp(payload.price(), 0, 20);
+                int newPrice = Math.clamp(payload.price(), net.zootycoon.economy.ZooEconomyEngine.MIN_TICKET_PRICE, net.zootycoon.economy.ZooEconomyEngine.MAX_TICKET_PRICE);
                 claimManager.setTicketPrice(ownerUuid, newPrice);
                 if (ent instanceof net.zootycoon.entity.ZooCashierEntity cashier) {
                     cashier.sendScreenToPlayer(player);

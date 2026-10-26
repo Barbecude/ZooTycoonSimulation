@@ -22,6 +22,45 @@ public class WarehousePayloads {
 
     private static boolean registered = false;
 
+    public record RawIngredientItemDto(ItemStack stack, boolean inBarrel) {
+        public static void write(RegistryFriendlyByteBuf buf, RawIngredientItemDto dto) {
+            ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, dto.stack);
+            buf.writeBoolean(dto.inBarrel);
+        }
+
+        public static RawIngredientItemDto read(RegistryFriendlyByteBuf buf) {
+            ItemStack stack = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
+            boolean inBarrel = buf.readBoolean();
+            return new RawIngredientItemDto(stack, inBarrel);
+        }
+    }
+
+    public record MenuItemRequestDto(
+            ItemStack targetItem,
+            List<RawIngredientItemDto> rawIngredients,
+            boolean isReadyInBarrel
+    ) {
+        public static void write(RegistryFriendlyByteBuf buf, MenuItemRequestDto dto) {
+            ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, dto.targetItem);
+            buf.writeVarInt(dto.rawIngredients.size());
+            for (RawIngredientItemDto raw : dto.rawIngredients) {
+                RawIngredientItemDto.write(buf, raw);
+            }
+            buf.writeBoolean(dto.isReadyInBarrel);
+        }
+
+        public static MenuItemRequestDto read(RegistryFriendlyByteBuf buf) {
+            ItemStack target = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
+            int size = buf.readVarInt();
+            List<RawIngredientItemDto> raws = new ArrayList<>(size);
+            for (int i = 0; i < size; i++) {
+                raws.add(RawIngredientItemDto.read(buf));
+            }
+            boolean ready = buf.readBoolean();
+            return new MenuItemRequestDto(target, raws, ready);
+        }
+    }
+
     public record StaffRequestDto(
             UUID staffUuid,
             int staffEntityId,
@@ -29,9 +68,10 @@ public class WarehousePayloads {
             String staffName,
             String subtitle,
             List<ItemStack> targetItems,
-            List<ItemStack> rawIngredients,
+            List<MenuItemRequestDto> menuItems,
             int currentCount,
-            int requiredCount
+            int requiredCount,
+            boolean allReadyToFulfill
     ) {
         public static void write(RegistryFriendlyByteBuf buf, StaffRequestDto dto) {
             buf.writeUUID(dto.staffUuid);
@@ -45,13 +85,14 @@ public class WarehousePayloads {
                 ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, st);
             }
 
-            buf.writeVarInt(dto.rawIngredients.size());
-            for (ItemStack st : dto.rawIngredients) {
-                ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, st);
+            buf.writeVarInt(dto.menuItems.size());
+            for (MenuItemRequestDto mi : dto.menuItems) {
+                MenuItemRequestDto.write(buf, mi);
             }
 
             buf.writeVarInt(dto.currentCount);
             buf.writeVarInt(dto.requiredCount);
+            buf.writeBoolean(dto.allReadyToFulfill);
         }
 
         public static StaffRequestDto read(RegistryFriendlyByteBuf buf) {
@@ -67,15 +108,16 @@ public class WarehousePayloads {
                 targets.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(buf));
             }
 
-            int rawSize = buf.readVarInt();
-            List<ItemStack> raws = new ArrayList<>(rawSize);
-            for (int i = 0; i < rawSize; i++) {
-                raws.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(buf));
+            int menuSize = buf.readVarInt();
+            List<MenuItemRequestDto> menus = new ArrayList<>(menuSize);
+            for (int i = 0; i < menuSize; i++) {
+                menus.add(MenuItemRequestDto.read(buf));
             }
 
             int currentCount = buf.readVarInt();
             int requiredCount = buf.readVarInt();
-            return new StaffRequestDto(staffUuid, staffEntityId, staffType, staffName, subtitle, targets, raws, currentCount, requiredCount);
+            boolean allReady = buf.readBoolean();
+            return new StaffRequestDto(staffUuid, staffEntityId, staffType, staffName, subtitle, targets, menus, currentCount, requiredCount, allReady);
         }
     }
 
@@ -161,6 +203,24 @@ public class WarehousePayloads {
         }
     }
 
+    public record FulfillStaffRequestPayload(BlockPos pos, UUID staffUuid) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<FulfillStaffRequestPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("fulfill_staff_request"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, FulfillStaffRequestPayload> CODEC =
+                CustomPacketPayload.codec(
+                        (payload, buf) -> {
+                            buf.writeBlockPos(payload.pos);
+                            buf.writeUUID(payload.staffUuid);
+                        },
+                        buf -> new FulfillStaffRequestPayload(buf.readBlockPos(), buf.readUUID())
+                );
+
+        @Override
+        public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
     public static void registerCommon() {
         if (registered) return;
         registered = true;
@@ -170,6 +230,7 @@ public class WarehousePayloads {
 
         PayloadTypeRegistry.playC2S().register(SelectBarrelCategoryPayload.TYPE, SelectBarrelCategoryPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestBarrelRecipeNotePayload.TYPE, RequestBarrelRecipeNotePayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(FulfillStaffRequestPayload.TYPE, FulfillStaffRequestPayload.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(SelectBarrelCategoryPayload.TYPE, (payload, context) -> {
             ServerPlayer player = context.player();
@@ -192,6 +253,15 @@ public class WarehousePayloads {
             context.server().execute(() -> {
                 if (player.level() instanceof ServerLevel sLevel) {
                     WarehouseSupplyManager.giveRecipeNoteToPlayer(sLevel, player, payload.pos(), payload.staffUuid());
+                }
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(FulfillStaffRequestPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                if (player.level() instanceof ServerLevel sLevel) {
+                    WarehouseSupplyManager.fulfillStaffRequestManually(sLevel, player, payload.pos(), payload.staffUuid());
                 }
             });
         });
