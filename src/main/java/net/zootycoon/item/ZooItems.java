@@ -148,6 +148,46 @@ public class ZooItems {
             40, 5, 4, true
     );
 
+    public static final ResourceKey<Item> GREEN_TEA_LEAVES_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("green_tea_leaves")
+    );
+    public static final Item GREEN_TEA_LEAVES = new Item(
+            new Item.Properties().food(new FoodProperties.Builder().nutrition(1).saturationModifier(0.1f).build())
+    );
+
+    public static final ResourceKey<Item> MATCHA_LATTE_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("matcha_latte")
+    );
+    public static final Item MATCHA_LATTE = new MatchaLatteItem(
+            new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(6).saturationModifier(0.6f).build())
+    );
+
+    public static final ResourceKey<Item> CHEESE_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("cheese")
+    );
+    public static final Item CHEESE = new Item(
+            new Item.Properties().food(new FoodProperties.Builder().nutrition(2).saturationModifier(0.4f).build())
+    );
+
+    public static final ResourceKey<Item> CHEESEBURGER_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("cheeseburger")
+    );
+    public static final Item CHEESEBURGER = new Item(
+            new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(10).saturationModifier(0.8f).build())
+    );
+
+    public static final ResourceKey<Item> DELUXE_CHEESEBURGER_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("deluxe_cheeseburger")
+    );
+    public static final Item DELUXE_CHEESEBURGER = new Item(
+            new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(14).saturationModifier(0.9f).build())
+    );
+
     public static List<ItemStack> createJakesBuildToolsItems() {
         List<ItemStack> list = new ArrayList<>();
 
@@ -343,6 +383,11 @@ public class ZooItems {
         Registry.register(BuiltInRegistries.ITEM, GOLD_WATERING_CAN_KEY, GOLD_WATERING_CAN);
         Registry.register(BuiltInRegistries.ITEM, DIAMOND_WATERING_CAN_KEY, DIAMOND_WATERING_CAN);
         Registry.register(BuiltInRegistries.ITEM, NETHERITE_WATERING_CAN_KEY, NETHERITE_WATERING_CAN);
+        Registry.register(BuiltInRegistries.ITEM, GREEN_TEA_LEAVES_KEY, GREEN_TEA_LEAVES);
+        Registry.register(BuiltInRegistries.ITEM, MATCHA_LATTE_KEY, MATCHA_LATTE);
+        Registry.register(BuiltInRegistries.ITEM, CHEESE_KEY, CHEESE);
+        Registry.register(BuiltInRegistries.ITEM, CHEESEBURGER_KEY, CHEESEBURGER);
+        Registry.register(BuiltInRegistries.ITEM, DELUXE_CHEESEBURGER_KEY, DELUXE_CHEESEBURGER);
 
         ItemGroupEvents.modifyEntriesEvent(CREATIVE_TAB_KEY).register(entries -> {
             entries.accept(net.zootycoon.block.ZooBlocks.FEEDING_TROUGH_ITEM);
@@ -350,6 +395,11 @@ public class ZooItems {
             entries.accept(net.zootycoon.block.ZooBlocks.GACHA_MACHINE_ITEM);
             entries.accept(net.zootycoon.block.ZooBlocks.HEATER_ITEM);
             entries.accept(net.zootycoon.block.ZooBlocks.COOLER_ITEM);
+            entries.accept(GREEN_TEA_LEAVES);
+            entries.accept(MATCHA_LATTE);
+            entries.accept(CHEESE);
+            entries.accept(CHEESEBURGER);
+            entries.accept(DELUXE_CHEESEBURGER);
             entries.accept(MAGNIFYING_GLASS);
             entries.accept(BROOM);
             entries.accept(BUILDER_NOTE);

@@ -476,7 +476,7 @@ public final class ZooEconomyEngine {
                         String path = id.getPath().toLowerCase(Locale.ROOT);
 
                         // Tier 3: Burger Kompleks (60 - 80 Emerald)
-                        if (path.contains("loaded_hamburger")) return BURGER_TIER_3_PRICE;
+                        if (path.contains("deluxe_cheeseburger") || path.contains("loaded_hamburger")) return BURGER_TIER_3_PRICE;
                         if ("farmersdelight".equals(namespace) && path.contains("hamburger")) return BURGER_FARMERS_DELIGHT_PRICE;
                         if (path.contains("steak_and_potatoes")) return 60;
 

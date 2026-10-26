@@ -148,7 +148,9 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
     private void updateTierButtonsStyle() {
         int[] tiers = net.zootycoon.economy.ZooEconomyEngine.TICKET_PRICE_TIERS;
         for (int i = 0; i < tierButtons.size() && i < tiers.length; i++) {
-            if (tiers[i] == this.ticketPrice) {
+            boolean isSelected = (tiers[i] == this.ticketPrice);
+            tierButtons.get(i).setSelected(isSelected);
+            if (isSelected) {
                 tierButtons.get(i).asPrimary();
             } else {
                 tierButtons.get(i).asSecondary();
@@ -330,7 +332,9 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
                 if (tierPrice > 0) {
                     btn.setItemIcon(EMERALD_ITEM_ICON).setIconAfter(true);
                 }
-                if (tierPrice == this.ticketPrice) {
+                boolean isSelected = (tierPrice == this.ticketPrice);
+                btn.setSelected(isSelected);
+                if (isSelected) {
                     btn.asPrimary();
                 } else {
                     btn.asSecondary();
@@ -376,7 +380,7 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
 
     @Override
     protected int getSpeechBubbleHeight() {
-        if (isStockRole()) {
+        if (isStockRole() || "TICKET".equalsIgnoreCase(currentRole)) {
             return 32;
         }
         return 44;
@@ -388,7 +392,7 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
             return 120;
         }
         if ("TICKET".equalsIgnoreCase(currentRole)) {
-            return 96;
+            return 110;
         }
         return 48;
     }
@@ -409,8 +413,8 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
             double starRating = net.zootycoon.client.ZooTycoonClient.getClientStarRating();
             var pred = net.zootycoon.economy.ZooEconomyEngine.getTicketPrediction(this.ticketPrice, starRating);
 
-            // Compute lines of advice wrapped to card width
-            var adviceLines = this.font.split(Component.literal(pred.advice()), contentW - 20);
+            // Compute lines of advice wrapped to card width (safely padded from border & scrollbar)
+            var adviceLines = this.font.split(Component.literal(pred.advice()), contentW - 26);
             int totalContentH = 14 + 13 + (adviceLines.size() * 11) + 4;
             this.ticketInfoMaxScroll = Math.max(0, totalContentH - (cardH - 6));
             this.ticketInfoScroll = Math.clamp(this.ticketInfoScroll, 0, this.ticketInfoMaxScroll);

@@ -1,0 +1,31 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:bread"
+    },
+    {
+      "item": "minecraft:cooked_beef"
+    },
+    {
+      "tag": "c:cheeses"
+    },
+    [
+      {
+        "tag": "c:crops/tomato"
+      },
+      {
+        "tag": "c:tomatoes"
+      },
+      {
+        "item": "minecraft:carrot"
+      }
+    ]
+  ],
+  "result": {
+    "count": 1,
+    "id": "zootycoon:cheeseburger"
+  }
+}
+

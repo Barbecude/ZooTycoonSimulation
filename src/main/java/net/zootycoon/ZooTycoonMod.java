@@ -318,7 +318,45 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.animal.ZooInspectionService.onPlayerDisconnect(handler.getPlayer());
         });
 
+        // Knife on Leaves -> Green Tea Leaves drop event (20% chance, leaves > 3 blocks above ground)
+        net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents.AFTER.register((level, player, pos, state, blockEntity) -> {
+            if (level.isClientSide() || player == null || player.isCreative()) {
+                return;
+            }
+            if (state.is(net.minecraft.tags.BlockTags.LEAVES)) {
+                ItemStack held = player.getMainHandItem();
+                if (isKnife(held)) {
+                    // Ground distance check: ensure downward 1..3 blocks have no solid/ground blocks
+                    boolean nearGround = false;
+                    for (int dy = 1; dy <= 3; dy++) {
+                        var downPos = pos.below(dy);
+                        var downState = level.getBlockState(downPos);
+                        if (downState.is(net.minecraft.tags.BlockTags.DIRT)
+                                || downState.is(net.minecraft.tags.BlockTags.BASE_STONE_OVERWORLD)
+                                || downState.isSolidRender(level, downPos)) {
+                            nearGround = true;
+                            break;
+                        }
+                    }
+                    if (!nearGround && level.random.nextFloat() < 0.20F) {
+                        net.minecraft.world.level.block.Block.popResource(level, pos, new ItemStack(ZooItems.GREEN_TEA_LEAVES));
+                    }
+                }
+            }
+        });
+
         LOGGER.info("Zoo Tycoon Simulation initialized successfully.");
+    }
+
+    private static boolean isKnife(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        var tagKey1 = net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM, ResourceLocation.parse("c:tools/knives"));
+        var tagKey2 = net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM, ResourceLocation.parse("c:knives"));
+        if (stack.is(tagKey1) || stack.is(tagKey2)) {
+            return true;
+        }
+        var key = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        return key != null && key.getPath().toLowerCase(java.util.Locale.ROOT).contains("knife");
     }
 }
 

@@ -264,10 +264,9 @@ public class WarehouseRecipeResolver {
         if (item == Items.POTION || path.equals("water_bottle")) {
             return Items.GLASS_BOTTLE;
         }
-        // Cheese -> milk bottle or sugar/wheat
-        if (path.contains("cheese")) {
-            Item milkBottle = BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath("farmersdelight", "milk_bottle"));
-            if (milkBottle != Items.AIR) return milkBottle;
+        // Cheese -> zootycoon cheese or milk bottle
+        if (path.contains("cheese") && !path.contains("cheeseburger")) {
+            return net.zootycoon.item.ZooItems.CHEESE;
         }
         return item;
     }
@@ -278,7 +277,14 @@ public class WarehouseRecipeResolver {
 
         if ("BURGER".equalsIgnoreCase(role)) {
             rawMap.put(Items.WHEAT, 1);
-            if (path.contains("chicken")) {
+            if (path.contains("deluxe_cheeseburger")) {
+                rawMap.put(Items.BEEF, 2);
+                rawMap.put(Items.PORKCHOP, 1);
+                rawMap.put(net.zootycoon.item.ZooItems.CHEESE, 1);
+            } else if (path.contains("cheeseburger")) {
+                rawMap.put(Items.BEEF, 1);
+                rawMap.put(net.zootycoon.item.ZooItems.CHEESE, 1);
+            } else if (path.contains("chicken")) {
                 rawMap.put(Items.CHICKEN, 1);
             } else if (path.contains("pork") || path.contains("bacon") || path.contains("ham")) {
                 rawMap.put(Items.PORKCHOP, 1);
@@ -306,7 +312,9 @@ public class WarehouseRecipeResolver {
             // Drink fallback
             rawMap.put(Items.GLASS_BOTTLE, 1);
             rawMap.put(Items.SUGAR, 1);
-            if (path.contains("melon")) {
+            if (path.contains("matcha") || path.contains("green_tea")) {
+                rawMap.put(net.zootycoon.item.ZooItems.GREEN_TEA_LEAVES, 1);
+            } else if (path.contains("melon")) {
                 rawMap.put(Items.MELON_SLICE, 2);
             } else if (path.contains("glow")) {
                 rawMap.put(Items.GLOW_BERRIES, 2);
