@@ -1,8 +1,0 @@
-{
-  "parent": "shelf:block/shelf",
-  "textures": {
-    "bottom": "minecraft:block/diorite",
-    "top": "minecraft:block/diorite",
-    "side": "minecraft:block/diorite"
-  }
-}
