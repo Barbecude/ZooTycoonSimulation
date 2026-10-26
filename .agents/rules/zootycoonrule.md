@@ -79,3 +79,5 @@ Urutan eksekusi sederhana:
 5. Spawner pengunjung mengikuti rating Alasan: Jumlah dan frekuensi pengunjung otomatis bertambah jika rating zoo tinggi.
 
 6. Already builded biome di kategori terrain Alasan: Menghasilkan biome asli dari world generation dengan ukuran kustom.
+
+7. performance check TPS, thick

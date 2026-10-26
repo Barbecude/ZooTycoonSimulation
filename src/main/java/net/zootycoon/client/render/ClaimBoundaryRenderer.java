@@ -340,7 +340,7 @@ public class ClaimBoundaryRenderer {
                 }
             }
         }
-        int cost = (newBlocks == 0) ? 0 : Math.max(1, (int) Math.ceil(newBlocks / 4.0));
+        int cost = net.zootycoon.economy.ZooEconomyEngine.calculateClaimCost(newBlocks);
 
         cachedSelection = new CachedSelectionData(
                 pos1, pos2, claimOffsetX, claimOffsetZ, playerUuid, claimsHash,

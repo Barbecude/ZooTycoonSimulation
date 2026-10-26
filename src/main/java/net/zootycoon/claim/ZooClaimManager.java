@@ -136,13 +136,13 @@ public class ZooClaimManager {
     }
 
     public int getTicketPrice(UUID playerUuid) {
-        if (playerUuid == null) return 2;
-        return ticketPrices.getOrDefault(playerUuid, 2);
+        if (playerUuid == null) return net.zootycoon.economy.ZooEconomyEngine.DEFAULT_TICKET_PRICE;
+        return ticketPrices.getOrDefault(playerUuid, net.zootycoon.economy.ZooEconomyEngine.DEFAULT_TICKET_PRICE);
     }
 
     public void setTicketPrice(UUID playerUuid, int price) {
         if (playerUuid == null) return;
-        ticketPrices.put(playerUuid, Math.clamp(price, 0, 20));
+        ticketPrices.put(playerUuid, Math.clamp(price, net.zootycoon.economy.ZooEconomyEngine.MIN_TICKET_PRICE, net.zootycoon.economy.ZooEconomyEngine.MAX_TICKET_PRICE));
         // Also update individual claims
         for (ZooClaim claim : getClaimsForPlayer(playerUuid)) {
             claim.setTicketPrice(price);
@@ -276,8 +276,8 @@ public class ZooClaimManager {
             }
         }
 
-        // 3. 4 blocks = 1 emerald. If newBlocks == 0 (all inside owned claims) or creative mode, free!
-        int cost = (newBlocks == 0) ? 0 : Math.max(1, (int) Math.ceil(newBlocks / 4.0));
+        // 3. New block calculation via ZooEconomyEngine. If newBlocks == 0 (all inside owned claims) or creative mode, free!
+        int cost = net.zootycoon.economy.ZooEconomyEngine.calculateClaimCost(newBlocks);
 
         if (cost > 0 && !player.isCreative()) {
             if (!TransactionHelper.hasEnoughEmeralds(player, cost)) {

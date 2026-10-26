@@ -77,7 +77,7 @@ public class StaffRecruitmentTab {
                 mouseX, mouseY,
                 ZooTycoonMod.id("textures/gui/staff/builder_large.png"),
                 ZooTranslations.get("zootycoon.ui.staff.builder.title"),
-                15,
+                net.zootycoon.economy.ZooEconomyEngine.getStaffHiringCost("builder"),
                 List.of(
                         ZooTranslations.get("zootycoon.ui.staff.builder.stat1", ZooTycoonClient.clientBuilders),
                         ZooTranslations.get("zootycoon.ui.staff.builder.stat2", ZooTycoonClient.clientActiveBuilders),
@@ -92,7 +92,7 @@ public class StaffRecruitmentTab {
                 mouseX, mouseY,
                 ZooTycoonMod.id("textures/gui/staff/zookeeper_large.png"),
                 ZooTranslations.get("zootycoon.ui.staff.zookeeper.title"),
-                25,
+                net.zootycoon.economy.ZooEconomyEngine.getStaffHiringCost("zookeeper"),
                 List.of(
                         ZooTranslations.get("zootycoon.ui.staff.zookeeper.stat1", ZooTycoonClient.clientZookeepers),
                         ZooTranslations.get("zootycoon.ui.staff.zookeeper.stat2"),
@@ -107,7 +107,7 @@ public class StaffRecruitmentTab {
                 mouseX, mouseY,
                 ZooTycoonMod.id("textures/gui/staff/security_large.png"),
                 ZooTranslations.get("zootycoon.ui.staff.security.title"),
-                30,
+                net.zootycoon.economy.ZooEconomyEngine.getStaffHiringCost("security"),
                 List.of(
                         ZooTranslations.get("zootycoon.ui.staff.security.stat1", ZooTycoonClient.clientSecurity),
                         ZooTranslations.get("zootycoon.ui.staff.security.stat2"),
@@ -122,7 +122,7 @@ public class StaffRecruitmentTab {
                 mouseX, mouseY,
                 ZooTycoonMod.id("textures/gui/staff/cashier_large.png"),
                 ZooTranslations.get("zootycoon.ui.staff.cashier.title"),
-                20,
+                net.zootycoon.economy.ZooEconomyEngine.getStaffHiringCost("cashier"),
                 List.of(
                         ZooTranslations.get("zootycoon.ui.staff.cashier.stat1", ZooTycoonClient.clientCashiers),
                         ZooTranslations.get("zootycoon.ui.staff.cashier.stat2"),

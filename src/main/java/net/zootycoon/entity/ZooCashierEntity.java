@@ -688,7 +688,7 @@ public class ZooCashierEntity extends PathfinderMob {
 
     public void sendScreenToPlayer(ServerPlayer sp) {
         boolean open = false;
-        int ticketPrice = 2;
+        int ticketPrice = net.zootycoon.economy.ZooEconomyEngine.DEFAULT_TICKET_PRICE;
         if (this.level() instanceof ServerLevel sLevel) {
             ZooClaimManager claimManager = ZooClaimManager.get(sLevel);
             var targetClaim = claimManager.getClaimAt(this.blockPosition());

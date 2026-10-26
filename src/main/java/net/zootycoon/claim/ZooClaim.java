@@ -13,7 +13,7 @@ public class ZooClaim {
     private final BoundingBox box;
     private final ClaimTier tier;
     private final long createdAt;
-    private int ticketPrice = 2;
+    private int ticketPrice = net.zootycoon.economy.ZooEconomyEngine.DEFAULT_TICKET_PRICE;
 
     public ZooClaim(UUID claimId, UUID ownerUuid, String ownerName, BoundingBox box, ClaimTier tier, long createdAt) {
         this.claimId = claimId;
@@ -29,7 +29,7 @@ public class ZooClaim {
     }
 
     public void setTicketPrice(int ticketPrice) {
-        this.ticketPrice = Math.clamp(ticketPrice, 0, 20);
+        this.ticketPrice = Math.clamp(ticketPrice, net.zootycoon.economy.ZooEconomyEngine.MIN_TICKET_PRICE, net.zootycoon.economy.ZooEconomyEngine.MAX_TICKET_PRICE);
     }
 
     public static ZooClaim create(UUID ownerUuid, String ownerName, BlockPos center, ClaimTier tier) {

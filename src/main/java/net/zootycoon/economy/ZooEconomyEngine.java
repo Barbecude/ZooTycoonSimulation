@@ -44,18 +44,18 @@ public final class ZooEconomyEngine {
     // =========================================================================
 
     /** Saldo emerald awal untuk pemain baru */
-    public static int STARTER_EMERALDS = 32;
+    public static int STARTER_EMERALDS = 320;
 
     /** Biaya rekrut staf (Emerald sekali bayar saat spawn) */
-    public static int BUILDER_HIRING_COST = 15;
-    public static int ZOOKEEPER_HIRING_COST = 25;
-    public static int SECURITY_HIRING_COST = 30;
-    public static int CASHIER_HIRING_COST = 20;
+    public static int BUILDER_HIRING_COST = 150;
+    public static int ZOOKEEPER_HIRING_COST = 250;
+    public static int SECURITY_HIRING_COST = 300;
+    public static int CASHIER_HIRING_COST = 200;
 
     /** Gaji harian staf yang dipotong setiap fajar (06:00 in-game) */
-    public static int ZOOKEEPER_DAILY_WAGE = 10;
-    public static int SECURITY_DAILY_WAGE = 6;
-    public static int CASHIER_DAILY_WAGE = 4;
+    public static int ZOOKEEPER_DAILY_WAGE = 100;
+    public static int SECURITY_DAILY_WAGE = 60;
+    public static int CASHIER_DAILY_WAGE = 40;
     public static int BUILDER_DAILY_WAGE = 0; // Kuli dibayar per proyek bangunan (bukan harian)
 
     // =========================================================================
@@ -63,12 +63,12 @@ public final class ZooEconomyEngine {
     // =========================================================================
 
     /** 5 Tier Pilihan Harga Tiket Masuk di Kasir (Emerald) */
-    public static final int[] TICKET_PRICE_TIERS = {0, 2, 5, 8, 12};
+    public static final int[] TICKET_PRICE_TIERS = {0, 20, 50, 80, 120};
 
     /** Batas harga tiket masuk kebun binatang (Emerald) */
-    public static int DEFAULT_TICKET_PRICE = 2;
+    public static int DEFAULT_TICKET_PRICE = 20;
     public static int MIN_TICKET_PRICE = 0; // 0 = Tiket Gratis (Free Admission)
-    public static int MAX_TICKET_PRICE = 20;
+    public static int MAX_TICKET_PRICE = 200;
 
     /** Kapasitas dasar pengunjung */
     public static int BASE_VISITOR_CAPACITY = 4;
@@ -82,7 +82,7 @@ public final class ZooEconomyEngine {
     public static double NORMAL_TICKET_STAR_MULTIPLIER = 2.0D;
 
     /** Penalti kapasitas jika tiket kemahalan dibanding rating */
-    public static int OVERPRICED_CAPACITY_PENALTY_PER_EMERALD = 3;
+    public static double OVERPRICED_CAPACITY_PENALTY_PER_EMERALD = 0.3D;
     public static int MIN_OVERPRICED_CAPACITY = 2;
 
     /** Rasio spawn pengunjung anak-anak */
@@ -98,7 +98,7 @@ public final class ZooEconomyEngine {
 
     /** Peluang dasar calon pengunjung menolak tiket kemahalan */
     public static float BASE_TICKET_REJECT_CHANCE = 0.40F;
-    public static float TICKET_REJECT_CHANCE_PER_EXTRA_EMERALD = 0.20F;
+    public static float TICKET_REJECT_CHANCE_PER_EXTRA_EMERALD = 0.02F;
     public static float MAX_TICKET_REJECT_CHANCE = 0.85F;
 
     /**
@@ -116,15 +116,15 @@ public final class ZooEconomyEngine {
     // =========================================================================
 
     // Makanan (Burger - More Delight, Farmer's Delight, Vanilla)
-    public static int BURGER_TIER_1_PRICE = 3; // Simple burger (2 bahan)
-    public static int BURGER_TIER_2_PRICE = 5; // Cheeseburger, egg burger (3-4 bahan)
-    public static int BURGER_TIER_3_PRICE = 8; // Loaded hamburger More Delight (7 bahan)
-    public static int BURGER_FARMERS_DELIGHT_PRICE = 6; // Hamburger Farmer's Delight (5 bahan)
+    public static int BURGER_TIER_1_PRICE = 30; // Simple burger (2 bahan)
+    public static int BURGER_TIER_2_PRICE = 50; // Cheeseburger, egg burger (3-4 bahan)
+    public static int BURGER_TIER_3_PRICE = 80; // Loaded hamburger More Delight (7 bahan)
+    public static int BURGER_FARMERS_DELIGHT_PRICE = 60; // Hamburger Farmer's Delight (5 bahan)
 
     // Minuman (Drink & Ice Cream - Croptopia, Farm and Charm, Farmer's Delight)
-    public static int DRINK_TIER_1_PRICE = 2; // Jus buah Croptopia, teh/kopi dasar
-    public static int DRINK_TIER_2_PRICE = 4; // Seduhan herbal Farm and Charm, Cider & Cocoa FD, Smoothies
-    public static int DRINK_TIER_3_PRICE = 6; // Minuman fermentasi Croptopia (beer, wine, mead)
+    public static int DRINK_TIER_1_PRICE = 20; // Jus buah Croptopia, teh/kopi dasar
+    public static int DRINK_TIER_2_PRICE = 40; // Seduhan herbal Farm and Charm, Cider & Cocoa FD, Smoothies
+    public static int DRINK_TIER_3_PRICE = 60; // Minuman fermentasi Croptopia (beer, wine, mead)
 
     // =========================================================================
     // 5. KERAMAIAN SATWA (OVERCROWDING THRESHOLDS)
@@ -175,7 +175,7 @@ public final class ZooEconomyEngine {
 
             // Normal / Fair price
             if (ticketPrice <= expected) {
-                if (starRating >= 4.0D && ticketPrice <= 2) {
+                if (starRating >= 4.0D && ticketPrice <= 20) {
                     return new TicketPrediction(
                             "Pengunjung: Sangat Padat (Terlalu Murah!)",
                             0xFF55FF55,
@@ -193,7 +193,7 @@ public final class ZooEconomyEngine {
             int diff = ticketPrice - expected;
             if (starRating >= HIGH_RATING_PRICE_TOLERANCE_THRESHOLD) {
                 // World class 5-star zoo!
-                if (ticketPrice <= 8) {
+                if (ticketPrice <= 80) {
                     return new TicketPrediction(
                             "Pengunjung: Ramai & Bergengsi",
                             0xFF55FF55,
@@ -208,13 +208,13 @@ public final class ZooEconomyEngine {
                 }
             }
 
-            if (diff <= 2) {
+            if (diff <= 20) {
                 return new TicketPrediction(
                         "Pengunjung: Sedang (Agak Mahal)",
                         0xFFECC94B,
                         "Sebagian kecil pengunjung mungkin ragu. Pastikan fasilitas zoo terawat."
                 );
-            } else if (diff <= 5) {
+            } else if (diff <= 50) {
                 return new TicketPrediction(
                         "Pengunjung: Sepi (Kemahalan!)",
                         0xFFE53E3E,
@@ -242,18 +242,18 @@ public final class ZooEconomyEngine {
 
     /**
      * Menghitung ekspektasi harga wajar tiket berdasarkan rating bintang (0.0 - 5.0).
-     * Bintang 0.0 - 1.0 -> 1 Emerald
-     * Bintang 2.0 -> 2 Emerald
-     * Bintang 3.0 -> 3 Emerald
-     * Bintang 4.0 -> 4 Emerald
-     * Bintang 5.0 -> 5 Emerald
+     * Bintang 0.0 - 1.0 -> 10 Emerald
+     * Bintang 2.0 -> 20 Emerald
+     * Bintang 3.0 -> 30 Emerald
+     * Bintang 4.0 -> 40 Emerald
+     * Bintang 5.0 -> 50 Emerald
      */
     public static int getExpectedTicketPrice(double starRating) {
         try {
             int rounded = (int) Math.round(starRating);
-            return Math.clamp(rounded, 1, 5);
+            return Math.clamp(rounded * 10, 10, 50);
         } catch (Throwable t) {
-            return 2;
+            return 20;
         }
     }
 
@@ -278,7 +278,7 @@ public final class ZooEconomyEngine {
                     return base + (int) Math.round(starRating * NORMAL_TICKET_STAR_MULTIPLIER);
                 }
                 int diff = ticketPrice - expected;
-                return Math.max(MIN_OVERPRICED_CAPACITY, base + (int) Math.round(starRating * 1.5D) - (diff * OVERPRICED_CAPACITY_PENALTY_PER_EMERALD));
+                return Math.max(MIN_OVERPRICED_CAPACITY, base + (int) Math.round(starRating * 1.5D) - (int) Math.round(diff * OVERPRICED_CAPACITY_PENALTY_PER_EMERALD));
             }
         } catch (Throwable t) {
             return 10;
@@ -290,7 +290,7 @@ public final class ZooEconomyEngine {
      */
     public static boolean shouldThrottleSpawn(int ticketPrice, int expectedPrice, double starRating, long currentTick) {
         try {
-            if (starRating >= HIGH_RATING_PRICE_TOLERANCE_THRESHOLD && ticketPrice <= 12) {
+            if (starRating >= HIGH_RATING_PRICE_TOLERANCE_THRESHOLD && ticketPrice <= 120) {
                 return false;
             }
             if (ticketPrice > expectedPrice) {
@@ -404,7 +404,7 @@ public final class ZooEconomyEngine {
 
             // 2. Jika kebun binatang sudah bintang 5 (prestisius), pengunjung jauh lebih memaklumi harga
             if (starRating >= HIGH_RATING_PRICE_TOLERANCE_THRESHOLD) {
-                if (ticketPrice > expected + 4 && random.nextFloat() < 0.35F) {
+                if (ticketPrice > expected + 40 && random.nextFloat() < 0.35F) {
                     return TicketDecision.REJECT_EXPENSIVE;
                 }
                 return TicketDecision.PURCHASE;
@@ -451,7 +451,7 @@ public final class ZooEconomyEngine {
     }
 
     public static int getFoodDrinkPrice(ItemStack stack) {
-        if (stack == null || stack.isEmpty()) return 2;
+        if (stack == null || stack.isEmpty()) return 20;
         ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (id != null) {
             String path = id.getPath().toLowerCase(Locale.ROOT);
@@ -466,7 +466,7 @@ public final class ZooEconomyEngine {
      * Menghitung harga jual makanan atau minuman di kasir secara berjenjang.
      */
     public static int getFoodDrinkPrice(String role, ItemStack stack) {
-        if (role == null) return 2;
+        if (role == null) return 20;
         try {
             if ("BURGER".equalsIgnoreCase(role)) {
                 if (stack != null && !stack.isEmpty()) {
@@ -475,21 +475,21 @@ public final class ZooEconomyEngine {
                         String namespace = id.getNamespace().toLowerCase(Locale.ROOT);
                         String path = id.getPath().toLowerCase(Locale.ROOT);
 
-                        // Tier 3: Burger Kompleks (6 - 8 Emerald)
+                        // Tier 3: Burger Kompleks (60 - 80 Emerald)
                         if (path.contains("loaded_hamburger")) return BURGER_TIER_3_PRICE;
                         if ("farmersdelight".equals(namespace) && path.contains("hamburger")) return BURGER_FARMERS_DELIGHT_PRICE;
-                        if (path.contains("steak_and_potatoes")) return 6;
+                        if (path.contains("steak_and_potatoes")) return 60;
 
-                        // Tier 2: Burger Standar (4 - 5 Emerald)
+                        // Tier 2: Burger Standar (40 - 50 Emerald)
                         if (path.contains("hamburger_with_cheese") || path.contains("cheeseburger")) return BURGER_TIER_2_PRICE;
-                        if (path.contains("hamburger_with_egg") || path.contains("tofuburger") || path.contains("steak_sandwich")) return 4;
-                        if ("croptopia".equals(namespace) && path.contains("hamburger")) return 4;
+                        if (path.contains("hamburger_with_egg") || path.contains("tofuburger") || path.contains("steak_sandwich")) return 40;
+                        if ("croptopia".equals(namespace) && path.contains("hamburger")) return 40;
 
-                        // Tier 1: Simple Burger (3 Emerald)
+                        // Tier 1: Simple Burger (30 Emerald)
                         if (path.contains("simple_hamburger")) return BURGER_TIER_1_PRICE;
                     }
                     FoodProperties food = stack.get(DataComponents.FOOD);
-                    if (food != null && food.nutrition() >= 10) return 4;
+                    if (food != null && food.nutrition() >= 10) return 40;
                 }
                 return BURGER_TIER_1_PRICE;
             }
@@ -501,16 +501,16 @@ public final class ZooEconomyEngine {
                         String namespace = id.getNamespace().toLowerCase(Locale.ROOT);
                         String path = id.getPath().toLowerCase(Locale.ROOT);
 
-                        // Tier 3: Minuman Fermentasi / Mewah (6 Emerald)
+                        // Tier 3: Minuman Fermentasi / Mewah (60 Emerald)
                         if (path.contains("beer") || path.contains("wine") || path.contains("mead")) return DRINK_TIER_3_PRICE;
-                        if (path.contains("chocolate_milkshake")) return 5;
+                        if (path.contains("chocolate_milkshake")) return 50;
 
-                        // Tier 2: Teh Herbal Farm and Charm, Seduhan FD & Smoothies (4 Emerald)
+                        // Tier 2: Teh Herbal Farm and Charm, Seduhan FD & Smoothies (40 Emerald)
                         if ("farm_and_charm".equals(namespace) && path.contains("tea")) return DRINK_TIER_2_PRICE;
                         if ("farmersdelight".equals(namespace) && (path.contains("apple_cider") || path.contains("hot_cocoa"))) return DRINK_TIER_2_PRICE;
                         if (path.contains("smoothie") || path.contains("milkshake") || path.contains("latte")) return DRINK_TIER_2_PRICE;
 
-                        // Tier 1: Jus Buah Croptopia & Kopi/Teh Dasar (2 Emerald)
+                        // Tier 1: Jus Buah Croptopia & Kopi/Teh Dasar (20 Emerald)
                         if (path.contains("juice") || path.contains("tea") || path.contains("coffee") || path.contains("limeade") || path.contains("lemonade")) {
                             return DRINK_TIER_1_PRICE;
                         }
@@ -522,9 +522,9 @@ public final class ZooEconomyEngine {
             if ("TICKET".equalsIgnoreCase(role)) {
                 return DEFAULT_TICKET_PRICE;
             }
-            return 2;
+            return 20;
         } catch (Throwable t) {
-            return 2;
+            return 20;
         }
     }
 
@@ -561,16 +561,25 @@ public final class ZooEconomyEngine {
      */
     public static int calculateBuilderWage(int totalBlocks) {
         try {
-            if (totalBlocks <= 15) return 2;
-            if (totalBlocks <= 30) return 4;
-            if (totalBlocks <= 60) return 8;
-            if (totalBlocks <= 120) return 18;
-            if (totalBlocks <= 250) return 35;
-            if (totalBlocks <= 500) return 75;
-            return 75 + (int) Math.ceil((totalBlocks - 500) * 0.2D);
+            if (totalBlocks <= 15) return 20;
+            if (totalBlocks <= 30) return 40;
+            if (totalBlocks <= 60) return 80;
+            if (totalBlocks <= 120) return 180;
+            if (totalBlocks <= 250) return 350;
+            if (totalBlocks <= 500) return 750;
+            return 750 + (int) Math.ceil((totalBlocks - 500) * 2.0D);
         } catch (Throwable t) {
-            return 10;
+            return 100;
         }
+    }
+
+    /**
+     * Menghitung biaya pembelian blok baru untuk ekspansi klaim tanah (Emerald).
+     * Skala 1 digit 0 ekstra: 2.5 emerald per blok baru (sebelumnya 0.25 emerald per blok).
+     */
+    public static int calculateClaimCost(int newBlocks) {
+        if (newBlocks <= 0) return 0;
+        return Math.max(10, (int) Math.ceil((newBlocks * 10.0) / 4.0));
     }
 
     /**

@@ -41,10 +41,10 @@ public class ZooStaffManager {
         }
     }
 
-    public static final int ZOOKEEPER_DAILY_WAGE = ZooEconomyEngine.ZOOKEEPER_DAILY_WAGE;
-    public static final int SECURITY_DAILY_WAGE = ZooEconomyEngine.SECURITY_DAILY_WAGE;
-    public static final int CASHIER_DAILY_WAGE = ZooEconomyEngine.CASHIER_DAILY_WAGE;
-    public static final int BUILDER_DAILY_WAGE = ZooEconomyEngine.BUILDER_DAILY_WAGE;
+    public static int ZOOKEEPER_DAILY_WAGE = ZooEconomyEngine.ZOOKEEPER_DAILY_WAGE;
+    public static int SECURITY_DAILY_WAGE = ZooEconomyEngine.SECURITY_DAILY_WAGE;
+    public static int CASHIER_DAILY_WAGE = ZooEconomyEngine.CASHIER_DAILY_WAGE;
+    public static int BUILDER_DAILY_WAGE = ZooEconomyEngine.BUILDER_DAILY_WAGE;
 
     private static ZooStaffManager instance;
     private final Map<UUID, StaffRecord> staffMap = new ConcurrentHashMap<>();

@@ -23,7 +23,7 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
     private final String currentRole;
     private final List<ItemStack> stockItems = new ArrayList<>(ZooCashierEntity.STOCK_SLOTS);
     private boolean isZooOpen;
-    private int ticketPrice = 2;
+    private int ticketPrice = net.zootycoon.economy.ZooEconomyEngine.DEFAULT_TICKET_PRICE;
     private ZooButton toggleZooBtn;
     private final List<ZooButton> tierButtons = new ArrayList<>();
     private float ticketInfoScroll = 0.0f;
@@ -110,16 +110,16 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
         this.entityId = entityId;
         this.currentRole = currentRole != null ? currentRole : "UNASSIGNED";
         this.isZooOpen = isZooOpen;
-        this.ticketPrice = Math.clamp(ticketPrice, 0, 20);
+        this.ticketPrice = Math.clamp(ticketPrice, net.zootycoon.economy.ZooEconomyEngine.MIN_TICKET_PRICE, net.zootycoon.economy.ZooEconomyEngine.MAX_TICKET_PRICE);
         updateStockItems(initialStock);
     }
 
     public CashierDialogScreen(int entityId, String currentRole, String cashierName, List<ItemStack> initialStock, boolean isZooOpen) {
-        this(entityId, currentRole, cashierName, initialStock, isZooOpen, 2);
+        this(entityId, currentRole, cashierName, initialStock, isZooOpen, net.zootycoon.economy.ZooEconomyEngine.DEFAULT_TICKET_PRICE);
     }
 
     public CashierDialogScreen(int entityId, String currentRole, String cashierName, List<ItemStack> initialStock) {
-        this(entityId, currentRole, cashierName, initialStock, false, 2);
+        this(entityId, currentRole, cashierName, initialStock, false, net.zootycoon.economy.ZooEconomyEngine.DEFAULT_TICKET_PRICE);
     }
 
     public int getEntityId() {
@@ -135,12 +135,12 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
     }
 
     public void updateTicketPrice(int price) {
-        this.ticketPrice = Math.clamp(price, 0, 20);
+        this.ticketPrice = Math.clamp(price, net.zootycoon.economy.ZooEconomyEngine.MIN_TICKET_PRICE, net.zootycoon.economy.ZooEconomyEngine.MAX_TICKET_PRICE);
         updateTierButtonsStyle();
     }
 
     private void setTicketPrice(int newPrice) {
-        this.ticketPrice = Math.clamp(newPrice, 0, 20);
+        this.ticketPrice = Math.clamp(newPrice, net.zootycoon.economy.ZooEconomyEngine.MIN_TICKET_PRICE, net.zootycoon.economy.ZooEconomyEngine.MAX_TICKET_PRICE);
         ClientPlayNetworking.send(new ZooNetworkPayloads.SetTicketPricePayload(this.entityId, this.ticketPrice));
         updateTierButtonsStyle();
     }
