@@ -1431,6 +1431,10 @@ public class ZooVisitorEntity extends PathfinderMob {
             ZooCashierEntity best = null;
             double bestScore = Double.MAX_VALUE;
             for (ZooCashierEntity c : ticketCashiers) {
+                if (c.isInQueue(visitor.getUUID())) {
+                    best = c;
+                    break;
+                }
                 double score = Math.sqrt(visitor.distanceToSqr(c)) + c.getQueueSize() * 6.0D;
                 if (score < bestScore) {
                     bestScore = score;
@@ -1475,14 +1479,8 @@ public class ZooVisitorEntity extends PathfinderMob {
             visitor.getLookControl().setLookAt(targetTicketCashier, 30.0F, 30.0F);
 
             double distToCashierSq = visitor.distanceToSqr(targetTicketCashier);
-            BlockPos targetSlot;
-            int qIdx = -1;
-            if (distToCashierSq <= 14.0D * 14.0D) {
-                qIdx = targetTicketCashier.enqueueOrGetIndex(visitor.getUUID());
-                targetSlot = targetTicketCashier.getQueueSlotPos(qIdx);
-            } else {
-                targetSlot = targetTicketCashier.getQueueSlotPos(targetTicketCashier.getQueueSize());
-            }
+            int qIdx = targetTicketCashier.enqueueOrGetIndex(visitor.getUUID());
+            BlockPos targetSlot = targetTicketCashier.getQueueSlotPos(qIdx);
 
             if (qIdx != lastQueueIndex) {
                 lastQueueIndex = qIdx;
@@ -1644,16 +1642,10 @@ public class ZooVisitorEntity extends PathfinderMob {
             if (targetCashier == null) return;
             visitor.getLookControl().setLookAt(targetCashier, 30.0F, 30.0F);
 
-            double distToCashierSq = visitor.distanceToSqr(targetCashier);
-            BlockPos targetSlot;
-            if (distToCashierSq <= 12.0D * 12.0D) {
-                int qIdx = targetCashier.enqueueOrGetIndex(visitor.getUUID());
-                targetSlot = targetCashier.getQueueSlotPos(qIdx);
-                if (visitor.fomoCashier == targetCashier) {
-                    visitor.fomoCashier = null;
-                }
-            } else {
-                targetSlot = targetCashier.getQueueSlotPos(targetCashier.getQueueSize());
+            int qIdx = targetCashier.enqueueOrGetIndex(visitor.getUUID());
+            BlockPos targetSlot = targetCashier.getQueueSlotPos(qIdx);
+            if (visitor.fomoCashier == targetCashier) {
+                visitor.fomoCashier = null;
             }
 
             double dx = visitor.getX() - (targetSlot.getX() + 0.5D);

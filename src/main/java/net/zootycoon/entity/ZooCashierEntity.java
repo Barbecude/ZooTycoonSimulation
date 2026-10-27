@@ -176,6 +176,10 @@ public class ZooCashierEntity extends PathfinderMob {
         }
     }
 
+    public boolean isInQueue(UUID visitorUuid) {
+        return visitorUuid != null && customerQueue.contains(visitorUuid);
+    }
+
     public int getQueueSize() {
         return customerQueue.size();
     }

@@ -18,6 +18,7 @@ import net.zootycoon.entity.ZooEntities;
 import net.zootycoon.entity.ZooVisitorEntity;
 import net.zootycoon.network.ZooNetworkPayloads;
 
+import java.util.Comparator;
 import java.util.List;
 
 public class ZooVisitorManager {
@@ -132,25 +133,45 @@ public class ZooVisitorManager {
                 continue;
             }
 
-            // Pick a Ticket Booth cashier and compute spawn position 5 blocks OUTSIDE the claimed zoo area near it
-            ZooCashierEntity ticketCashier = ticketCashiers.get(level.getRandom().nextInt(ticketCashiers.size()));
-            BlockPos spawnPos = findOutsideSpawnNearTicketCashier(level, claims, ticketCashier);
+            // Pick the Ticket Booth cashier (prefer one with smaller queue to distribute crowds)
+            ZooCashierEntity ticketCashier = ticketCashiers.stream()
+                    .min(Comparator.comparingInt(ZooCashierEntity::getQueueSize))
+                    .orElse(ticketCashiers.get(level.getRandom().nextInt(ticketCashiers.size())));
+
+            int tailIndex = ticketCashier.getQueueSize();
+            BlockPos spawnPos = findQueueTailSpawnPos(level, claims, ticketCashier, tailIndex);
 
             if (spawnPos != null) {
                 Vec3 spawnVec = new Vec3(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5);
                 ZooVisitorEntity visitor = spawnVisitor(level, spawnVec, spawnPos);
                 if (visitor != null) {
-                    visitor.getNavigation().moveTo(ticketCashier, 1.05D);
+                    ticketCashier.enqueueOrGetIndex(visitor.getUUID());
+                    Direction facing = ticketCashier.getFacingDirection();
+                    float yaw = facing.getOpposite().toYRot();
+                    visitor.setYRot(yaw);
+                    visitor.setYHeadRot(yaw);
+                    visitor.setYBodyRot(yaw);
+                    visitor.lookAt(ticketCashier, 360.0F, 360.0F);
                 }
 
                 // Chance to spawn an accompanying child visitor (higher during free admission)
                 float childChance = net.zootycoon.economy.ZooEconomyEngine.getChildSpawnChance(ticketPrice);
                 if (level.getRandom().nextFloat() < childChance && currentVisitors.size() + 1 < maxCapacity) {
-                    Vec3 childVec = spawnVec.add(level.getRandom().nextDouble() - 0.5, 0, level.getRandom().nextDouble() - 0.5);
-                    ZooVisitorEntity child = spawnVisitor(level, childVec, spawnPos);
-                    if (child != null) {
-                        child.setChildVisitor(true);
-                        child.getNavigation().moveTo(ticketCashier, 1.05D);
+                    int childTailIndex = ticketCashier.getQueueSize();
+                    BlockPos childSpawnPos = findQueueTailSpawnPos(level, claims, ticketCashier, childTailIndex);
+                    if (childSpawnPos != null) {
+                        Vec3 childVec = new Vec3(childSpawnPos.getX() + 0.5, childSpawnPos.getY(), childSpawnPos.getZ() + 0.5);
+                        ZooVisitorEntity child = spawnVisitor(level, childVec, childSpawnPos);
+                        if (child != null) {
+                            child.setChildVisitor(true);
+                            ticketCashier.enqueueOrGetIndex(child.getUUID());
+                            Direction facing = ticketCashier.getFacingDirection();
+                            float yaw = facing.getOpposite().toYRot();
+                            child.setYRot(yaw);
+                            child.setYHeadRot(yaw);
+                            child.setYBodyRot(yaw);
+                            child.lookAt(ticketCashier, 360.0F, 360.0F);
+                        }
                     }
                 }
 
@@ -161,6 +182,59 @@ public class ZooVisitorManager {
                 }
             }
         }
+    }
+
+    /**
+     * Finds a walkable spawn position at the tail of the Ticket Cashier's queue line.
+     * Queue index 0 is 2 blocks in front of the cashier, index k is 2 + k blocks in front.
+     * Newly spawned visitors appear directly at the back of the line rather than in front.
+     */
+    private static BlockPos findQueueTailSpawnPos(
+            ServerLevel level,
+            List<ZooClaim> claims,
+            ZooCashierEntity ticketCashier,
+            int queueIndex
+    ) {
+        Direction facing = ticketCashier.getFacingDirection();
+        BlockPos slotPos = ticketCashier.getQueueSlotPos(queueIndex);
+
+        if (isValidWalkablePos(level, slotPos)) {
+            return slotPos;
+        }
+
+        // Try checking vertical elevation offsets at this queue slot
+        for (int dy : new int[]{1, -1, 2, -2, 3, -3}) {
+            BlockPos candidate = slotPos.offset(0, dy, 0);
+            if (isValidWalkablePos(level, candidate)) {
+                return candidate;
+            }
+        }
+
+        // Try stepping 1 to 3 blocks further back along the queue direction
+        for (int step = 1; step <= 3; step++) {
+            BlockPos backPos = ticketCashier.blockPosition().relative(facing, 2 + queueIndex + step);
+            for (int dy : new int[]{0, 1, -1, 2, -2}) {
+                BlockPos candidate = backPos.offset(0, dy, 0);
+                if (isValidWalkablePos(level, candidate)) {
+                    return candidate;
+                }
+            }
+        }
+
+        // Try lateral offsets (1 block left or right of the queue line)
+        Direction lateral = facing.getClockWise();
+        for (int lat : new int[]{1, -1}) {
+            BlockPos latPos = slotPos.relative(lateral, lat);
+            for (int dy : new int[]{0, 1, -1, 2, -2}) {
+                BlockPos candidate = latPos.offset(0, dy, 0);
+                if (isValidWalkablePos(level, candidate)) {
+                    return candidate;
+                }
+            }
+        }
+
+        // Fallback: use outside spawn near cashier if queue line is somehow completely blocked
+        return findOutsideSpawnNearTicketCashier(level, claims, ticketCashier);
     }
 
     private static boolean isInsideClaims(List<ZooClaim> claims, int x, int z) {
