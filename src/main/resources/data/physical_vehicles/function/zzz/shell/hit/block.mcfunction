@@ -2,7 +2,7 @@ tag @s add phys_veh.shell.hit
 tag @s add phys_veh.shell.hit_block
 scoreboard players set #ray main_score -1
 scoreboard players set #shell_responce main_score 40
-forceload add ~ ~
+# forceload add ~ ~
 tp @s ~ ~ ~
 execute if block ~ ~ ~ #minecraft:leaves run tp @p[tag=phys_veh.debug.leaves] ~ ~ ~
 #execute store result score #temp main_score run data get entity @s Pos[2] 100

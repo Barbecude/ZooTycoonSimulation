@@ -5,4 +5,4 @@ execute as @e[tag=phys_veh.step_ignore,x=0] run tag @s remove phys_veh.step_igno
 
 execute if score #shell_responce main_score matches 1.. run return run schedule function physical_vehicles:zzz/shell/tick 1t replace
 execute if entity @e[type=minecraft:item_display,tag=phys_veh.shell,limit=1] run return run schedule function physical_vehicles:zzz/shell/tick 1t replace
-forceload remove all
+# forceload remove all

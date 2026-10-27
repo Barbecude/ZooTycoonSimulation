@@ -1,3 +1,3 @@
 scoreboard players set #shell_responce main_score 40
-forceload add ~ ~
+# forceload add ~ ~
 tp @s ~ ~-0.09 ~
