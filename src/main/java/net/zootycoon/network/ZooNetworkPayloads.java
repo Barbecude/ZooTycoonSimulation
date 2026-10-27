@@ -640,7 +640,9 @@ public class ZooNetworkPayloads {
             int hunger,
             int thirst,
             boolean needsToilet,
-            boolean hasTrash
+            boolean hasTrash,
+            String complaintName,
+            String feedbackText
     ) implements CustomPacketPayload {
         public static final CustomPacketPayload.Type<OpenVisitorScreenPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("open_visitor_screen"));
         public static final StreamCodec<FriendlyByteBuf, OpenVisitorScreenPayload> CODEC = CustomPacketPayload.codec(
@@ -655,6 +657,8 @@ public class ZooNetworkPayloads {
                     buf.writeInt(payload.thirst);
                     buf.writeBoolean(payload.needsToilet);
                     buf.writeBoolean(payload.hasTrash);
+                    buf.writeUtf(payload.complaintName != null ? payload.complaintName : "NONE");
+                    buf.writeUtf(payload.feedbackText != null ? payload.feedbackText : "");
                 },
                 buf -> new OpenVisitorScreenPayload(
                         buf.readInt(),
@@ -666,8 +670,36 @@ public class ZooNetworkPayloads {
                         buf.readInt(),
                         buf.readInt(),
                         buf.readBoolean(),
-                        buf.readBoolean()
+                        buf.readBoolean(),
+                        buf.readUtf(),
+                        buf.readUtf()
                 )
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // Resolve Visitor Complaint Payload (C2S)
+    public record ResolveVisitorComplaintPayload(int entityId, String resolutionAction) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<ResolveVisitorComplaintPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("resolve_visitor_complaint"));
+        public static final StreamCodec<FriendlyByteBuf, ResolveVisitorComplaintPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeInt(payload.entityId);
+                    buf.writeUtf(payload.resolutionAction != null ? payload.resolutionAction : "");
+                },
+                buf -> new ResolveVisitorComplaintPayload(buf.readInt(), buf.readUtf())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // Supply Zookeeper Fuel Payload (C2S)
+    public record SupplyZookeeperFuelPayload(UUID keeperUuid, String fuelType) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<SupplyZookeeperFuelPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("supply_zookeeper_fuel"));
+        public static final StreamCodec<FriendlyByteBuf, SupplyZookeeperFuelPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeUUID(payload.keeperUuid);
+                    buf.writeUtf(payload.fuelType != null ? payload.fuelType : "COAL");
+                },
+                buf -> new SupplyZookeeperFuelPayload(buf.readUUID(), buf.readUtf())
         );
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
@@ -1124,6 +1156,8 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playC2S().register(RefillGachaMachinePayload.TYPE, RefillGachaMachinePayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ExtractGachaPlushiePayload.TYPE, ExtractGachaPlushiePayload.CODEC);
         PayloadTypeRegistry.playC2S().register(CompletePlayerBathingPayload.TYPE, CompletePlayerBathingPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(ResolveVisitorComplaintPayload.TYPE, ResolveVisitorComplaintPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(SupplyZookeeperFuelPayload.TYPE, SupplyZookeeperFuelPayload.CODEC);
 
         PayloadTypeRegistry.playS2C().register(SyncClaimsPayload.TYPE, SyncClaimsPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncStudioStatePayload.TYPE, SyncStudioStatePayload.CODEC);
@@ -1563,13 +1597,46 @@ public class ZooNetworkPayloads {
                         level.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, visitor.getX(), visitor.getY() + 1.2D, visitor.getZ(), 5, 0.25, 0.25, 0.25, 0.05);
                         sendToast(player, "zootycoon.toast.title.visitor", "zootycoon.dialog.visitor.guiding_toast", 1);
                     } else {
-                        // "Belum Ada" -> visitor disappointed, rating decreases
+                        // "Belum Ada" -> visitor disappointed, sets angry mood & complaint (rating only given when leaving)
                         visitor.stopFollowingPlayer();
                         level.playSound(null, visitor.blockPosition(), net.minecraft.sounds.SoundEvents.VILLAGER_NO, net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 0.9F);
                         level.sendParticles(net.minecraft.core.particles.ParticleTypes.ANGRY_VILLAGER, visitor.getX(), visitor.getY() + 1.2D, visitor.getZ(), 5, 0.25, 0.25, 0.25, 0.02);
-                        int newRating = net.zootycoon.economy.ZooRatingManager.get(level.getServer()).deductRating(player.getUUID(), 2, player);
-                        sendToast(player, "zootycoon.toast.title.rating_down", "zootycoon.toast.rating.not_available", 2, newRating);
+                        if (visitor.needsToilet()) {
+                            visitor.triggerComplaint(net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.TOILET);
+                        } else if (visitor.getHunger() >= 50) {
+                            visitor.triggerComplaint(net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.HUNGRY);
+                        } else if (visitor.getThirst() >= 50) {
+                            visitor.triggerComplaint(net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.THIRSTY);
+                        } else {
+                            visitor.setMood(net.zootycoon.entity.ZooVisitorEntity.VisitorMood.ANGRY);
+                        }
                     }
+                }
+            });
+        });
+
+        // Handler: Resolve Visitor Complaint from GUI
+        ServerPlayNetworking.registerGlobalReceiver(ResolveVisitorComplaintPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            net.minecraft.server.level.ServerLevel level = (net.minecraft.server.level.ServerLevel) player.level();
+            context.server().execute(() -> {
+                net.minecraft.world.entity.Entity ent = level.getEntity(payload.entityId());
+                if (ent instanceof net.zootycoon.entity.ZooVisitorEntity visitor && visitor.isAlive()) {
+                    visitor.resolveComplaint();
+                    level.playSound(null, visitor.blockPosition(), net.minecraft.sounds.SoundEvents.VILLAGER_YES, net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 1.0F);
+                    level.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, visitor.getX(), visitor.getY() + 1.2D, visitor.getZ(), 6, 0.25, 0.25, 0.25, 0.05);
+                }
+            });
+        });
+
+        // Handler: Supply Zookeeper Fuel (Coal / Ice)
+        ServerPlayNetworking.registerGlobalReceiver(SupplyZookeeperFuelPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            net.minecraft.server.level.ServerLevel level = (net.minecraft.server.level.ServerLevel) player.level();
+            context.server().execute(() -> {
+                net.minecraft.world.entity.Entity ent = level.getEntity(payload.keeperUuid());
+                if (ent instanceof net.zootycoon.entity.ZooZookeeperEntity keeper && keeper.isAlive()) {
+                    keeper.handleFuelTransfer(player, payload.fuelType());
                 }
             });
         });

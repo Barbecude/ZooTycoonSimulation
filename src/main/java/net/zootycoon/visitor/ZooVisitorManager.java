@@ -119,16 +119,16 @@ public class ZooVisitorManager {
 
             double starRating = net.zootycoon.economy.ZooRatingManager.get(level.getServer()).getStarRating(player.getUUID());
 
-            // Periodic zoo quality rating bonus (every 60s if animal welfare is high and park is clean)
-            if (currentTick % 1200 == 0 && level.getServer() != null) {
-                double quality = net.zootycoon.economy.ZooEconomyEngine.calculateZooQuality(level, player.getUUID());
-                if (quality >= 0.80D && !currentVisitors.isEmpty()) {
-                    net.zootycoon.economy.ZooRatingManager.get(level.getServer()).addRating(player.getUUID(), 1, player);
-                }
-            }
-
             int expectedPrice = net.zootycoon.economy.ZooEconomyEngine.getExpectedTicketPrice(starRating);
             int ticketPrice = claimManager.getTicketPrice(player.getUUID());
+
+            // 1. Pengunjung yang merasa kemahalan tidak akan spawn sama sekali agar performa baik
+            double zooQuality = net.zootycoon.economy.ZooEconomyEngine.calculateZooQuality(level, player.getUUID());
+            net.zootycoon.economy.ZooEconomyEngine.TicketDecision decision =
+                    net.zootycoon.economy.ZooEconomyEngine.evaluateTicketPurchase(ticketPrice, starRating, zooQuality, level.getRandom());
+            if (decision != net.zootycoon.economy.ZooEconomyEngine.TicketDecision.PURCHASE) {
+                continue;
+            }
 
             // Throttle spawning if tickets are overpriced for current rating
             if (net.zootycoon.economy.ZooEconomyEngine.shouldThrottleSpawn(ticketPrice, expectedPrice, starRating, currentTick)) {

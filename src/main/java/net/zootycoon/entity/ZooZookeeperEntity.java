@@ -51,6 +51,12 @@ import net.minecraft.world.Containers;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.zootycoon.animal.ZooAnimalHungerManager;
+import net.zootycoon.animal.ZooClimate;
+import net.zootycoon.animal.habitat.HabitatProfile;
+import net.zootycoon.animal.habitat.HabitatProfileLoader;
+import net.zootycoon.block.ZooCoolerBlock;
+import net.zootycoon.block.ZooHeaterBlock;
+import net.zootycoon.block.entity.ZooThermalBlockEntity;
 import net.zootycoon.util.ZooTranslations;
 import net.minecraft.ChatFormatting;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -105,6 +111,9 @@ private static final String[] NAMES = new String[]{
 
     private static final int FOOD_SLOTS = 8;
     private final SimpleContainer foodInventory = new SimpleContainer(FOOD_SLOTS);
+
+    private static final int FUEL_SLOTS = 4;
+    private final SimpleContainer fuelInventory = new SimpleContainer(FUEL_SLOTS);
 
     private boolean hasWateringCan = false;
     private ItemStack wateringCanStack = ItemStack.EMPTY;
@@ -524,7 +533,98 @@ private static final String[] NAMES = new String[]{
         this.entityData.set(SWEEPING, false);
 
         // ========================================================
-        // 2a. PRIORITY 2a: Bathe assigned animal if dirty (cleanliness <= 60%) and tools are available
+        // 2a. PRIORITY 2a: Thermal Management for assigned animal
+        // Checks if animal is freezing or overheating
+        // ========================================================
+        if (assignedAnimal != null) {
+            HabitatProfile habProfile = HabitatProfileLoader.getProfile(assignedAnimal);
+            if (habProfile != null) {
+                float effectiveTemp = ZooClimate.getEffectiveTemperature(sLevel, assignedAnimal.blockPosition());
+                boolean tooCold = effectiveTemp < habProfile.minTemperature();
+                boolean tooHot = effectiveTemp > habProfile.maxTemperature();
+
+                if (tooCold) {
+                    BlockPos nearestHeater = findNearestHeater(sLevel, assignedAnimal.blockPosition(), 20.0D);
+                    if (nearestHeater != null) {
+                        if (hasCoal()) {
+                            currentDutyState = "REFUEL_HEATER";
+                            ItemStack coalItem = peekCoal();
+                            this.setItemSlot(EquipmentSlot.MAINHAND, coalItem.copy());
+
+                            double distSq = this.distanceToSqr(nearestHeater.getX() + 0.5D, nearestHeater.getY() + 0.5D, nearestHeater.getZ() + 0.5D);
+                            if (distSq > 2.5D * 2.5D) {
+                                this.getNavigation().moveTo(nearestHeater.getX() + 0.5D, nearestHeater.getY(), nearestHeater.getZ() + 0.5D, 1.25D);
+                                return;
+                            } else {
+                                this.getNavigation().stop();
+                                this.getLookControl().setLookAt(nearestHeater.getX() + 0.5D, nearestHeater.getY() + 0.5D, nearestHeater.getZ() + 0.5D, 30.0F, 30.0F);
+                                this.swing(InteractionHand.MAIN_HAND);
+
+                                ItemStack taken = takeCoal(1);
+                                int fuelTicks = ZooHeaterBlock.getFuelTicks(taken);
+                                if (fuelTicks > 0 && sLevel.getBlockEntity(nearestHeater) instanceof ZooThermalBlockEntity thermal) {
+                                    thermal.addFuel(fuelTicks);
+                                    sLevel.playSound(null, nearestHeater, SoundEvents.FIRECHARGE_USE, SoundSource.BLOCKS, 1.0F, 1.0F);
+                                    sLevel.sendParticles(ParticleTypes.FLAME, nearestHeater.getX() + 0.5D, nearestHeater.getY() + 0.5D, nearestHeater.getZ() + 0.5D, 8, 0.2, 0.2, 0.2, 0.02);
+                                    actionCooldown = 40;
+                                    this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+                                    return;
+                                }
+                            }
+                        } else {
+                            currentDutyState = "NEED_COAL";
+                        }
+                    } else {
+                        currentDutyState = "NEED_HEATER_NEARBY";
+                    }
+                } else if (tooHot) {
+                    BlockPos nearestCooler = findNearestCooler(sLevel, assignedAnimal.blockPosition(), 20.0D);
+                    if (nearestCooler != null) {
+                        if (hasIce()) {
+                            currentDutyState = "REFUEL_COOLER";
+                            ItemStack iceItem = peekIce();
+                            this.setItemSlot(EquipmentSlot.MAINHAND, iceItem.copy());
+
+                            double distSq = this.distanceToSqr(nearestCooler.getX() + 0.5D, nearestCooler.getY() + 0.5D, nearestCooler.getZ() + 0.5D);
+                            if (distSq > 2.5D * 2.5D) {
+                                this.getNavigation().moveTo(nearestCooler.getX() + 0.5D, nearestCooler.getY(), nearestCooler.getZ() + 0.5D, 1.25D);
+                                return;
+                            } else {
+                                this.getNavigation().stop();
+                                this.getLookControl().setLookAt(nearestCooler.getX() + 0.5D, nearestCooler.getY() + 0.5D, nearestCooler.getZ() + 0.5D, 30.0F, 30.0F);
+                                this.swing(InteractionHand.MAIN_HAND);
+
+                                ItemStack taken = takeIce(1);
+                                int coolTicks = ZooCoolerBlock.getCoolingTicks(taken);
+                                if (coolTicks > 0 && sLevel.getBlockEntity(nearestCooler) instanceof ZooThermalBlockEntity thermal) {
+                                    thermal.addFuel(coolTicks);
+                                    sLevel.playSound(null, nearestCooler, SoundEvents.GLASS_PLACE, SoundSource.BLOCKS, 1.0F, 1.0F);
+                                    sLevel.sendParticles(ParticleTypes.SNOWFLAKE, nearestCooler.getX() + 0.5D, nearestCooler.getY() + 0.8D, nearestCooler.getZ() + 0.5D, 8, 0.2, 0.2, 0.2, 0.02);
+                                    actionCooldown = 40;
+                                    this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+                                    return;
+                                }
+                            }
+                        } else {
+                            currentDutyState = "NEED_ICE";
+                        }
+                    } else {
+                        currentDutyState = "NEED_COOLER_NEARBY";
+                    }
+                }
+            }
+        }
+
+        if (!"REFUEL_HEATER".equals(currentDutyState) && !"REFUEL_COOLER".equals(currentDutyState)) {
+            if (hasCoal() && this.getMainHandItem().is(peekCoal().getItem())) {
+                this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+            } else if (hasIce() && this.getMainHandItem().is(peekIce().getItem())) {
+                this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+            }
+        }
+
+        // ========================================================
+        // 2b. PRIORITY 2b: Bathe assigned animal if dirty (cleanliness <= 60%) and tools are available
         // ========================================================
         if (assignedAnimal != null && this.hasBathingTools()) {
             int cleanliness = ZooAnimalHungerManager.getCleanliness(assignedAnimal);
@@ -766,24 +866,47 @@ private static final String[] NAMES = new String[]{
         } else if (!hasAnimal) {
             dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.speech_no_animal");
         } else {
-            int cleanlinessVal = ZooAnimalHungerManager.getCleanliness(animal);
-            boolean isDirty = (cleanlinessVal <= 60);
-            if (isDirty && !this.hasBathingTools()) {
-                dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.need_bathing_tools", animalName);
-            } else {
-                ChatFormatting hungerColor = hunger <= 25 ? ChatFormatting.RED : (hunger <= 60 ? ChatFormatting.YELLOW : ChatFormatting.GREEN);
-                String hungerColoredStr = hungerColor + String.valueOf(hunger) + "%" + ChatFormatting.RESET;
-                var diet = AnimalDietRegistry.getDiet(animal);
-                boolean isThrownDiet = (diet != null && diet.feedingType == AnimalDietRegistry.FeedingType.THROWN_MEAT);
+            HabitatProfile habProfile = HabitatProfileLoader.getProfile(animal);
+            float effectiveTemp = ZooClimate.getEffectiveTemperature(animal);
+            boolean tooCold = habProfile != null && effectiveTemp < habProfile.minTemperature();
+            boolean tooHot = habProfile != null && effectiveTemp > habProfile.maxTemperature();
 
-                if (this.getFoodStock() <= 0) {
-                    dialogText = isThrownDiet
-                            ? ZooTranslations.get("zootycoon.dialog.zookeeper.empty_stock_throw", animalName, hungerColoredStr)
-                            : ZooTranslations.get("zootycoon.dialog.zookeeper.empty_stock", animalName, hungerColoredStr);
+            if (tooCold) {
+                BlockPos heater = findNearestHeater((ServerLevel) this.level(), animal.blockPosition(), 20.0D);
+                if (heater == null) {
+                    dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.need_heater_block", animalName);
+                } else if (!hasCoal()) {
+                    dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.need_coal", animalName);
+                }
+            } else if (tooHot) {
+                BlockPos cooler = findNearestCooler((ServerLevel) this.level(), animal.blockPosition(), 20.0D);
+                if (cooler == null) {
+                    dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.need_cooler_block", animalName);
+                } else if (!hasIce()) {
+                    dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.need_ice", animalName);
+                }
+            }
+
+            if (dialogText.isEmpty()) {
+                int cleanlinessVal = ZooAnimalHungerManager.getCleanliness(animal);
+                boolean isDirty = (cleanlinessVal <= 60);
+                if (isDirty && !this.hasBathingTools()) {
+                    dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.need_bathing_tools", animalName);
                 } else {
-                    dialogText = isThrownDiet
-                            ? ZooTranslations.get("zootycoon.dialog.zookeeper.speech_with_animal_throw", animalName, hungerColoredStr, String.valueOf(this.getFoodStock()))
-                            : ZooTranslations.get("zootycoon.dialog.zookeeper.speech_with_animal", animalName, hungerColoredStr, String.valueOf(this.getFoodStock()));
+                    ChatFormatting hungerColor = hunger <= 25 ? ChatFormatting.RED : (hunger <= 60 ? ChatFormatting.YELLOW : ChatFormatting.GREEN);
+                    String hungerColoredStr = hungerColor + String.valueOf(hunger) + "%" + ChatFormatting.RESET;
+                    var diet = AnimalDietRegistry.getDiet(animal);
+                    boolean isThrownDiet = (diet != null && diet.feedingType == AnimalDietRegistry.FeedingType.THROWN_MEAT);
+
+                    if (this.getFoodStock() <= 0) {
+                        dialogText = isThrownDiet
+                                ? ZooTranslations.get("zootycoon.dialog.zookeeper.empty_stock_throw", animalName, hungerColoredStr)
+                                : ZooTranslations.get("zootycoon.dialog.zookeeper.empty_stock", animalName, hungerColoredStr);
+                    } else {
+                        dialogText = isThrownDiet
+                                ? ZooTranslations.get("zootycoon.dialog.zookeeper.speech_with_animal_throw", animalName, hungerColoredStr, String.valueOf(this.getFoodStock()))
+                                : ZooTranslations.get("zootycoon.dialog.zookeeper.speech_with_animal", animalName, hungerColoredStr, String.valueOf(this.getFoodStock()));
+                    }
                 }
             }
         }
@@ -1045,6 +1168,155 @@ private static final String[] NAMES = new String[]{
         return this.wateringCanStack;
     }
 
+    public SimpleContainer getFuelInventory() {
+        return this.fuelInventory;
+    }
+
+    public boolean hasCoal() {
+        for (int i = 0; i < FUEL_SLOTS; i++) {
+            ItemStack stack = this.fuelInventory.getItem(i);
+            if (!stack.isEmpty() && ZooHeaterBlock.getFuelTicks(stack) > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public ItemStack peekCoal() {
+        for (int i = 0; i < FUEL_SLOTS; i++) {
+            ItemStack stack = this.fuelInventory.getItem(i);
+            if (!stack.isEmpty() && ZooHeaterBlock.getFuelTicks(stack) > 0) {
+                return stack;
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
+    public ItemStack takeCoal(int maxCount) {
+        if (maxCount <= 0) return ItemStack.EMPTY;
+        for (int i = 0; i < FUEL_SLOTS; i++) {
+            ItemStack stack = this.fuelInventory.getItem(i);
+            if (!stack.isEmpty() && ZooHeaterBlock.getFuelTicks(stack) > 0) {
+                int toTake = Math.min(stack.getCount(), maxCount);
+                ItemStack taken = stack.split(toTake);
+                if (stack.isEmpty()) {
+                    this.fuelInventory.setItem(i, ItemStack.EMPTY);
+                }
+                return taken;
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
+    public boolean hasIce() {
+        for (int i = 0; i < FUEL_SLOTS; i++) {
+            ItemStack stack = this.fuelInventory.getItem(i);
+            if (!stack.isEmpty() && ZooCoolerBlock.getCoolingTicks(stack) > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public ItemStack peekIce() {
+        for (int i = 0; i < FUEL_SLOTS; i++) {
+            ItemStack stack = this.fuelInventory.getItem(i);
+            if (!stack.isEmpty() && ZooCoolerBlock.getCoolingTicks(stack) > 0) {
+                return stack;
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
+    public ItemStack takeIce(int maxCount) {
+        if (maxCount <= 0) return ItemStack.EMPTY;
+        for (int i = 0; i < FUEL_SLOTS; i++) {
+            ItemStack stack = this.fuelInventory.getItem(i);
+            if (!stack.isEmpty() && ZooCoolerBlock.getCoolingTicks(stack) > 0) {
+                int toTake = Math.min(stack.getCount(), maxCount);
+                ItemStack taken = stack.split(toTake);
+                if (stack.isEmpty()) {
+                    this.fuelInventory.setItem(i, ItemStack.EMPTY);
+                }
+                return taken;
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
+    public void handleFuelTransfer(ServerPlayer player, String fuelType) {
+        int totalGiven = 0;
+        boolean hasFuelItem = false;
+        boolean isCoal = "COAL".equalsIgnoreCase(fuelType);
+
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack st = player.getInventory().getItem(i);
+            if (!st.isEmpty()) {
+                int fuelTicks = isCoal ? ZooHeaterBlock.getFuelTicks(st) : ZooCoolerBlock.getCoolingTicks(st);
+                if (fuelTicks > 0) {
+                    hasFuelItem = true;
+                    int toTake = Math.min(st.getCount(), 16 - totalGiven);
+                    ItemStack taken = st.split(toTake);
+                    ItemStack leftover = this.fuelInventory.addItem(taken);
+                    int added = toTake - leftover.getCount();
+                    if (!leftover.isEmpty()) {
+                        st.grow(leftover.getCount());
+                    }
+                    totalGiven += added;
+                    if (totalGiven >= 16 || !leftover.isEmpty()) break;
+                }
+            }
+        }
+        player.getInventory().setChanged();
+
+        if (totalGiven > 0) {
+            this.playSound(SoundEvents.VILLAGER_YES, 1.0f, 1.0f);
+            ((ServerLevel) this.level()).sendParticles(ParticleTypes.HAPPY_VILLAGER, this.getX(), this.getY() + 1.2, this.getZ(), 6, 0.2, 0.2, 0.2, 0.02);
+            String toastKey = isCoal ? "zootycoon.zookeeper.coal_given_toast" : "zootycoon.zookeeper.ice_given_toast";
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.zookeeper", toastKey, 1, totalGiven);
+        } else if (!hasFuelItem) {
+            this.playSound(SoundEvents.VILLAGER_NO, 1.0f, 1.0f);
+            String toastKey = isCoal ? "zootycoon.zookeeper.no_coal_in_inv" : "zootycoon.zookeeper.no_ice_in_inv";
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.zookeeper", toastKey, 2);
+        }
+    }
+
+    public BlockPos findNearestHeater(ServerLevel sLevel, BlockPos center, double maxDist) {
+        BlockPos best = null;
+        double bestDistSq = maxDist * maxDist;
+        for (BlockPos pos : ZooThermalBlockEntity.KNOWN_HEATERS) {
+            if (ownerUuid != null && !ZooClaimManager.get(sLevel).isClaimedBy(pos, ownerUuid)) continue;
+            double d = center.distSqr(pos);
+            if (d <= bestDistSq) {
+                if (sLevel.getBlockEntity(pos) instanceof ZooThermalBlockEntity thermal && thermal.getThermalType() == ZooThermalBlockEntity.ThermalType.HEATING) {
+                    if (thermal.getFuelTime() < 2400) {
+                        bestDistSq = d;
+                        best = pos;
+                    }
+                }
+            }
+        }
+        return best;
+    }
+
+    public BlockPos findNearestCooler(ServerLevel sLevel, BlockPos center, double maxDist) {
+        BlockPos best = null;
+        double bestDistSq = maxDist * maxDist;
+        for (BlockPos pos : ZooThermalBlockEntity.KNOWN_COOLERS) {
+            if (ownerUuid != null && !ZooClaimManager.get(sLevel).isClaimedBy(pos, ownerUuid)) continue;
+            double d = center.distSqr(pos);
+            if (d <= bestDistSq) {
+                if (sLevel.getBlockEntity(pos) instanceof ZooThermalBlockEntity thermal && thermal.getThermalType() == ZooThermalBlockEntity.ThermalType.COOLING) {
+                    if (thermal.getFuelTime() < 2400) {
+                        bestDistSq = d;
+                        best = pos;
+                    }
+                }
+            }
+        }
+        return best;
+    }
+
     public boolean isSweeping() {
         return this.entityData.get(SWEEPING) || this.getMainHandItem().is(ZooItems.BROOM);
     }
@@ -1242,6 +1514,7 @@ private static final String[] NAMES = new String[]{
     protected void dropCustomDeathLoot(ServerLevel level, DamageSource damageSource, boolean recentlyHit) {
         super.dropCustomDeathLoot(level, damageSource, recentlyHit);
         Containers.dropContents(level, this, this.foodInventory);
+        Containers.dropContents(level, this, this.fuelInventory);
     }
 
     @Override
@@ -1260,6 +1533,18 @@ private static final String[] NAMES = new String[]{
             }
         }
         tag.put("FoodInventory", foodTag);
+
+        ListTag fuelTag = new ListTag();
+        for (int i = 0; i < FUEL_SLOTS; i++) {
+            ItemStack stack = this.fuelInventory.getItem(i);
+            if (!stack.isEmpty()) {
+                CompoundTag slotTag = new CompoundTag();
+                slotTag.putByte("Slot", (byte) i);
+                fuelTag.add(stack.save(this.registryAccess(), slotTag));
+            }
+        }
+        tag.put("FuelInventory", fuelTag);
+
         tag.putString("DutyState", currentDutyState);
         tag.putBoolean("HasWateringCan", hasWateringCan);
         if (!wateringCanStack.isEmpty()) {
@@ -1302,6 +1587,19 @@ private static final String[] NAMES = new String[]{
         } else if (tag.contains("FoodStock")) {
             this.setFoodStock(tag.getInt("FoodStock"));
         }
+
+        this.fuelInventory.clearContent();
+        if (tag.contains("FuelInventory", Tag.TAG_LIST)) {
+            ListTag fuelTag = tag.getList("FuelInventory", Tag.TAG_COMPOUND);
+            for (int i = 0; i < fuelTag.size(); i++) {
+                CompoundTag slotTag = fuelTag.getCompound(i);
+                int slot = slotTag.getByte("Slot") & 255;
+                if (slot < FUEL_SLOTS) {
+                    this.fuelInventory.setItem(slot, ItemStack.parseOptional(this.registryAccess(), slotTag));
+                }
+            }
+        }
+
         if (tag.contains("DutyState")) {
             this.currentDutyState = tag.getString("DutyState");
         }

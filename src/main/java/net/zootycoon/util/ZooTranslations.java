@@ -62,6 +62,17 @@ public final class ZooTranslations {
         loaded = !TRANSLATIONS.isEmpty();
     }
 
+    public static boolean has(String key) {
+        if (key == null) return false;
+        ensureLoaded();
+        if (TRANSLATIONS.containsKey(key)) return true;
+        try {
+            return net.minecraft.locale.Language.getInstance().has(key);
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
     public static String get(String key, Object... args) {
         ensureLoaded();
         String raw = TRANSLATIONS.getOrDefault(key, key);

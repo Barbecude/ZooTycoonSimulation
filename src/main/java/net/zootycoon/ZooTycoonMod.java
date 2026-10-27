@@ -93,6 +93,7 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.animal.ZooInspectionService.reset();
             net.zootycoon.animal.AnimalBathingManager.reset();
             net.zootycoon.animal.habitat.HabitatEvaluator.reset();
+            net.zootycoon.block.entity.ZooThermalBlockEntity.reset();
         });
 
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTING.register(server -> {
@@ -111,6 +112,7 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.animal.ZooInspectionService.reset();
             net.zootycoon.animal.AnimalBathingManager.reset();
             net.zootycoon.animal.habitat.HabitatEvaluator.reset();
+            net.zootycoon.block.entity.ZooThermalBlockEntity.reset();
             net.zootycoon.construction.ConstructionManager.loadFromFile(server);
         });
 

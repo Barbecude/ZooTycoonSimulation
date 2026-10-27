@@ -139,6 +139,12 @@ public class ZookeeperDialogScreen extends EasyNpcDialogScreen {
             int actionBtnX = startX + 12;
             int closeBtnX = startX + 12 + btnW + 8;
 
+            boolean isCoalCondition = this.dialogText != null && (
+                    this.dialogText.contains("Coal") || this.dialogText.contains("kedinginan")
+            );
+            boolean isIceCondition = this.dialogText != null && (
+                    this.dialogText.contains("Ice") || this.dialogText.contains("Icebox") || this.dialogText.contains("kepanasan")
+            );
             boolean isBathingCondition = this.dialogText != null && (
                     this.dialogText.contains("dimandikan")
                     || this.dialogText.contains("sikat")
@@ -147,7 +153,23 @@ public class ZookeeperDialogScreen extends EasyNpcDialogScreen {
                     || this.dialogText.contains("bath")
             );
 
-            if (isBathingCondition) {
+            if (isCoalCondition) {
+                // Condition: Butuh Coal -> Show [Serahkan Coal] & [Semangat kerjanya!]
+                ZooButton giveCoalBtn = new ZooButton(actionBtnX, btnY, btnW, 22,
+                        ZooTranslations.component("zootycoon.dialog.zookeeper.btn.give_coal"), b -> {
+                    ClientPlayNetworking.send(new ZooNetworkPayloads.SupplyZookeeperFuelPayload(this.keeperUuid, "COAL"));
+                    this.onClose();
+                }).asPrimary();
+                addRenderableWidget(giveCoalBtn);
+            } else if (isIceCondition) {
+                // Condition: Butuh Ice -> Show [Serahkan Ice] & [Semangat kerjanya!]
+                ZooButton giveIceBtn = new ZooButton(actionBtnX, btnY, btnW, 22,
+                        ZooTranslations.component("zootycoon.dialog.zookeeper.btn.give_ice"), b -> {
+                    ClientPlayNetworking.send(new ZooNetworkPayloads.SupplyZookeeperFuelPayload(this.keeperUuid, "ICE"));
+                    this.onClose();
+                }).asPrimary();
+                addRenderableWidget(giveIceBtn);
+            } else if (isBathingCondition) {
                 // Condition: Butuh Alat Mandi -> Show [Serahkan Alat Mandi] & [Semangat kerjanya!]
                 ZooButton giveToolsBtn = new ZooButton(actionBtnX, btnY, btnW, 22,
                         ZooTranslations.component("zootycoon.dialog.zookeeper.btn.give_bathing_tools"), b -> {

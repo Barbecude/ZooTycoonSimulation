@@ -28,6 +28,15 @@ public class ZooThermalBlockEntity extends BlockEntity {
 
     public static final Set<BlockPos> ACTIVE_HEATERS = ConcurrentHashMap.newKeySet();
     public static final Set<BlockPos> ACTIVE_COOLERS = ConcurrentHashMap.newKeySet();
+    public static final Set<BlockPos> KNOWN_HEATERS = ConcurrentHashMap.newKeySet();
+    public static final Set<BlockPos> KNOWN_COOLERS = ConcurrentHashMap.newKeySet();
+
+    public static void reset() {
+        ACTIVE_HEATERS.clear();
+        ACTIVE_COOLERS.clear();
+        KNOWN_HEATERS.clear();
+        KNOWN_COOLERS.clear();
+    }
 
     private final ThermalType thermalType;
     private int fuelTime = 0;
@@ -36,6 +45,11 @@ public class ZooThermalBlockEntity extends BlockEntity {
     public ZooThermalBlockEntity(BlockPos pos, BlockState state, ThermalType thermalType) {
         super(thermalType == ThermalType.HEATING ? ZooBlocks.HEATER_BLOCK_ENTITY : ZooBlocks.COOLER_BLOCK_ENTITY, pos, state);
         this.thermalType = thermalType;
+        if (thermalType == ThermalType.HEATING) {
+            KNOWN_HEATERS.add(pos.immutable());
+        } else {
+            KNOWN_COOLERS.add(pos.immutable());
+        }
     }
 
     public ThermalType getThermalType() {
@@ -148,6 +162,18 @@ public class ZooThermalBlockEntity extends BlockEntity {
         tag.putInt("FuelTime", fuelTime);
         tag.putInt("MaxFuelTime", maxFuelTime);
         return tag;
+    }
+
+    @Override
+    public void setRemoved() {
+        super.setRemoved();
+        if (this.thermalType == ThermalType.HEATING) {
+            KNOWN_HEATERS.remove(this.worldPosition);
+            ACTIVE_HEATERS.remove(this.worldPosition);
+        } else {
+            KNOWN_COOLERS.remove(this.worldPosition);
+            ACTIVE_COOLERS.remove(this.worldPosition);
+        }
     }
 
     @Override

@@ -358,7 +358,9 @@ public class ZooTycoonClient implements ClientModInitializer {
                         payload.hunger(),
                         payload.thirst(),
                         payload.needsToilet(),
-                        payload.hasTrash()
+                        payload.hasTrash(),
+                        payload.complaintName(),
+                        payload.feedbackText()
                 ));
             });
         });

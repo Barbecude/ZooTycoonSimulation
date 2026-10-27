@@ -91,7 +91,8 @@ public class ZooVisitorEntity extends PathfinderMob {
         ADORED("zootycoon.visitor.mood.adored", 0xFF69B4),
         HUNGRY("zootycoon.visitor.mood.hungry", 0xFF0000),
         THIRSTY("zootycoon.visitor.mood.thirsty", 0x0000FF),
-        SCARED("zootycoon.visitor.mood.scared", 0xFF4500);
+        SCARED("zootycoon.visitor.mood.scared", 0xFF4500),
+        ANGRY("zootycoon.visitor.mood.angry", 0xFF2200);
 
         public final String labelKey;
         public final int color;
@@ -111,6 +112,35 @@ public class ZooVisitorEntity extends PathfinderMob {
                 return NEUTRAL;
             }
             return values[ordinal];
+        }
+    }
+
+    public enum VisitorComplaint {
+        NONE(""),
+        CROWDED("This zoo is awfully crowded."),
+        THIRSTY("I can't find anything to drink."),
+        HUNGRY("There's nothing to eat around here!"),
+        NO_SEAT("There's no place to sit down around here!"),
+        OUT_OF_STOCK("They ran out of food and drinks while I was waiting in line!"),
+        LONG_QUEUE("The lines for food and drinks are way too long!"),
+        TOILET("I've been looking everywhere and can't find a toilet!"),
+        LITTER("This zoo is filthy! There is trash everywhere."),
+        SICK_ANIMALS("The animals look sick and neglected! Someone should take care of them."),
+        TICKET_EXPENSIVE("The ticket price is way too expensive for what's here!"),
+        FEW_ANIMALS("There are barely any animals to see in this zoo!");
+
+        public final String defaultFeedback;
+
+        VisitorComplaint(String defaultFeedback) {
+            this.defaultFeedback = defaultFeedback;
+        }
+
+        public String getFeedback() {
+            String key = "zootycoon.dialog.visitor.feedback." + name().toLowerCase(java.util.Locale.ROOT);
+            if (net.zootycoon.util.ZooTranslations.has(key)) {
+                return net.zootycoon.util.ZooTranslations.get(key);
+            }
+            return defaultFeedback;
         }
     }
 
@@ -167,6 +197,11 @@ public class ZooVisitorEntity extends PathfinderMob {
     private int lastWatchedAnimalId = -1;
     private BlockPos escapeTarget = null;
     private int escapeTicks = 0;
+    private VisitorComplaint currentComplaint = VisitorComplaint.NONE;
+    private boolean hasSatDown = false;
+    private boolean encounteredOutOfStock = false;
+    private boolean experiencedLongQueue = false;
+    private boolean experiencedOvercrowding = false;
     private ZooCashierEntity fomoCashier = null;
     private boolean fomoActive = false;
     private int fomoCooldown = 0;
@@ -312,6 +347,21 @@ public class ZooVisitorEntity extends PathfinderMob {
 
     public void setMood(VisitorMood mood) {
         this.entityData.set(MOOD, mood.ordinal());
+    }
+
+    public void triggerComplaint(VisitorComplaint complaint) {
+        if (complaint == null || complaint == VisitorComplaint.NONE) return;
+        this.currentComplaint = complaint;
+        setMood(VisitorMood.ANGRY);
+    }
+
+    public void resolveComplaint() {
+        this.currentComplaint = VisitorComplaint.NONE;
+        setMood(VisitorMood.NEUTRAL);
+    }
+
+    public VisitorComplaint getComplaint() {
+        return this.currentComplaint;
     }
 
     public int getVariant() {
@@ -729,6 +779,11 @@ public class ZooVisitorEntity extends PathfinderMob {
             return;
         }
 
+        if (this.currentComplaint != VisitorComplaint.NONE) {
+            setMood(VisitorMood.ANGRY);
+            return;
+        }
+
         // When visitor is currently assigned to watch an animal, suppress hunger/thirst/toilet
         // and strictly show only animal viewing moods (or neutral while walking to exhibit)
         if (watchingAnimalId != -1) {
@@ -762,6 +817,60 @@ public class ZooVisitorEntity extends PathfinderMob {
             return;
         }
         setMood(VisitorMood.NEUTRAL);
+    }
+
+    private void checkVisitorDissatisfaction() {
+        if (isTimeToLeave() || isLeaving() || this.watchingAnimalId != -1) return;
+
+        // 1. Overcrowding check
+        int nearbyVisitors = this.level().getEntitiesOfClass(ZooVisitorEntity.class, this.getBoundingBox().inflate(4.5D)).size();
+        if (nearbyVisitors >= 7) {
+            this.experiencedOvercrowding = true;
+            triggerComplaint(VisitorComplaint.CROWDED);
+            return;
+        }
+
+        // 2. Toilet urgency
+        if (needsToilet() && toiletTimer > 600 && this.currentComplaint == VisitorComplaint.NONE) {
+            triggerComplaint(VisitorComplaint.TOILET);
+            return;
+        }
+
+        // 3. Unresolved severe thirst/hunger without stalls
+        if (canDrink() && getThirst() >= 60 && stayTime > 1200 && drinkCount == 0 && this.currentComplaint == VisitorComplaint.NONE) {
+            triggerComplaint(VisitorComplaint.THIRSTY);
+            return;
+        }
+        if (canEat() && getHunger() >= 60 && stayTime > 1200 && foodCount == 0 && this.currentComplaint == VisitorComplaint.NONE) {
+            triggerComplaint(VisitorComplaint.HUNGRY);
+            return;
+        }
+
+        // 4. Seating check: walked for over 2 minutes without resting
+        if (stayTime > 2400 && !hasSatDown && this.currentComplaint == VisitorComplaint.NONE) {
+            triggerComplaint(VisitorComplaint.NO_SEAT);
+            return;
+        }
+
+        // 5. Litter proximity check: trash nearby
+        if (this.currentComplaint == VisitorComplaint.NONE && this.tickCount % 80 == 0) {
+            BlockPos myPos = this.blockPosition();
+            for (int dx = -3; dx <= 3; dx++) {
+                for (int dz = -3; dz <= 3; dz++) {
+                    for (int dy = -1; dy <= 2; dy++) {
+                        if (this.level().getBlockState(myPos.offset(dx, dy, dz)).is(net.zootycoon.block.ZooBlocks.TRASH)) {
+                            triggerComplaint(VisitorComplaint.LITTER);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 6. Haven't seen animals after significant stay
+        if (stayTime > 2000 && !hasWatchedAnimal && this.currentComplaint == VisitorComplaint.NONE) {
+            triggerComplaint(VisitorComplaint.FEW_ANIMALS);
+        }
     }
 
     @Override
@@ -833,6 +942,11 @@ public class ZooVisitorEntity extends PathfinderMob {
                 }
             } else {
                 toiletTimer = 0;
+            }
+
+            // Periodic visitor satisfaction checks (overcrowding, litter, seating, unfulfilled needs)
+            if (this.tickCount % 40 == 0 && !leavingNow && this.getTags().contains("ticket_purchased")) {
+                checkVisitorDissatisfaction();
             }
 
             // Occasional trash generation
@@ -1064,7 +1178,9 @@ public class ZooVisitorEntity extends PathfinderMob {
                     getHunger(),
                     getThirst(),
                     needsToilet(),
-                    hasTrash()
+                    hasTrash(),
+                    this.currentComplaint.name(),
+                    this.currentComplaint.getFeedback()
             ));
             this.playSound(SoundEvents.VILLAGER_YES, 1.0F, 1.0F);
             return InteractionResult.SUCCESS;
@@ -1097,6 +1213,11 @@ public class ZooVisitorEntity extends PathfinderMob {
         tag.putBoolean("HasWatchedAnimal", hasWatchedAnimal);
         tag.putBoolean("HasRewardedRating", hasRewardedRating);
         tag.putBoolean("HasLeftReview", hasLeftReview);
+        tag.putString("Complaint", currentComplaint.name());
+        tag.putBoolean("HasSatDown", hasSatDown);
+        tag.putBoolean("EncounteredOutOfStock", encounteredOutOfStock);
+        tag.putBoolean("ExperiencedLongQueue", experiencedLongQueue);
+        tag.putBoolean("ExperiencedOvercrowding", experiencedOvercrowding);
         tag.putInt("LastWatchedAnimalId", lastWatchedAnimalId);
         tag.putInt("EatMode", postPurchaseEatMode);
         tag.putBoolean("DrinkingItem", isDrinkingItem);
@@ -1134,6 +1255,15 @@ public class ZooVisitorEntity extends PathfinderMob {
         cashierCooldown = tag.getInt("CashierCooldown");
         hasWatchedAnimal = tag.getBoolean("HasWatchedAnimal");
         hasRewardedRating = tag.getBoolean("HasRewardedRating");
+        if (tag.contains("Complaint")) {
+            try {
+                this.currentComplaint = VisitorComplaint.valueOf(tag.getString("Complaint"));
+            } catch (Exception ignored) {}
+        }
+        this.hasSatDown = tag.getBoolean("HasSatDown");
+        this.encounteredOutOfStock = tag.getBoolean("EncounteredOutOfStock");
+        this.experiencedLongQueue = tag.getBoolean("ExperiencedLongQueue");
+        this.experiencedOvercrowding = tag.getBoolean("ExperiencedOvercrowding");
         if (tag.contains("HasLeftReview")) {
             hasLeftReview = tag.getBoolean("HasLeftReview");
         }
@@ -1974,10 +2104,6 @@ public class ZooVisitorEntity extends PathfinderMob {
             if (targetAnimal != null && this.hasActuallyViewed) {
                 visitor.hasWatchedAnimal = true;
                 visitor.lastWatchedAnimalId = targetAnimal.getId();
-                if (!visitor.hasRewardedRating && visitor.level() instanceof net.minecraft.server.level.ServerLevel sl) {
-                    visitor.hasRewardedRating = true;
-                    visitor.rewardZooOwnerRating(sl, 1, "WATCH_ANIMAL");
-                }
             }
             visitor.setActivelyWatchingAnimal(false);
             visitor.watchingAnimalId = -1;
@@ -2017,9 +2143,11 @@ public class ZooVisitorEntity extends PathfinderMob {
                 if (!visitor.isActivelyWatchingAnimal()) {
                     visitor.setActivelyWatchingAnimal(true);
                     visitor.updateMood();
-                    if (!visitor.hasRewardedRating && visitor.level() instanceof net.minecraft.server.level.ServerLevel sl) {
-                        visitor.hasRewardedRating = true;
-                        visitor.rewardZooOwnerRating(sl, 1, "WATCH_ANIMAL");
+                    float maxHp = targetAnimal.getMaxHealth() > 0 ? targetAnimal.getMaxHealth() : 20.0f;
+                    int anHunger = net.zootycoon.animal.ZooAnimalHungerManager.getHunger(targetAnimal);
+                    int anClean = net.zootycoon.animal.ZooAnimalHungerManager.getCleanliness(targetAnimal);
+                    if (targetAnimal.getHealth() <= maxHp * 0.35f || anHunger <= 20 || anClean <= 20) {
+                        visitor.triggerComplaint(VisitorComplaint.SICK_ANIMALS);
                     }
                 }
 
@@ -2135,25 +2263,90 @@ public class ZooVisitorEntity extends PathfinderMob {
             score -= 1.5D; // Did not get to see animals
         }
 
-        // 2. Needs satisfaction (Food/Drink)
-        if (this.getHunger() <= 20 && this.canEat()) {
-            score -= 0.5D;
-        }
-        if (this.getThirst() <= 20 && this.canDrink()) {
-            score -= 0.5D;
-        }
-        if (this.foodCount > 0 || this.drinkCount > 0) {
-            score += 0.5D;
+        // 2. Satwa di kebun binatang banyak, beragam & spesies unik
+        int totalAnimals = 0;
+        java.util.Set<EntityType<?>> distinctSpecies = new java.util.HashSet<>();
+        boolean hasRareAnimal = false;
+        double totalFitnessSum = 0.0D;
+        int fitnessCount = 0;
+
+        for (var claim : net.zootycoon.claim.ZooClaimManager.get(sl).getPlayerClaims(ownerUuid)) {
+            var box = claim.getBox();
+            AABB area = new AABB(box.minX(), box.minY(), box.minZ(), box.maxX() + 1, box.maxY() + 1, box.maxZ() + 1);
+            List<LivingEntity> livings = sl.getEntitiesOfClass(LivingEntity.class, area, e -> !(e instanceof net.zootycoon.entity.ZooVisitorEntity) && !(e instanceof net.zootycoon.entity.ZooStaffEntity) && !(e instanceof Player));
+            for (LivingEntity le : livings) {
+                if (net.zootycoon.animal.ZooAnimalHungerManager.isTagged(le)) {
+                    totalAnimals++;
+                    distinctSpecies.add(le.getType());
+                    String typeId = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(le.getType()).toString().toLowerCase(java.util.Locale.ROOT);
+                    if (typeId.contains("panda") || typeId.contains("polar_bear") || typeId.contains("sniffer")
+                            || typeId.contains("axolotl") || typeId.contains("allay") || typeId.contains("camel")
+                            || typeId.contains("dolphin") || typeId.contains("turtle")) {
+                        hasRareAnimal = true;
+                    }
+
+                    // Fitness calculation: health, hunger, thirst, cleanliness
+                    float maxHp = le.getMaxHealth() > 0 ? le.getMaxHealth() : 20.0f;
+                    double hpPct = Math.clamp(le.getHealth() / maxHp, 0.0, 1.0);
+                    double hungerPct = Math.clamp(net.zootycoon.animal.ZooAnimalHungerManager.getHunger(le) / 100.0, 0.0, 1.0);
+                    double thirstPct = Math.clamp(net.zootycoon.animal.ZooAnimalHungerManager.getThirst(le) / 100.0, 0.0, 1.0);
+                    double cleanPct = Math.clamp(net.zootycoon.animal.ZooAnimalHungerManager.getCleanliness(le) / 100.0, 0.0, 1.0);
+                    totalFitnessSum += (hpPct + hungerPct + thirstPct + cleanPct) / 4.0;
+                    fitnessCount++;
+                }
+            }
         }
 
-        // 3. Toilet satisfaction
-        if (this.hasUsedToilet) {
+        if (totalAnimals >= 12) {
+            score += 1.0D;
+        } else if (totalAnimals >= 6) {
             score += 0.5D;
-        } else if (this.toiletTimer > 1000) {
+        } else if (totalAnimals < 3) {
             score -= 1.0D;
         }
 
-        // 4. Overall zoo environment and animal health
+        if (distinctSpecies.size() >= 5) {
+            score += 0.75D;
+        } else if (distinctSpecies.size() >= 3) {
+            score += 0.4D;
+        }
+        if (hasRareAnimal) {
+            score += 0.5D;
+        }
+
+        // 3. Makanan & minuman terpenuhi
+        if (this.foodCount > 0 && this.drinkCount > 0) {
+            score += 0.75D;
+        } else if (this.foodCount > 0 || this.drinkCount > 0) {
+            score += 0.5D;
+        }
+        if (this.getHunger() <= 20) {
+            score -= 0.5D;
+        }
+        if (this.getThirst() <= 20) {
+            score -= 0.5D;
+        }
+
+        // 4. Hewan sehat & fit (semakin fit semakin tinggi ngasih rating)
+        if (fitnessCount > 0) {
+            double avgFitness = totalFitnessSum / (double) fitnessCount;
+            if (avgFitness >= 0.80D) {
+                score += 1.0D;
+            } else if (avgFitness >= 0.65D) {
+                score += 0.5D;
+            } else if (avgFitness < 0.40D) {
+                score -= 1.25D;
+            }
+        }
+
+        // 5. Toilet tersedia
+        if (this.hasUsedToilet) {
+            score += 0.5D;
+        } else if (this.toiletTimer > 800) {
+            score -= 1.0D;
+        }
+
+        // 6. Kebersihan area
         double zooQuality = net.zootycoon.economy.ZooEconomyEngine.calculateZooQuality(sl, ownerUuid);
         if (zooQuality >= 0.85D) {
             score += 0.5D;
@@ -2161,14 +2354,40 @@ public class ZooVisitorEntity extends PathfinderMob {
             score -= 1.0D;
         }
 
-        // 5. Ticket pricing fairness
+        // 7. Kewajaran harga tiket
         int ticketPrice = net.zootycoon.claim.ZooClaimManager.get(sl).getTicketPrice(ownerUuid);
         double starRating = net.zootycoon.economy.ZooRatingManager.get(sl.getServer()).getStarRating(ownerUuid);
         int expected = net.zootycoon.economy.ZooEconomyEngine.getExpectedTicketPrice(starRating);
-
         if (ticketPrice <= 0) {
+            score += 0.75D;
+        } else if (ticketPrice <= expected) {
             score += 0.5D;
-        } else if (ticketPrice > expected + 30) {
+        } else if (ticketPrice > expected + 25) {
+            score -= 1.0D;
+        }
+
+        // 8. Ada tempat duduk
+        if (this.hasSatDown) {
+            score += 0.5D;
+        } else if (this.stayTime > 2400) {
+            score -= 0.5D;
+        }
+
+        // 9. Stok makanan dan minuman tidak habis pada saat mengantri
+        if (this.encounteredOutOfStock) {
+            score -= 1.0D;
+        }
+
+        // 10. Crowded / antrean panjang
+        if (this.experiencedOvercrowding) {
+            score -= 0.75D;
+        }
+        if (this.experiencedLongQueue) {
+            score -= 0.5D;
+        }
+
+        // 11. Penalty if leaving with unresolved complaint
+        if (this.currentComplaint != VisitorComplaint.NONE) {
             score -= 1.0D;
         }
 
@@ -2201,8 +2420,8 @@ public class ZooVisitorEntity extends PathfinderMob {
 
             if (!visitor.hasLeftReview && visitor.getTags().contains("ticket_purchased")) {
                 visitor.hasLeftReview = true;
-                // 65% chance for ticketed visitors to leave a Google Maps review upon departure
-                if (visitor.getRandom().nextFloat() < 0.65F && visitor.level() instanceof net.minecraft.server.level.ServerLevel sl && sl.getServer() != null) {
+                // 15% chance for ticketed visitors to leave a Google Maps review upon departure
+                if (visitor.getRandom().nextFloat() < 0.15F && visitor.level() instanceof net.minecraft.server.level.ServerLevel sl && sl.getServer() != null) {
                     net.zootycoon.claim.ZooClaim claim = visitor.findActiveZooClaim();
                     UUID ownerUuid = (claim != null) ? claim.getOwnerUuid() : null;
                     if (ownerUuid != null) {
@@ -2836,6 +3055,10 @@ public class ZooVisitorEntity extends PathfinderMob {
                 if (visitor.level() instanceof net.minecraft.server.level.ServerLevel sl) {
                     boolean success = net.zootycoon.util.ZooSeatHelper.seatVisitorAt(sl, targetPos, visitor);
                     if (success) {
+                        visitor.hasSatDown = true;
+                        if (visitor.currentComplaint == VisitorComplaint.NO_SEAT) {
+                            visitor.resolveComplaint();
+                        }
                         this.isSeated = true;
                         this.sitTicks = 180 + visitor.getRandom().nextInt(240); // 9-21 seconds sitting
                         visitor.getNavigation().stop();
