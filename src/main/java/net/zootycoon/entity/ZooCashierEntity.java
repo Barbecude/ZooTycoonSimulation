@@ -557,7 +557,7 @@ public class ZooCashierEntity extends PathfinderMob {
                     this.getLookControl().setLookAt(customer, 30.0F, 30.0F);
 
                     if ("TICKET".equals(role)) {
-                        if (serviceTicks % 20 == 0) {
+                        if (serviceTicks == 20) {
                             sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_WORK_LIBRARIAN, SoundSource.NEUTRAL, 0.6F, 1.1F);
                         }
                         if (serviceTicks <= 0) {
@@ -573,7 +573,7 @@ public class ZooCashierEntity extends PathfinderMob {
                             customer.onTransactionComplete(this.blockPosition(), "TICKET", ItemStack.EMPTY, false);
                             servingCustomerUuid = null;
                             serviceTicks = 0;
-                            serveCooldown = 10;
+                            serveCooldown = 4;
                         }
                     } else if ("BURGER".equals(role)) {
                         // Sizzling / cooking burger sounds and smoke particles
@@ -656,7 +656,7 @@ public class ZooCashierEntity extends PathfinderMob {
                     ZooVisitorEntity customer = resolveNextReadyCustomer(sLevel, role);
                     if (customer != null) {
                         servingCustomerUuid = customer.getUUID();
-                        serviceTicks = 200; // 10 seconds (200 ticks)
+                        serviceTicks = 25; // Snappy ticket purchase (1.25 seconds)
                         sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_WORK_LIBRARIAN, SoundSource.NEUTRAL, 0.7F, 1.0F);
                     }
                 }

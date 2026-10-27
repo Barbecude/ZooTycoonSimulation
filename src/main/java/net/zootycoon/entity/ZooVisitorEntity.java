@@ -162,6 +162,7 @@ public class ZooVisitorEntity extends PathfinderMob {
     private int cashierCooldown = 0;
     private boolean hasWatchedAnimal = false;
     private boolean isActivelyWatchingAnimal = false;
+    private boolean hasRewardedRating = false;
     private int lastWatchedAnimalId = -1;
     private BlockPos escapeTarget = null;
     private int escapeTicks = 0;
@@ -885,6 +886,9 @@ public class ZooVisitorEntity extends PathfinderMob {
                             this.entityData.set(IS_DRINKING, false);
                             this.postPurchaseEatMode = EAT_MODE_NONE;
                             this.setHasTrash(true);
+                            if (this.level() instanceof net.minecraft.server.level.ServerLevel sl && this.random.nextFloat() < 0.5F) {
+                                rewardZooOwnerRating(sl, 1, "FOOD");
+                            }
                         }
                     }
                 } else if (escapeTicks <= 0) {
@@ -1081,6 +1085,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         tag.putInt("DrinkCount", drinkCount);
         tag.putInt("CashierCooldown", cashierCooldown);
         tag.putBoolean("HasWatchedAnimal", hasWatchedAnimal);
+        tag.putBoolean("HasRewardedRating", hasRewardedRating);
         tag.putInt("LastWatchedAnimalId", lastWatchedAnimalId);
         tag.putInt("EatMode", postPurchaseEatMode);
         tag.putBoolean("DrinkingItem", isDrinkingItem);
@@ -1117,6 +1122,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         drinkCount = tag.getInt("DrinkCount");
         cashierCooldown = tag.getInt("CashierCooldown");
         hasWatchedAnimal = tag.getBoolean("HasWatchedAnimal");
+        hasRewardedRating = tag.getBoolean("HasRewardedRating");
         lastWatchedAnimalId = tag.contains("LastWatchedAnimalId") ? tag.getInt("LastWatchedAnimalId") : -1;
         setHunger(tag.getInt("Hunger"));
         setThirst(tag.getInt("Thirst"));
@@ -1366,6 +1372,20 @@ public class ZooVisitorEntity extends PathfinderMob {
             sLevel.playSound(null, this.blockPosition(), SoundEvents.PLAYER_LEVELUP, net.minecraft.sounds.SoundSource.NEUTRAL, 0.8F, 1.2F);
             sLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, this.getX(), this.getY() + 1.2D, this.getZ(), 8, 0.3, 0.3, 0.3, 0.05);
             sLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.HEART, this.getX(), this.getY() + 1.4D, this.getZ(), 4, 0.25, 0.25, 0.25, 0.02);
+        }
+    }
+
+    public void rewardZooOwnerRating(net.minecraft.server.level.ServerLevel sLevel, int amount, String reason) {
+        net.zootycoon.claim.ZooClaim claim = findActiveZooClaim();
+        if (claim == null || claim.getOwnerUuid() == null) return;
+        UUID ownerUuid = claim.getOwnerUuid();
+        ServerPlayer sPlayer = sLevel.getServer().getPlayerList().getPlayer(ownerUuid);
+        if (sPlayer != null) {
+            net.zootycoon.economy.ZooRatingManager.get(sLevel.getServer()).addRating(ownerUuid, amount, sPlayer);
+            sLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, this.getX(), this.getY() + 1.2D, this.getZ(), 4, 0.25, 0.25, 0.25, 0.02);
+            if (sLevel.random.nextFloat() < 0.25F) {
+                sLevel.playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, net.minecraft.sounds.SoundSource.NEUTRAL, 0.6F, 1.4F);
+            }
         }
     }
 
@@ -1873,6 +1893,9 @@ public class ZooVisitorEntity extends PathfinderMob {
         private int watchTimer;
         private int travelTimeout;
         private BlockPos watchPos;
+        private double lastDistToAnimalSq = Double.MAX_VALUE;
+        private int stuckTicks = 0;
+        private boolean hasActuallyViewed = false;
 
         public WatchAnimalsGoal(ZooVisitorEntity visitor) {
             this.visitor = visitor;
@@ -1887,7 +1910,7 @@ public class ZooVisitorEntity extends PathfinderMob {
                 // Priority activation to go watch animals and eat
             } else {
                 if (visitor.hasWatchedAnimal && visitor.tickCount % 40 != 0) return false;
-                if (!visitor.hasWatchedAnimal && visitor.tickCount % 10 != 0) return false;
+                if (!visitor.hasWatchedAnimal && visitor.tickCount % 5 != 0) return false;
             }
 
             // Search for registered zoo animals across the entire claimed zoo area
@@ -1899,26 +1922,35 @@ public class ZooVisitorEntity extends PathfinderMob {
 
             if (allZooAnimals.isEmpty()) return false;
 
-            // Pick randomly among all candidates, avoiding the same animal if > 1 exist
-            List<Animal> candidates = allZooAnimals;
-            if (candidates.size() > 1 && visitor.lastWatchedAnimalId != -1) {
-                List<Animal> filtered = candidates.stream()
-                        .filter(a -> a.getId() != visitor.lastWatchedAnimalId)
-                        .toList();
-                if (!filtered.isEmpty()) {
-                    candidates = filtered;
+            // Pick the nearest zoo animal that isn't the one we just watched (if multiple exist)
+            Animal best = null;
+            double bestDist = Double.MAX_VALUE;
+            for (Animal a : allZooAnimals) {
+                if (allZooAnimals.size() > 1 && a.getId() == visitor.lastWatchedAnimalId) {
+                    continue;
+                }
+                double d = visitor.distanceToSqr(a);
+                if (d < bestDist) {
+                    bestDist = d;
+                    best = a;
                 }
             }
+            if (best == null) {
+                best = allZooAnimals.get(0);
+            }
 
-            this.targetAnimal = candidates.get(visitor.random.nextInt(candidates.size()));
+            this.targetAnimal = best;
             return true;
         }
 
         @Override
         public void start() {
-            int base = 600 + visitor.random.nextInt(400); // ~30-50 seconds
+            int base = 300 + visitor.random.nextInt(200); // 15-25 seconds viewing time once arrived
             watchTimer = base;
-            travelTimeout = 400; // max 20 seconds to reach viewing range
+            travelTimeout = 1200; // up to 60 seconds to walk to exhibit across large zoos
+            lastDistToAnimalSq = Double.MAX_VALUE;
+            stuckTicks = 0;
+            hasActuallyViewed = false;
             visitor.setActivelyWatchingAnimal(false);
             if (targetAnimal != null) {
                 visitor.watchingAnimalId = targetAnimal.getId();
@@ -1931,9 +1963,13 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         @Override
         public void stop() {
-            if (targetAnimal != null) {
+            if (targetAnimal != null && this.hasActuallyViewed) {
                 visitor.hasWatchedAnimal = true;
                 visitor.lastWatchedAnimalId = targetAnimal.getId();
+                if (!visitor.hasRewardedRating && visitor.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                    visitor.hasRewardedRating = true;
+                    visitor.rewardZooOwnerRating(sl, 1, "WATCH_ANIMAL");
+                }
             }
             visitor.setActivelyWatchingAnimal(false);
             visitor.watchingAnimalId = -1;
@@ -1941,6 +1977,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             visitor.watchingAnimalIsPredator = false;
             targetAnimal = null;
             watchPos = null;
+            hasActuallyViewed = false;
             visitor.updateMood();
         }
 
@@ -1951,46 +1988,68 @@ public class ZooVisitorEntity extends PathfinderMob {
                 return;
             }
 
-            if (watchPos == null || visitor.distanceToSqr(watchPos.getX() + 0.5, watchPos.getY(), watchPos.getZ() + 0.5) < 2.0D) {
-                watchPos = computeWatchPos(targetAnimal);
-            }
-
-            boolean inViewingRange = false;
             double distAnimalSq = visitor.distanceToSqr(targetAnimal);
-            double distWatchSq = watchPos != null ? visitor.distanceToSqr(watchPos.getX() + 0.5, watchPos.getY(), watchPos.getZ() + 0.5) : Double.MAX_VALUE;
+            boolean barrier = isBarrierBetween(visitor, targetAnimal);
 
-            if (distAnimalSq <= 64.0D || distWatchSq <= 9.0D || (distAnimalSq <= 256.0D && isBarrierBetween(visitor, targetAnimal))) {
-                inViewingRange = true;
+            // In viewing range if:
+            // 1. Within 8 blocks (64 sq)
+            // 2. Within 16 blocks (256 sq) with fence/wall in between
+            // 3. Within 12 blocks (144 sq) and pathfinding reached the nearest walkable spot (e.g. at fence edge)
+            boolean inViewingRange = distAnimalSq <= 64.0D
+                    || (distAnimalSq <= 256.0D && barrier)
+                    || (distAnimalSq <= 144.0D && visitor.getNavigation().isDone());
+
+            if (inViewingRange) {
+                hasActuallyViewed = true;
                 visitor.hasWatchedAnimal = true;
                 visitor.lastWatchedAnimalId = targetAnimal.getId();
+                visitor.getNavigation().stop();
+                visitor.getLookControl().setLookAt(targetAnimal, 30.0F, 30.0F);
+
                 if (!visitor.isActivelyWatchingAnimal()) {
                     visitor.setActivelyWatchingAnimal(true);
                     visitor.updateMood();
+                    if (!visitor.hasRewardedRating && visitor.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                        visitor.hasRewardedRating = true;
+                        visitor.rewardZooOwnerRating(sl, 1, "WATCH_ANIMAL");
+                    }
                 }
+
                 if (visitor.postPurchaseEatMode == EAT_MODE_WATCH_ANIMAL && visitor.consumeBitesRemaining <= 0 && !visitor.isConsuming()) {
                     visitor.startConsuming(visitor.getMainHandItem(), visitor.isDrinkingItem, 28);
+                }
+
+                if (watchTimer > 0) {
+                    watchTimer--;
                 }
             } else {
                 if (visitor.isActivelyWatchingAnimal()) {
                     visitor.setActivelyWatchingAnimal(false);
                     visitor.updateMood();
                 }
-            }
 
-            if (watchPos != null) {
-                if (distWatchSq > 4.0D || visitor.getNavigation().isDone()) {
+                // If moving towards animal, re-navigate every 40 ticks or when path finishes
+                if (watchPos == null || visitor.tickCount % 40 == 0) {
+                    watchPos = computeWatchPos(targetAnimal);
+                }
+
+                if (watchPos != null) {
                     visitor.moveTowardLongRange(watchPos, 1.05D);
                 }
-            }
 
-            visitor.getLookControl().setLookAt(targetAnimal, 30.0F, 30.0F);
-            visitor.watchingAnimalSize = determineAnimalSize(targetAnimal);
-
-            if (inViewingRange) {
-                if (watchTimer > 0) {
-                    watchTimer--;
+                // Travel timeout countdown with anti-stuck & progress refresh
+                if (distAnimalSq < lastDistToAnimalSq - 1.0D) {
+                    lastDistToAnimalSq = distAnimalSq;
+                    travelTimeout = 1200; // Reset timeout while making good forward progress
+                    stuckTicks = 0;
+                } else {
+                    stuckTicks++;
+                    if (stuckTicks > 200) {
+                        // Truly stuck for 10 seconds: abort this animal without marking as watched
+                        watchTimer = 0;
+                    }
                 }
-            } else {
+
                 if (travelTimeout > 0) {
                     travelTimeout--;
                     if (travelTimeout <= 0) {
@@ -1998,6 +2057,8 @@ public class ZooVisitorEntity extends PathfinderMob {
                     }
                 }
             }
+
+            visitor.watchingAnimalSize = determineAnimalSize(targetAnimal);
         }
 
         private boolean isBarrierBetween(ZooVisitorEntity visitor, Animal animal) {
@@ -2032,12 +2093,27 @@ public class ZooVisitorEntity extends PathfinderMob {
         }
 
         private BlockPos computeWatchPos(Animal target) {
-            double radius = 4.0D;
-            double angle = ((visitor.getId() * 37) + (target.getId() * 19)) % 360;
-            double rad = Math.toRadians(angle);
-            int dx = (int) Math.round(Math.cos(rad) * radius);
-            int dz = (int) Math.round(Math.sin(rad) * radius);
-            return target.blockPosition().offset(dx, 0, dz);
+            Vec3 aPos = target.position();
+            Vec3 vPos = visitor.position();
+            Vec3 dir = vPos.subtract(aPos);
+            double dist = dir.horizontalDistance();
+            if (dist < 0.1D) {
+                return visitor.blockPosition();
+            }
+            Vec3 norm = dir.normalize();
+            // Target a position ~4.5 blocks outside the animal, toward the visitor's side
+            double targetDist = Math.min(dist, 4.5D);
+            Vec3 watchVec = aPos.add(norm.scale(targetDist));
+            int wx = net.minecraft.util.Mth.floor(watchVec.x);
+            int wz = net.minecraft.util.Mth.floor(watchVec.z);
+            int wy = target.blockPosition().getY();
+            if (visitor.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                int surfY = sl.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, wx, wz);
+                if (Math.abs(surfY - wy) <= 6) {
+                    wy = surfY;
+                }
+            }
+            return new BlockPos(wx, wy, wz);
         }
     }
 
@@ -2169,6 +2245,9 @@ public class ZooVisitorEntity extends PathfinderMob {
                     if (timer > 20) {
                         visitor.setHasTrash(false);
                         visitor.playSound(SoundEvents.ITEM_PICKUP, 1.0F, 1.0F);
+                        if (visitor.level() instanceof net.minecraft.server.level.ServerLevel sl && visitor.random.nextFloat() < 0.4F) {
+                            visitor.rewardZooOwnerRating(sl, 1, "TRASH");
+                        }
 
                         net.minecraft.world.level.block.state.BlockState state = visitor.level().getBlockState(targetPos);
                         if (state.is(net.zootycoon.block.ZooBlocks.TRASH_CAN)) {
@@ -2359,6 +2438,8 @@ public class ZooVisitorEntity extends PathfinderMob {
                         toilet.releaseVisitorOccupant(visitor.getUUID());
                         if (visitor.guidedPlayerUuid != null) {
                             visitor.completeGuideReward(sl, "TOILET");
+                        } else if (visitor.random.nextFloat() < 0.4F) {
+                            visitor.rewardZooOwnerRating(sl, 1, "TOILET");
                         }
                     }
 
@@ -2808,6 +2889,7 @@ public class ZooVisitorEntity extends PathfinderMob {
                                     var eco = net.zootycoon.economy.ZooEconomyManager.get(sl.getServer());
                                     ServerPlayer owner = sl.getServer().getPlayerList().getPlayer(ownerUuid);
                                     eco.addBalance(ownerUuid, 4, owner);
+                                    net.zootycoon.economy.ZooRatingManager.get(sl.getServer()).addRating(ownerUuid, 1, owner);
                                 }
 
                                 sl.playSound(null, targetMachinePos, net.zootycoon.sound.ZooSounds.KACHING, net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 1.0F);

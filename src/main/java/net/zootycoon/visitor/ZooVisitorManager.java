@@ -118,6 +118,15 @@ public class ZooVisitorManager {
             );
 
             double starRating = net.zootycoon.economy.ZooRatingManager.get(level.getServer()).getStarRating(player.getUUID());
+
+            // Periodic zoo quality rating bonus (every 60s if animal welfare is high and park is clean)
+            if (currentTick % 1200 == 0 && level.getServer() != null) {
+                double quality = net.zootycoon.economy.ZooEconomyEngine.calculateZooQuality(level, player.getUUID());
+                if (quality >= 0.80D && !currentVisitors.isEmpty()) {
+                    net.zootycoon.economy.ZooRatingManager.get(level.getServer()).addRating(player.getUUID(), 1, player);
+                }
+            }
+
             int expectedPrice = net.zootycoon.economy.ZooEconomyEngine.getExpectedTicketPrice(starRating);
             int ticketPrice = claimManager.getTicketPrice(player.getUUID());
 
