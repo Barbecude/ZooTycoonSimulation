@@ -89,34 +89,9 @@ public class WarehouseSupplyManager {
         if (barrel == null || !barrel.isCategoryAssigned()) return;
         String category = barrel.getCategory();
 
-        // 1. Discover/refresh requests for staff in the same zoo or nearby
+        // Discover/refresh requests for staff in the same zoo or nearby.
+        // Items are NEVER taken automatically; the player must explicitly press the checkmark button to deliver.
         refreshStaffRequests(sLevel, barrel, category);
-
-        // 2. Check if barrel can fulfill any active request for this category
-        long now = sLevel.getGameTime();
-        boolean anyFulfilled = false;
-
-        List<StaffSupplyRequest> matching = getMatchingRequestsForBarrel(sLevel, barrel, category);
-        for (StaffSupplyRequest req : matching) {
-            if (canBarrelFulfill(sLevel, barrel, req)) {
-                if (req.readySinceGameTime < 0L) {
-                    req.readySinceGameTime = now;
-                } else if (now - req.readySinceGameTime >= FULFILLMENT_DELAY_TICKS) {
-                    if (consumeAndFulfill(sLevel, barrel, req)) {
-                        ACTIVE_REQUESTS.remove(req.staffUuid);
-                        anyFulfilled = true;
-                    } else {
-                        req.readySinceGameTime = -1L;
-                    }
-                }
-            } else {
-                req.readySinceGameTime = -1L;
-            }
-        }
-
-        if (anyFulfilled) {
-            barrel.syncToViewingPlayers(sLevel);
-        }
     }
 
     public static void syncRequestsToPlayer(ServerLevel sLevel, EmptyBarrelBlockEntity barrel, ServerPlayer player) {
@@ -129,9 +104,6 @@ public class WarehouseSupplyManager {
 
         for (StaffSupplyRequest req : matching) {
             boolean allReady = canBarrelFulfill(sLevel, barrel, req);
-            if (allReady && req.readySinceGameTime < 0L) {
-                req.readySinceGameTime = sLevel.getGameTime();
-            }
 
             List<ItemStack> targets = new ArrayList<>();
             for (ItemStack st : req.targetItems) {
