@@ -345,11 +345,19 @@ public class WarehouseSupplyManager {
     public static boolean canBarrelFulfill(ServerLevel sLevel, EmptyBarrelBlockEntity barrel, StaffSupplyRequest req) {
         if ("CASHIER".equals(req.staffType)) {
             if (req.requiredRawIngredients.isEmpty()) return false;
+            List<ItemStack> pool = new ArrayList<>();
+            for (int i = 0; i < barrel.getContainerSize(); i++) {
+                ItemStack st = barrel.getItem(i);
+                if (!st.isEmpty()) {
+                    pool.add(st.copy());
+                }
+            }
             for (Map.Entry<Item, Integer> entry : req.requiredRawIngredients.entrySet()) {
-                int have = countItemInBarrel(barrel, entry.getKey());
+                int have = countItemInVirtualPool(pool, entry.getKey());
                 if (have < entry.getValue()) {
                     return false;
                 }
+                consumeFromVirtualPool(pool, entry.getKey(), entry.getValue());
             }
             return true;
         } else {
