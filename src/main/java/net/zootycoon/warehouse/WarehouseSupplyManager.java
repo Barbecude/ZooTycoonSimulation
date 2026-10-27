@@ -143,6 +143,16 @@ public class WarehouseSupplyManager {
             int requiredCount = 0;
 
             if ("CASHIER".equals(req.staffType)) {
+                // Virtual pool of barrel item stacks to allocate ingredients sequentially across menu items
+                // Prevents multiple menu items from falsely double-counting the same ingredient
+                List<ItemStack> virtualPool = new ArrayList<>();
+                for (int i = 0; i < barrel.getContainerSize(); i++) {
+                    ItemStack st = barrel.getItem(i);
+                    if (!st.isEmpty()) {
+                        virtualPool.add(st.copy());
+                    }
+                }
+
                 for (ItemStack targetSt : req.targetItems) {
                     Map<Item, Integer> singleRaws = WarehouseRecipeResolver.resolveRawIngredientsForSingleItem(sLevel, req.category, targetSt.getItem());
                     List<WarehousePayloads.RawIngredientItemDto> rawDtos = new ArrayList<>();
@@ -150,7 +160,7 @@ public class WarehouseSupplyManager {
 
                     for (Map.Entry<Item, Integer> entry : singleRaws.entrySet()) {
                         int needed = entry.getValue() * targetSt.getCount();
-                        int have = countItemInBarrel(barrel, entry.getKey());
+                        int have = countItemInVirtualPool(virtualPool, entry.getKey());
                         boolean inBarrel = (have >= needed);
                         if (!inBarrel) {
                             itemReady = false;
@@ -160,6 +170,16 @@ public class WarehouseSupplyManager {
                     if (singleRaws.isEmpty()) {
                         itemReady = false;
                     }
+
+                    // If this menu item is fully satisfied, deduct its ingredients from the virtual pool
+                    // so the next menu item cannot double-count them
+                    if (itemReady) {
+                        for (Map.Entry<Item, Integer> entry : singleRaws.entrySet()) {
+                            int toConsume = entry.getValue() * targetSt.getCount();
+                            consumeFromVirtualPool(virtualPool, entry.getKey(), toConsume);
+                        }
+                    }
+
                     menuDtos.add(new WarehousePayloads.MenuItemRequestDto(targetSt.copy(), rawDtos, itemReady));
                 }
 
@@ -531,6 +551,28 @@ public class WarehouseSupplyManager {
             }
         }
         return total;
+    }
+
+    private static int countItemInVirtualPool(List<ItemStack> pool, Item item) {
+        int total = 0;
+        for (ItemStack st : pool) {
+            if (!st.isEmpty() && isRawIngredientMatching(st, item)) {
+                total += st.getCount();
+            }
+        }
+        return total;
+    }
+
+    private static void consumeFromVirtualPool(List<ItemStack> pool, Item item, int amount) {
+        int remaining = amount;
+        for (ItemStack st : pool) {
+            if (remaining <= 0) break;
+            if (!st.isEmpty() && isRawIngredientMatching(st, item)) {
+                int take = Math.min(remaining, st.getCount());
+                st.shrink(take);
+                remaining -= take;
+            }
+        }
     }
 
     private static void removeItemsFromBarrel(EmptyBarrelBlockEntity barrel, Item item, int amount) {
