@@ -727,6 +727,27 @@ public class ZooVisitorEntity extends PathfinderMob {
             setMood(VisitorMood.NEUTRAL);
             return;
         }
+
+        // When visitor is currently assigned to watch an animal, suppress hunger/thirst/toilet
+        // and strictly show only animal viewing moods (or neutral while walking to exhibit)
+        if (watchingAnimalId != -1) {
+            if (isActivelyWatchingAnimal) {
+                if (watchingAnimalIsPredator) {
+                    setMood(VisitorMood.SCARED);
+                } else if (watchingAnimalSize == 2) {
+                    setMood(VisitorMood.AMAZED);
+                } else if (watchingAnimalSize == 0) {
+                    setMood(VisitorMood.ADORED);
+                } else {
+                    setMood(VisitorMood.NEUTRAL);
+                }
+            } else {
+                setMood(VisitorMood.NEUTRAL);
+            }
+            return;
+        }
+
+        // Only after watching animal is completed can general moods appear
         if (needsToilet()) {
             setMood(VisitorMood.TOILET);
             return;
@@ -737,18 +758,6 @@ public class ZooVisitorEntity extends PathfinderMob {
         }
         if (canDrink() && getThirst() >= 50 && hasWatchedAnimal) {
             setMood(VisitorMood.THIRSTY);
-            return;
-        }
-        if (watchingAnimalId != -1 && isActivelyWatchingAnimal) {
-            if (watchingAnimalIsPredator) {
-                setMood(VisitorMood.SCARED);
-            } else if (watchingAnimalSize == 2) {
-                setMood(VisitorMood.AMAZED);
-            } else if (watchingAnimalSize == 0) {
-                setMood(VisitorMood.ADORED);
-            } else {
-                setMood(VisitorMood.NEUTRAL);
-            }
             return;
         }
         setMood(VisitorMood.NEUTRAL);
@@ -1922,24 +1931,18 @@ public class ZooVisitorEntity extends PathfinderMob {
 
             if (allZooAnimals.isEmpty()) return false;
 
-            // Pick the nearest zoo animal that isn't the one we just watched (if multiple exist)
-            Animal best = null;
-            double bestDist = Double.MAX_VALUE;
-            for (Animal a : allZooAnimals) {
-                if (allZooAnimals.size() > 1 && a.getId() == visitor.lastWatchedAnimalId) {
-                    continue;
+            // User requirement: randomly choose which animal to watch across the zoo, avoiding last watched animal
+            List<Animal> candidates = allZooAnimals;
+            if (candidates.size() > 1 && visitor.lastWatchedAnimalId != -1) {
+                List<Animal> filtered = candidates.stream()
+                        .filter(a -> a.getId() != visitor.lastWatchedAnimalId)
+                        .toList();
+                if (!filtered.isEmpty()) {
+                    candidates = filtered;
                 }
-                double d = visitor.distanceToSqr(a);
-                if (d < bestDist) {
-                    bestDist = d;
-                    best = a;
-                }
-            }
-            if (best == null) {
-                best = allZooAnimals.get(0);
             }
 
-            this.targetAnimal = best;
+            this.targetAnimal = candidates.get(visitor.random.nextInt(candidates.size()));
             return true;
         }
 
