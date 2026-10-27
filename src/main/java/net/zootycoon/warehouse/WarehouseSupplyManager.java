@@ -460,17 +460,43 @@ public class WarehouseSupplyManager {
             return true;
         }
 
-        // 3. Shared Fabric / Forge convention tags (c:crops/tomato, c:tomatoes, c:onions, etc.)
+        // 3. Shared Fabric / Forge specific convention tags (e.g. c:crops/tomato, c:tomatoes, c:crops/onion)
+        // Must specifically match the item/crop name, NEVER generic broad categories like c:foods, c:crops, c:meat, etc.
+        String cleanTarget = normalizeCropName(targetPath);
         for (var stackTag : stack.getTags().toList()) {
             String ns = stackTag.location().getNamespace();
             if ("c".equals(ns) || "forge".equals(ns)) {
-                if (BuiltInRegistries.ITEM.getOrCreateTag(stackTag).contains(BuiltInRegistries.ITEM.wrapAsHolder(targetItem))) {
-                    return true;
+                String tagPath = stackTag.location().getPath().toLowerCase(Locale.ROOT);
+                if (isBroadCategoryTag(tagPath)) {
+                    continue;
+                }
+                String tagLeaf = tagPath.contains("/") ? tagPath.substring(tagPath.lastIndexOf('/') + 1) : tagPath;
+                String cleanTagLeaf = normalizeCropName(tagLeaf);
+                if (cleanTagLeaf.equals(cleanTarget)) {
+                    if (BuiltInRegistries.ITEM.getOrCreateTag(stackTag).contains(BuiltInRegistries.ITEM.wrapAsHolder(targetItem))) {
+                        return true;
+                    }
                 }
             }
         }
 
         return false;
+    }
+
+    private static boolean isBroadCategoryTag(String tagPath) {
+        if (tagPath == null) return true;
+        String s = tagPath.toLowerCase(Locale.ROOT);
+        return s.equals("foods") || s.equals("food")
+                || s.equals("crops") || s.equals("crop")
+                || s.equals("vegetables") || s.equals("vegetable")
+                || s.equals("fruits") || s.equals("fruit")
+                || s.equals("berries") || s.equals("berry")
+                || s.equals("meat") || s.equals("meats")
+                || s.equals("raw_meats") || s.equals("cooked_meats")
+                || s.equals("seeds") || s.equals("seed")
+                || s.equals("grain") || s.equals("grains")
+                || s.equals("animal_foods") || s.equals("animal_food")
+                || s.startsWith("diet_") || s.equals("items");
     }
 
     private static boolean isCropAliasMatch(String a, String b) {
@@ -484,11 +510,15 @@ public class WarehouseSupplyManager {
         String s = name.toLowerCase(Locale.ROOT);
         if (s.endsWith("_crop")) s = s.substring(0, s.length() - 5);
         if (s.endsWith("_leaf")) s = s.substring(0, s.length() - 5);
-        if (s.endsWith("tomatoes")) return "tomato";
-        if (s.endsWith("potatoes")) return "potato";
-        if (s.endsWith("berries")) return "berry";
-        if (s.endsWith("onions")) return "onion";
-        if (s.endsWith("cabbages")) return "cabbage";
+        if (s.endsWith("_leaves")) s = s.substring(0, s.length() - 7);
+        if (s.endsWith("tomatoes")) return s.substring(0, s.length() - 8) + "tomato";
+        if (s.endsWith("potatoes")) return s.substring(0, s.length() - 8) + "potato";
+        if (s.endsWith("berries")) return s.substring(0, s.length() - 7) + "berry";
+        if (s.endsWith("onions")) return s.substring(0, s.length() - 6) + "onion";
+        if (s.endsWith("cabbages")) return s.substring(0, s.length() - 8) + "cabbage";
+        if (s.endsWith("s") && !s.endsWith("ss") && s.length() > 3) {
+            s = s.substring(0, s.length() - 1);
+        }
         return s;
     }
 
