@@ -162,6 +162,9 @@ public class ZooVisitorEntity extends PathfinderMob {
     private boolean fomoActive = false;
     private int fomoCooldown = 0;
     private int fomoTicks = 0;
+    private int navStuckTicks = 0;
+    private double lastNavX = 0.0D;
+    private double lastNavZ = 0.0D;
 
     public boolean isFomoTarget() {
         return this.fomoActive && this.fomoCashier != null && this.fomoCashier.isAlive();
@@ -238,9 +241,19 @@ public class ZooVisitorEntity extends PathfinderMob {
     public ZooVisitorEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
         this.consumerType = Math.random() < 0.5 ? 0 : 1;
+
+        this.setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.DOOR_WOOD_CLOSED, 0.0F);
+        this.setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.DOOR_OPEN, 0.0F);
+        this.setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.TRAPDOOR, 0.0F);
+
         if (isChildVisitor()) {
             this.refreshDimensions();
         }
+    }
+
+    @Override
+    protected net.minecraft.world.entity.ai.navigation.PathNavigation createNavigation(Level level) {
+        return new net.zootycoon.entity.ai.navigation.ZooPathNavigation(this, level);
     }
 
     @Override
@@ -262,12 +275,13 @@ public class ZooVisitorEntity extends PathfinderMob {
         return PathfinderMob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 20.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.28D)
-                .add(Attributes.FOLLOW_RANGE, 64.0D);
+                .add(Attributes.FOLLOW_RANGE, 96.0D);
     }
 
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
+        this.goalSelector.addGoal(0, new net.zootycoon.entity.ai.goal.ZooDoorAndGateInteractGoal(this));
         this.goalSelector.addGoal(1, new RunAwayFromCashierGoal(this));
         this.goalSelector.addGoal(1, new FollowGuidePlayerGoal(this));
         this.goalSelector.addGoal(1, new LeaveZooGoal(this));
@@ -276,7 +290,6 @@ public class ZooVisitorEntity extends PathfinderMob {
         this.goalSelector.addGoal(2, new QueueAtCashierGoal(this));
         this.goalSelector.addGoal(2, new UseGachaMachineGoal(this));
         this.goalSelector.addGoal(2, new FindTrashCanGoal(this));
-        this.goalSelector.addGoal(3, new OpenDoorGoal(this, true));
         this.goalSelector.addGoal(4, new FindSeatGoal(this));
         this.goalSelector.addGoal(5, new WatchAnimalsGoal(this));
         this.goalSelector.addGoal(6, new VisitorZooStrollGoal(this, 0.7D));
@@ -637,12 +650,23 @@ public class ZooVisitorEntity extends PathfinderMob {
         double dx = (target.getX() + 0.5D) - this.getX();
         double dz = (target.getZ() + 0.5D) - this.getZ();
         double horizDistSq = dx * dx + dz * dz;
-        if (horizDistSq <= 22.0D * 22.0D) {
+
+        // Up to 56 blocks: direct pathfinding through corridors/paths using ZooPathNavigation
+        if (horizDistSq <= 56.0D * 56.0D) {
             this.getNavigation().moveTo(target.getX() + 0.5D, target.getY(), target.getZ() + 0.5D, speed);
             return;
         }
+
+        // Over 56 blocks: first try generating a full A* path to the target
+        net.minecraft.world.level.pathfinder.Path fullPath = this.getNavigation().createPath(target, 1);
+        if (fullPath != null && !fullPath.isDone()) {
+            this.getNavigation().moveTo(fullPath, speed);
+            return;
+        }
+
+        // Fallback for massive distances: step along general vector towards target, sampling walkable floor
         double dist = Math.sqrt(horizDistSq);
-        double step = 18.0D;
+        double step = 32.0D;
         int wpX = net.minecraft.util.Mth.floor(this.getX() + (dx / dist) * step);
         int wpZ = net.minecraft.util.Mth.floor(this.getZ() + (dz / dist) * step);
         int wpY = target.getY();
@@ -942,6 +966,34 @@ public class ZooVisitorEntity extends PathfinderMob {
                 }
             }
         }
+
+        // Navigation stuck detection and continuous jump bouncing suppression
+        if (this.getNavigation().isInProgress()) {
+            double moveDistSq = (this.getX() - lastNavX) * (this.getX() - lastNavX) + (this.getZ() - lastNavZ) * (this.getZ() - lastNavZ);
+            if (moveDistSq < 0.0009D) {
+                navStuckTicks++;
+                if (navStuckTicks >= 6) {
+                    if (this.onGround() && this.getDeltaMovement().y > 0.0D) {
+                        this.setDeltaMovement(this.getDeltaMovement().x, 0.0D, this.getDeltaMovement().z);
+                    }
+                    if (navStuckTicks % 15 == 0) {
+                        this.getNavigation().recomputePath();
+                    }
+                    if (navStuckTicks >= 40) {
+                        this.getNavigation().stop();
+                        navStuckTicks = 0;
+                    }
+                }
+            } else {
+                navStuckTicks = 0;
+            }
+            lastNavX = this.getX();
+            lastNavZ = this.getZ();
+        } else {
+            navStuckTicks = 0;
+            lastNavX = this.getX();
+            lastNavZ = this.getZ();
+        }
     }
 
     @Override
@@ -1170,12 +1222,15 @@ public class ZooVisitorEntity extends PathfinderMob {
                 this.entityData.set(IS_CONSUMING, false);
                 this.entityData.set(IS_DRINKING, isDrink);
 
-                int choice = this.random.nextInt(3);
-                if (choice == 1 && !hasNearbySeat(24)) {
-                    choice = this.random.nextBoolean() ? 0 : 2;
-                }
-                if (choice == 2 && !hasZooAnimals()) {
-                    choice = 0;
+                // User requirement: not all visitors sit down (only 15% sit if seat nearby, 45% watch animals, 40% stroll)
+                int roll = this.random.nextInt(100);
+                int choice;
+                if (roll < 15 && hasNearbySeat(20)) {
+                    choice = 1; // Sit and eat
+                } else if (roll < 60 && hasZooAnimals()) {
+                    choice = 2; // Watch animals and eat
+                } else {
+                    choice = 0; // Stroll and eat
                 }
                 this.postPurchaseEatMode = choice + 1;
             }
@@ -2475,6 +2530,13 @@ public class ZooVisitorEntity extends PathfinderMob {
                 if (visitor.needsToilet()) return false;
                 if (visitor.hasTrash()) return false;
                 if (visitor.isPassenger()) return false;
+
+                // User requirement 1: Not all visitors must sit down
+                // Only ~30% of visitors have the inclination to sit down to rest; the rest just walk & explore
+                if (Math.abs(visitor.getUUID().getLeastSignificantBits() % 10) >= 3) {
+                    return false;
+                }
+
                 if (visitor.sitCooldown > 0) {
                     visitor.sitCooldown--;
                     return false;
@@ -2484,7 +2546,11 @@ public class ZooVisitorEntity extends PathfinderMob {
                     searchCooldown--;
                     return false;
                 }
-                searchCooldown = 40 + visitor.getRandom().nextInt(30);
+                searchCooldown = 60 + visitor.getRandom().nextInt(60);
+
+                if (visitor.getRandom().nextInt(4) != 0) {
+                    return false;
+                }
             }
 
             int radH = (visitor.postPurchaseEatMode == EAT_MODE_SEAT) ? 20 : 14;
@@ -2536,7 +2602,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             this.targetPos = null;
             this.isSeated = false;
             this.sitTicks = 0;
-            visitor.sitCooldown = 500 + visitor.getRandom().nextInt(600); // 25-55s cooldown
+            visitor.sitCooldown = 1200 + visitor.getRandom().nextInt(1200); // 1-2 minutes cooldown between sits
         }
 
         @Override

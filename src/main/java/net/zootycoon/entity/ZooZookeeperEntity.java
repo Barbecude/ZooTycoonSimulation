@@ -112,6 +112,9 @@ private static final String[] NAMES = new String[]{
 
     private BlockPos currentTrashTarget = null;
     private int trashStuckTicks = 0;
+    private int navStuckTicks = 0;
+    private double lastNavX = 0.0D;
+    private double lastNavZ = 0.0D;
     private BlockPos tempDirtPos = null;
     private int tempDirtTimer = 0;
     private BlockState previousBlockState = null;
@@ -130,6 +133,10 @@ private static final String[] NAMES = new String[]{
         super(entityType, level);
         this.setPersistenceRequired();
 
+        this.setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.DOOR_WOOD_CLOSED, 0.0F);
+        this.setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.DOOR_OPEN, 0.0F);
+        this.setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.TRAPDOOR, 0.0F);
+
         if (!level.isClientSide()) {
             int nameIdx = this.random.nextInt(NAMES.length);
             this.setCustomName(Component.literal(NAMES[nameIdx]));
@@ -140,16 +147,22 @@ private static final String[] NAMES = new String[]{
         }
     }
 
+    @Override
+    protected net.minecraft.world.entity.ai.navigation.PathNavigation createNavigation(Level level) {
+        return new net.zootycoon.entity.ai.navigation.ZooPathNavigation(this, level);
+    }
+
     public static AttributeSupplier.Builder createAttributes() {
         return PathfinderMob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 20.0)
                 .add(Attributes.MOVEMENT_SPEED, 0.25)
-                .add(Attributes.FOLLOW_RANGE, 32.0);
+                .add(Attributes.FOLLOW_RANGE, 64.0);
     }
 
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
+        this.goalSelector.addGoal(0, new net.zootycoon.entity.ai.goal.ZooDoorAndGateInteractGoal(this));
         this.goalSelector.addGoal(1, new net.minecraft.world.entity.ai.goal.AvoidEntityGoal<>(this, ZooHunterEntity.class, 14.0F, 1.1D, 1.35D));
         this.goalSelector.addGoal(2, new LookAtPlayerGoal(this, Player.class, 8.0f));
         this.goalSelector.addGoal(3, new ZookeeperClaimStrollGoal(this, 0.4));
@@ -331,6 +344,52 @@ private static final String[] NAMES = new String[]{
                     this.getNavigation().stop();
                 }
             }
+
+            // Anti-stuck and jumping suppression against furniture, toilets, and gacha blocks
+            double movedDistSq = (this.getX() - lastNavX) * (this.getX() - lastNavX)
+                    + (this.getZ() - lastNavZ) * (this.getZ() - lastNavZ);
+            if (movedDistSq < 0.0009D) {
+                navStuckTicks++;
+                if (navStuckTicks >= 6) {
+                    // Suppress continuous jump bouncing when blocked
+                    if (this.onGround() && this.getDeltaMovement().y > 0.0D) {
+                        this.setDeltaMovement(this.getDeltaMovement().x, 0.0D, this.getDeltaMovement().z);
+                    }
+
+                    // Check for clear walkway to the left or right of facing direction
+                    net.minecraft.core.Direction facing = this.getDirection();
+                    BlockPos myPos = this.blockPosition();
+                    net.minecraft.core.Direction left = facing.getCounterClockWise();
+                    net.minecraft.core.Direction right = facing.getClockWise();
+
+                    boolean leftClear = isPassableFloor(sLevel, myPos.relative(left));
+                    boolean rightClear = isPassableFloor(sLevel, myPos.relative(right));
+
+                    if (leftClear || rightClear) {
+                        net.minecraft.core.Direction escapeDir = leftClear ? left : right;
+                        double nudgeX = escapeDir.getStepX() * 0.12D;
+                        double nudgeZ = escapeDir.getStepZ() * 0.12D;
+                        this.setDeltaMovement(this.getDeltaMovement().x + nudgeX, this.getDeltaMovement().y, this.getDeltaMovement().z + nudgeZ);
+                    }
+
+                    if (navStuckTicks % 12 == 0) {
+                        this.getNavigation().recomputePath();
+                    }
+
+                    if (navStuckTicks >= 35) {
+                        this.getNavigation().stop();
+                        navStuckTicks = 0;
+                    }
+                }
+            } else {
+                navStuckTicks = 0;
+            }
+            lastNavX = this.getX();
+            lastNavZ = this.getZ();
+        } else {
+            navStuckTicks = 0;
+            lastNavX = this.getX();
+            lastNavZ = this.getZ();
         }
 
         // Run active bathing duty every tick, or routine duties every 20 ticks
@@ -339,6 +398,20 @@ private static final String[] NAMES = new String[]{
         } else if (this.tickCount % 20 == 0 && actionCooldown <= 0) {
             handleStaffDuties(sLevel);
         }
+    }
+
+    private boolean isPassableFloor(ServerLevel level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        BlockState above = level.getBlockState(pos.above());
+        BlockState ground = level.getBlockState(pos.below());
+
+        if (state.isAir() || !state.blocksMotion()) {
+            if (above.isAir() || !above.blocksMotion()) {
+                return ground.isSolid() && !net.zootycoon.util.ZooSeatHelper.isSeatableBlockState(ground)
+                        && !ground.is(ZooBlocks.TOILET) && !ground.is(ZooBlocks.GACHA_MACHINE);
+            }
+        }
+        return false;
     }
 
     private void returnToClaimedLand(ServerLevel sLevel, ZooClaimManager claimManager) {

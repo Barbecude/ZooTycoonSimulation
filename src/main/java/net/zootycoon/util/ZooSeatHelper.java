@@ -25,15 +25,29 @@ public class ZooSeatHelper {
 
     /**
      * Checks if a block is a seatable object (chairs, benches, stools, sofas, seats from any mod).
+     * Note: Visitors are strictly prohibited from sitting on stairs.
      */
     public static boolean isSeatableBlock(Level level, BlockPos pos, BlockState state) {
+        if (!isSeatableBlockState(state)) return false;
+        return isSeatNotOccupied(level, pos);
+    }
+
+    /**
+     * Checks if a BlockState matches a seatable furniture item without checking occupancy.
+     */
+    public static boolean isSeatableBlockState(BlockState state) {
         if (state == null || state.isAir()) return false;
 
         // Exclude toilets (toilets are handled by FindToiletGoal)
         if (state.is(net.zootycoon.block.ZooBlocks.TOILET)) return false;
 
+        // User requirement: Visitors MUST NOT sit on stairs
+        if (state.getBlock() instanceof StairBlock) return false;
+
         ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        if (blockId == null) return false;
         String path = blockId.getPath().toLowerCase();
+        if (path.contains("stair")) return false;
 
         // 1. Check ID keywords (covering Another Furniture, Handcrafted, Adorn, Refurbished Furniture, Cluttered, etc.)
         if (path.contains("chair")
@@ -48,7 +62,7 @@ public class ZooSeatHelper {
                 || path.contains("chaise")
                 || path.contains("ottoman")
                 || path.contains("pouffe")) {
-            return isSeatNotOccupied(level, pos);
+            return true;
         }
 
         // 2. Check tags (e.g. #c:seats, #c:chairs, #furniture:seats, #another_furniture:chairs, etc.)
@@ -63,30 +77,18 @@ public class ZooSeatHelper {
                     || tagPath.contains("sit");
         });
         if (hasSeatTag) {
-            return isSeatNotOccupied(level, pos);
+            return true;
         }
 
         // 3. Check Class name
         String className = state.getBlock().getClass().getSimpleName().toLowerCase();
-        if (className.contains("chair")
+        if (className.contains("stair")) return false;
+        return className.contains("chair")
                 || className.contains("seat")
                 || className.contains("bench")
                 || className.contains("sofa")
                 || className.contains("couch")
-                || className.contains("stool")) {
-            return isSeatNotOccupied(level, pos);
-        }
-
-        // 4. Vanilla stairs (when used as seats, lower half)
-        if (state.getBlock() instanceof StairBlock) {
-            if (state.hasProperty(StairBlock.HALF) && state.getValue(StairBlock.HALF) == Half.BOTTOM) {
-                if (level.getBlockState(pos.above()).isAir()) {
-                    return isSeatNotOccupied(level, pos);
-                }
-            }
-        }
-
-        return false;
+                || className.contains("stool");
     }
 
     public static boolean isSeatNotOccupied(Level level, BlockPos pos) {
