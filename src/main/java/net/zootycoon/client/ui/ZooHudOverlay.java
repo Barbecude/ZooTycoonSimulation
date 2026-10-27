@@ -191,9 +191,7 @@ public class ZooHudOverlay {
 
         double starRating = ZooTycoonClient.getClientStarRating();
         int reviewCount = ZooTycoonClient.getClientReviewCount();
-        String ratingText = (reviewCount > 0)
-                ? String.format(java.util.Locale.ROOT, "%.1f (%d)", starRating, reviewCount)
-                : String.format(java.util.Locale.ROOT, "%.1f", starRating);
+        String ratingText = String.format(java.util.Locale.ROOT, "%.1f (%d)", starRating, reviewCount);
 
         Font font = mc.font;
         int textW = font.width(ratingText);

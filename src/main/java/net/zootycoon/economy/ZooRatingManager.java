@@ -72,11 +72,10 @@ public class ZooRatingManager {
                         reviewCounts.put(uuid, countTag.getInt(key));
                         reviewStarsSum.put(uuid, sumTag.getDouble(key));
                     } else {
-                        // Migration for old saves: initialize 10 baseline reviews
-                        int initialCount = 10;
-                        double initialStar = Math.clamp(r / 20.0D, 1.0D, 5.0D);
+                        // Migration for old saves: initialize 0 baseline reviews
+                        int initialCount = 0;
                         reviewCounts.put(uuid, initialCount);
-                        reviewStarsSum.put(uuid, initialStar * (double) initialCount);
+                        reviewStarsSum.put(uuid, 0.0D);
                     }
                 } catch (Exception ignored) {}
             }
@@ -152,9 +151,8 @@ public class ZooRatingManager {
     public void setStarRating(UUID playerUuid, double starRating, ServerPlayer player) {
         if (playerUuid == null) return;
         double clamped = Math.clamp(starRating, 1.0D, 5.0D);
-        int baselineCount = Math.max(10, reviewCounts.getOrDefault(playerUuid, 10));
-        reviewCounts.put(playerUuid, baselineCount);
-        reviewStarsSum.put(playerUuid, clamped * baselineCount);
+        reviewCounts.put(playerUuid, 0);
+        reviewStarsSum.put(playerUuid, 0.0D);
         ratings.put(playerUuid, (int) Math.round(clamped * 20.0D));
         saveToFile();
         syncToPlayer(player);
