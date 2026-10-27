@@ -62,7 +62,7 @@ public class ZooVisitorManager {
         }
 
         long currentTick = level.getGameTime();
-        if (currentTick - lastSpawnTick < 100) { // Check every 5 seconds for responsive crowd dynamics
+        if (currentTick - lastSpawnTick < 45) { // Check every 2.25 seconds for smooth crowd ramp-up
             return;
         }
         lastSpawnTick = currentTick;

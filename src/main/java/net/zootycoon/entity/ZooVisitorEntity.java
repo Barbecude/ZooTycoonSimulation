@@ -32,6 +32,12 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.block.FenceBlock;
+import net.minecraft.world.level.block.FenceGateBlock;
+import net.minecraft.world.level.block.IronBarsBlock;
+import net.minecraft.world.level.block.WallBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.zootycoon.ZooTycoonMod;
 import net.zootycoon.animal.ZooAnimalHungerManager;
 import net.zootycoon.block.ToiletBlockEntity;
@@ -155,6 +161,7 @@ public class ZooVisitorEntity extends PathfinderMob {
     private int drinkCount = 0;
     private int cashierCooldown = 0;
     private boolean hasWatchedAnimal = false;
+    private boolean isActivelyWatchingAnimal = false;
     private int lastWatchedAnimalId = -1;
     private BlockPos escapeTarget = null;
     private int escapeTicks = 0;
@@ -287,14 +294,14 @@ public class ZooVisitorEntity extends PathfinderMob {
         this.goalSelector.addGoal(1, new LeaveZooGoal(this));
         this.goalSelector.addGoal(1, new BuyTicketAtEntranceGoal(this));
         this.goalSelector.addGoal(2, new FindToiletGoal(this));
-        this.goalSelector.addGoal(2, new QueueAtCashierGoal(this));
-        this.goalSelector.addGoal(2, new UseGachaMachineGoal(this));
-        this.goalSelector.addGoal(2, new FindTrashCanGoal(this));
+        this.goalSelector.addGoal(2, new WatchAnimalsGoal(this));
+        this.goalSelector.addGoal(3, new QueueAtCashierGoal(this));
+        this.goalSelector.addGoal(3, new UseGachaMachineGoal(this));
+        this.goalSelector.addGoal(3, new FindTrashCanGoal(this));
         this.goalSelector.addGoal(4, new FindSeatGoal(this));
-        this.goalSelector.addGoal(5, new WatchAnimalsGoal(this));
-        this.goalSelector.addGoal(6, new VisitorZooStrollGoal(this, 0.7D));
-        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 6.0F));
-        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(5, new VisitorZooStrollGoal(this, 0.7D));
+        this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 6.0F));
+        this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
     }
 
     public VisitorMood getMood() {
@@ -462,6 +469,14 @@ public class ZooVisitorEntity extends PathfinderMob {
 
     public void setHasWatchedAnimal(boolean hasWatchedAnimal) {
         this.hasWatchedAnimal = hasWatchedAnimal;
+    }
+
+    public boolean isActivelyWatchingAnimal() {
+        return this.isActivelyWatchingAnimal;
+    }
+
+    public void setActivelyWatchingAnimal(boolean activelyWatching) {
+        this.isActivelyWatchingAnimal = activelyWatching;
     }
 
     public int getLastWatchedAnimalId() {
@@ -723,7 +738,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             setMood(VisitorMood.THIRSTY);
             return;
         }
-        if (watchingAnimalId != -1) {
+        if (watchingAnimalId != -1 && isActivelyWatchingAnimal) {
             if (watchingAnimalIsPredator) {
                 setMood(VisitorMood.SCARED);
             } else if (watchingAnimalSize == 2) {
@@ -1607,19 +1622,19 @@ public class ZooVisitorEntity extends PathfinderMob {
         }
 
         private String determineDesiredRole() {
-            if (visitor.isFomoTarget()) {
+            if (visitor.isFomoTarget() && visitor.hasWatchedAnimal()) {
                 return visitor.fomoCashier.getCashierRole();
             }
             if (visitor.isTimeToLeave() || visitor.isConsuming() || visitor.postPurchaseEatMode > 0 || visitor.needsToilet() || visitor.hasCashierCooldown()) {
                 return null;
             }
-            if (!visitor.getTags().contains("ticket_purchased") || visitor.guidingPlayerUuid != null) {
+            if (!visitor.getTags().contains("ticket_purchased") || visitor.guidingPlayerUuid != null || !visitor.hasWatchedAnimal()) {
                 return null;
             }
-            if (visitor.hasWatchedAnimal() && visitor.canEat() && (visitor.getHunger() >= 35 || visitor.getMood() == VisitorMood.HUNGRY)) {
+            if (visitor.canEat() && (visitor.getHunger() >= 35 || visitor.getMood() == VisitorMood.HUNGRY)) {
                 return "BURGER";
             }
-            if (visitor.hasWatchedAnimal() && visitor.canDrink() && (visitor.getThirst() >= 25 || visitor.getMood() == VisitorMood.THIRSTY)) {
+            if (visitor.canDrink() && (visitor.getThirst() >= 25 || visitor.getMood() == VisitorMood.THIRSTY)) {
                 return "DRINK";
             }
             return null;
@@ -1627,7 +1642,7 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         @Override
         public boolean canUse() {
-            if (visitor.isTimeToLeave()) return false;
+            if (visitor.isTimeToLeave() || !visitor.hasWatchedAnimal()) return false;
             if (visitor.isFomoTarget()) {
                 this.targetCashier = visitor.fomoCashier;
                 this.targetRole = targetCashier.getCashierRole();
@@ -1904,6 +1919,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             int base = 600 + visitor.random.nextInt(400); // ~30-50 seconds
             watchTimer = base;
             travelTimeout = 400; // max 20 seconds to reach viewing range
+            visitor.setActivelyWatchingAnimal(false);
             if (targetAnimal != null) {
                 visitor.watchingAnimalId = targetAnimal.getId();
                 visitor.watchingAnimalSize = determineAnimalSize(targetAnimal);
@@ -1919,6 +1935,7 @@ public class ZooVisitorEntity extends PathfinderMob {
                 visitor.hasWatchedAnimal = true;
                 visitor.lastWatchedAnimalId = targetAnimal.getId();
             }
+            visitor.setActivelyWatchingAnimal(false);
             visitor.watchingAnimalId = -1;
             visitor.watchingAnimalSize = -1;
             visitor.watchingAnimalIsPredator = false;
@@ -1939,17 +1956,29 @@ public class ZooVisitorEntity extends PathfinderMob {
             }
 
             boolean inViewingRange = false;
-            if (watchPos != null) {
-                double dist = visitor.distanceToSqr(watchPos.getX() + 0.5, watchPos.getY(), watchPos.getZ() + 0.5);
-                if (dist <= 64.0D || visitor.distanceToSqr(targetAnimal) <= 100.0D) {
-                    inViewingRange = true;
-                    visitor.hasWatchedAnimal = true;
-                    visitor.lastWatchedAnimalId = targetAnimal.getId();
-                    if (visitor.postPurchaseEatMode == EAT_MODE_WATCH_ANIMAL && visitor.consumeBitesRemaining <= 0 && !visitor.isConsuming()) {
-                        visitor.startConsuming(visitor.getMainHandItem(), visitor.isDrinkingItem, 28);
-                    }
+            double distAnimalSq = visitor.distanceToSqr(targetAnimal);
+            double distWatchSq = watchPos != null ? visitor.distanceToSqr(watchPos.getX() + 0.5, watchPos.getY(), watchPos.getZ() + 0.5) : Double.MAX_VALUE;
+
+            if (distAnimalSq <= 64.0D || distWatchSq <= 9.0D || (distAnimalSq <= 256.0D && isBarrierBetween(visitor, targetAnimal))) {
+                inViewingRange = true;
+                visitor.hasWatchedAnimal = true;
+                visitor.lastWatchedAnimalId = targetAnimal.getId();
+                if (!visitor.isActivelyWatchingAnimal()) {
+                    visitor.setActivelyWatchingAnimal(true);
+                    visitor.updateMood();
                 }
-                if (dist > 4.0D || visitor.getNavigation().isDone()) {
+                if (visitor.postPurchaseEatMode == EAT_MODE_WATCH_ANIMAL && visitor.consumeBitesRemaining <= 0 && !visitor.isConsuming()) {
+                    visitor.startConsuming(visitor.getMainHandItem(), visitor.isDrinkingItem, 28);
+                }
+            } else {
+                if (visitor.isActivelyWatchingAnimal()) {
+                    visitor.setActivelyWatchingAnimal(false);
+                    visitor.updateMood();
+                }
+            }
+
+            if (watchPos != null) {
+                if (distWatchSq > 4.0D || visitor.getNavigation().isDone()) {
                     visitor.moveTowardLongRange(watchPos, 1.05D);
                 }
             }
@@ -1969,6 +1998,22 @@ public class ZooVisitorEntity extends PathfinderMob {
                     }
                 }
             }
+        }
+
+        private boolean isBarrierBetween(ZooVisitorEntity visitor, Animal animal) {
+            Vec3 start = visitor.getEyePosition();
+            Vec3 end = animal.getEyePosition();
+            Vec3 dir = end.subtract(start).normalize();
+            for (double d = 1.0; d <= 3.5; d += 1.0) {
+                BlockPos checkPos = BlockPos.containing(start.add(dir.scale(d)));
+                BlockState state = visitor.level().getBlockState(checkPos);
+                if (state.getBlock() instanceof FenceBlock || state.getBlock() instanceof WallBlock
+                        || state.getBlock() instanceof IronBarsBlock || state.getBlock() instanceof FenceGateBlock
+                        || state.is(BlockTags.FENCES) || state.is(BlockTags.WALLS)) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         @Override
@@ -2472,6 +2517,9 @@ public class ZooVisitorEntity extends PathfinderMob {
             if (visitor.isTimeToLeave() || !visitor.getTags().contains("ticket_purchased")) {
                 return false;
             }
+            if (!visitor.hasWatchedAnimal()) {
+                return false;
+            }
             return super.canUse();
         }
 
@@ -2527,6 +2575,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             } else {
                 if (visitor.isTimeToLeave()) return false;
                 if (!visitor.getTags().contains("ticket_purchased")) return false;
+                if (!visitor.hasWatchedAnimal()) return false;
                 if (visitor.needsToilet()) return false;
                 if (visitor.hasTrash()) return false;
                 if (visitor.isPassenger()) return false;
@@ -2660,6 +2709,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         public boolean canUse() {
             if (visitor.isTimeToLeave() || visitor.isConsuming() || visitor.postPurchaseEatMode > 0
                     || visitor.needsToilet() || !visitor.getTags().contains("ticket_purchased")
+                    || !visitor.hasWatchedAnimal()
                     || visitor.guidingPlayerUuid != null) {
                 return false;
             }

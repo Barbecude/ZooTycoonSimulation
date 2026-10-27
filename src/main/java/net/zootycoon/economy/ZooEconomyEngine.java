@@ -72,19 +72,19 @@ public final class ZooEconomyEngine {
     public static int MAX_TICKET_PRICE = 200;
 
     /** Kapasitas dasar pengunjung */
-    public static int BASE_VISITOR_CAPACITY = 4;
-    public static int CASHIER_CAPACITY_BONUS = 3;
+    public static int BASE_VISITOR_CAPACITY = 25;
+    public static int CASHIER_CAPACITY_BONUS = 10;
 
     /** Bonus kapasitas saat tiket GRATIS (0 Emerald) - lonjakan massa / overcrowding */
-    public static int FREE_TICKET_EXTRA_CAPACITY = 10;
-    public static double FREE_TICKET_STAR_MULTIPLIER = 4.0D; // Rating tinggi + gratis = super membludak
+    public static int FREE_TICKET_EXTRA_CAPACITY = 30;
+    public static double FREE_TICKET_STAR_MULTIPLIER = 5.0D; // Rating tinggi + gratis = super membludak
 
     /** Bonus kapasitas saat tiket dibayar dengan harga wajar */
-    public static double NORMAL_TICKET_STAR_MULTIPLIER = 2.0D;
+    public static double NORMAL_TICKET_STAR_MULTIPLIER = 4.0D;
 
     /** Penalti kapasitas jika tiket kemahalan dibanding rating */
     public static double OVERPRICED_CAPACITY_PENALTY_PER_EMERALD = 0.3D;
-    public static int MIN_OVERPRICED_CAPACITY = 2;
+    public static int MIN_OVERPRICED_CAPACITY = 10;
 
     /** Rasio spawn pengunjung anak-anak */
     public static float DEFAULT_CHILD_SPAWN_CHANCE = 0.30F;
@@ -314,23 +314,26 @@ public final class ZooEconomyEngine {
             int base = BASE_VISITOR_CAPACITY + (Math.max(0, cashierCount) * CASHIER_CAPACITY_BONUS);
             int expected = getExpectedTicketPrice(starRating);
 
+            int capacity;
             if (ticketPrice <= 0) {
                 // Free admission: bonus kapasitas masif
-                return base + FREE_TICKET_EXTRA_CAPACITY + (int) Math.round(starRating * FREE_TICKET_STAR_MULTIPLIER);
+                capacity = base + FREE_TICKET_EXTRA_CAPACITY + (int) Math.round(starRating * FREE_TICKET_STAR_MULTIPLIER);
             } else if (ticketPrice <= expected) {
                 // Harga wajar atau murah
-                return base + (int) Math.round(starRating * NORMAL_TICKET_STAR_MULTIPLIER);
+                capacity = base + (int) Math.round(starRating * NORMAL_TICKET_STAR_MULTIPLIER);
             } else {
                 // Kemahalan
                 // Zoo bintang tinggi (>= 4.5) tetap mempertahankan kapasitas stabil meski harga tinggi
                 if (starRating >= HIGH_RATING_PRICE_TOLERANCE_THRESHOLD) {
-                    return base + (int) Math.round(starRating * NORMAL_TICKET_STAR_MULTIPLIER);
+                    capacity = base + (int) Math.round(starRating * NORMAL_TICKET_STAR_MULTIPLIER);
+                } else {
+                    int diff = ticketPrice - expected;
+                    capacity = Math.max(MIN_OVERPRICED_CAPACITY, base + (int) Math.round(starRating * 1.5D) - (int) Math.round(diff * OVERPRICED_CAPACITY_PENALTY_PER_EMERALD));
                 }
-                int diff = ticketPrice - expected;
-                return Math.max(MIN_OVERPRICED_CAPACITY, base + (int) Math.round(starRating * 1.5D) - (int) Math.round(diff * OVERPRICED_CAPACITY_PENALTY_PER_EMERALD));
             }
+            return Math.min(90, Math.max(MIN_OVERPRICED_CAPACITY, capacity));
         } catch (Throwable t) {
-            return 10;
+            return 25;
         }
     }
 
