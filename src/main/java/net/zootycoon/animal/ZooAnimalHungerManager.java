@@ -72,6 +72,52 @@ public class ZooAnimalHungerManager {
         return true;
     }
 
+    public static boolean isPureAquatic(String entityTypeId) {
+        if (entityTypeId == null || entityTypeId.isEmpty()) return false;
+        String id = entityTypeId.toLowerCase(Locale.ROOT);
+        // Semi-aquatic exclusions: these spend time on land/mud and retain welfare/grooming
+        if (id.contains("hippo") || id.contains("alligator") || id.contains("crocodile") || id.contains("croc")
+                || id.contains("capybara") || id.contains("penguin") || id.contains("platypus")
+                || id.contains("turtle") || id.contains("tortoise") || id.contains("otter")
+                || id.contains("seal") || id.contains("walrus") || id.contains("seagull")
+                || id.contains("duck") || id.contains("frog") || id.contains("toad")
+                || id.contains("beaver") || id.contains("crane") || id.contains("pelican")) {
+            return false;
+        }
+
+        // Pure aquatic matches: living exclusively in water tanks / ocean
+        return id.contains("orca")
+                || id.contains("cachalot")
+                || id.contains("whale")
+                || id.contains("shark")
+                || id.contains("squid")
+                || id.contains("dolphin")
+                || id.contains("mantis_shrimp")
+                || id.contains("octopus")
+                || id.contains("manta_ray")
+                || id.contains("stingray")
+                || id.contains("ray")
+                || id.contains("fish")
+                || id.contains("cod")
+                || id.contains("salmon")
+                || id.contains("pufferfish")
+                || id.contains("axolotl")
+                || id.contains("tadpole")
+                || id.contains("eel")
+                || id.contains("jellyfish");
+    }
+
+    public static boolean isPureAquatic(Entity entity) {
+        if (entity == null) return false;
+        if (entity instanceof net.minecraft.world.entity.animal.WaterAnimal) {
+            String id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString().toLowerCase(Locale.ROOT);
+            if (id.contains("turtle") || id.contains("frog")) return false;
+            return true;
+        }
+        String id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
+        return isPureAquatic(id);
+    }
+
     public static boolean isScanningItem(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
         if (stack.is(Items.SPYGLASS)) return true;
@@ -240,11 +286,17 @@ public class ZooAnimalHungerManager {
                 }
             }
 
-            // Cleanliness decay
-            if (level.getGameTime() % 240 == 0) { // Loses 1% every 12s
-                int currentClean = getCleanliness(animal);
-                if (currentClean > 0) {
-                    setCleanliness(animal, currentClean - 1);
+            // Cleanliness decay (pure aquatic animals never get dirty)
+            if (!isPureAquatic(animal)) {
+                if (level.getGameTime() % 240 == 0) { // Loses 1% every 12s
+                    int currentClean = getCleanliness(animal);
+                    if (currentClean > 0) {
+                        setCleanliness(animal, currentClean - 1);
+                    }
+                }
+            } else {
+                if (getCleanliness(animal) != MAX_CLEANLINESS) {
+                    setCleanliness(animal, MAX_CLEANLINESS);
                 }
             }
 
@@ -344,17 +396,19 @@ public class ZooAnimalHungerManager {
     }
 
     private static void applyNegativeStatEffects(ServerLevel level, LivingEntity animal, int currentHunger, int currentThirst, int currentClean) {
-        // 1. Kebersihan (Cleanliness <= 0 -> Poison + Weakness)
-        if (currentClean <= 0) {
-            animal.addEffect(new MobEffectInstance(MobEffects.POISON, 80, 0, false, true, true));
-            animal.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80, 0, false, false, true));
-            if (level.getGameTime() % 40 == 0) {
-                level.sendParticles(ParticleTypes.ITEM_SLIME, animal.getX(), animal.getY() + animal.getBbHeight() * 0.5, animal.getZ(), 5, 0.2, 0.2, 0.2, 0.02);
-            }
-        } else if (currentClean <= 10) {
-            animal.addEffect(new MobEffectInstance(MobEffects.POISON, 80, 0, false, false, true));
-            if (level.getGameTime() % 40 == 0) {
-                level.sendParticles(ParticleTypes.ITEM_SLIME, animal.getX(), animal.getY() + animal.getBbHeight() * 0.5, animal.getZ(), 3, 0.2, 0.2, 0.2, 0.02);
+        // 1. Kebersihan (Cleanliness <= 0 -> Poison + Weakness) - Pure aquatic animals never get dirty
+        if (!isPureAquatic(animal)) {
+            if (currentClean <= 0) {
+                animal.addEffect(new MobEffectInstance(MobEffects.POISON, 80, 0, false, true, true));
+                animal.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80, 0, false, false, true));
+                if (level.getGameTime() % 40 == 0) {
+                    level.sendParticles(ParticleTypes.ITEM_SLIME, animal.getX(), animal.getY() + animal.getBbHeight() * 0.5, animal.getZ(), 5, 0.2, 0.2, 0.2, 0.02);
+                }
+            } else if (currentClean <= 10) {
+                animal.addEffect(new MobEffectInstance(MobEffects.POISON, 80, 0, false, false, true));
+                if (level.getGameTime() % 40 == 0) {
+                    level.sendParticles(ParticleTypes.ITEM_SLIME, animal.getX(), animal.getY() + animal.getBbHeight() * 0.5, animal.getZ(), 3, 0.2, 0.2, 0.2, 0.02);
+                }
             }
         }
 
@@ -723,7 +777,7 @@ public class ZooAnimalHungerManager {
     }
 
     public static int getCleanliness(Entity entity) {
-        if (entity == null) return MAX_CLEANLINESS;
+        if (entity == null || isPureAquatic(entity)) return MAX_CLEANLINESS;
         Integer cached = CLEANLINESS_MAP.get(entity.getUUID());
         if (cached != null) return cached;
 
@@ -741,6 +795,9 @@ public class ZooAnimalHungerManager {
 
     public static void setCleanliness(Entity entity, int cleanliness) {
         if (entity == null) return;
+        if (isPureAquatic(entity)) {
+            cleanliness = MAX_CLEANLINESS;
+        }
         int clamped = Math.clamp(cleanliness, 0, MAX_CLEANLINESS);
         CLEANLINESS_MAP.put(entity.getUUID(), clamped);
 

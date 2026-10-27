@@ -11,6 +11,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.food.FoodProperties;
@@ -22,6 +23,7 @@ import net.zootycoon.claim.ZooClaimManager;
 import net.zootycoon.network.ZooNetworkPayloads;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -72,15 +74,15 @@ public final class ZooEconomyEngine {
     public static int MAX_TICKET_PRICE = 200;
 
     /** Kapasitas dasar pengunjung */
-    public static int BASE_VISITOR_CAPACITY = 25;
-    public static int CASHIER_CAPACITY_BONUS = 10;
+    public static int BASE_VISITOR_CAPACITY = 45;
+    public static int CASHIER_CAPACITY_BONUS = 15;
 
     /** Bonus kapasitas saat tiket GRATIS (0 Emerald) - lonjakan massa / overcrowding */
-    public static int FREE_TICKET_EXTRA_CAPACITY = 30;
-    public static double FREE_TICKET_STAR_MULTIPLIER = 5.0D; // Rating tinggi + gratis = super membludak
+    public static int FREE_TICKET_EXTRA_CAPACITY = 45;
+    public static double FREE_TICKET_STAR_MULTIPLIER = 8.0D; // Rating tinggi + gratis = super membludak
 
     /** Bonus kapasitas saat tiket dibayar dengan harga wajar */
-    public static double NORMAL_TICKET_STAR_MULTIPLIER = 4.0D;
+    public static double NORMAL_TICKET_STAR_MULTIPLIER = 8.0D;
 
     /** Penalti kapasitas jika tiket kemahalan dibanding rating */
     public static double OVERPRICED_CAPACITY_PENALTY_PER_EMERALD = 0.3D;
@@ -233,6 +235,55 @@ public final class ZooEconomyEngine {
         }
     }
 
+    public static String getTicketPriceTierLabel(int ticketPrice) {
+        if (ticketPrice <= 0) return "Gratis (Ramah Warga)";
+        if (ticketPrice <= 20) return "Standar (Ramah Keluarga)";
+        if (ticketPrice <= 50) return "Menengah (Wisata Populer)";
+        if (ticketPrice <= 80) return "Eksklusif (Pengunjung Mampu)";
+        return "VIP Sultan (Koleksi Mewah)";
+    }
+
+    public static int calculateZooValuation(ServerLevel level, UUID ownerUuid) {
+        if (level == null || ownerUuid == null || level.getServer() == null) return 0;
+        try {
+            int treasury = ZooEconomyManager.get(level.getServer()).getBalance(ownerUuid);
+            var claimManager = net.zootycoon.claim.ZooClaimManager.get(level);
+            List<net.zootycoon.claim.ZooClaim> claims = claimManager.getPlayerClaims(ownerUuid);
+            int claimValue = claims.size() * 100;
+
+            int animalCount = 0;
+            int staffCount = 0;
+            for (ServerLevel sl : level.getServer().getAllLevels()) {
+                for (Entity e : sl.getAllEntities()) {
+                    if (e instanceof LivingEntity living && living.isAlive()) {
+                        if (net.zootycoon.animal.ZooAnimalHungerManager.isOwnedBy(living, ownerUuid)
+                                || (claimManager.isClaimedBy(living.blockPosition(), ownerUuid) && net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(living))) {
+                            animalCount++;
+                        }
+                        if (e.getTags().contains("zootycoon_staff")) {
+                            staffCount++;
+                        }
+                    }
+                }
+            }
+
+            int animalValue = animalCount * 250;
+            int staffValue = staffCount * 200;
+
+            return Math.max(0, treasury + claimValue + animalValue + staffValue);
+        } catch (Throwable t) {
+            return 0;
+        }
+    }
+
+    public static String getZooValuationTier(int valuation) {
+        if (valuation < 1000) return "Perintis Zoo (Rintisan)";
+        if (valuation < 5000) return "Kebun Binatang Berkembang (Komersial)";
+        if (valuation < 15000) return "Taman Konservasi Mapan (Mapan)";
+        if (valuation < 50000) return "Destinasi Wisata Terkenal (Ternama)";
+        return "Mega Safari Tycoon (Kaliber Dunia)";
+    }
+
     /**
      * Menghasilkan teks dialog natural dan santai dari kasir tiket ('Bos...')
      * yang bereaksi langsung terhadap harga tiket yang dipilih serta rating kebun binatang.
@@ -250,7 +301,7 @@ public final class ZooEconomyEngine {
                 if (starRating >= 4.0D) {
                     return Component.literal(String.format(Locale.ROOT, "Tiket gratis Bos? Zoo kita udah bintang %.1f! Pengunjung bakal super membludak serbu kebun binatang, siap-siap kewalahan!", starRating));
                 }
-                return Component.literal("Tiket gratis Bos? Pengunjung bakal membludak serbu kebun binatang kita, tapi kita nggak dapet uang tiket masuk!");
+                return Component.literal("Tiket gratis Bos? Ramah warga banget! Pengunjung bakal membludak serbu kebun binatang kita!");
             }
 
             // 2. Bintang 5 / World Class Zoo
@@ -266,15 +317,18 @@ public final class ZooEconomyEngine {
                 if (starRating >= 3.5D && ticketPrice <= 20) {
                     return Component.literal(String.format(Locale.ROOT, "Kemurahan Bos! Rating kita udah %.1f bintang, sayang banget tiket cuma %d Emerald. Harusnya bisa dinaikkan!", starRating, ticketPrice));
                 }
+                if (ticketPrice <= 20) {
+                    return Component.literal(String.format(Locale.ROOT, "Tiket 20 Emerald harga standar ramah keluarga Bos! Sesuai sama reputasi bintang %.1f kita.", starRating));
+                }
                 return Component.literal(String.format(Locale.ROOT, "Harga pas Bos! Sesuai sama reputasi bintang %.1f kita, pengunjung bakal ramai dan tertib.", starRating));
             }
 
             // 4. Overpriced comparison
             int diff = ticketPrice - expected;
             if (diff <= 30) {
-                return Component.literal(String.format(Locale.ROOT, "Agak mahal nih Bos untuk rating bintang %.1f. Pengunjung mungkin agak mikir, pastikan fasilitas zoo kita terawat ya!", starRating));
+                return Component.literal(String.format(Locale.ROOT, "Tiket %d Emerald kategori menengah ke atas Bos. Untuk rating bintang %.1f, pastikan fasilitas zoo kita terawat ya!", ticketPrice, starRating));
             } else {
-                return Component.literal(String.format(Locale.ROOT, "Kemahalan Bos! Rating aja cuma %.1f bintang, yang dateng nanti sedikit dan kalau kondisi zoo kurang bagus rating kita makin anjlok!", starRating));
+                return Component.literal(String.format(Locale.ROOT, "Tiket %d Emerald kemahalan Bos! Rating masih %.1f bintang, pengunjung bisa kecewa kalau kondisi zoo kurang bagus!", ticketPrice, starRating));
             }
         } catch (Throwable t) {
             return Component.literal("Loket tiket siap melayani pengunjung Bos!");
@@ -331,7 +385,7 @@ public final class ZooEconomyEngine {
                     capacity = Math.max(MIN_OVERPRICED_CAPACITY, base + (int) Math.round(starRating * 1.5D) - (int) Math.round(diff * OVERPRICED_CAPACITY_PENALTY_PER_EMERALD));
                 }
             }
-            return Math.min(90, Math.max(MIN_OVERPRICED_CAPACITY, capacity));
+            return Math.min(150, Math.max(MIN_OVERPRICED_CAPACITY, capacity));
         } catch (Throwable t) {
             return 25;
         }

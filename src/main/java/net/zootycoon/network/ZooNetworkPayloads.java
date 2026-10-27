@@ -696,11 +696,14 @@ public class ZooNetworkPayloads {
     }
 
     // 18c. Sync Rating Payload (S2C)
-    public record SyncRatingPayload(int rating) implements CustomPacketPayload {
+    public record SyncRatingPayload(int rating, int reviewCount) implements CustomPacketPayload {
         public static final CustomPacketPayload.Type<SyncRatingPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("sync_rating"));
         public static final StreamCodec<FriendlyByteBuf, SyncRatingPayload> CODEC = CustomPacketPayload.codec(
-                (payload, buf) -> buf.writeInt(payload.rating),
-                buf -> new SyncRatingPayload(buf.readInt())
+                (payload, buf) -> {
+                    buf.writeInt(payload.rating);
+                    buf.writeInt(payload.reviewCount);
+                },
+                buf -> new SyncRatingPayload(buf.readInt(), buf.readInt())
         );
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }

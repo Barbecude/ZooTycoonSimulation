@@ -72,7 +72,7 @@ public class AnimalBathingManager {
     }
 
     public static boolean waterAnimal(LivingEntity animal, ServerPlayer player, ItemStack held, InteractionHand hand) {
-        if (animal == null || !animal.isAlive() || !(animal.level() instanceof ServerLevel sl)) {
+        if (animal == null || !animal.isAlive() || !(animal.level() instanceof ServerLevel sl) || ZooAnimalHungerManager.isPureAquatic(animal)) {
             return false;
         }
 
@@ -102,7 +102,7 @@ public class AnimalBathingManager {
     }
 
     public static boolean brushAnimal(LivingEntity animal, ServerPlayer player, ItemStack held, InteractionHand hand) {
-        if (animal == null || !animal.isAlive() || !(animal.level() instanceof ServerLevel sl)) {
+        if (animal == null || !animal.isAlive() || !(animal.level() instanceof ServerLevel sl) || ZooAnimalHungerManager.isPureAquatic(animal)) {
             return false;
         }
 

@@ -251,6 +251,8 @@
   "zootycoon.dialog.visitor.btn.not_available": "Belum Ada",
   "zootycoon.dialog.visitor.guiding_toast": "Pengunjung sedang mengikuti Anda menuju fasilitas yang dicari.",
   "zootycoon.toast.title.visitor": "Pengunjung Kebun Binatang",
+  "zootycoon.toast.title.review": "Ulasan Pengunjung",
+  "zootycoon.toast.review.left": "Pengunjung memberikan ulasan %s bintang!",
   "zootycoon.toast.title.rating_up": "Rating Kebun Binatang Naik",
   "zootycoon.toast.title.rating_down": "Rating Kebun Binatang Turun",
   "zootycoon.toast.rating.guide_success": "Pengunjung puas diantarkan ke fasilitas! Rating zoo: %s/100",

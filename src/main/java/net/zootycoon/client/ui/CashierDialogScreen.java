@@ -398,7 +398,11 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
     @Override
     protected void renderDialogContent(GuiGraphics graphics, int contentX, int contentY, int contentW, int contentH, int mouseX, int mouseY, float delta) {
         if ("TICKET".equalsIgnoreCase(currentRole)) {
-            // Simplified UI: No separate card container needed! The natural dialogue in the speech bubble conveys all feedback.
+            int bubbleH = getSpeechBubbleHeight();
+            int buttonsY = startY + 39 + bubbleH + 10;
+            int labelY = buttonsY + 25;
+            String tierLabel = net.zootycoon.economy.ZooEconomyEngine.getTicketPriceTierLabel(this.ticketPrice);
+            graphics.drawString(this.font, Component.literal("Kategori: " + tierLabel), contentX, labelY, 0xFFBBBBBB, false);
             return;
         }
 

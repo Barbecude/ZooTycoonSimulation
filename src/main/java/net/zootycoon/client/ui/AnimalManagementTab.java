@@ -496,8 +496,10 @@ public class AnimalManagementTab {
         int foodGridH = foods.isEmpty() ? 0 : foodRows * (slotSize + gap);
         int foodToggleBtnH = hasMultipleFoodRows ? 20 : 0;
 
+        boolean isAquatic = net.zootycoon.animal.ZooAnimalHungerManager.isPureAquatic(selectedData.entityTypeId());
+        int cleanRowH = isAquatic ? 0 : 12;
         int habNeedsH = redNeeds.isEmpty() ? 13 : (11 + redNeeds.size() * 10 + 2);
-        int detailsTotalContentH = 12 + 12 + 12 + 12 + 13 + habNeedsH + 14 + foodGridH + foodToggleBtnH + 8;
+        int detailsTotalContentH = 12 + 12 + 12 + cleanRowH + 13 + habNeedsH + 14 + foodGridH + foodToggleBtnH + 8;
 
         this.maxDetailsScroll = Math.max(0, detailsTotalContentH - scrollAreaH);
         this.detailsScrollOffset = Math.clamp(this.detailsScrollOffset, 0, this.maxDetailsScroll);
@@ -577,25 +579,27 @@ public class AnimalManagementTab {
         }
         relY += 12;
 
-        // 4. Cleanliness (Sparkle icons + percentage)
-        int cleanY = scrollAreaY + relY - detailsScrollOffset;
-        int filledClean = Math.clamp(Math.round(selectedData.cleanliness() / 10.0f), 0, 10);
-        for (int i = 0; i < 10; i++) {
-            int sX = infoX + i * 10;
-            if (i < filledClean) {
-                graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-            } else {
-                graphics.setColor(0.38f, 0.38f, 0.38f, 0.40f);
+        // 4. Cleanliness (Sparkle icons + percentage) - Hidden for pure aquatic animals
+        if (!isAquatic) {
+            int cleanY = scrollAreaY + relY - detailsScrollOffset;
+            int filledClean = Math.clamp(Math.round(selectedData.cleanliness() / 10.0f), 0, 10);
+            for (int i = 0; i < 10; i++) {
+                int sX = infoX + i * 10;
+                if (i < filledClean) {
+                    graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+                } else {
+                    graphics.setColor(0.38f, 0.38f, 0.38f, 0.40f);
+                }
+                graphics.blit(CLEANLINESS_ICON, sX, cleanY, 0, 0, 9, 9, 9, 9);
             }
-            graphics.blit(CLEANLINESS_ICON, sX, cleanY, 0, 0, 9, 9, 9, 9);
+            graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+            int cleanColor = HologramBarRenderer.getStatusColor((float) selectedData.cleanliness());
+            graphics.drawString(font, Component.literal(selectedData.cleanliness() + "%"), statTextX, cleanY + 1, cleanColor, false);
+            if (inScrollArea && mouseX >= infoX && mouseX <= infoX + 100 && mouseY >= cleanY && mouseY <= cleanY + 10) {
+                hoveredStatTooltip = Component.literal("Kebersihan: " + selectedData.cleanliness() + "%");
+            }
+            relY += 12;
         }
-        graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-        int cleanColor = HologramBarRenderer.getStatusColor((float) selectedData.cleanliness());
-        graphics.drawString(font, Component.literal(selectedData.cleanliness() + "%"), statTextX, cleanY + 1, cleanColor, false);
-        if (inScrollArea && mouseX >= infoX && mouseX <= infoX + 100 && mouseY >= cleanY && mouseY <= cleanY + 10) {
-            hoveredStatTooltip = Component.literal("Kebersihan: " + selectedData.cleanliness() + "%");
-        }
-        relY += 12;
 
         // 5. Temperature (Thermometer icon + status)
         int tempY = scrollAreaY + relY - detailsScrollOffset;
@@ -1125,7 +1129,9 @@ public class AnimalManagementTab {
                 List<ItemStack> foods = AnimalDietRegistry.getFoodsForAnimal(previewEntity);
                 List<Component> redNeeds = getHabitatRedNeeds(previewEntity);
                 int habNeedsH = redNeeds.isEmpty() ? 13 : (11 + redNeeds.size() * 10 + 2);
-                int relY = 12 + 12 + 12 + 12 + 13 + habNeedsH + 14;
+                boolean isAquatic = net.zootycoon.animal.ZooAnimalHungerManager.isPureAquatic(selectedData.entityTypeId());
+                int cleanRowH = isAquatic ? 0 : 12;
+                int relY = 12 + 12 + 12 + cleanRowH + 13 + habNeedsH + 14;
                 int slotStartY = scrollAreaY + relY - detailsScrollOffset;
                 int slotSize = 22;
                 int gap = 4;

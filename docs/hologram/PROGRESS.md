@@ -31,6 +31,7 @@
 | 26 | Hologram Icon Multi-Row (Kelola Satwa Style Tanpa Persen) | SELESAI | 2026-10-25 | Mengganti icon tunggal + persentase pada in-world hologram dengan deretan 10 icon persis seperti Kelola Satwa (10 hati, 10 paha pakan, 10 tetes air, 10 spons pembersih) tanpa teks persen, serta mempertahankan format suhu (termometer + °C + status) |
 | 27 | Perbaikan Kenaikan Kebersihan Mandi & Do-Nothing Saat 100% Bersih | SELESAI | 2026-10-25 | Memperbaiki kenaikan kebersihan 100% pada CompletePlayerBathingPayload server-side (menghilangkan ketergantungan isWet saat paket tahap 2 tiba), mengirim snapshot & sync instan, serta menerapkan perilaku do-nothing (tanpa hologram progress bar, tanpa notifikasi need_water/toast, hanya partikel/animasi siram lokal) saat kebersihan satwa sudah 100% |
 | 28 | Perbaikan Z-Fighting & Anti-Flicker Icon Hati & Lapar Hologram | SELESAI | 2026-10-25 | Mengatasi bug kedap-kedip (flickering) pada deretan icon hati dan hunger hologram dengan merender tepat 1 quad per slot (hanya full sprite saat penuh atau container/empty saat kosong) dan menerapkan Z-offset layer aman (+0.002f ke depan) untuk half sprite |
+| 29 | Pengecualian Kebersihan Satwa Akuatik Murni | SELESAI | 2026-10-27 | Satwa akuatik murni (orca, paus, hiu, cumi-cumi, lumba-lumba, ikan, axolotl) dikecualikan dari status kebersihan: baris kebersihan dihilangkan dari in-world hologram dan UI Kelola Satwa, kebersihan selalu 100%, dan zookeeper/player tidak memandikan satwa akuatik |
 
 ## Keputusan
 - Koreksi CONTEXT.md poin T5: Sync periodik sebenarnya ada di server tick setiap 40 tick (2 detik) melalui `ZooNetworkPayloads.sendAnimalSync(player)`. Namun, method ini HANYA mengirimkan hewan yang sudah terdaftar (`isTagged`) dan dimiliki pemain (`isOwnedBy`). Hewan yang belum terdaftar tidak pernah masuk payload sehingga client renderer selalu menerima null dan jatuh ke nilai palsu (80/80/100). Mekanisme request inspeksi on-demand per target belum ada.
@@ -299,6 +300,17 @@
 - Kategori diet pada subtitle hologram satwa tampil berwarna ungu lavender lembut (`0xFFBD6DFF`) dan metode pakan tetap abu-abu (`0xFFAAAAAA`).
 - Indikator overhead satwa kini mendukung 5 stat (Health, Hunger, Thirst, Cleanliness, Suhu Api/Es getar) berjejer horizontal.
 - Scanner blok habitat kini mengenali bunga mod/variatif, blok kubus karang, dan dasar kerikil/pasir/prismarine di kedalaman air hingga 16 blok.
+
+- Fase 29: Pengecualian Kebersihan Satwa Akuatik Murni:
+  1. Klasifikasi Satwa Akuatik:
+     - ZooAnimalHungerManager.isPureAquatic: Mendeteksi satwa air murni (orca, paus, hiu, cumi-cumi raksasa, lumba-lumba, udang mantis, ikan, axolotl, dll.) yang hidup 100% di air dan mengecualikan satwa semi-akuatik (hippo, alligator, capybara, penguin).
+     - Satwa akuatik murni tidak memiliki kebutuhan kebersihan fisik (kebersihan selalu 100%, decay 0, kebal racun kotor).
+  2. Eliminasi Baris Kebersihan Hologram & UI:
+     - In-world hologram (ZooAnimalHologramRenderer): baris kebersihan (ikon spons dan label Bersih:) dihilangkan sepenuhnya untuk satwa akuatik murni, ketinggian kartu otomatis menyusut menjadi 4 baris stat (Kesehatan, Lapar, Haus, Suhu).
+     - Menu Kelola Satwa (AnimalManagementTab): deretan 10 ikon spons dan persentase kebersihan dihilangkan untuk satwa akuatik murni, tata letak detail dan interaksi makanan menyesuaikan secara proporsional.
+  3. Zookeeper & Player Bathing:
+     - Zookeeper tidak pernah mencoba memandikan satwa akuatik murni.
+     - Player tidak dapat menyiram atau menyikat satwa akuatik murni (AnimalBathingManager dan PlayerBathingClientController).
 
 ## Blocker
 - Tidak ada blocker.

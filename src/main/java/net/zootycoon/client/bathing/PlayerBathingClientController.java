@@ -264,6 +264,7 @@ public class PlayerBathingClientController {
         if (target instanceof net.zootycoon.entity.ZooCashierEntity) return false;
         if (target instanceof net.zootycoon.entity.ZooVisitorEntity) return false;
         if (target instanceof net.zootycoon.entity.ZooHunterEntity) return false;
+        if (ZooAnimalHungerManager.isPureAquatic(target)) return false;
 
         return ZooTycoonClient.clientAnimalMap.containsKey(target.getId())
                 || ZooAnimalHungerManager.isZooAnimalCandidate(target);

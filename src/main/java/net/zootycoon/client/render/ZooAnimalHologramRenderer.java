@@ -63,6 +63,7 @@ public class ZooAnimalHologramRenderer {
         public final int entityId;
         public final long snapshotTimestamp;
         public final boolean registered;
+        public final boolean isPureAquatic;
         public final int hpPct;
         public final int hunger;
         public final int thirst;
@@ -129,6 +130,7 @@ public class ZooAnimalHologramRenderer {
                 int entityId,
                 long snapshotTimestamp,
                 boolean registered,
+                boolean isPureAquatic,
                 int hpPct,
                 int hunger,
                 int thirst,
@@ -184,6 +186,7 @@ public class ZooAnimalHologramRenderer {
             this.entityId = entityId;
             this.snapshotTimestamp = snapshotTimestamp;
             this.registered = registered;
+            this.isPureAquatic = isPureAquatic;
             this.hpPct = hpPct;
             this.hunger = hunger;
             this.thirst = thirst;
@@ -390,8 +393,10 @@ public class ZooAnimalHologramRenderer {
                     Math.max(dietSubtitleWidth + 16.0f,
                     Math.max(foodsRowWidth + 16.0f, maxHabTextWidth + 18.0f))));
 
+            boolean isPureAquatic = net.zootycoon.animal.ZooAnimalHungerManager.isPureAquatic(entity);
+
             float foodSectionHeight = (foodCount > 0) ? 16.0f : 0.0f;
-            float statsSectionHeight = 5.0f * ROW_HEIGHT;
+            float statsSectionHeight = isPureAquatic ? (4.0f * ROW_HEIGHT) : (5.0f * ROW_HEIGHT);
             float habitatSectionHeight = redNeeds.isEmpty() ? 12.0f : (12.0f + (redNeeds.size() * 10.0f));
 
             float contentHeight = HEADER_HEIGHT + foodSectionHeight + statsSectionHeight + 4.0f + habitatSectionHeight;
@@ -406,6 +411,7 @@ public class ZooAnimalHologramRenderer {
                     entity.getId(),
                     snapshotTimestamp,
                     isRegistered,
+                    isPureAquatic,
                     hpPct,
                     hunger,
                     thirst,
@@ -780,29 +786,50 @@ public class ZooAnimalHologramRenderer {
             float r1Y = curY;
             float r2Y = curY + ROW_HEIGHT;
             float r3Y = curY + (ROW_HEIGHT * 2.0f);
-            float r4Y = curY + (ROW_HEIGHT * 3.0f);
-            float r5Y = curY + (ROW_HEIGHT * 4.0f);
-            curY += (ROW_HEIGHT * 5.0f) + 4.0f;
+            float r4Y;
+            float r5Y;
+            if (cached.isPureAquatic) {
+                r4Y = curY + (ROW_HEIGHT * 3.0f);
+                r5Y = r4Y;
+                curY += (ROW_HEIGHT * 4.0f) + 4.0f;
+            } else {
+                r4Y = curY + (ROW_HEIGHT * 3.0f);
+                r5Y = curY + (ROW_HEIGHT * 4.0f);
+                curY += (ROW_HEIGHT * 5.0f) + 4.0f;
+            }
 
             // Render Stat Labels (Indonesian, Left-aligned with fadeAlpha)
             font.drawInBatch(HP_LABEL, labelX, r1Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             font.drawInBatch(HUNGER_LABEL, labelX, r2Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
             font.drawInBatch(THIRST_LABEL, labelX, r3Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(CLEAN_LABEL, labelX, r4Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            font.drawInBatch(TEMP_LABEL, labelX, r5Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            if (!cached.isPureAquatic) {
+                font.drawInBatch(CLEAN_LABEL, labelX, r4Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+                font.drawInBatch(TEMP_LABEL, labelX, r5Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            } else {
+                font.drawInBatch(TEMP_LABEL, labelX, r4Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFDDDDDD, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            }
 
             // Render 10-Icon Rows matching Kelola Satwa without percentage
             HologramBarRenderer.drawHeartRow(mc, buffer, matrix, iconX, r1Y + 1.0f, entity.getHealth(), entity.getMaxHealth(), LightTexture.FULL_BRIGHT, fadeAlpha);
             HologramBarRenderer.drawHungerRow(mc, buffer, matrix, iconX, r2Y + 1.0f, cached.hunger, cached.registered, LightTexture.FULL_BRIGHT, fadeAlpha);
             HologramBarRenderer.drawThirstRow(buffer, matrix, iconX, r3Y + 1.0f, cached.thirst, cached.registered, LightTexture.FULL_BRIGHT, fadeAlpha);
-            HologramBarRenderer.drawCleanlinessRow(buffer, matrix, iconX, r4Y + 1.0f, cached.cleanliness, cached.registered, LightTexture.FULL_BRIGHT, fadeAlpha);
+            if (!cached.isPureAquatic) {
+                HologramBarRenderer.drawCleanlinessRow(buffer, matrix, iconX, r4Y + 1.0f, cached.cleanliness, cached.registered, LightTexture.FULL_BRIGHT, fadeAlpha);
 
-            // Temperature Row: left as it is ("kecual yg suhu biarin aja")
-            HologramBarRenderer.drawThermometerIcon(buffer, matrix, iconX, r5Y + 1.0f, LightTexture.FULL_BRIGHT, fadeAlpha);
-            float tempValX = iconX + 13.0f;
-            font.drawInBatch(cached.tempBaseText, tempValX, r5Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFFFFFFF, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
-            float statusX = tempValX + cached.tempBaseTextWidth;
-            font.drawInBatch(cached.tempStatusLabel, statusX, r5Y + 1.0f, HologramBarRenderer.applyAlpha(cached.tempStatusColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+                // Temperature Row on r5Y
+                HologramBarRenderer.drawThermometerIcon(buffer, matrix, iconX, r5Y + 1.0f, LightTexture.FULL_BRIGHT, fadeAlpha);
+                float tempValX = iconX + 13.0f;
+                font.drawInBatch(cached.tempBaseText, tempValX, r5Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFFFFFFF, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+                float statusX = tempValX + cached.tempBaseTextWidth;
+                font.drawInBatch(cached.tempStatusLabel, statusX, r5Y + 1.0f, HologramBarRenderer.applyAlpha(cached.tempStatusColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            } else {
+                // Temperature Row on r4Y
+                HologramBarRenderer.drawThermometerIcon(buffer, matrix, iconX, r4Y + 1.0f, LightTexture.FULL_BRIGHT, fadeAlpha);
+                float tempValX = iconX + 13.0f;
+                font.drawInBatch(cached.tempBaseText, tempValX, r4Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFFFFFFF, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+                float statusX = tempValX + cached.tempBaseTextWidth;
+                font.drawInBatch(cached.tempStatusLabel, statusX, r4Y + 1.0f, HologramBarRenderer.applyAlpha(cached.tempStatusColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            }
 
             // 5. Habitat Needs Section: ONLY RED ITEMS SHOWN (Left-aligned with fadeAlpha)
             float checklistStartX = leftX;

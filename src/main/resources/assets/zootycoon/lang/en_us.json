@@ -256,6 +256,8 @@
   "zootycoon.dialog.visitor.btn.not_available": "Not Available Yet",
   "zootycoon.dialog.visitor.guiding_toast": "The visitor is following you to the facility.",
   "zootycoon.toast.title.visitor": "Zoo Visitor",
+  "zootycoon.toast.title.review": "Visitor Review",
+  "zootycoon.toast.review.left": "A visitor left a %s-star review!",
   "zootycoon.toast.title.rating_up": "Zoo Rating Increased",
   "zootycoon.toast.title.rating_down": "Zoo Rating Decreased",
   "zootycoon.toast.rating.guide_success": "Visitor successfully guided to facility! Zoo rating: %s/100",

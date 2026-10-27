@@ -163,6 +163,7 @@ public class ZooVisitorEntity extends PathfinderMob {
     private boolean hasWatchedAnimal = false;
     private boolean isActivelyWatchingAnimal = false;
     private boolean hasRewardedRating = false;
+    private boolean hasLeftReview = false;
     private int lastWatchedAnimalId = -1;
     private BlockPos escapeTarget = null;
     private int escapeTicks = 0;
@@ -1095,6 +1096,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         tag.putInt("CashierCooldown", cashierCooldown);
         tag.putBoolean("HasWatchedAnimal", hasWatchedAnimal);
         tag.putBoolean("HasRewardedRating", hasRewardedRating);
+        tag.putBoolean("HasLeftReview", hasLeftReview);
         tag.putInt("LastWatchedAnimalId", lastWatchedAnimalId);
         tag.putInt("EatMode", postPurchaseEatMode);
         tag.putBoolean("DrinkingItem", isDrinkingItem);
@@ -1132,6 +1134,9 @@ public class ZooVisitorEntity extends PathfinderMob {
         cashierCooldown = tag.getInt("CashierCooldown");
         hasWatchedAnimal = tag.getBoolean("HasWatchedAnimal");
         hasRewardedRating = tag.getBoolean("HasRewardedRating");
+        if (tag.contains("HasLeftReview")) {
+            hasLeftReview = tag.getBoolean("HasLeftReview");
+        }
         lastWatchedAnimalId = tag.contains("LastWatchedAnimalId") ? tag.getInt("LastWatchedAnimalId") : -1;
         setHunger(tag.getInt("Hunger"));
         setThirst(tag.getInt("Thirst"));
@@ -2120,6 +2125,57 @@ public class ZooVisitorEntity extends PathfinderMob {
         }
     }
 
+    public double calculateVisitorReviewScore(net.minecraft.server.level.ServerLevel sl, UUID ownerUuid) {
+        double score = 3.0D; // Baseline rating
+
+        // 1. Animal watching experience
+        if (this.hasWatchedAnimal) {
+            score += 1.0D;
+        } else {
+            score -= 1.5D; // Did not get to see animals
+        }
+
+        // 2. Needs satisfaction (Food/Drink)
+        if (this.getHunger() <= 20 && this.canEat()) {
+            score -= 0.5D;
+        }
+        if (this.getThirst() <= 20 && this.canDrink()) {
+            score -= 0.5D;
+        }
+        if (this.foodCount > 0 || this.drinkCount > 0) {
+            score += 0.5D;
+        }
+
+        // 3. Toilet satisfaction
+        if (this.hasUsedToilet) {
+            score += 0.5D;
+        } else if (this.toiletTimer > 1000) {
+            score -= 1.0D;
+        }
+
+        // 4. Overall zoo environment and animal health
+        double zooQuality = net.zootycoon.economy.ZooEconomyEngine.calculateZooQuality(sl, ownerUuid);
+        if (zooQuality >= 0.85D) {
+            score += 0.5D;
+        } else if (zooQuality < 0.45D) {
+            score -= 1.0D;
+        }
+
+        // 5. Ticket pricing fairness
+        int ticketPrice = net.zootycoon.claim.ZooClaimManager.get(sl).getTicketPrice(ownerUuid);
+        double starRating = net.zootycoon.economy.ZooRatingManager.get(sl.getServer()).getStarRating(ownerUuid);
+        int expected = net.zootycoon.economy.ZooEconomyEngine.getExpectedTicketPrice(starRating);
+
+        if (ticketPrice <= 0) {
+            score += 0.5D;
+        } else if (ticketPrice > expected + 30) {
+            score -= 1.0D;
+        }
+
+        double clamped = Math.clamp(score, 1.0D, 5.0D);
+        return (double) Math.round(clamped);
+    }
+
     /**
      * Goal for leaving the zoo once stay time is over or visitor is forced to leave.
      */
@@ -2142,6 +2198,24 @@ public class ZooVisitorEntity extends PathfinderMob {
                 visitor.stopRiding();
             }
             visitor.setMood(VisitorMood.NEUTRAL);
+
+            if (!visitor.hasLeftReview && visitor.getTags().contains("ticket_purchased")) {
+                visitor.hasLeftReview = true;
+                // 65% chance for ticketed visitors to leave a Google Maps review upon departure
+                if (visitor.getRandom().nextFloat() < 0.65F && visitor.level() instanceof net.minecraft.server.level.ServerLevel sl && sl.getServer() != null) {
+                    net.zootycoon.claim.ZooClaim claim = visitor.findActiveZooClaim();
+                    UUID ownerUuid = (claim != null) ? claim.getOwnerUuid() : null;
+                    if (ownerUuid != null) {
+                        net.minecraft.server.level.ServerPlayer owner = sl.getServer().getPlayerList().getPlayer(ownerUuid);
+                        double reviewStars = visitor.calculateVisitorReviewScore(sl, ownerUuid);
+                        net.zootycoon.economy.ZooRatingManager.get(sl.getServer()).addReview(ownerUuid, reviewStars, owner);
+                        if (owner != null) {
+                            net.zootycoon.network.ZooNetworkPayloads.sendToast(owner, "zootycoon.toast.title.review", "zootycoon.toast.review.left", 1, String.format(java.util.Locale.ROOT, "%.0f", reviewStars));
+                        }
+                    }
+                }
+            }
+
             BlockPos gate = visitor.resolveLeaveTarget();
             if (gate != null) {
                 visitor.moveTowardLongRange(gate, 1.15D);
