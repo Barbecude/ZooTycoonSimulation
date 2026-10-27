@@ -8,5 +8,8 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface LivingEntityAccessor {
     @Accessor("jumping")
     boolean isJumping();
+
+    @Accessor("noActionTime")
+    void zootycoon$setNoActionTime(int time);
 }
 

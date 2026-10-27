@@ -278,6 +278,11 @@ public class ZooAnimalHungerManager {
                 continue;
             }
 
+            // Registered zoo animals must never despawn
+            if (animal instanceof Mob mob && !mob.isPersistenceRequired()) {
+                mob.setPersistenceRequired();
+            }
+
             // Universal thirst decay
             if (level.getGameTime() % thirstDecayInterval == 0) {
                 int thirst = getThirst(animal);
@@ -665,6 +670,9 @@ public class ZooAnimalHungerManager {
         if (entity == null) return;
         if (tagged) {
             entity.addTag("zoo_registered");
+            if (entity instanceof Mob mob) {
+                mob.setPersistenceRequired();
+            }
             if (entity instanceof net.minecraft.world.entity.PathfinderMob pMob) {
                 net.zootycoon.animal.ai.AnimalDrinkWaterGoal.attach(pMob);
                 net.zootycoon.animal.ai.AnimalEatDroppedFoodGoal.attach(pMob);
