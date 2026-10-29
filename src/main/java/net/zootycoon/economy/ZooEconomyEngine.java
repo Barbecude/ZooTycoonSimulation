@@ -107,7 +107,7 @@ public final class ZooEconomyEngine {
     /** Peluang dasar calon pengunjung menolak tiket kemahalan */
     public static float BASE_TICKET_REJECT_CHANCE = 0.40F;
     public static float TICKET_REJECT_CHANCE_PER_EXTRA_EMERALD = 0.02F;
-    public static float MAX_TICKET_REJECT_CHANCE = 0.85F;
+    public static float MAX_TICKET_REJECT_CHANCE = 1.0F; // Jika harga jelas kemahalan, 100% pengunjung menolak dan tidak spawn sama sekali!
 
     /**
      * Skor kualitas kebun binatang minimum (0.0 s/d 1.0).

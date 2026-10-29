@@ -198,12 +198,6 @@ public class ZooVisitorManager {
                         }
                     }
                 }
-
-                // Show notification occasionally (not more than once every 2 minutes)
-                if (currentVisitors.isEmpty() && currentTick - lastToastTick > 2400) {
-                    lastToastTick = currentTick;
-                    ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.info", "zootycoon.visitor.spawned", 0);
-                }
             }
         }
     }

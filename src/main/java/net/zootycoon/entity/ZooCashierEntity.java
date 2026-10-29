@@ -70,6 +70,7 @@ public class ZooCashierEntity extends PathfinderMob {
     private UUID servingCustomerUuid = null;
     private int serviceTicks = 0;
     private long lastVisitorSpawnTick = -1L;
+    private static long lastTicketToastTick = 0L;
 
     public ZooCashierEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
@@ -580,6 +581,7 @@ public class ZooCashierEntity extends PathfinderMob {
                             sLevel.playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.7F, 1.2F);
                             sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
                             customer.onTransactionComplete(this.blockPosition(), "TICKET", ItemStack.EMPTY, false);
+                            notifyOwnerVisitorEntered(sLevel);
                             servingCustomerUuid = null;
                             serviceTicks = 0;
                             serveCooldown = 4;
@@ -696,6 +698,23 @@ public class ZooCashierEntity extends PathfinderMob {
             ZooEconomyManager eco = ZooEconomyManager.get(sLevel.getServer());
             ServerPlayer owner = sLevel.getServer().getPlayerList().getPlayer(ownerUuid);
             eco.addBalance(ownerUuid, amount, owner);
+        }
+    }
+
+    private void notifyOwnerVisitorEntered(ServerLevel sLevel) {
+        long currentTick = sLevel.getGameTime();
+        if (currentTick - lastTicketToastTick < 2400) return; // at most once every 2 minutes
+
+        BlockPos pos = this.blockPosition();
+        for (ZooClaim claim : ZooClaimManager.get(sLevel).getAllClaims()) {
+            if (claim.contains(pos.getX(), pos.getZ()) && claim.getOwnerUuid() != null) {
+                ServerPlayer ownerPlayer = sLevel.getServer().getPlayerList().getPlayer(claim.getOwnerUuid());
+                if (ownerPlayer != null) {
+                    lastTicketToastTick = currentTick;
+                    net.zootycoon.network.ZooNetworkPayloads.sendToast(ownerPlayer, "zootycoon.toast.title.info", "zootycoon.visitor.spawned", 0);
+                }
+                break;
+            }
         }
     }
 
