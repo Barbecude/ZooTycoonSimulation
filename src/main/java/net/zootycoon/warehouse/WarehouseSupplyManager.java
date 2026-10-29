@@ -189,6 +189,46 @@ public class WarehouseSupplyManager {
                     requiredCount += need;
                     currentCount += Math.min(have, need);
                 }
+            } else if (EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(req.category)) {
+                if (isCoolingRequest(req)) {
+                    requiredCount = 16;
+                    int count = 0;
+                    int coolTicks = 0;
+                    for (int i = 0; i < barrel.getContainerSize(); i++) {
+                        ItemStack st = barrel.getItem(i);
+                        int cool = net.zootycoon.block.ZooCoolerBlock.getCoolingTicks(st);
+                        if (!st.isEmpty() && cool > 0) {
+                            count += st.getCount();
+                            coolTicks += cool * st.getCount();
+                        }
+                    }
+                    currentCount = Math.min(16, Math.max(count, coolTicks / 4800));
+                } else if (isHeatingRequest(req)) {
+                    requiredCount = 16;
+                    int count = 0;
+                    int fuelTicks = 0;
+                    for (int i = 0; i < barrel.getContainerSize(); i++) {
+                        ItemStack st = barrel.getItem(i);
+                        int fuel = net.zootycoon.block.ZooHeaterBlock.getFuelTicks(st);
+                        if (!st.isEmpty() && fuel > 0) {
+                            count += st.getCount();
+                            fuelTicks += fuel * st.getCount();
+                        }
+                    }
+                    currentCount = Math.min(16, Math.max(count, fuelTicks / 3200));
+                } else {
+                    requiredCount = 2;
+                    boolean hasCan = false;
+                    boolean hasBrush = false;
+                    for (int i = 0; i < barrel.getContainerSize(); i++) {
+                        ItemStack st = barrel.getItem(i);
+                        if (!st.isEmpty()) {
+                            if (net.zootycoon.animal.AnimalBathingManager.isWateringCan(st)) hasCan = true;
+                            if (st.is(Items.BRUSH)) hasBrush = true;
+                        }
+                    }
+                    currentCount = (hasCan ? 1 : 0) + (hasBrush ? 1 : 0);
+                }
             } else {
                 requiredCount = ZOOKEEPER_REQUIRED_FOOD;
                 LivingEntity animal = resolveAnimal(sLevel, req.animalUuid);
@@ -243,9 +283,12 @@ public class WarehouseSupplyManager {
                     it.remove();
                 }
             } else if (ent instanceof ZooZookeeperEntity keeper) {
-                if (!keeper.hasActiveAssignedAnimal()
-                        || keeper.getFoodStock() > ZOOKEEPER_LOW_STOCK_THRESHOLD) {
+                if (!keeper.hasActiveAssignedAnimal()) {
                     it.remove();
+                } else if (EmptyBarrelBlockEntity.CAT_ANIMAL_FOOD.equalsIgnoreCase(req.category)) {
+                    if (keeper.getFoodStock() > ZOOKEEPER_LOW_STOCK_THRESHOLD) {
+                        it.remove();
+                    }
                 }
             }
         }
@@ -411,6 +454,7 @@ public class WarehouseSupplyManager {
             req.animalUuid = animal.getUUID();
             req.animalName = animalName;
             req.targetItems.add(new ItemStack(Items.COAL, 16));
+            req.targetItems.add(new ItemStack(Items.CHARCOAL, 16));
             req.requiredRawIngredients.put(Items.COAL, 16);
             return req;
         }
@@ -427,6 +471,8 @@ public class WarehouseSupplyManager {
             req.animalUuid = animal.getUUID();
             req.animalName = animalName;
             req.targetItems.add(new ItemStack(Items.ICE, 16));
+            req.targetItems.add(new ItemStack(Items.PACKED_ICE, 16));
+            req.targetItems.add(new ItemStack(Items.BLUE_ICE, 16));
             req.requiredRawIngredients.put(Items.ICE, 16);
             return req;
         }
@@ -453,6 +499,19 @@ public class WarehouseSupplyManager {
         return null;
     }
 
+    public static boolean isCoolingRequest(StaffSupplyRequest req) {
+        if (req == null) return false;
+        return (req.subtitle != null && req.subtitle.contains("Pendingin"))
+                || req.requiredRawIngredients.containsKey(Items.ICE);
+    }
+
+    public static boolean isHeatingRequest(StaffSupplyRequest req) {
+        if (req == null) return false;
+        return (req.subtitle != null && req.subtitle.contains("Pemanas"))
+                || (req.subtitle != null && req.subtitle.contains("Bahan Bakar"))
+                || req.requiredRawIngredients.containsKey(Items.COAL);
+    }
+
     public static boolean canBarrelFulfill(ServerLevel sLevel, EmptyBarrelBlockEntity barrel, StaffSupplyRequest req) {
         if ("CASHIER".equals(req.staffType)) {
             if (req.requiredRawIngredients.isEmpty()) return false;
@@ -472,24 +531,30 @@ public class WarehouseSupplyManager {
             }
             return true;
         } else if (EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(req.category)) {
-            if (req.requiredRawIngredients.containsKey(Items.COAL)) {
+            if (isHeatingRequest(req)) {
                 int count = 0;
+                int fuelTicks = 0;
                 for (int i = 0; i < barrel.getContainerSize(); i++) {
                     ItemStack st = barrel.getItem(i);
-                    if (!st.isEmpty() && net.zootycoon.block.ZooHeaterBlock.getFuelTicks(st) > 0) {
+                    int fuel = net.zootycoon.block.ZooHeaterBlock.getFuelTicks(st);
+                    if (!st.isEmpty() && fuel > 0) {
                         count += st.getCount();
+                        fuelTicks += fuel * st.getCount();
                     }
                 }
-                return count >= 16;
-            } else if (req.requiredRawIngredients.containsKey(Items.ICE)) {
+                return count >= 16 || fuelTicks >= 51200;
+            } else if (isCoolingRequest(req)) {
                 int count = 0;
+                int coolingTicks = 0;
                 for (int i = 0; i < barrel.getContainerSize(); i++) {
                     ItemStack st = barrel.getItem(i);
-                    if (!st.isEmpty() && net.zootycoon.block.ZooCoolerBlock.getCoolingTicks(st) > 0) {
+                    int cool = net.zootycoon.block.ZooCoolerBlock.getCoolingTicks(st);
+                    if (!st.isEmpty() && cool > 0) {
                         count += st.getCount();
+                        coolingTicks += cool * st.getCount();
                     }
                 }
-                return count >= 16;
+                return count >= 16 || coolingTicks >= 76800;
             } else {
                 boolean hasCan = false;
                 boolean hasBrush = false;
@@ -551,44 +616,76 @@ public class WarehouseSupplyManager {
             if (EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(req.category)) {
                 if (!canBarrelFulfill(sLevel, barrel, req)) return false;
 
-                if (req.requiredRawIngredients.containsKey(Items.COAL)) {
-                    int remaining = 16;
-                    for (int i = 0; i < barrel.getContainerSize() && remaining > 0; i++) {
+                if (isHeatingRequest(req)) {
+                    int remainingTicks = 51200; // 16 coal equivalent
+                    int remainingCount = 16;
+                    int totalGiven = 0;
+                    for (int i = 0; i < barrel.getContainerSize() && remainingTicks > 0 && remainingCount > 0; i++) {
                         ItemStack st = barrel.getItem(i);
-                        if (!st.isEmpty() && net.zootycoon.block.ZooHeaterBlock.getFuelTicks(st) > 0) {
-                            int take = Math.min(remaining, st.getCount());
-                            ItemStack split = st.split(take);
+                        int fuel = net.zootycoon.block.ZooHeaterBlock.getFuelTicks(st);
+                        if (!st.isEmpty() && fuel > 0) {
+                            int toTake = Math.min(st.getCount(), remainingCount);
+                            int ticksNeededTake = Math.max(1, (int) Math.ceil((double) remainingTicks / fuel));
+                            toTake = Math.min(toTake, ticksNeededTake);
+
+                            ItemStack split = st.split(toTake);
                             ItemStack leftover = keeper.getFuelInventory().addItem(split);
-                            int added = take - leftover.getCount();
-                            if (!leftover.isEmpty()) st.grow(leftover.getCount());
-                            if (st.isEmpty()) barrel.setItem(i, ItemStack.EMPTY);
-                            remaining -= added;
+                            int added = toTake - leftover.getCount();
+                            if (!leftover.isEmpty()) {
+                                st.grow(leftover.getCount());
+                            }
+                            if (st.isEmpty()) {
+                                barrel.setItem(i, ItemStack.EMPTY);
+                            }
+                            totalGiven += added;
+                            remainingTicks -= (added * fuel);
+                            remainingCount -= added;
                             if (!leftover.isEmpty()) break;
                         }
                     }
-                    sLevel.playSound(null, barrel.getBlockPos(), SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8F, 1.1F);
-                    sLevel.playSound(null, keeper.blockPosition(), SoundEvents.FIRECHARGE_USE, SoundSource.NEUTRAL, 0.8F, 1.1F);
-                    sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, keeper.getX(), keeper.getY() + 1.2D, keeper.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
-                    return true;
-                } else if (req.requiredRawIngredients.containsKey(Items.ICE)) {
-                    int remaining = 16;
-                    for (int i = 0; i < barrel.getContainerSize() && remaining > 0; i++) {
+                    barrel.setChanged();
+                    if (totalGiven > 0) {
+                        sLevel.playSound(null, barrel.getBlockPos(), SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8F, 1.1F);
+                        sLevel.playSound(null, keeper.blockPosition(), SoundEvents.FIRECHARGE_USE, SoundSource.NEUTRAL, 0.8F, 1.1F);
+                        sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, keeper.getX(), keeper.getY() + 1.2D, keeper.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
+                        return true;
+                    }
+                    return false;
+                } else if (isCoolingRequest(req)) {
+                    int remainingTicks = 76800; // 16 regular ice equivalent
+                    int remainingCount = 16;
+                    int totalGiven = 0;
+                    for (int i = 0; i < barrel.getContainerSize() && remainingTicks > 0 && remainingCount > 0; i++) {
                         ItemStack st = barrel.getItem(i);
-                        if (!st.isEmpty() && net.zootycoon.block.ZooCoolerBlock.getCoolingTicks(st) > 0) {
-                            int take = Math.min(remaining, st.getCount());
-                            ItemStack split = st.split(take);
+                        int cool = net.zootycoon.block.ZooCoolerBlock.getCoolingTicks(st);
+                        if (!st.isEmpty() && cool > 0) {
+                            int toTake = Math.min(st.getCount(), remainingCount);
+                            int ticksNeededTake = Math.max(1, (int) Math.ceil((double) remainingTicks / cool));
+                            toTake = Math.min(toTake, ticksNeededTake);
+
+                            ItemStack split = st.split(toTake);
                             ItemStack leftover = keeper.getFuelInventory().addItem(split);
-                            int added = take - leftover.getCount();
-                            if (!leftover.isEmpty()) st.grow(leftover.getCount());
-                            if (st.isEmpty()) barrel.setItem(i, ItemStack.EMPTY);
-                            remaining -= added;
+                            int added = toTake - leftover.getCount();
+                            if (!leftover.isEmpty()) {
+                                st.grow(leftover.getCount());
+                            }
+                            if (st.isEmpty()) {
+                                barrel.setItem(i, ItemStack.EMPTY);
+                            }
+                            totalGiven += added;
+                            remainingTicks -= (added * cool);
+                            remainingCount -= added;
                             if (!leftover.isEmpty()) break;
                         }
                     }
-                    sLevel.playSound(null, barrel.getBlockPos(), SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8F, 1.1F);
-                    sLevel.playSound(null, keeper.blockPosition(), SoundEvents.GLASS_PLACE, SoundSource.NEUTRAL, 0.8F, 1.1F);
-                    sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, keeper.getX(), keeper.getY() + 1.2D, keeper.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
-                    return true;
+                    barrel.setChanged();
+                    if (totalGiven > 0) {
+                        sLevel.playSound(null, barrel.getBlockPos(), SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8F, 1.1F);
+                        sLevel.playSound(null, keeper.blockPosition(), SoundEvents.GLASS_PLACE, SoundSource.NEUTRAL, 0.8F, 1.1F);
+                        sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, keeper.getX(), keeper.getY() + 1.2D, keeper.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
+                        return true;
+                    }
+                    return false;
                 } else {
                     ItemStack takenCan = ItemStack.EMPTY;
                     ItemStack takenBrush = ItemStack.EMPTY;
@@ -604,6 +701,7 @@ public class WarehouseSupplyManager {
                             }
                         }
                     }
+                    barrel.setChanged();
                     if (!takenCan.isEmpty() && !takenBrush.isEmpty()) {
                         keeper.supplyBathingTools(takenCan, takenBrush);
                         sLevel.playSound(null, barrel.getBlockPos(), SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8F, 1.1F);
@@ -815,6 +913,8 @@ public class WarehouseSupplyManager {
         if (player.blockPosition().distSqr(barrelPos) > 64.0D) return;
         if (!(sLevel.getBlockEntity(barrelPos) instanceof EmptyBarrelBlockEntity barrel)) return;
 
+        refreshStaffRequests(sLevel, barrel, barrel.getCategory());
+
         StaffSupplyRequest req = ACTIVE_REQUESTS.get(staffUuid);
         if (req != null && canBarrelFulfill(sLevel, barrel, req)) {
             if (consumeAndFulfill(sLevel, barrel, req)) {
@@ -863,6 +963,37 @@ public class WarehouseSupplyManager {
                         itemTag.putString("section", sectionTitle);
                         materialsList.add(itemTag);
                     }
+                }
+            }
+        } else if (EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(req.category)) {
+            String targetDesc = (req.animalName != null ? req.animalName : "Satwa");
+            String title;
+            String sectionTitle;
+            int neededCount;
+            if (isCoolingRequest(req)) {
+                title = "Pendingin " + targetDesc + " (Min. 16)";
+                sectionTitle = "Varian Es / Pendingin";
+                neededCount = 16;
+            } else if (isHeatingRequest(req)) {
+                title = "Pemanas " + targetDesc + " (Min. 16)";
+                sectionTitle = "Bahan Bakar / Pemanas";
+                neededCount = 16;
+            } else {
+                title = "Alat Mandi " + targetDesc;
+                sectionTitle = "Peralatan Kebersihan";
+                neededCount = 1;
+            }
+            tag.putString("SchematicName", title);
+
+            for (ItemStack itemStack : req.targetItems) {
+                ResourceLocation key = BuiltInRegistries.ITEM.getKey(itemStack.getItem());
+                if (key != null) {
+                    CompoundTag itemTag = new CompoundTag();
+                    itemTag.putString("id", key.toString());
+                    itemTag.putInt("needed", neededCount);
+                    itemTag.putBoolean("checked", false);
+                    itemTag.putString("section", sectionTitle);
+                    materialsList.add(itemTag);
                 }
             }
         } else {

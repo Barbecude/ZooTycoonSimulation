@@ -588,9 +588,30 @@ public class EmptyBarrelChestOverlay {
 
         // 5. Tooltips
         if (hoveredCheckDto != null) {
-            String checkTip = hoveredCheckDto.allReadyToFulfill()
-                    ? ("CASHIER".equalsIgnoreCase(hoveredCheckDto.staffType()) ? "Kirim Bahan Mentah ke Kasir" : "Kirim Pakan ke Zookeeper")
-                    : "Bahan Mentah di Barrel Belum Lengkap";
+            String checkTip;
+            if (hoveredCheckDto.allReadyToFulfill()) {
+                if ("CASHIER".equalsIgnoreCase(hoveredCheckDto.staffType())) {
+                    checkTip = "Kirim Bahan Mentah ke Kasir";
+                } else if (hoveredCheckDto.subtitle().toLowerCase().contains("pendingin")) {
+                    checkTip = "Kirim Pendingin ke Zookeeper";
+                } else if (hoveredCheckDto.subtitle().toLowerCase().contains("pemanas")) {
+                    checkTip = "Kirim Pemanas ke Zookeeper";
+                } else if (hoveredCheckDto.subtitle().toLowerCase().contains("mandi")) {
+                    checkTip = "Kirim Alat Mandi ke Zookeeper";
+                } else {
+                    checkTip = "Kirim Pakan ke Zookeeper";
+                }
+            } else {
+                if ("CASHIER".equalsIgnoreCase(hoveredCheckDto.staffType())) {
+                    checkTip = "Bahan Mentah di Barrel Belum Lengkap";
+                } else if (hoveredCheckDto.subtitle().toLowerCase().contains("pendingin")
+                        || hoveredCheckDto.subtitle().toLowerCase().contains("pemanas")
+                        || hoveredCheckDto.subtitle().toLowerCase().contains("mandi")) {
+                    checkTip = "Alat Perawatan di Barrel Belum Lengkap";
+                } else {
+                    checkTip = "Pakan di Barrel Belum Lengkap";
+                }
+            }
             graphics.renderTooltip(font, Component.literal(checkTip), mouseX, mouseY);
         } else if (hoveredStack != null && hoveredDto != null) {
             if ("CASHIER".equalsIgnoreCase(hoveredDto.staffType())) {
@@ -617,7 +638,22 @@ public class EmptyBarrelChestOverlay {
             } else {
                 List<Component> lines = new ArrayList<>();
                 lines.add(hoveredStack.getHoverName());
-                lines.add(Component.literal(ZooTranslations.get("zootycoon.warehouse.tooltip.zookeeper_food")).withStyle(ChatFormatting.GRAY));
+                if ("ANIMAL_CARE".equalsIgnoreCase(activeCategory)
+                        || hoveredDto.subtitle().toLowerCase().contains("pendingin")
+                        || hoveredDto.subtitle().toLowerCase().contains("pemanas")
+                        || hoveredDto.subtitle().toLowerCase().contains("mandi")) {
+                    if (net.zootycoon.block.ZooCoolerBlock.getCoolingTicks(hoveredStack) > 0) {
+                        lines.add(Component.literal("Bisa gunakan semua varian es (Ice, Packed Ice, Blue Ice, Salju)").withStyle(ChatFormatting.AQUA));
+                    } else if (net.zootycoon.block.ZooHeaterBlock.getFuelTicks(hoveredStack) > 0) {
+                        lines.add(Component.literal("Bisa gunakan Coal, Charcoal, atau Block of Coal").withStyle(ChatFormatting.GOLD));
+                    } else if (net.zootycoon.animal.AnimalBathingManager.isWateringCan(hoveredStack) || hoveredStack.is(net.minecraft.world.item.Items.BRUSH)) {
+                        lines.add(Component.literal("Alat untuk memandikan dan membersihkan satwa").withStyle(ChatFormatting.GREEN));
+                    } else {
+                        lines.add(Component.literal("Alat Perawatan Satwa").withStyle(ChatFormatting.GRAY));
+                    }
+                } else {
+                    lines.add(Component.literal(ZooTranslations.get("zootycoon.warehouse.tooltip.zookeeper_food")).withStyle(ChatFormatting.GRAY));
+                }
                 graphics.renderTooltip(font, lines, Optional.empty(), mouseX, mouseY);
             }
         }
