@@ -62,7 +62,7 @@ public class ZooVisitorManager {
         }
 
         long currentTick = level.getGameTime();
-        if (currentTick - lastSpawnTick < 25) { // Check every 1.25 seconds for smooth crowd ramp-up
+        if (currentTick - lastSpawnTick < 20) { // Check every 1.0 second
             return;
         }
         lastSpawnTick = currentTick;
@@ -117,21 +117,39 @@ public class ZooVisitorManager {
                     ZooVisitorEntity.class, zooArea, Entity::isAlive
             );
 
-            double starRating = net.zootycoon.economy.ZooRatingManager.get(level.getServer()).getStarRating(player.getUUID());
-
-            int expectedPrice = net.zootycoon.economy.ZooEconomyEngine.getExpectedTicketPrice(starRating);
             int ticketPrice = claimManager.getTicketPrice(player.getUUID());
+            int interval = net.zootycoon.economy.ZooEconomyEngine.getVisitorSpawnIntervalTicks(ticketPrice, level.getRandom());
+
+            // Filter Ticket Booth cashiers that are ready to receive new arrivals:
+            // 1. Queue is not backed up (queue < MAX_TICKET_QUEUE_SIZE)
+            // 2. Cooldown interval has elapsed since last visitor arrival
+            List<ZooCashierEntity> readyCashiers = ticketCashiers.stream()
+                    .filter(c -> c.getQueueSize() < net.zootycoon.economy.ZooEconomyEngine.MAX_TICKET_QUEUE_SIZE)
+                    .filter(c -> c.getLastVisitorSpawnTick() <= 0L || (currentTick - c.getLastVisitorSpawnTick()) >= interval)
+                    .sorted(Comparator.comparingInt(ZooCashierEntity::getQueueSize))
+                    .toList();
+
+            if (readyCashiers.isEmpty()) {
+                continue;
+            }
+
+            ZooCashierEntity ticketCashier = readyCashiers.get(0);
+
+            double starRating = net.zootycoon.economy.ZooRatingManager.get(level.getServer()).getStarRating(player.getUUID());
+            int expectedPrice = net.zootycoon.economy.ZooEconomyEngine.getExpectedTicketPrice(starRating);
 
             // 1. Pengunjung yang merasa kemahalan tidak akan spawn sama sekali agar performa baik
             double zooQuality = net.zootycoon.economy.ZooEconomyEngine.calculateZooQuality(level, player.getUUID());
             net.zootycoon.economy.ZooEconomyEngine.TicketDecision decision =
                     net.zootycoon.economy.ZooEconomyEngine.evaluateTicketPurchase(ticketPrice, starRating, zooQuality, level.getRandom());
             if (decision != net.zootycoon.economy.ZooEconomyEngine.TicketDecision.PURCHASE) {
+                ticketCashier.setLastVisitorSpawnTick(currentTick);
                 continue;
             }
 
             // Throttle spawning if tickets are overpriced for current rating
             if (net.zootycoon.economy.ZooEconomyEngine.shouldThrottleSpawn(ticketPrice, expectedPrice, starRating, currentTick)) {
+                ticketCashier.setLastVisitorSpawnTick(currentTick);
                 continue;
             }
 
@@ -139,18 +157,15 @@ public class ZooVisitorManager {
             int maxCapacity = net.zootycoon.economy.ZooEconomyEngine.calculateMaxVisitorCapacity(allCashiers.size(), starRating, ticketPrice);
 
             if (currentVisitors.size() >= maxCapacity) {
+                ticketCashier.setLastVisitorSpawnTick(currentTick);
                 continue;
             }
-
-            // Pick the Ticket Booth cashier (prefer one with smaller queue to distribute crowds)
-            ZooCashierEntity ticketCashier = ticketCashiers.stream()
-                    .min(Comparator.comparingInt(ZooCashierEntity::getQueueSize))
-                    .orElse(ticketCashiers.get(level.getRandom().nextInt(ticketCashiers.size())));
 
             int tailIndex = ticketCashier.getQueueSize();
             BlockPos spawnPos = findQueueTailSpawnPos(level, claims, ticketCashier, tailIndex);
 
             if (spawnPos != null) {
+                ticketCashier.setLastVisitorSpawnTick(currentTick);
                 Vec3 spawnVec = new Vec3(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5);
                 ZooVisitorEntity visitor = spawnVisitor(level, spawnVec, spawnPos);
                 if (visitor != null) {

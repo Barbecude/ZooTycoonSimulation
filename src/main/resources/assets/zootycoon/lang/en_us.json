@@ -583,7 +583,7 @@
   "zootycoon.heater.time_remaining": "Heater remaining time: %s",
   "zootycoon.heater.empty": "Heater is empty! Add coal or wood.",
   "zootycoon.cooler.fueled": "Cooler Box coolant added (%s)",
-  "zootycoon.cooler.time_remaining": "Cooler Box remaining time: %s",
+  "zootycoon.cooler.time_remaining": "Es akan mencair dalam: %s",
   "zootycoon.cooler.empty": "Cooler Box is empty! Add ice or snow.",
   "zootycoon.inspect.stat.health": "Kesehatan:",
   "zootycoon.inspect.stat.hunger": "Lapar:",

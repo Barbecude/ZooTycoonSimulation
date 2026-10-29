@@ -69,6 +69,7 @@ public class ZooCashierEntity extends PathfinderMob {
     private int fomoCooldown = 0;
     private UUID servingCustomerUuid = null;
     private int serviceTicks = 0;
+    private long lastVisitorSpawnTick = -1L;
 
     public ZooCashierEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
@@ -182,6 +183,14 @@ public class ZooCashierEntity extends PathfinderMob {
 
     public int getQueueSize() {
         return customerQueue.size();
+    }
+
+    public long getLastVisitorSpawnTick() {
+        return lastVisitorSpawnTick;
+    }
+
+    public void setLastVisitorSpawnTick(long tick) {
+        this.lastVisitorSpawnTick = tick;
     }
 
     /**
@@ -738,6 +747,7 @@ public class ZooCashierEntity extends PathfinderMob {
         super.addAdditionalSaveData(tag);
         tag.putString("CashierRole", getCashierRole());
         tag.putInt("FacingDir", this.entityData.get(FACING_DIR));
+        tag.putLong("LastVisitorSpawnTick", lastVisitorSpawnTick);
         ListTag itemsTag = new ListTag();
         for (int i = 0; i < STOCK_SLOTS; i++) {
             ItemStack stack = this.stockInventory.getItem(i);
@@ -753,6 +763,9 @@ public class ZooCashierEntity extends PathfinderMob {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
+        if (tag.contains("LastVisitorSpawnTick")) {
+            lastVisitorSpawnTick = tag.getLong("LastVisitorSpawnTick");
+        }
         this.stockInventory.clearContent();
         if (tag.contains("StockItems", Tag.TAG_LIST)) {
             ListTag itemsTag = tag.getList("StockItems", Tag.TAG_COMPOUND);

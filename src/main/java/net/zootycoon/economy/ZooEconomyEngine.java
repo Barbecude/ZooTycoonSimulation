@@ -92,6 +92,11 @@ public final class ZooEconomyEngine {
     public static float DEFAULT_CHILD_SPAWN_CHANCE = 0.30F;
     public static float FREE_TICKET_CHILD_SPAWN_CHANCE = 0.45F;
 
+    /** Jeda waktu kedatangan pengunjung di loket tiket (ticks, 20 ticks = 1 detik) */
+    public static int VISITOR_SPAWN_INTERVAL_TICKS = 160; // 8 detik jeda standar antar pengunjung
+    public static int VISITOR_SPAWN_INTERVAL_FREE_TICKS = 180; // 9 detik jeda saat gratis agar loket tidak kebanjiran
+    public static int MAX_TICKET_QUEUE_SIZE = 5; // Batas panjang antrean loket sebelum menunda kedatangan pengunjung baru
+
     // =========================================================================
     // 3. TOLERANSI HARGA, KUALITAS ZOO & PENURUNAN RATING
     // =========================================================================
@@ -420,6 +425,20 @@ public final class ZooEconomyEngine {
             return ticketPrice <= 0 ? FREE_TICKET_CHILD_SPAWN_CHANCE : DEFAULT_CHILD_SPAWN_CHANCE;
         } catch (Throwable t) {
             return 0.30F;
+        }
+    }
+
+    /**
+     * Menghitung jeda waktu (ticks) sebelum rombongan pengunjung berikutnya tiba di loket tiket.
+     * Memberikan jeda yang wajar agar tidak terjadi antrean menumpuk secara instan, terutama saat tiket gratis.
+     */
+    public static int getVisitorSpawnIntervalTicks(int ticketPrice, net.minecraft.util.RandomSource random) {
+        try {
+            int base = ticketPrice <= 0 ? VISITOR_SPAWN_INTERVAL_FREE_TICKS : VISITOR_SPAWN_INTERVAL_TICKS;
+            int jitter = random != null ? random.nextInt(41) - 20 : 0;
+            return Math.max(120, base + jitter);
+        } catch (Throwable t) {
+            return 160;
         }
     }
 
