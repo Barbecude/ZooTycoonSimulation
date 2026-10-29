@@ -236,7 +236,8 @@ public class EmptyBarrelChestOverlay {
         String title = screen.getTitle().getString();
         return title.equals(ZooTranslations.get("zootycoon.warehouse.barrel.title.burger"))
                 || title.equals(ZooTranslations.get("zootycoon.warehouse.barrel.title.drink"))
-                || title.equals(ZooTranslations.get("zootycoon.warehouse.barrel.title.animal_food"));
+                || title.equals(ZooTranslations.get("zootycoon.warehouse.barrel.title.animal_food"))
+                || title.equals(ZooTranslations.get("zootycoon.warehouse.barrel.title.animal_care"));
     }
 
     private static int getPanelWidth(Screen screen) {

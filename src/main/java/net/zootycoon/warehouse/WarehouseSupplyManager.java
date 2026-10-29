@@ -267,16 +267,34 @@ public class WarehouseSupplyManager {
                         }
                     }
                 }
-            } else if (entity instanceof ZooZookeeperEntity keeper && EmptyBarrelBlockEntity.CAT_ANIMAL_FOOD.equalsIgnoreCase(category)) {
-                if (keeper.hasActiveAssignedAnimal() && keeper.getFoodStock() <= ZOOKEEPER_LOW_STOCK_THRESHOLD) {
-                    UUID animalId = keeper.getAssignedAnimalUuid();
-                    LivingEntity animal = resolveAnimal(sLevel, animalId);
-                    if (animal != null) {
-                        List<ItemStack> expectedFoods = AnimalDietRegistry.getFoodsForAnimal(animal);
-                        StaffSupplyRequest existing = ACTIVE_REQUESTS.get(keeper.getUUID());
-                        if (existing == null || !animalId.equals(existing.animalUuid) || existing.targetItems.size() != expectedFoods.size()) {
-                            StaffSupplyRequest created = createZookeeperRequest(keeper, animal);
-                            ACTIVE_REQUESTS.put(keeper.getUUID(), created);
+            } else if (entity instanceof ZooZookeeperEntity keeper) {
+                if (EmptyBarrelBlockEntity.CAT_ANIMAL_FOOD.equalsIgnoreCase(category)) {
+                    if (keeper.hasActiveAssignedAnimal() && keeper.getFoodStock() <= ZOOKEEPER_LOW_STOCK_THRESHOLD) {
+                        UUID animalId = keeper.getAssignedAnimalUuid();
+                        LivingEntity animal = resolveAnimal(sLevel, animalId);
+                        if (animal != null) {
+                            List<ItemStack> expectedFoods = AnimalDietRegistry.getFoodsForAnimal(animal);
+                            StaffSupplyRequest existing = ACTIVE_REQUESTS.get(keeper.getUUID());
+                            if (existing == null || !animalId.equals(existing.animalUuid) || existing.targetItems.size() != expectedFoods.size()) {
+                                StaffSupplyRequest created = createZookeeperRequest(keeper, animal);
+                                ACTIVE_REQUESTS.put(keeper.getUUID(), created);
+                            }
+                        }
+                    }
+                } else if (EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(category)) {
+                    if (keeper.hasActiveAssignedAnimal()) {
+                        UUID animalId = keeper.getAssignedAnimalUuid();
+                        LivingEntity animal = resolveAnimal(sLevel, animalId);
+                        if (animal != null) {
+                            StaffSupplyRequest careReq = evaluateZookeeperCareRequest(sLevel, keeper, animal);
+                            if (careReq != null) {
+                                ACTIVE_REQUESTS.put(keeper.getUUID(), careReq);
+                            } else {
+                                StaffSupplyRequest existing = ACTIVE_REQUESTS.get(keeper.getUUID());
+                                if (existing != null && EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(existing.category)) {
+                                    ACTIVE_REQUESTS.remove(keeper.getUUID());
+                                }
+                            }
                         }
                     }
                 }
@@ -370,6 +388,71 @@ public class WarehouseSupplyManager {
         return req;
     }
 
+    private static StaffSupplyRequest evaluateZookeeperCareRequest(ServerLevel sLevel, ZooZookeeperEntity keeper, LivingEntity animal) {
+        String keeperName = keeper.getName().getString();
+        String animalName = animal.hasCustomName()
+                ? animal.getCustomName().getString()
+                : animal.getType().getDescription().getString();
+
+        var habProfile = net.zootycoon.animal.habitat.HabitatProfileLoader.getProfile(animal);
+        float effectiveTemp = net.zootycoon.animal.ZooClimate.getEffectiveTemperature(sLevel, animal.blockPosition());
+        boolean tooCold = habProfile != null && effectiveTemp < habProfile.minTemperature();
+        boolean tooHot = habProfile != null && effectiveTemp > habProfile.maxTemperature();
+
+        if (tooCold && !keeper.hasCoal()) {
+            StaffSupplyRequest req = new StaffSupplyRequest(
+                    keeper.getUUID(),
+                    keeper.getId(),
+                    EmptyBarrelBlockEntity.CAT_ANIMAL_CARE,
+                    "ZOOKEEPER",
+                    keeperName,
+                    "Kebutuhan: Pemanas (" + animalName + " Kedinginan)"
+            );
+            req.animalUuid = animal.getUUID();
+            req.animalName = animalName;
+            req.targetItems.add(new ItemStack(Items.COAL, 16));
+            req.requiredRawIngredients.put(Items.COAL, 16);
+            return req;
+        }
+
+        if (tooHot && !keeper.hasIce()) {
+            StaffSupplyRequest req = new StaffSupplyRequest(
+                    keeper.getUUID(),
+                    keeper.getId(),
+                    EmptyBarrelBlockEntity.CAT_ANIMAL_CARE,
+                    "ZOOKEEPER",
+                    keeperName,
+                    "Kebutuhan: Pendingin (" + animalName + " Kepanasan)"
+            );
+            req.animalUuid = animal.getUUID();
+            req.animalName = animalName;
+            req.targetItems.add(new ItemStack(Items.ICE, 16));
+            req.requiredRawIngredients.put(Items.ICE, 16);
+            return req;
+        }
+
+        int clean = net.zootycoon.animal.ZooAnimalHungerManager.getCleanliness(animal);
+        if (clean <= 60 && !keeper.hasBathingTools()) {
+            StaffSupplyRequest req = new StaffSupplyRequest(
+                    keeper.getUUID(),
+                    keeper.getId(),
+                    EmptyBarrelBlockEntity.CAT_ANIMAL_CARE,
+                    "ZOOKEEPER",
+                    keeperName,
+                    "Kebutuhan: Alat Mandi (" + animalName + " Kotor)"
+            );
+            req.animalUuid = animal.getUUID();
+            req.animalName = animalName;
+            req.targetItems.add(new ItemStack(ZooItems.COPPER_WATERING_CAN, 1));
+            req.targetItems.add(new ItemStack(Items.BRUSH, 1));
+            req.requiredRawIngredients.put(ZooItems.COPPER_WATERING_CAN, 1);
+            req.requiredRawIngredients.put(Items.BRUSH, 1);
+            return req;
+        }
+
+        return null;
+    }
+
     public static boolean canBarrelFulfill(ServerLevel sLevel, EmptyBarrelBlockEntity barrel, StaffSupplyRequest req) {
         if ("CASHIER".equals(req.staffType)) {
             if (req.requiredRawIngredients.isEmpty()) return false;
@@ -388,6 +471,37 @@ public class WarehouseSupplyManager {
                 consumeFromVirtualPool(pool, entry.getKey(), entry.getValue());
             }
             return true;
+        } else if (EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(req.category)) {
+            if (req.requiredRawIngredients.containsKey(Items.COAL)) {
+                int count = 0;
+                for (int i = 0; i < barrel.getContainerSize(); i++) {
+                    ItemStack st = barrel.getItem(i);
+                    if (!st.isEmpty() && net.zootycoon.block.ZooHeaterBlock.getFuelTicks(st) > 0) {
+                        count += st.getCount();
+                    }
+                }
+                return count >= 16;
+            } else if (req.requiredRawIngredients.containsKey(Items.ICE)) {
+                int count = 0;
+                for (int i = 0; i < barrel.getContainerSize(); i++) {
+                    ItemStack st = barrel.getItem(i);
+                    if (!st.isEmpty() && net.zootycoon.block.ZooCoolerBlock.getCoolingTicks(st) > 0) {
+                        count += st.getCount();
+                    }
+                }
+                return count >= 16;
+            } else {
+                boolean hasCan = false;
+                boolean hasBrush = false;
+                for (int i = 0; i < barrel.getContainerSize(); i++) {
+                    ItemStack st = barrel.getItem(i);
+                    if (!st.isEmpty()) {
+                        if (net.zootycoon.animal.AnimalBathingManager.isWateringCan(st)) hasCan = true;
+                        if (st.is(Items.BRUSH)) hasBrush = true;
+                    }
+                }
+                return hasCan && hasBrush;
+            }
         } else {
             LivingEntity animal = resolveAnimal(sLevel, req.animalUuid);
             int have = countValidAnimalFoodInBarrel(barrel, animal, req.targetItems);
@@ -434,6 +548,72 @@ public class WarehouseSupplyManager {
         }
 
         if ("ZOOKEEPER".equals(req.staffType) && ent instanceof ZooZookeeperEntity keeper) {
+            if (EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(req.category)) {
+                if (!canBarrelFulfill(sLevel, barrel, req)) return false;
+
+                if (req.requiredRawIngredients.containsKey(Items.COAL)) {
+                    int remaining = 16;
+                    for (int i = 0; i < barrel.getContainerSize() && remaining > 0; i++) {
+                        ItemStack st = barrel.getItem(i);
+                        if (!st.isEmpty() && net.zootycoon.block.ZooHeaterBlock.getFuelTicks(st) > 0) {
+                            int take = Math.min(remaining, st.getCount());
+                            ItemStack split = st.split(take);
+                            ItemStack leftover = keeper.getFuelInventory().addItem(split);
+                            int added = take - leftover.getCount();
+                            if (!leftover.isEmpty()) st.grow(leftover.getCount());
+                            if (st.isEmpty()) barrel.setItem(i, ItemStack.EMPTY);
+                            remaining -= added;
+                            if (!leftover.isEmpty()) break;
+                        }
+                    }
+                    sLevel.playSound(null, barrel.getBlockPos(), SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8F, 1.1F);
+                    sLevel.playSound(null, keeper.blockPosition(), SoundEvents.FIRECHARGE_USE, SoundSource.NEUTRAL, 0.8F, 1.1F);
+                    sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, keeper.getX(), keeper.getY() + 1.2D, keeper.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
+                    return true;
+                } else if (req.requiredRawIngredients.containsKey(Items.ICE)) {
+                    int remaining = 16;
+                    for (int i = 0; i < barrel.getContainerSize() && remaining > 0; i++) {
+                        ItemStack st = barrel.getItem(i);
+                        if (!st.isEmpty() && net.zootycoon.block.ZooCoolerBlock.getCoolingTicks(st) > 0) {
+                            int take = Math.min(remaining, st.getCount());
+                            ItemStack split = st.split(take);
+                            ItemStack leftover = keeper.getFuelInventory().addItem(split);
+                            int added = take - leftover.getCount();
+                            if (!leftover.isEmpty()) st.grow(leftover.getCount());
+                            if (st.isEmpty()) barrel.setItem(i, ItemStack.EMPTY);
+                            remaining -= added;
+                            if (!leftover.isEmpty()) break;
+                        }
+                    }
+                    sLevel.playSound(null, barrel.getBlockPos(), SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8F, 1.1F);
+                    sLevel.playSound(null, keeper.blockPosition(), SoundEvents.GLASS_PLACE, SoundSource.NEUTRAL, 0.8F, 1.1F);
+                    sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, keeper.getX(), keeper.getY() + 1.2D, keeper.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
+                    return true;
+                } else {
+                    ItemStack takenCan = ItemStack.EMPTY;
+                    ItemStack takenBrush = ItemStack.EMPTY;
+                    for (int i = 0; i < barrel.getContainerSize(); i++) {
+                        ItemStack st = barrel.getItem(i);
+                        if (!st.isEmpty()) {
+                            if (takenCan.isEmpty() && net.zootycoon.animal.AnimalBathingManager.isWateringCan(st)) {
+                                takenCan = st.split(1);
+                                if (st.isEmpty()) barrel.setItem(i, ItemStack.EMPTY);
+                            } else if (takenBrush.isEmpty() && st.is(Items.BRUSH)) {
+                                takenBrush = st.split(1);
+                                if (st.isEmpty()) barrel.setItem(i, ItemStack.EMPTY);
+                            }
+                        }
+                    }
+                    if (!takenCan.isEmpty() && !takenBrush.isEmpty()) {
+                        keeper.supplyBathingTools(takenCan, takenBrush);
+                        sLevel.playSound(null, barrel.getBlockPos(), SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8F, 1.1F);
+                        sLevel.playSound(null, keeper.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.8F, 1.1F);
+                        sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, keeper.getX(), keeper.getY() + 1.2D, keeper.getZ(), 8, 0.25, 0.25, 0.25, 0.02);
+                        return true;
+                    }
+                    return false;
+                }
+            }
             LivingEntity animal = resolveAnimal(sLevel, req.animalUuid);
             if (!canBarrelFulfill(sLevel, barrel, req)) return false;
 

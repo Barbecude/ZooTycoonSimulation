@@ -126,16 +126,6 @@ public class ZooThermalBlockEntity extends BlockEntity {
     }
 
     @Override
-    public void setRemoved() {
-        if (thermalType == ThermalType.HEATING) {
-            ACTIVE_HEATERS.remove(worldPosition);
-        } else {
-            ACTIVE_COOLERS.remove(worldPosition);
-        }
-        super.setRemoved();
-    }
-
-    @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.putInt("FuelTime", fuelTime);

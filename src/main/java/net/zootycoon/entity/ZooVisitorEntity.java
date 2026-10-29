@@ -30,7 +30,9 @@ import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.FenceBlock;
@@ -92,7 +94,8 @@ public class ZooVisitorEntity extends PathfinderMob {
         HUNGRY("zootycoon.visitor.mood.hungry", 0xFF0000),
         THIRSTY("zootycoon.visitor.mood.thirsty", 0x0000FF),
         SCARED("zootycoon.visitor.mood.scared", 0xFF4500),
-        ANGRY("zootycoon.visitor.mood.angry", 0xFF2200);
+        ANGRY("zootycoon.visitor.mood.angry", 0xFF2200),
+        CRYING("zootycoon.visitor.mood.crying", 0x4682B4);
 
         public final String labelKey;
         public final int color;
@@ -202,6 +205,7 @@ public class ZooVisitorEntity extends PathfinderMob {
     private boolean encounteredOutOfStock = false;
     private boolean experiencedLongQueue = false;
     private boolean experiencedOvercrowding = false;
+    private int overcrowdedTicks = 0;
     private ZooCashierEntity fomoCashier = null;
     private boolean fomoActive = false;
     private int fomoCooldown = 0;
@@ -352,7 +356,11 @@ public class ZooVisitorEntity extends PathfinderMob {
     public void triggerComplaint(VisitorComplaint complaint) {
         if (complaint == null || complaint == VisitorComplaint.NONE) return;
         this.currentComplaint = complaint;
-        setMood(VisitorMood.ANGRY);
+        if (complaint == VisitorComplaint.SICK_ANIMALS) {
+            setMood(VisitorMood.CRYING);
+        } else {
+            setMood(VisitorMood.ANGRY);
+        }
     }
 
     public void resolveComplaint() {
@@ -780,7 +788,11 @@ public class ZooVisitorEntity extends PathfinderMob {
         }
 
         if (this.currentComplaint != VisitorComplaint.NONE) {
-            setMood(VisitorMood.ANGRY);
+            if (this.currentComplaint == VisitorComplaint.SICK_ANIMALS) {
+                setMood(VisitorMood.CRYING);
+            } else {
+                setMood(VisitorMood.ANGRY);
+            }
             return;
         }
 
@@ -822,12 +834,20 @@ public class ZooVisitorEntity extends PathfinderMob {
     private void checkVisitorDissatisfaction() {
         if (isTimeToLeave() || isLeaving() || this.watchingAnimalId != -1) return;
 
-        // 1. Overcrowding check
+        // 1. Overcrowding check: only triggers if visitor is inside a dense crowd of >= 7 other visitors for a prolonged time (~12 seconds)
         int nearbyVisitors = this.level().getEntitiesOfClass(ZooVisitorEntity.class, this.getBoundingBox().inflate(4.5D)).size();
         if (nearbyVisitors >= 7) {
-            this.experiencedOvercrowding = true;
-            triggerComplaint(VisitorComplaint.CROWDED);
-            return;
+            this.overcrowdedTicks += 40;
+            if (this.overcrowdedTicks >= 240) {
+                this.experiencedOvercrowding = true;
+                triggerComplaint(VisitorComplaint.CROWDED);
+                return;
+            }
+        } else {
+            if (this.overcrowdedTicks > 0) {
+                this.overcrowdedTicks -= 40;
+                if (this.overcrowdedTicks < 0) this.overcrowdedTicks = 0;
+            }
         }
 
         // 2. Toilet urgency
@@ -2129,9 +2149,11 @@ public class ZooVisitorEntity extends PathfinderMob {
             // 1. Within 8 blocks (64 sq)
             // 2. Within 16 blocks (256 sq) with fence/wall in between
             // 3. Within 12 blocks (144 sq) and pathfinding reached the nearest walkable spot (e.g. at fence edge)
+            // 4. Already arrived and viewing within 14 blocks (keeps viewing without spinning/re-pathing)
             boolean inViewingRange = distAnimalSq <= 64.0D
                     || (distAnimalSq <= 256.0D && barrier)
-                    || (distAnimalSq <= 144.0D && visitor.getNavigation().isDone());
+                    || (distAnimalSq <= 144.0D && visitor.getNavigation().isDone())
+                    || (hasActuallyViewed && distAnimalSq <= 196.0D);
 
             if (inViewingRange) {
                 hasActuallyViewed = true;
@@ -2231,25 +2253,63 @@ public class ZooVisitorEntity extends PathfinderMob {
         private BlockPos computeWatchPos(Animal target) {
             Vec3 aPos = target.position();
             Vec3 vPos = visitor.position();
-            Vec3 dir = vPos.subtract(aPos);
-            double dist = dir.horizontalDistance();
-            if (dist < 0.1D) {
-                return visitor.blockPosition();
-            }
-            Vec3 norm = dir.normalize();
-            // Target a position ~4.5 blocks outside the animal, toward the visitor's side
-            double targetDist = Math.min(dist, 4.5D);
-            Vec3 watchVec = aPos.add(norm.scale(targetDist));
-            int wx = net.minecraft.util.Mth.floor(watchVec.x);
-            int wz = net.minecraft.util.Mth.floor(watchVec.z);
-            int wy = target.blockPosition().getY();
-            if (visitor.level() instanceof net.minecraft.server.level.ServerLevel sl) {
-                int surfY = sl.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, wx, wz);
-                if (Math.abs(surfY - wy) <= 6) {
-                    wy = surfY;
+            double dx = vPos.x - aPos.x;
+            double dz = vPos.z - aPos.z;
+            double baseAngle = Math.atan2(dz, dx);
+
+            // Collect other visitors currently watching this same animal
+            List<ZooVisitorEntity> coViewers = visitor.level().getEntitiesOfClass(
+                    ZooVisitorEntity.class,
+                    target.getBoundingBox().inflate(12.0D),
+                    v -> v != visitor && v.isAlive() && v.watchingAnimalId == target.getId()
+            );
+
+            // Find an unoccupied radial angle slot out of 16 slots around the animal
+            double chosenAngle = baseAngle;
+            double viewingRadius = 4.8D;
+            boolean foundSlot = false;
+
+            for (int offset = 0; offset < 16; offset++) {
+                int sign = (offset % 2 == 0) ? (offset / 2) : -(offset / 2 + 1);
+                double candAngle = baseAngle + sign * (Math.PI / 8.0D); // 22.5 degree increments
+
+                double cx = aPos.x + Math.cos(candAngle) * viewingRadius;
+                double cz = aPos.z + Math.sin(candAngle) * viewingRadius;
+
+                boolean occupied = false;
+                for (ZooVisitorEntity other : coViewers) {
+                    double distSq = (other.getX() - cx) * (other.getX() - cx) + (other.getZ() - cz) * (other.getZ() - cz);
+                    if (distSq < 1.44D) { // within 1.2 blocks
+                        occupied = true;
+                        break;
+                    }
+                }
+
+                if (!occupied) {
+                    chosenAngle = candAngle;
+                    foundSlot = true;
+                    break;
                 }
             }
-            return new BlockPos(wx, wy, wz);
+
+            if (!foundSlot) {
+                int slotHash = Math.abs(visitor.getUUID().hashCode() % 16);
+                chosenAngle = slotHash * (Math.PI / 8.0D);
+            }
+
+            double wx = aPos.x + Math.cos(chosenAngle) * viewingRadius;
+            double wz = aPos.z + Math.sin(chosenAngle) * viewingRadius;
+            int bx = net.minecraft.util.Mth.floor(wx);
+            int bz = net.minecraft.util.Mth.floor(wz);
+            int by = target.blockPosition().getY();
+
+            if (visitor.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                int surfY = sl.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, bx, bz);
+                if (Math.abs(surfY - by) <= 6) {
+                    by = surfY;
+                }
+            }
+            return new BlockPos(bx, by, bz);
         }
     }
 
@@ -2273,7 +2333,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         for (var claim : net.zootycoon.claim.ZooClaimManager.get(sl).getPlayerClaims(ownerUuid)) {
             var box = claim.getBox();
             AABB area = new AABB(box.minX(), box.minY(), box.minZ(), box.maxX() + 1, box.maxY() + 1, box.maxZ() + 1);
-            List<LivingEntity> livings = sl.getEntitiesOfClass(LivingEntity.class, area, e -> !(e instanceof net.zootycoon.entity.ZooVisitorEntity) && !(e instanceof net.zootycoon.entity.ZooStaffEntity) && !(e instanceof Player));
+            List<LivingEntity> livings = sl.getEntitiesOfClass(LivingEntity.class, area, e -> !(e instanceof ZooVisitorEntity) && !(e instanceof Player) && !(e instanceof ZooZookeeperEntity) && !(e instanceof ZooBuilderEntity) && !(e instanceof ZooCashierEntity) && !(e instanceof ZooSecurityEntity));
             for (LivingEntity le : livings) {
                 if (net.zootycoon.animal.ZooAnimalHungerManager.isTagged(le)) {
                     totalAnimals++;
@@ -2392,7 +2452,23 @@ public class ZooVisitorEntity extends PathfinderMob {
         }
 
         double clamped = Math.clamp(score, 1.0D, 5.0D);
-        return (double) Math.round(clamped);
+
+        // Realistic Google Maps calibration curve: 5 stars is rare (~15% roll among fully satisfied visitors)
+        if (clamped >= 4.4D && this.currentComplaint == VisitorComplaint.NONE) {
+            if (this.random.nextFloat() < 0.15F) {
+                return 5.0D;
+            } else {
+                return 4.0D;
+            }
+        } else if (clamped >= 3.5D) {
+            return 4.0D;
+        } else if (clamped >= 2.5D) {
+            return 3.0D;
+        } else if (clamped >= 1.5D) {
+            return 2.0D;
+        } else {
+            return 1.0D;
+        }
     }
 
     /**

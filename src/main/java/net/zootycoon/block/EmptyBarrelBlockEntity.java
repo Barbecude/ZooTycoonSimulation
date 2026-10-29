@@ -39,6 +39,7 @@ public class EmptyBarrelBlockEntity extends BlockEntity implements Container, Me
     public static final String CAT_BURGER = "BURGER";
     public static final String CAT_DRINK = "DRINK";
     public static final String CAT_ANIMAL_FOOD = "ANIMAL_FOOD";
+    public static final String CAT_ANIMAL_CARE = "ANIMAL_CARE";
 
     private NonNullList<ItemStack> items = NonNullList.withSize(CONTAINER_SIZE, ItemStack.EMPTY);
     private String category = CAT_UNASSIGNED;
@@ -130,6 +131,7 @@ public class EmptyBarrelBlockEntity extends BlockEntity implements Container, Me
             case CAT_BURGER -> Component.translatable("zootycoon.warehouse.barrel.title.burger");
             case CAT_DRINK -> Component.translatable("zootycoon.warehouse.barrel.title.drink");
             case CAT_ANIMAL_FOOD -> Component.translatable("zootycoon.warehouse.barrel.title.animal_food");
+            case CAT_ANIMAL_CARE -> Component.translatable("zootycoon.warehouse.barrel.title.animal_care");
             default -> Component.translatable("block.zootycoon.empty_barrel");
         };
     }

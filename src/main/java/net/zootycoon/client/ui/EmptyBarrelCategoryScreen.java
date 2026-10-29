@@ -15,7 +15,7 @@ public class EmptyBarrelCategoryScreen extends Screen {
 
     private final BlockPos barrelPos;
     private final int panelWidth = 260;
-    private final int panelHeight = 168;
+    private final int panelHeight = 196;
     private int startX;
     private int startY;
 
@@ -33,8 +33,8 @@ public class EmptyBarrelCategoryScreen extends Screen {
         int btnX = startX + 16;
         int btnW = panelWidth - 32;
         int btnH = 22;
-        int gap = 6;
-        int firstBtnY = startY + 46;
+        int gap = 5;
+        int firstBtnY = startY + 44;
 
         ZooButton burgerBtn = new ZooButton(
                 btnX, firstBtnY, btnW, btnH,
@@ -57,8 +57,15 @@ public class EmptyBarrelCategoryScreen extends Screen {
         ).setItemIcon(new ItemStack(Items.WHEAT)).asPrimary();
         addRenderableWidget(animalFoodBtn);
 
+        ZooButton animalCareBtn = new ZooButton(
+                btnX, firstBtnY + (btnH + gap) * 3, btnW, btnH,
+                ZooTranslations.component("zootycoon.warehouse.category.btn.animal_care"),
+                b -> selectCategory(EmptyBarrelBlockEntity.CAT_ANIMAL_CARE)
+        ).setItemIcon(new ItemStack(Items.BRUSH)).asPrimary();
+        addRenderableWidget(animalCareBtn);
+
         ZooButton cancelBtn = new ZooButton(
-                btnX, firstBtnY + (btnH + gap) * 3 + 4, btnW, 20,
+                btnX, firstBtnY + (btnH + gap) * 4 + 4, btnW, 20,
                 ZooTranslations.component("zootycoon.dialog.btn.close"),
                 b -> onClose()
         ).asSecondary();

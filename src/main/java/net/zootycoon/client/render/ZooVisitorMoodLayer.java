@@ -33,6 +33,8 @@ public class ZooVisitorMoodLayer extends RenderLayer<ZooVisitorEntity, ZooVisito
             ZooTycoonMod.id("textures/gui/moods/mood_scared.png");
     private static final ResourceLocation ANGRY =
             ZooTycoonMod.id("textures/gui/moods/mood_angry.png");
+    private static final ResourceLocation CRYING =
+            ZooTycoonMod.id("textures/gui/moods/mood_crying.png");
 
     public ZooVisitorMoodLayer(RenderLayerParent<ZooVisitorEntity, ZooVisitorModel> parent) {
         super(parent);

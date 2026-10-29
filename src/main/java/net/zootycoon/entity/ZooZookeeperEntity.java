@@ -1070,6 +1070,16 @@ private static final String[] NAMES = new String[]{
         }
     }
 
+    public void supplyBathingTools(ItemStack can, ItemStack brush) {
+        this.hasWateringCan = true;
+        this.wateringCanStack = can != null ? can.copy() : ItemStack.EMPTY;
+        this.brushStack = brush != null ? brush.copy() : ItemStack.EMPTY;
+        this.entityData.set(HAS_BATHING_TOOLS, true);
+        this.currentDutyState = "BATHING";
+        this.actionCooldown = 0;
+        this.bathingStepTicks = 0;
+    }
+
     public void handleBathingToolsTransfer(ServerPlayer player) {
         LivingEntity animal = null;
         if (assignedAnimalUuid != null && this.level() instanceof ServerLevel sLevel) {
