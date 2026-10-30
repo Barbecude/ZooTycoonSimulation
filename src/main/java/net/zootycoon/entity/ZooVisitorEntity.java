@@ -335,14 +335,14 @@ public class ZooVisitorEntity extends PathfinderMob {
         this.goalSelector.addGoal(1, new LeaveZooGoal(this));
         this.goalSelector.addGoal(1, new BuyTicketAtEntranceGoal(this));
         this.goalSelector.addGoal(2, new FindToiletGoal(this));
-        this.goalSelector.addGoal(2, new WatchAnimalsGoal(this));
+        this.goalSelector.addGoal(2, new FindSeatGoal(this));
+        this.goalSelector.addGoal(3, new WatchAnimalsGoal(this));
         this.goalSelector.addGoal(3, new QueueAtCashierGoal(this));
         this.goalSelector.addGoal(3, new UseGachaMachineGoal(this));
         this.goalSelector.addGoal(3, new FindTrashCanGoal(this));
-        this.goalSelector.addGoal(4, new FindSeatGoal(this));
-        this.goalSelector.addGoal(5, new VisitorZooStrollGoal(this, 0.7D));
-        this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 6.0F));
-        this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(4, new VisitorZooStrollGoal(this, 0.7D));
+        this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 6.0F));
+        this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
     }
 
     public VisitorMood getMood() {
@@ -875,26 +875,7 @@ public class ZooVisitorEntity extends PathfinderMob {
     private void checkVisitorDissatisfaction() {
         if (isTimeToLeave() || isLeaving() || this.watchingAnimalId != -1) return;
 
-        // 1. Overcrowding check: only triggers if visitor is inside a dense crowd of >= 7 other visitors for a prolonged time (~12 seconds)
-        int nearbyVisitors = this.level().getEntitiesOfClass(ZooVisitorEntity.class, this.getBoundingBox().inflate(4.5D)).size();
-        if (nearbyVisitors >= 7) {
-            this.overcrowdedTicks += 40;
-            if (this.overcrowdedTicks >= 240) {
-                this.experiencedOvercrowding = true;
-                triggerComplaint(VisitorComplaint.CROWDED);
-                return;
-            }
-        } else {
-            if (this.overcrowdedTicks > 0) {
-                this.overcrowdedTicks -= 40;
-                if (this.overcrowdedTicks < 0) this.overcrowdedTicks = 0;
-            }
-            if (this.currentComplaint == VisitorComplaint.CROWDED && this.overcrowdedTicks == 0) {
-                resolveComplaint();
-            }
-        }
-
-        // 2. Toilet urgency
+        // 1. Toilet urgency
         if (needsToilet() && toiletTimer > 600 && this.currentComplaint == VisitorComplaint.NONE) {
             triggerComplaint(VisitorComplaint.TOILET);
             return;
@@ -977,6 +958,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         super.aiStep();
         if (!this.level().isClientSide()) {
             stayTime++;
+            if (sitCooldown > 0) sitCooldown--;
             if (cashierCooldown > 0) cashierCooldown--;
             if (escapeTicks > 0) escapeTicks--;
             if (fomoCooldown > 0) fomoCooldown--;
@@ -2532,10 +2514,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             score -= 1.0D;
         }
 
-        // 10. Crowded / antrean panjang
-        if (this.experiencedOvercrowding) {
-            score -= 0.75D;
-        }
+        // 10. Antrean panjang
         if (this.experiencedLongQueue) {
             score -= 0.5D;
         }
@@ -3117,18 +3096,14 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         @Override
         public boolean canUse() {
-            if (visitor.postPurchaseEatMode == EAT_MODE_SEAT) {
-                if (visitor.isTimeToLeave() || visitor.isPassenger()) return false;
-            } else {
-                if (visitor.isTimeToLeave()) return false;
-                if (!visitor.getTags().contains("ticket_purchased")) return false;
-                if (!visitor.hasWatchedAnimal()) return false;
-                if (visitor.needsToilet()) return false;
-                if (visitor.hasTrash()) return false;
-                if (visitor.isPassenger()) return false;
+            if (visitor.isTimeToLeave() || visitor.isPassenger()) return false;
+            if (visitor.needsToilet()) return false;
+            if (visitor.hasTrash()) return false;
 
+            if (visitor.postPurchaseEatMode == EAT_MODE_SEAT) {
+                // Priority activation: eating on seat
+            } else {
                 if (visitor.sitCooldown > 0) {
-                    visitor.sitCooldown--;
                     return false;
                 }
 
@@ -3136,10 +3111,10 @@ public class ZooVisitorEntity extends PathfinderMob {
                     searchCooldown--;
                     return false;
                 }
-                searchCooldown = 40 + visitor.getRandom().nextInt(40);
+                searchCooldown = 20 + visitor.getRandom().nextInt(20);
             }
 
-            double searchDist = (visitor.postPurchaseEatMode == EAT_MODE_SEAT) ? 24.0D : 48.0D;
+            double searchDist = (visitor.postPurchaseEatMode == EAT_MODE_SEAT) ? 24.0D : 36.0D;
             BlockPos seat = net.zootycoon.util.ZooSeatHelper.findNearestAvailableSeat(visitor.level(), visitor.blockPosition(), searchDist);
             if (seat != null) {
                 this.targetPos = seat;
@@ -3174,7 +3149,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             this.targetPos = null;
             this.isSeated = false;
             this.sitTicks = 0;
-            visitor.sitCooldown = 1200 + visitor.getRandom().nextInt(1200); // 1-2 minutes cooldown between sits
+            visitor.sitCooldown = 400 + visitor.getRandom().nextInt(400); // 20-40 seconds cooldown between sits
         }
 
         @Override
@@ -3197,7 +3172,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             if (targetPos == null) return;
 
             double distSq = visitor.distanceToSqr(targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5);
-            if (distSq <= 2.2D) {
+            if (distSq <= 3.8D || (distSq <= 6.25D && visitor.getNavigation().isDone())) {
                 if (visitor.level() instanceof net.minecraft.server.level.ServerLevel sl) {
                     boolean success = net.zootycoon.util.ZooSeatHelper.seatVisitorAt(sl, targetPos, visitor);
                     if (success) {

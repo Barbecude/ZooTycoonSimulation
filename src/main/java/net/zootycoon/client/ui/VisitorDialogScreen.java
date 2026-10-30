@@ -249,7 +249,6 @@ public class VisitorDialogScreen extends EasyNpcDialogScreen {
                 addRenderableWidget(new ZooButton(x2, btnY, btnW, 22, btn2Text, b -> this.onClose()).asPrimary());
                 break;
 
-            case "CROWDED":
             case "LONG_QUEUE":
             default:
                 btn1Text = ZooTranslations.component("zootycoon.dialog.visitor.btn.apologize");

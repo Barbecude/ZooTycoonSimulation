@@ -43,17 +43,6 @@ public class ZooSeatHelper {
     public static BlockPos findNearestAvailableSeat(Level level, BlockPos visitorPos, double maxDistance) {
         if (level == null || visitorPos == null) return null;
 
-        // If KNOWN_SEATS is empty or has very few seats, discover nearby seats around the visitor once
-        if (KNOWN_SEATS.isEmpty()) {
-            int scanRadH = 24;
-            int scanRadV = 3;
-            for (BlockPos p : BlockPos.betweenClosed(visitorPos.offset(-scanRadH, -scanRadV, -scanRadH), visitorPos.offset(scanRadH, scanRadV, scanRadH))) {
-                if (isSeatableBlockState(level.getBlockState(p))) {
-                    KNOWN_SEATS.add(p.immutable());
-                }
-            }
-        }
-
         double maxDistSq = maxDistance * maxDistance;
         BlockPos bestPos = null;
         double bestDistSq = Double.MAX_VALUE;
@@ -77,6 +66,25 @@ public class ZooSeatHelper {
                 }
             }
         }
+
+        // If no seat found in KNOWN_SEATS within range, scan immediate vicinity (radius 24)
+        if (bestPos == null) {
+            int scanH = (int) Math.min(24.0, maxDistance);
+            int scanV = 3;
+            for (BlockPos p : BlockPos.betweenClosed(visitorPos.offset(-scanH, -scanV, -scanH), visitorPos.offset(scanH, scanV, scanH))) {
+                BlockState state = level.getBlockState(p);
+                if (isSeatableBlockState(state)) {
+                    BlockPos imm = p.immutable();
+                    KNOWN_SEATS.add(imm);
+                    double distSq = visitorPos.distSqr(imm);
+                    if (distSq <= maxDistSq && distSq < bestDistSq && isSeatNotOccupied(level, imm)) {
+                        bestDistSq = distSq;
+                        bestPos = imm;
+                    }
+                }
+            }
+        }
+
         return bestPos;
     }
 
@@ -118,7 +126,13 @@ public class ZooSeatHelper {
                 || path.contains("throne")
                 || path.contains("chaise")
                 || path.contains("ottoman")
-                || path.contains("pouffe")) {
+                || path.contains("pouffe")
+                || path.contains("deck_chair")
+                || path.contains("deckchair")
+                || path.contains("cushion")
+                || path.contains("hammock")
+                || path.contains("bleacher")
+                || path.contains("pew")) {
             return true;
         }
 
@@ -155,7 +169,16 @@ public class ZooSeatHelper {
 
         // Check if any entity is already sitting on this seat
         AABB box = new AABB(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1.0, pos.getY() + 1.0, pos.getZ() + 1.0).inflate(0.1);
-        List<Entity> occupants = level.getEntitiesOfClass(Entity.class, box, e -> e.isPassenger() || e.hasPassenger(passenger -> true) || (e instanceof ToiletSeatEntity));
+        List<Entity> occupants = level.getEntitiesOfClass(Entity.class, box, e -> {
+            if (e instanceof ToiletSeatEntity tse) {
+                if (tse.getPassengers().isEmpty()) {
+                    tse.discard();
+                    return false;
+                }
+                return true;
+            }
+            return e.isPassenger() || e.hasPassenger(passenger -> true);
+        });
         return occupants.isEmpty();
     }
 
@@ -233,6 +256,14 @@ public class ZooSeatHelper {
 
         // Determine seating height based on true seat surface (matching player source of truth)
         double seatY = getSeatSurfaceY(level, pos, state);
+
+        // Clean up any stale seat entities at this position before adding fresh entity
+        AABB box = new AABB(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1.0, pos.getY() + 1.0, pos.getZ() + 1.0).inflate(0.2);
+        for (ToiletSeatEntity oldSeat : level.getEntitiesOfClass(ToiletSeatEntity.class, box)) {
+            if (oldSeat.getPassengers().isEmpty()) {
+                oldSeat.discard();
+            }
+        }
 
         // Create invisible seat entity
         ToiletSeatEntity seat = new ToiletSeatEntity(ZooEntities.TOILET_SEAT, level);

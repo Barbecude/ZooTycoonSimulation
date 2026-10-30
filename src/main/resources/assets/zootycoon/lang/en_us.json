@@ -642,7 +642,6 @@
   "zootycoon.zookeeper.no_coal_in_inv": "You don't have Coal or heater fuel in your inventory!",
   "zootycoon.zookeeper.ice_given_toast": "Supplied %s Ice to Zookeeper.",
   "zootycoon.zookeeper.no_ice_in_inv": "You don't have Ice or cooling items in your inventory!",
-  "zootycoon.dialog.visitor.feedback.crowded": "This zoo is awfully crowded.",
   "zootycoon.dialog.visitor.feedback.thirsty": "I can't find anything to drink.",
   "zootycoon.dialog.visitor.feedback.hungry": "There's nothing to eat around here!",
   "zootycoon.dialog.visitor.feedback.no_seat": "There's no place to sit down around here!",
