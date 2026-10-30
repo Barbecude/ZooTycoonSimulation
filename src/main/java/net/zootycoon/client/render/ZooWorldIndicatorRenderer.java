@@ -24,6 +24,7 @@ import net.zootycoon.entity.ZooBuilderEntity;
 import net.zootycoon.entity.ZooCashierEntity;
 import net.zootycoon.entity.ZooVisitorEntity;
 import net.zootycoon.entity.ZooZookeeperEntity;
+import net.zootycoon.network.InspectionPayloads;
 import net.zootycoon.network.ZooNetworkPayloads;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -31,6 +32,7 @@ import org.joml.Quaternionf;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class ZooWorldIndicatorRenderer {
@@ -224,28 +226,55 @@ public class ZooWorldIndicatorRenderer {
                     }
 
                     // 2e. Temperature: Hot (Fire) / Cold (Ice with shivering vibration)
-                    long gameTime = living.level().getGameTime();
-                    CachedThermalStatus thermal = THERMAL_CACHE.get(living.getId());
-                    if (thermal == null || (gameTime - thermal.lastCheckTick > 20)) {
-                        HabitatProfile profile = HabitatProfileLoader.getProfile(living);
-                        boolean hot = false;
-                        boolean cold = false;
-                        if (profile != null) {
-                            float effTemp = ZooClimate.getEffectiveTemperature(living);
-                            cold = effTemp < profile.minTemperature();
-                            hot = effTemp > profile.maxTemperature();
-                        }
-                        thermal = new CachedThermalStatus(gameTime, hot, cold);
-                        THERMAL_CACHE.put(living.getId(), thermal);
-                        if (THERMAL_CACHE.size() > 200) {
-                            THERMAL_CACHE.clear();
+                    // Authoritative check: use server-evaluated habitatNeeds if available so overhead icon always matches hologram
+                    boolean tooHot = false;
+                    boolean tooCold = false;
+
+                    String habitatNeeds = (syncData.habitatNeeds() != null && !syncData.habitatNeeds().isEmpty())
+                            ? syncData.habitatNeeds()
+                            : null;
+                    if (habitatNeeds == null) {
+                        InspectionPayloads.HabitatData hab = InspectionPayloads.getLatestHabitat(living.getId());
+                        if (hab != null && hab.needs() != null && !hab.needs().isEmpty()) {
+                            habitatNeeds = hab.needs();
                         }
                     }
 
-                    if (thermal.tooHot()) {
+                    String tempStatus = extractTempStatus(habitatNeeds);
+                    if (tempStatus != null) {
+                        if ("COOLER".equalsIgnoreCase(tempStatus)) {
+                            tooHot = true;
+                        } else if ("HEATER".equalsIgnoreCase(tempStatus)) {
+                            tooCold = true;
+                        }
+                        // "OK" means comfortable -> neither hot nor cold!
+                    } else {
+                        // Fallback only if no server habitat payload has been received yet
+                        long gameTime = living.level().getGameTime();
+                        CachedThermalStatus thermal = THERMAL_CACHE.get(living.getId());
+                        if (thermal == null || (gameTime - thermal.lastCheckTick > 20)) {
+                            HabitatProfile profile = HabitatProfileLoader.getProfile(living);
+                            boolean hot = false;
+                            boolean cold = false;
+                            if (profile != null) {
+                                float effTemp = ZooClimate.getEffectiveTemperature(living);
+                                cold = effTemp < profile.minTemperature();
+                                hot = effTemp > profile.maxTemperature();
+                            }
+                            thermal = new CachedThermalStatus(gameTime, hot, cold);
+                            THERMAL_CACHE.put(living.getId(), thermal);
+                            if (THERMAL_CACHE.size() > 200) {
+                                THERMAL_CACHE.clear();
+                            }
+                        }
+                        tooHot = thermal.tooHot();
+                        tooCold = thermal.tooCold();
+                    }
+
+                    if (tooHot) {
                         float firePulse = (float) (Math.sin(now / 120.0) * 0.02);
                         alerts.add(new AnimalAlert(TEMP_HOT_TEXTURE, 0.22f + firePulse, 0.22f + firePulse, 0.0f, 0.0f, 255, 255, 255));
-                    } else if (thermal.tooCold()) {
+                    } else if (tooCold) {
                         float shiverX = (float) (Math.sin(now / 35.0) * 0.035);
                         float shiverY = (float) (Math.cos(now / 25.0) * 0.015);
                         alerts.add(new AnimalAlert(TEMP_COLD_TEXTURE, 0.22f, 0.22f, shiverX, shiverY, 255, 255, 255));
@@ -330,5 +359,15 @@ public class ZooWorldIndicatorRenderer {
             int r, int g, int b, int a
     ) {
         renderBillboard(buffer, poseStack, texture, x, y, z, 0.0f, 0.0f, halfW, halfH, cameraRotation, r, g, b, a);
+    }
+
+    private static String extractTempStatus(String habitatNeeds) {
+        if (habitatNeeds == null || habitatNeeds.isEmpty()) return null;
+        int idx = habitatNeeds.indexOf("temp=");
+        if (idx == -1) return null;
+        int start = idx + 5;
+        int end = habitatNeeds.indexOf(';', start);
+        if (end == -1) end = habitatNeeds.length();
+        return habitatNeeds.substring(start, end).trim().toUpperCase(Locale.ROOT);
     }
 }
