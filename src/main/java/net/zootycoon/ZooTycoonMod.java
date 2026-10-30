@@ -2,6 +2,7 @@ package net.zootycoon;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -320,8 +321,23 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.animal.ZooInspectionService.onPlayerDisconnect(handler.getPlayer());
         });
 
+        // 6c. Track seat block placement for visitor rest coordinates
+        net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
+            if (!world.isClientSide() && player != null) {
+                net.minecraft.world.item.ItemStack stack = player.getItemInHand(hand);
+                if (stack.getItem() instanceof net.minecraft.world.item.BlockItem bi) {
+                    BlockPos placedPos = hitResult.getBlockPos().relative(hitResult.getDirection());
+                    if (net.zootycoon.util.ZooSeatHelper.isSeatableBlockState(bi.getBlock().defaultBlockState())) {
+                        net.zootycoon.util.ZooSeatHelper.registerSeat(placedPos);
+                    }
+                }
+            }
+            return net.minecraft.world.InteractionResult.PASS;
+        });
+
         // Knife on Leaves -> Green Tea Leaves drop event (20% chance, leaves > 3 blocks above ground)
         net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents.AFTER.register((level, player, pos, state, blockEntity) -> {
+            net.zootycoon.util.ZooSeatHelper.unregisterSeat(pos);
             if (level.isClientSide() || player == null || player.isCreative()) {
                 return;
             }

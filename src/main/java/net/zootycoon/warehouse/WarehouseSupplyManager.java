@@ -262,7 +262,7 @@ public class WarehouseSupplyManager {
         while (it.hasNext()) {
             Map.Entry<UUID, StaffSupplyRequest> entry = it.next();
             StaffSupplyRequest req = entry.getValue();
-            Entity ent = sLevel.getEntity(req.staffUuid);
+            Entity ent = resolveEntityByUuid(sLevel, req.staffUuid);
             if (ent == null || !ent.isAlive()) {
                 it.remove();
                 continue;
@@ -349,7 +349,7 @@ public class WarehouseSupplyManager {
         List<StaffSupplyRequest> list = new ArrayList<>();
         for (StaffSupplyRequest req : ACTIVE_REQUESTS.values()) {
             if (!req.category.equalsIgnoreCase(category)) continue;
-            Entity ent = sLevel.getEntity(req.staffUuid);
+            Entity ent = resolveEntityByUuid(sLevel, req.staffUuid);
             if (ent != null && ent.isAlive() && isStaffInSameZooOrNearby(sLevel, barrel, ent.blockPosition())) {
                 list.add(req);
             }
@@ -575,7 +575,7 @@ public class WarehouseSupplyManager {
     }
 
     private static boolean consumeAndFulfill(ServerLevel sLevel, EmptyBarrelBlockEntity barrel, StaffSupplyRequest req) {
-        Entity ent = sLevel.getEntity(req.staffUuid);
+        Entity ent = resolveEntityByUuid(sLevel, req.staffUuid);
         if (ent == null || !ent.isAlive()) return false;
 
         if ("CASHIER".equals(req.staffType) && ent instanceof ZooCashierEntity cashier) {
@@ -629,7 +629,7 @@ public class WarehouseSupplyManager {
                             toTake = Math.min(toTake, ticksNeededTake);
 
                             ItemStack split = st.split(toTake);
-                            ItemStack leftover = keeper.getFuelInventory().addItem(split);
+                            ItemStack leftover = keeper.addFuelOrCoolant(split);
                             int added = toTake - leftover.getCount();
                             if (!leftover.isEmpty()) {
                                 st.grow(leftover.getCount());
@@ -664,7 +664,7 @@ public class WarehouseSupplyManager {
                             toTake = Math.min(toTake, ticksNeededTake);
 
                             ItemStack split = st.split(toTake);
-                            ItemStack leftover = keeper.getFuelInventory().addItem(split);
+                            ItemStack leftover = keeper.addFuelOrCoolant(split);
                             int added = toTake - leftover.getCount();
                             if (!leftover.isEmpty()) {
                                 st.grow(leftover.getCount());
@@ -902,9 +902,20 @@ public class WarehouseSupplyManager {
         return false;
     }
 
+    public static Entity resolveEntityByUuid(ServerLevel sLevel, UUID uuid) {
+        if (sLevel == null || uuid == null) return null;
+        Entity ent = sLevel.getEntity(uuid);
+        if (ent != null && ent.isAlive()) return ent;
+        for (Entity e : sLevel.getAllEntities()) {
+            if (e.getUUID().equals(uuid) && e.isAlive()) {
+                return e;
+            }
+        }
+        return null;
+    }
+
     private static LivingEntity resolveAnimal(ServerLevel sLevel, UUID animalUuid) {
-        if (sLevel == null || animalUuid == null) return null;
-        Entity ent = sLevel.getEntity(animalUuid);
+        Entity ent = resolveEntityByUuid(sLevel, animalUuid);
         return (ent instanceof LivingEntity living && living.isAlive()) ? living : null;
     }
 
@@ -913,9 +924,12 @@ public class WarehouseSupplyManager {
         if (player.blockPosition().distSqr(barrelPos) > 64.0D) return;
         if (!(sLevel.getBlockEntity(barrelPos) instanceof EmptyBarrelBlockEntity barrel)) return;
 
-        refreshStaffRequests(sLevel, barrel, barrel.getCategory());
-
         StaffSupplyRequest req = ACTIVE_REQUESTS.get(staffUuid);
+        if (req == null) {
+            refreshStaffRequests(sLevel, barrel, barrel.getCategory());
+            req = ACTIVE_REQUESTS.get(staffUuid);
+        }
+
         if (req != null && canBarrelFulfill(sLevel, barrel, req)) {
             if (consumeAndFulfill(sLevel, barrel, req)) {
                 ACTIVE_REQUESTS.remove(req.staffUuid);
@@ -1029,9 +1043,14 @@ public class WarehouseSupplyManager {
             }
         }
 
-        Component customItemName = "CASHIER".equals(req.staffType)
-                ? Component.translatable("zootycoon.warehouse.note.recipe_name", req.staffName)
-                : Component.translatable("zootycoon.warehouse.note.food_name", req.animalName != null ? req.animalName : req.staffName);
+        Component customItemName;
+        if ("CASHIER".equals(req.staffType)) {
+            customItemName = Component.translatable("zootycoon.warehouse.note.recipe_name", req.staffName);
+        } else if (EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(req.category)) {
+            customItemName = Component.translatable("zootycoon.warehouse.note.care_name", req.animalName != null ? req.animalName : req.staffName);
+        } else {
+            customItemName = Component.translatable("zootycoon.warehouse.note.food_name", req.animalName != null ? req.animalName : req.staffName);
+        }
 
         if (!existingNote.isEmpty()) {
             existingNote.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));

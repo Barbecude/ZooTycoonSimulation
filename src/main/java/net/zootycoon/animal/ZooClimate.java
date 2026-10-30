@@ -90,12 +90,21 @@ public class ZooClimate {
             int dx = pos.getX() - heaterPos.getX();
             int dz = pos.getZ() - heaterPos.getZ();
             int dy = Math.abs(pos.getY() - heaterPos.getY());
-            if (dx * dx + dz * dz <= 400 && dy <= 8) { // 20-block horizontal radius, 8-block vertical
+            if (dx * dx + dz * dz <= 576 && dy <= 16) { // 24-block horizontal radius, 16-block vertical
                 heaterCount++;
                 if (heaterCount == 1) {
-                    adjustment += 0.65f;
-                } else if (heaterCount >= 2) {
+                    adjustment += 0.75f;
+                } else if (heaterCount == 2) {
+                    adjustment += 0.55f;
+                } else if (heaterCount == 3) {
                     adjustment += 0.45f;
+                } else if (heaterCount == 4) {
+                    adjustment += 0.35f;
+                } else {
+                    adjustment += 0.25f;
+                }
+                if (adjustment >= 3.0f) {
+                    adjustment = 3.0f;
                     break;
                 }
             }
@@ -105,14 +114,38 @@ public class ZooClimate {
             int dx = pos.getX() - coolerPos.getX();
             int dz = pos.getZ() - coolerPos.getZ();
             int dy = Math.abs(pos.getY() - coolerPos.getY());
-            if (dx * dx + dz * dz <= 400 && dy <= 8) { // 20-block horizontal radius, 8-block vertical
+            if (dx * dx + dz * dz <= 576 && dy <= 16) { // 24-block horizontal radius, 16-block vertical
                 coolerCount++;
                 if (coolerCount == 1) {
-                    adjustment -= 0.75f;
-                } else if (coolerCount >= 2) {
-                    adjustment -= 0.45f;
+                    adjustment -= 0.85f;
+                } else if (coolerCount == 2) {
+                    adjustment -= 0.65f;
+                } else if (coolerCount == 3) {
+                    adjustment -= 0.50f;
+                } else if (coolerCount == 4) {
+                    adjustment -= 0.40f;
+                } else if (coolerCount == 5) {
+                    adjustment -= 0.35f;
+                } else {
+                    adjustment -= 0.25f;
+                }
+                if (adjustment <= -3.5f) {
+                    adjustment = -3.5f;
                     break;
                 }
+            }
+        }
+        // Passive cooling from placed coolers in KNOWN_COOLERS (even if temporarily unfueled)
+        int passiveCoolerCount = 0;
+        for (BlockPos coolerPos : net.zootycoon.block.entity.ZooThermalBlockEntity.KNOWN_COOLERS) {
+            if (net.zootycoon.block.entity.ZooThermalBlockEntity.ACTIVE_COOLERS.contains(coolerPos)) continue;
+            int dx = pos.getX() - coolerPos.getX();
+            int dz = pos.getZ() - coolerPos.getZ();
+            int dy = Math.abs(pos.getY() - coolerPos.getY());
+            if (dx * dx + dz * dz <= 576 && dy <= 16) {
+                passiveCoolerCount++;
+                adjustment -= 0.15f;
+                if (passiveCoolerCount >= 4) break; // max -0.60f passive insulation
             }
         }
         return adjustment;

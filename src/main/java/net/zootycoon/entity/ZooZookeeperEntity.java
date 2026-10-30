@@ -112,7 +112,7 @@ private static final String[] NAMES = new String[]{
     private static final int FOOD_SLOTS = 8;
     private final SimpleContainer foodInventory = new SimpleContainer(FOOD_SLOTS);
 
-    private static final int FUEL_SLOTS = 4;
+    private static final int FUEL_SLOTS = 8;
     private final SimpleContainer fuelInventory = new SimpleContainer(FUEL_SLOTS);
 
     private boolean hasWateringCan = false;
@@ -1252,6 +1252,28 @@ private static final String[] NAMES = new String[]{
             }
         }
         return ItemStack.EMPTY;
+    }
+
+    public ItemStack addFuelOrCoolant(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return ItemStack.EMPTY;
+        ItemStack leftover = this.fuelInventory.addItem(stack);
+        if (leftover.isEmpty()) return ItemStack.EMPTY;
+
+        // If inventory is full of other fuel/coolant types, make room for urgent need
+        boolean isIce = ZooCoolerBlock.getCoolingTicks(stack) > 0;
+        for (int i = 0; i < FUEL_SLOTS && !leftover.isEmpty(); i++) {
+            ItemStack slot = this.fuelInventory.getItem(i);
+            if (isIce && ZooHeaterBlock.getFuelTicks(slot) > 0) {
+                this.fuelInventory.setItem(i, leftover.copy());
+                leftover = ItemStack.EMPTY;
+                break;
+            } else if (!isIce && ZooCoolerBlock.getCoolingTicks(slot) > 0) {
+                this.fuelInventory.setItem(i, leftover.copy());
+                leftover = ItemStack.EMPTY;
+                break;
+            }
+        }
+        return leftover;
     }
 
     public void handleFuelTransfer(ServerPlayer player, String fuelType) {

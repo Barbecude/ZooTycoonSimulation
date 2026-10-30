@@ -925,8 +925,15 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         // 4. Seating check: walked for over 2 minutes without resting
         if (stayTime > 2400 && !hasSatDown && this.currentComplaint == VisitorComplaint.NONE) {
-            triggerComplaint(VisitorComplaint.NO_SEAT);
-            return;
+            BlockPos nearestSeat = net.zootycoon.util.ZooSeatHelper.findNearestAvailableSeat(this.level(), this.blockPosition(), 48.0D);
+            if (nearestSeat != null) {
+                // There is an available seat nearby! Do not complain, prioritize heading there to sit down
+                this.sitCooldown = 0;
+            } else {
+                // No seat available anywhere nearby, player didn't provide chairs/benches
+                triggerComplaint(VisitorComplaint.NO_SEAT);
+                return;
+            }
         }
 
         // 5. Litter proximity check: trash nearby
@@ -3120,12 +3127,6 @@ public class ZooVisitorEntity extends PathfinderMob {
                 if (visitor.hasTrash()) return false;
                 if (visitor.isPassenger()) return false;
 
-                // User requirement 1: Not all visitors must sit down
-                // Only ~30% of visitors have the inclination to sit down to rest; the rest just walk & explore
-                if (Math.abs(visitor.getUUID().getLeastSignificantBits() % 10) >= 3) {
-                    return false;
-                }
-
                 if (visitor.sitCooldown > 0) {
                     visitor.sitCooldown--;
                     return false;
@@ -3135,31 +3136,13 @@ public class ZooVisitorEntity extends PathfinderMob {
                     searchCooldown--;
                     return false;
                 }
-                searchCooldown = 60 + visitor.getRandom().nextInt(60);
-
-                if (visitor.getRandom().nextInt(4) != 0) {
-                    return false;
-                }
+                searchCooldown = 40 + visitor.getRandom().nextInt(40);
             }
 
-            int radH = (visitor.postPurchaseEatMode == EAT_MODE_SEAT) ? 20 : 14;
-            int radV = (visitor.postPurchaseEatMode == EAT_MODE_SEAT) ? 3 : 2;
-            BlockPos current = visitor.blockPosition();
-            BlockPos best = null;
-            double bestDist = Double.MAX_VALUE;
-
-            for (BlockPos p : BlockPos.betweenClosed(current.offset(-radH, -radV, -radH), current.offset(radH, radV, radH))) {
-                if (net.zootycoon.util.ZooSeatHelper.isSeatableBlock(visitor.level(), p, visitor.level().getBlockState(p))) {
-                    double d = visitor.distanceToSqr(p.getX() + 0.5, p.getY(), p.getZ() + 0.5);
-                    if (d < bestDist) {
-                        bestDist = d;
-                        best = p.immutable();
-                    }
-                }
-            }
-
-            if (best != null) {
-                this.targetPos = best;
+            double searchDist = (visitor.postPurchaseEatMode == EAT_MODE_SEAT) ? 24.0D : 48.0D;
+            BlockPos seat = net.zootycoon.util.ZooSeatHelper.findNearestAvailableSeat(visitor.level(), visitor.blockPosition(), searchDist);
+            if (seat != null) {
+                this.targetPos = seat;
                 return true;
             }
             return false;

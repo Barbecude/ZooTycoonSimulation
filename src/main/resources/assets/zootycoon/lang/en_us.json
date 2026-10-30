@@ -626,6 +626,7 @@
   "zootycoon.warehouse.btn.take_food_note": "Ambil Catatan",
   "zootycoon.warehouse.note.recipe_name": "Catatan Resep: %s",
   "zootycoon.warehouse.note.food_name": "Catatan Pakan: %s",
+  "zootycoon.warehouse.note.care_name": "Catatan Perawatan: %s",
   "zootycoon.warehouse.note_taken": "Catatan kebutuhan bahan berhasil diambil!",
   "zootycoon.warehouse.tooltip.raw_needed": "Bahan Mentah Dibutuhkan:",
   "zootycoon.warehouse.tooltip.zookeeper_food": "Bebas masukkan kombinasi pakan ini (Min. 32)",

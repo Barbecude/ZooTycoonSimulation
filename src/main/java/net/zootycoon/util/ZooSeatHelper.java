@@ -19,9 +19,66 @@ import net.zootycoon.entity.ToiletSeatEntity;
 import net.zootycoon.entity.ZooEntities;
 import net.zootycoon.entity.ZooVisitorEntity;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ZooSeatHelper {
+
+    public static final Set<BlockPos> KNOWN_SEATS = ConcurrentHashMap.newKeySet();
+
+    public static void registerSeat(BlockPos pos) {
+        if (pos != null) {
+            KNOWN_SEATS.add(pos.immutable());
+        }
+    }
+
+    public static void unregisterSeat(BlockPos pos) {
+        if (pos != null) {
+            KNOWN_SEATS.remove(pos);
+        }
+    }
+
+    public static BlockPos findNearestAvailableSeat(Level level, BlockPos visitorPos, double maxDistance) {
+        if (level == null || visitorPos == null) return null;
+
+        // If KNOWN_SEATS is empty or has very few seats, discover nearby seats around the visitor once
+        if (KNOWN_SEATS.isEmpty()) {
+            int scanRadH = 24;
+            int scanRadV = 3;
+            for (BlockPos p : BlockPos.betweenClosed(visitorPos.offset(-scanRadH, -scanRadV, -scanRadH), visitorPos.offset(scanRadH, scanRadV, scanRadH))) {
+                if (isSeatableBlockState(level.getBlockState(p))) {
+                    KNOWN_SEATS.add(p.immutable());
+                }
+            }
+        }
+
+        double maxDistSq = maxDistance * maxDistance;
+        BlockPos bestPos = null;
+        double bestDistSq = Double.MAX_VALUE;
+
+        Iterator<BlockPos> it = KNOWN_SEATS.iterator();
+        while (it.hasNext()) {
+            BlockPos pos = it.next();
+            if (!level.isLoaded(pos)) continue;
+
+            BlockState state = level.getBlockState(pos);
+            if (!isSeatableBlockState(state)) {
+                it.remove();
+                continue;
+            }
+
+            double distSq = visitorPos.distSqr(pos);
+            if (distSq <= maxDistSq && distSq < bestDistSq) {
+                if (isSeatNotOccupied(level, pos)) {
+                    bestDistSq = distSq;
+                    bestPos = pos;
+                }
+            }
+        }
+        return bestPos;
+    }
 
     /**
      * Checks if a block is a seatable object (chairs, benches, stools, sofas, seats from any mod).
