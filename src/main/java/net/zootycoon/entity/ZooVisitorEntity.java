@@ -204,8 +204,26 @@ public class ZooVisitorEntity extends PathfinderMob {
     private boolean hasSatDown = false;
     private boolean encounteredOutOfStock = false;
     private boolean experiencedLongQueue = false;
-    private boolean experiencedOvercrowding = false;
-    private int overcrowdedTicks = 0;
+    private String currentDestinationType = "NONE";
+
+    public void setDestinationType(String type) {
+        this.currentDestinationType = type != null ? type : "NONE";
+    }
+
+    public String getDestinationType() {
+        return this.currentDestinationType;
+    }
+
+    public boolean isHeadingToDestination() {
+        if (!"NONE".equals(this.currentDestinationType)) {
+            return true;
+        }
+        if (isTimeToLeave() || isLeaving()) return true;
+        if (guidingPlayerUuid != null) return true;
+        if (isConsuming() || postPurchaseEatMode > 0) return true;
+        if (isHeadingToOrAtCashier()) return true;
+        return false;
+    }
     private ZooCashierEntity fomoCashier = null;
     private boolean fomoActive = false;
     private int fomoCooldown = 0;
@@ -355,6 +373,7 @@ public class ZooVisitorEntity extends PathfinderMob {
 
     public void triggerComplaint(VisitorComplaint complaint) {
         if (complaint == null || complaint == VisitorComplaint.NONE) return;
+        if (isHeadingToDestination()) return;
         this.currentComplaint = complaint;
         if (complaint == VisitorComplaint.SICK_ANIMALS) {
             setMood(VisitorMood.CRYING);
@@ -829,6 +848,23 @@ public class ZooVisitorEntity extends PathfinderMob {
         }
 
         if (this.currentComplaint != VisitorComplaint.NONE) {
+            if (isHeadingToDestination()) {
+                if ("TOILET".equals(this.currentDestinationType)) {
+                    setMood(VisitorMood.TOILET);
+                } else if ("CASHIER".equals(this.currentDestinationType)) {
+                    if (canDrink() && getThirst() >= 40) {
+                        setMood(VisitorMood.THIRSTY);
+                    } else if (canEat() && getHunger() >= 40) {
+                        setMood(VisitorMood.HUNGRY);
+                    } else {
+                        setMood(VisitorMood.NEUTRAL);
+                    }
+                } else {
+                    setMood(VisitorMood.NEUTRAL);
+                }
+                return;
+            }
+
             if (this.currentComplaint == VisitorComplaint.SICK_ANIMALS) {
                 setMood(VisitorMood.CRYING);
             } else {
@@ -874,6 +910,7 @@ public class ZooVisitorEntity extends PathfinderMob {
 
     private void checkVisitorDissatisfaction() {
         if (isTimeToLeave() || isLeaving() || this.watchingAnimalId != -1) return;
+        if (isHeadingToDestination()) return;
 
         // 1. Toilet urgency
         if (needsToilet() && toiletTimer > 600 && this.currentComplaint == VisitorComplaint.NONE) {
@@ -1308,7 +1345,6 @@ public class ZooVisitorEntity extends PathfinderMob {
         tag.putBoolean("HasSatDown", hasSatDown);
         tag.putBoolean("EncounteredOutOfStock", encounteredOutOfStock);
         tag.putBoolean("ExperiencedLongQueue", experiencedLongQueue);
-        tag.putBoolean("ExperiencedOvercrowding", experiencedOvercrowding);
         tag.putInt("LastWatchedAnimalId", lastWatchedAnimalId);
         tag.putInt("EatMode", postPurchaseEatMode);
         tag.putBoolean("DrinkingItem", isDrinkingItem);
@@ -1354,7 +1390,6 @@ public class ZooVisitorEntity extends PathfinderMob {
         this.hasSatDown = tag.getBoolean("HasSatDown");
         this.encounteredOutOfStock = tag.getBoolean("EncounteredOutOfStock");
         this.experiencedLongQueue = tag.getBoolean("ExperiencedLongQueue");
-        this.experiencedOvercrowding = tag.getBoolean("ExperiencedOvercrowding");
         if (tag.contains("HasLeftReview")) {
             hasLeftReview = tag.getBoolean("HasLeftReview");
         }
@@ -1798,6 +1833,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         public void start() {
             this.repathTimer = 0;
             this.lastQueueIndex = -1;
+            this.visitor.setDestinationType("ENTRANCE");
             this.visitor.setActiveCashierTarget(this.targetTicketCashier);
         }
 
@@ -1807,6 +1843,7 @@ public class ZooVisitorEntity extends PathfinderMob {
                 this.targetTicketCashier.removeFromQueue(visitor.getUUID());
             }
             this.targetTicketCashier = null;
+            this.visitor.setDestinationType("NONE");
             this.visitor.setActiveCashierTarget(null);
             if (visitor.getTags().contains("ticket_purchased") && !visitor.isTimeToLeave()) {
                 visitor.walkIntoZooInterior();
@@ -1946,7 +1983,11 @@ public class ZooVisitorEntity extends PathfinderMob {
         @Override
         public void start() {
             this.repathTimer = 0;
+            this.visitor.setDestinationType("CASHIER");
             this.visitor.setActiveCashierTarget(this.targetCashier);
+            if (this.visitor.currentComplaint == VisitorComplaint.HUNGRY || this.visitor.currentComplaint == VisitorComplaint.THIRSTY) {
+                this.visitor.resolveComplaint();
+            }
         }
 
         @Override
@@ -1956,6 +1997,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             }
             this.targetCashier = null;
             this.targetRole = null;
+            this.visitor.setDestinationType("NONE");
             this.visitor.setActiveCashierTarget(null);
         }
 
@@ -2032,11 +2074,13 @@ public class ZooVisitorEntity extends PathfinderMob {
         @Override
         public void start() {
             this.pathingCooldown = 0;
+            visitor.setDestinationType("GUIDE");
             visitor.getNavigation().stop();
         }
 
         @Override
         public void stop() {
+            visitor.setDestinationType("NONE");
             visitor.getNavigation().stop();
         }
 
@@ -2180,6 +2224,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             lastDistToAnimalSq = Double.MAX_VALUE;
             stuckTicks = 0;
             hasActuallyViewed = false;
+            visitor.setDestinationType("ANIMAL");
             visitor.setActivelyWatchingAnimal(false);
             if (targetAnimal != null) {
                 visitor.watchingAnimalId = targetAnimal.getId();
@@ -2203,6 +2248,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             targetAnimal = null;
             watchPos = null;
             hasActuallyViewed = false;
+            visitor.setDestinationType("NONE");
             visitor.updateMood();
         }
 
@@ -2562,6 +2608,7 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         @Override
         public void start() {
+            visitor.setDestinationType("LEAVE");
             if (visitor.isPassenger()) {
                 visitor.stopRiding();
             }
@@ -2610,6 +2657,11 @@ public class ZooVisitorEntity extends PathfinderMob {
             if (visitor.distanceToSqr(gate.getX() + 0.5, gate.getY(), gate.getZ() + 0.5) < 9.0D) {
                 visitor.discard();
             }
+        }
+
+        @Override
+        public void stop() {
+            visitor.setDestinationType("NONE");
         }
     }
 
@@ -2666,9 +2718,16 @@ public class ZooVisitorEntity extends PathfinderMob {
         @Override
         public void start() {
             if (targetPos != null) {
+                visitor.setDestinationType("TRASH");
                 visitor.getNavigation().moveTo(targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, 1.0D);
             }
             timer = 0;
+        }
+
+        @Override
+        public void stop() {
+            visitor.setDestinationType("NONE");
+            targetPos = null;
         }
 
         @Override
@@ -2828,6 +2887,10 @@ public class ZooVisitorEntity extends PathfinderMob {
             usingTicks = 0;
             queueTicks = 0;
             repathCooldown = 0;
+            visitor.setDestinationType("TOILET");
+            if (visitor.currentComplaint == VisitorComplaint.TOILET) {
+                visitor.resolveComplaint();
+            }
             if (targetPos != null) {
                 repathIfNeeded(targetPos);
             }
@@ -2846,6 +2909,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             if (visitor.getPose() == net.minecraft.world.entity.Pose.CROUCHING) {
                 visitor.setPose(net.minecraft.world.entity.Pose.STANDING);
             }
+            visitor.setDestinationType("NONE");
             targetPos = null;
             doorPos = null;
             stage = null;
@@ -3136,6 +3200,10 @@ public class ZooVisitorEntity extends PathfinderMob {
         public void start() {
             this.isSeated = false;
             this.sitTicks = 0;
+            visitor.setDestinationType("SEAT");
+            if (visitor.currentComplaint == VisitorComplaint.NO_SEAT) {
+                visitor.resolveComplaint();
+            }
             if (targetPos != null) {
                 visitor.getNavigation().moveTo(targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, 1.0D);
             }
@@ -3146,6 +3214,7 @@ public class ZooVisitorEntity extends PathfinderMob {
             if (visitor.isPassenger()) {
                 visitor.stopRiding();
             }
+            visitor.setDestinationType("NONE");
             this.targetPos = null;
             this.isSeated = false;
             this.sitTicks = 0;
@@ -3255,6 +3324,7 @@ public class ZooVisitorEntity extends PathfinderMob {
         public void start() {
             this.rollTicks = 0;
             this.repathTimer = 0;
+            visitor.setDestinationType("GACHA");
             if (targetMachinePos != null) {
                 visitor.getNavigation().moveTo(targetMachinePos.getX() + 0.5, targetMachinePos.getY(), targetMachinePos.getZ() + 0.5, 1.0D);
             }
@@ -3262,6 +3332,7 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         @Override
         public void stop() {
+            visitor.setDestinationType("NONE");
             this.targetMachinePos = null;
             this.rollTicks = 0;
             this.repathTimer = 0;
