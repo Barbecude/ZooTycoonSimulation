@@ -159,6 +159,7 @@
   "zootycoon.ui.animals.select_zookeeper": "Select Zookeeper:",
   "zootycoon.ui.animals.unassign_zookeeper": "— Unassign Zookeeper —",
   "zootycoon.ui.animals.zookeeper_assigned_toast": "Zookeeper assigned successfully!",
+  "zootycoon.ui.animals.zookeeper_assigned_toast_detail": "%s assigned to care for %s",
   "zootycoon.ui.animals.zookeeper_unassigned_toast": "Zookeeper unassigned successfully!",
   "zootycoon.ui.animals.no_zookeepers_hired": "(No zookeepers hired)",
   "zootycoon.ui.animals.tag_label": "Tag Nama:",

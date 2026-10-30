@@ -1869,10 +1869,12 @@ public class ZooNetworkPayloads {
                             }
                         }
                         net.zootycoon.animal.ZooAnimalHungerManager.setAssignedZookeeper(animal, payload.zookeeperUuid());
+                        String zkAssignedName = "";
                         if (payload.zookeeperUuid() != null) {
                             for (ServerLevel sl : player.level().getServer().getAllLevels()) {
                                 net.minecraft.world.entity.Entity zkEnt = sl.getEntity(payload.zookeeperUuid());
                                 if (zkEnt instanceof net.zootycoon.entity.ZooZookeeperEntity keeper) {
+                                    zkAssignedName = keeper.getName().getString();
                                     UUID prevAnimalUuid = keeper.getAssignedAnimalUuid();
                                     if (prevAnimalUuid != null && !prevAnimalUuid.equals(animal.getUUID())) {
                                         for (ServerLevel sl2 : player.level().getServer().getAllLevels()) {
@@ -1884,13 +1886,34 @@ public class ZooNetworkPayloads {
                                         }
                                     }
                                     keeper.setAssignedAnimalUuid(animal.getUUID());
+
+                                    // Reset/clear food only if keeper holds food that is not accepted by the new animal's diet
+                                    boolean hasIncompatibleFood = false;
+                                    for (int i = 0; i < keeper.getFoodInventory().getContainerSize(); i++) {
+                                        ItemStack st = keeper.getFoodInventory().getItem(i);
+                                        if (!st.isEmpty() && !net.zootycoon.animal.AnimalDietRegistry.isFoodValid(animal, st)) {
+                                            hasIncompatibleFood = true;
+                                            break;
+                                        }
+                                    }
+                                    if (hasIncompatibleFood) {
+                                        keeper.getFoodInventory().clearContent();
+                                        keeper.setFoodStock(0);
+                                    } else {
+                                        keeper.updateFoodStockFromInventory();
+                                    }
                                     break;
                                 }
                             }
                         }
                         sendAnimalSync(player);
                         if (payload.zookeeperUuid() != null) {
-                            sendToast(player, "zootycoon.toast.title.success", "zootycoon.ui.animals.zookeeper_assigned_toast", 1);
+                            String aName = animal.hasCustomName() ? animal.getCustomName().getString() : animal.getType().getDescription().getString();
+                            if (!zkAssignedName.isEmpty()) {
+                                sendToast(player, "zootycoon.toast.title.success", "zootycoon.ui.animals.zookeeper_assigned_toast_detail", 1, zkAssignedName, aName);
+                            } else {
+                                sendToast(player, "zootycoon.toast.title.success", "zootycoon.ui.animals.zookeeper_assigned_toast", 1);
+                            }
                         } else {
                             sendToast(player, "zootycoon.toast.title.info", "zootycoon.ui.animals.zookeeper_unassigned_toast", 2);
                         }
@@ -2086,14 +2109,25 @@ public class ZooNetworkPayloads {
 
         for (ServerLevel sLevel : player.level().getServer().getAllLevels()) {
             for (net.minecraft.world.entity.Entity entity : sLevel.getAllEntities()) {
-                if (entity instanceof net.zootycoon.entity.ZooZookeeperEntity zk && player.getUUID().equals(zk.getOwnerUuid())) {
+                if (entity instanceof net.zootycoon.entity.ZooZookeeperEntity zk) {
+                    boolean isOwner = player.getUUID().equals(zk.getOwnerUuid());
+                    if (!isOwner && zk.getOwnerUuid() == null) {
+                        boolean inClaim = net.zootycoon.claim.ZooClaimManager.get(sLevel).isClaimedBy(zk.blockPosition(), player.getUUID());
+                        boolean nearPlayer = zk.distanceToSqr(player) <= 128.0D * 128.0D;
+                        if (inClaim || nearPlayer) {
+                            zk.setOwnerUuid(player.getUUID());
+                            isOwner = true;
+                        }
+                    }
+                    if (!isOwner) continue;
+
                     UUID aUuid = zk.getAssignedAnimalUuid();
                     int assignedAnimalId = -1;
                     boolean isAssigned = false;
                     if (aUuid != null) {
                         for (ServerLevel sl : player.level().getServer().getAllLevels()) {
                             net.minecraft.world.entity.Entity aEnt = sl.getEntity(aUuid);
-                            if (aEnt instanceof net.minecraft.world.entity.LivingEntity living && net.zootycoon.animal.ZooAnimalHungerManager.isTagged(living)) {
+                            if (aEnt instanceof net.minecraft.world.entity.LivingEntity living && living.isAlive() && net.zootycoon.animal.ZooAnimalHungerManager.isTagged(living)) {
                                 if (zk.getUUID().equals(net.zootycoon.animal.ZooAnimalHungerManager.getAssignedZookeeper(living))) {
                                     assignedAnimalId = living.getId();
                                     isAssigned = true;

@@ -321,6 +321,25 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.animal.ZooInspectionService.onPlayerDisconnect(handler.getPlayer());
         });
 
+        // Auto-release assigned zookeeper when a zoo animal dies
+        net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.AFTER_DEATH.register((entity, damageSource) -> {
+            if (entity != null && !entity.level().isClientSide() && entity.level().getServer() != null) {
+                if (net.zootycoon.animal.ZooAnimalHungerManager.isTagged(entity)) {
+                    java.util.UUID zkUuid = net.zootycoon.animal.ZooAnimalHungerManager.getAssignedZookeeper(entity);
+                    net.zootycoon.animal.ZooAnimalHungerManager.setAssignedZookeeper(entity, null);
+                    if (zkUuid != null) {
+                        for (net.minecraft.server.level.ServerLevel sl : entity.level().getServer().getAllLevels()) {
+                            net.minecraft.world.entity.Entity zkEnt = sl.getEntity(zkUuid);
+                            if (zkEnt instanceof net.zootycoon.entity.ZooZookeeperEntity keeper) {
+                                keeper.setAssignedAnimalUuid(null);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
         // 6c. Track seat block placement for visitor rest coordinates
         net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
             if (!world.isClientSide() && player != null) {

@@ -455,10 +455,16 @@ private static final String[] NAMES = new String[]{
         LivingEntity assignedAnimal = null;
         if (this.assignedAnimalUuid != null) {
             Entity ent = sLevel.getEntity(this.assignedAnimalUuid);
+            if (ent == null && sLevel.getServer() != null) {
+                for (ServerLevel sl : sLevel.getServer().getAllLevels()) {
+                    ent = sl.getEntity(this.assignedAnimalUuid);
+                    if (ent != null) break;
+                }
+            }
             if (ent instanceof LivingEntity living && living.isAlive()) {
                 assignedAnimal = living;
-            } else {
-                // If animal is dead or gone, clear assignment
+            } else if (ent != null && !ent.isAlive()) {
+                // If animal is dead, immediately clear assignment so zookeeper can be reused
                 this.assignedAnimalUuid = null;
                 this.entityData.set(HAS_ASSIGNED_ANIMAL, false);
             }

@@ -154,6 +154,7 @@
   "zootycoon.ui.animals.select_zookeeper": "Pilih Zookeeper:",
   "zootycoon.ui.animals.unassign_zookeeper": "— Lepas Zookeeper —",
   "zootycoon.ui.animals.zookeeper_assigned_toast": "Zookeeper berhasil ditugaskan!",
+  "zootycoon.ui.animals.zookeeper_assigned_toast_detail": "%s ditugaskan merawat %s",
   "zootycoon.ui.animals.zookeeper_unassigned_toast": "Tugas Zookeeper dilepas!",
   "zootycoon.ui.animals.no_zookeepers_hired": "(Belum rekrut zookeeper)",
   "zootycoon.ui.animals.tag_label": "Tag Nama:",
