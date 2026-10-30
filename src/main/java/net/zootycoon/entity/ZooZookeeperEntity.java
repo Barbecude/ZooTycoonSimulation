@@ -99,7 +99,92 @@ private static final String[] NAMES = new String[]{
         "Kiki Kompor",
         "Ratna Rice Cooker",
         "Lilis Lemper",
-        "Margaret baskom"
+        "Margaret baskom",
+        "Dina Dispenser",
+        "Rina Rendang",
+        "Wati Wajan",
+        "Yuni Yoghurt",
+        "Tati Teflon",
+        "Mimin Mie Instan",
+        "Euis Es Teh",
+        "Neneng Nugget",
+        "Popon Pisang",
+        "Cici Cilok",
+        "Bunga Bakwan",
+        "Sari Sandal",
+        "Lulu Lontong",
+        "Fifi Fanta",
+        "Gigi Gorengan",
+        "Hani Handuk",
+        "Ika Ikan Asin",
+        "Juju Jengkol",
+        "Kokom Kolak",
+        "Lina Lele",
+        "Maya Martabak",
+        "Nia Nastar",
+        "Okta Odading",
+        "Pipit Pempek",
+        "Qori Quaker",
+        "Rara Rujak",
+        "Susi Soto",
+        "Titin Tahu",
+        "Ulfa Uduk",
+        "Vera Vespa",
+        "Wulan Waffle",
+        "Xena Xiaomi",
+        "Yayuk Yakult",
+        "Zahra Zebra",
+        "Ayu Angsa",
+        "Bella Bubur",
+        "Citra Cendol",
+        "Dita Donat",
+        "Eka Empal",
+        "Feni Fotokopi",
+        "Gita Gado-gado",
+        "Hesti Helm",
+        "Indah Indomie",
+        "Jeni Jamu",
+        "Kania Kerak Telor",
+        "Laras Lapis",
+        "Mega Mendoan",
+        "Nita Nasi Kuning",
+        "Oci Opor",
+        "Prita Pecel",
+        "Rani Risol",
+        "Sinta Serabi",
+        "Tika Tempe",
+        "Umi Ulekan",
+        "Vita Vetsin",
+        "Winda Wedang",
+        "Yanti Yupi",
+        "Zara Zipper",
+        "Anggi Angkringan",
+        "Bety Batagor",
+        "Cinta Cireng",
+        "Dewi Dadar",
+        "Elsa Emping",
+        "Farah Fanbelt",
+        "Gina Getuk",
+        "Heni Hansaplast",
+        "Ines Iler",
+        "Jihan Jagung",
+        "Kartika Kecap",
+        "Lia Lumpia",
+        "Mira Molen",
+        "Nisa Nutrisari",
+        "Olla Ongol-ongol",
+        "Putu Pop Mie",
+        "Ririn Rambutan",
+        "Sarah Sapu Lidi",
+        "Tuti Tolak Angin",
+        "Uci Ulat Sagu",
+        "Wiwik Wingko",
+        "Yola Yonkers",
+        "Zaskia Zuppa",
+        "Bunga Balado",
+        "Dewi Dendeng",
+        "Mawar Mangkok",
+        "Tiara Terasi"
 };
 
 
@@ -127,6 +212,12 @@ private static final String[] NAMES = new String[]{
     private BlockPos tempDirtPos = null;
     private int tempDirtTimer = 0;
     private BlockState previousBlockState = null;
+
+    private UUID callTargetUuid = null;
+    private int callTicks = 0;
+    private int callStuckTicks = 0;
+    private int callTeleportStage = 0;
+    private double callBestDistSq = Double.MAX_VALUE;
 
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
@@ -188,7 +279,7 @@ private static final String[] NAMES = new String[]{
 
         @Override
         public boolean canUse() {
-            if (this.zookeeper.hasActiveAssignedAnimal()) {
+            if (this.zookeeper.hasActiveAssignedAnimal() || this.zookeeper.isBeingCalled()) {
                 return false;
             }
             return super.canUse();
@@ -231,6 +322,133 @@ private static final String[] NAMES = new String[]{
         return false;
     }
 
+    /**
+     * Picks a name from the 100-name pool that no other zookeeper in the game currently uses.
+     * Duplicates are only allowed when every name in the pool is already taken.
+     */
+    public void assignUniqueName(ServerLevel sLevel) {
+        java.util.Set<String> used = new java.util.HashSet<>();
+        if (sLevel.getServer() != null) {
+            for (ServerLevel lvl : sLevel.getServer().getAllLevels()) {
+                for (Entity e : lvl.getAllEntities()) {
+                    if (e != this && e instanceof ZooZookeeperEntity other && other.getCustomName() != null) {
+                        used.add(other.getCustomName().getString());
+                    }
+                }
+            }
+        }
+        java.util.List<String> free = new java.util.ArrayList<>();
+        for (String n : NAMES) {
+            if (!used.contains(n)) free.add(n);
+        }
+        String chosen = free.isEmpty()
+                ? NAMES[this.random.nextInt(NAMES.length)]
+                : free.get(this.random.nextInt(free.size()));
+        this.setCustomName(Component.literal(chosen));
+        this.setCustomNameVisible(true);
+    }
+
+    public boolean isBeingCalled() {
+        return callTicks > 0;
+    }
+
+    /** Sends this idle zookeeper walking to the player; teleports a bit closer if the path gets stuck. */
+    public void callToPlayer(ServerPlayer player) {
+        if (hasActiveAssignedAnimal()) return;
+        this.callTargetUuid = player.getUUID();
+        this.callTicks = 600;
+        this.callStuckTicks = 0;
+        this.callTeleportStage = 0;
+        this.callBestDistSq = Double.MAX_VALUE;
+        this.currentTrashTarget = null;
+        this.trashStuckTicks = 0;
+        if (this.level() instanceof ServerLevel sLevel && tempDirtPos != null) {
+            removeTempDirt(sLevel);
+        }
+        this.entityData.set(SWEEPING, false);
+        if (this.getMainHandItem().is(ZooItems.BROOM)) {
+            this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+        }
+        this.currentDutyState = "IDLE";
+        this.getNavigation().stop();
+    }
+
+    private void finishCall() {
+        this.callTicks = 0;
+        this.callTargetUuid = null;
+        this.callStuckTicks = 0;
+        this.getNavigation().stop();
+    }
+
+    private void tickCall(ServerLevel sLevel) {
+        ServerPlayer target = callTargetUuid == null ? null : sLevel.getServer().getPlayerList().getPlayer(callTargetUuid);
+        if (target == null || target.level() != sLevel || hasActiveAssignedAnimal()) {
+            finishCall();
+            return;
+        }
+        callTicks--;
+        double distSq = this.distanceToSqr(target);
+        if (distSq <= 9.0D) {
+            this.getLookControl().setLookAt(target, 30.0F, 30.0F);
+            sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, this.getX(), this.getY() + 1.2D, this.getZ(), 6, 0.3, 0.4, 0.3, 0.02);
+            finishCall();
+            return;
+        }
+        if (callTicks <= 0) {
+            teleportNearPlayer(sLevel, target, 2.5D);
+            finishCall();
+            return;
+        }
+        if (this.tickCount % 10 == 0) {
+            this.getNavigation().moveTo(target, 1.2D);
+        }
+        if (this.tickCount % 20 == 0) {
+            if (distSq > callBestDistSq - 1.0D) {
+                callStuckTicks += 20;
+            } else {
+                callBestDistSq = distSq;
+                callStuckTicks = 0;
+            }
+            if (callStuckTicks >= 60) {
+                teleportNearPlayer(sLevel, target, callTeleportStage == 0 ? 7.0D : 2.5D);
+                callTeleportStage++;
+                callStuckTicks = 0;
+                callBestDistSq = this.distanceToSqr(target);
+            }
+        }
+    }
+
+    private void teleportNearPlayer(ServerLevel sLevel, ServerPlayer target, double dist) {
+        double dx = this.getX() - target.getX();
+        double dz = this.getZ() - target.getZ();
+        double len = Math.sqrt(dx * dx + dz * dz);
+        if (len < 0.001D) { dx = 1.0D; dz = 0.0D; len = 1.0D; }
+        double tx = target.getX() + dx / len * dist;
+        double tz = target.getZ() + dz / len * dist;
+        int baseY = target.blockPosition().getY();
+        for (int dy = 3; dy >= -4; dy--) {
+            BlockPos feet = BlockPos.containing(tx, baseY + dy, tz);
+            if (sLevel.getBlockState(feet.below()).isSolid()
+                    && sLevel.getBlockState(feet).getCollisionShape(sLevel, feet).isEmpty()
+                    && sLevel.getBlockState(feet.above()).getCollisionShape(sLevel, feet.above()).isEmpty()) {
+                this.teleportTo(tx, feet.getY(), tz);
+                this.getNavigation().stop();
+                return;
+            }
+        }
+        this.teleportTo(target.getX(), target.getY(), target.getZ());
+        this.getNavigation().stop();
+    }
+
+    /** Dismisses this zookeeper: drops carried items and removes the entity. */
+    public void dismiss(ServerLevel sLevel) {
+        removeTempDirt(sLevel);
+        Containers.dropContents(sLevel, this, this.foodInventory);
+        Containers.dropContents(sLevel, this, this.fuelInventory);
+        sLevel.sendParticles(ParticleTypes.POOF, this.getX(), this.getY() + 1.0D, this.getZ(), 12, 0.3, 0.5, 0.3, 0.02);
+        this.discard();
+    }
+
     public ZooClaim findClosestClaim(ZooClaimManager claimManager) {
         java.util.Collection<ZooClaim> claims = (ownerUuid != null)
                 ? claimManager.getPlayerClaims(ownerUuid)
@@ -268,6 +486,12 @@ private static final String[] NAMES = new String[]{
         }
 
         if (actionCooldown > 0) actionCooldown--;
+
+        // Player call: walk to the player, bypassing routine duties and claim return until arrival
+        if (callTicks > 0) {
+            tickCall(sLevel);
+            return;
+        }
 
         // Temporary dirt expiration countdown
         if (tempDirtPos != null) {

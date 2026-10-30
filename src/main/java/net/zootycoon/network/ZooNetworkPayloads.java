@@ -285,6 +285,19 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // 10f-2. Manage Zookeeper Payload (C2S): action 0 = call to player, 1 = fire
+    public record ManageZookeeperPayload(UUID zookeeperUuid, int action) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<ManageZookeeperPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("manage_zookeeper"));
+        public static final StreamCodec<FriendlyByteBuf, ManageZookeeperPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeUUID(payload.zookeeperUuid);
+                    buf.writeInt(payload.action);
+                },
+                buf -> new ManageZookeeperPayload(buf.readUUID(), buf.readInt())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     // 10g. Sync Emerald Balance Payload (S2C)
     public record SyncEmeraldBalancePayload(int balance, int delta) implements CustomPacketPayload {
         public static final CustomPacketPayload.Type<SyncEmeraldBalancePayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("sync_emerald_balance"));
@@ -1130,6 +1143,7 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playC2S().register(UpdateNoteChecklistPayload.TYPE, UpdateNoteChecklistPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(HireStaffPayload.TYPE, HireStaffPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestStaffSyncPayload.TYPE, RequestStaffSyncPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(ManageZookeeperPayload.TYPE, ManageZookeeperPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(PayBuilderWagePayload.TYPE, PayBuilderWagePayload.CODEC);
         PayloadTypeRegistry.playC2S().register(EnterStudioPayload.TYPE, EnterStudioPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(EditStudioPayload.TYPE, EditStudioPayload.CODEC);
@@ -1425,6 +1439,27 @@ public class ZooNetworkPayloads {
                 } else {
                     sendToast(player, "zootycoon.toast.title.error", "zootycoon.staff.not_enough_emeralds", 3);
                 }
+            });
+        });
+
+        // Handler: Manage Zookeeper (call / fire idle zookeepers)
+        ServerPlayNetworking.registerGlobalReceiver(ManageZookeeperPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                var staffManager = net.zootycoon.economy.ZooStaffManager.get(context.server());
+                boolean fire = payload.action() == 1;
+                int result = fire
+                        ? staffManager.fireZookeeper(player, payload.zookeeperUuid())
+                        : staffManager.callZookeeper(player, payload.zookeeperUuid());
+                if (result == 0) {
+                    sendToast(player, "zootycoon.toast.title.success",
+                            fire ? "zootycoon.staff.manage.fired" : "zootycoon.staff.manage.called", 1);
+                } else if (result == 2) {
+                    sendToast(player, "zootycoon.toast.title.warning", "zootycoon.staff.manage.busy", 2);
+                } else {
+                    sendToast(player, "zootycoon.toast.title.error", "zootycoon.staff.manage.not_found", 3);
+                }
+                sendAnimalSync(player);
             });
         });
 

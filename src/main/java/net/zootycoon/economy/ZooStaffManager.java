@@ -283,6 +283,7 @@ public class ZooStaffManager {
                 rec.zookeepers++;
                 var zk = ZooEntities.ZOOKEEPER.create(sLevel);
                 if (zk != null) {
+                    zk.assignUniqueName(sLevel);
                     zk.setPos(player.getX() + 0.5, player.getY(), player.getZ() + 0.5);
                     zk.setOwnerUuid(player.getUUID());
                     sLevel.addFreshEntity(zk);
@@ -326,6 +327,45 @@ public class ZooStaffManager {
         saveToFile();
         syncToPlayer(player);
         return true;
+    }
+
+    private net.zootycoon.entity.ZooZookeeperEntity findOwnedZookeeper(ServerPlayer player, UUID zookeeperUuid) {
+        if (zookeeperUuid == null || server == null) return null;
+        for (ServerLevel lvl : server.getAllLevels()) {
+            if (lvl.getEntity(zookeeperUuid) instanceof net.zootycoon.entity.ZooZookeeperEntity zk && zk.isAlive()) {
+                UUID owner = zk.getOwnerUuid();
+                if (owner == null || owner.equals(player.getUUID())) {
+                    return zk;
+                }
+            }
+        }
+        return null;
+    }
+
+    /** Returns 0 on success, 1 if not found, 2 if the zookeeper is currently working. */
+    public int callZookeeper(ServerPlayer player, UUID zookeeperUuid) {
+        var zk = findOwnedZookeeper(player, zookeeperUuid);
+        if (zk == null) return 1;
+        if (zk.hasActiveAssignedAnimal()) return 2;
+        zk.callToPlayer(player);
+        return 0;
+    }
+
+    /** Returns 0 on success, 1 if not found, 2 if the zookeeper is currently working. */
+    public int fireZookeeper(ServerPlayer player, UUID zookeeperUuid) {
+        var zk = findOwnedZookeeper(player, zookeeperUuid);
+        if (zk == null) return 1;
+        if (zk.hasActiveAssignedAnimal()) return 2;
+        if (zk.level() instanceof ServerLevel zl) {
+            zk.dismiss(zl);
+        } else {
+            zk.discard();
+        }
+        StaffRecord rec = getRecord(player.getUUID());
+        rec.zookeepers = Math.max(0, rec.zookeepers - 1);
+        saveToFile();
+        syncToPlayer(player);
+        return 0;
     }
 
     public void syncToPlayer(ServerPlayer player) {

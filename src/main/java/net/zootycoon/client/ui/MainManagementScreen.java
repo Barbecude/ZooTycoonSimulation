@@ -20,18 +20,21 @@ public class MainManagementScreen extends Screen {
         ROOT_GRID,
         ENCLOSURES_CATALOG,
         STAFF_RECRUITMENT,
+        ZOOKEEPER_MANAGE,
         ANIMAL_MANAGEMENT
     }
 
     private ViewState currentView = ViewState.ROOT_GRID;
     private final SchematicCatalogTab enclosuresTab;
     private final StaffRecruitmentTab staffTab;
+    private final ZookeeperManageTab zookeeperManageTab;
     private final AnimalManagementTab animalTab;
 
     public MainManagementScreen() {
         super(ZooTranslations.component("zootycoon.ui.title"));
         this.enclosuresTab = new SchematicCatalogTab(this, "enclosures");
         this.staffTab = new StaffRecruitmentTab(this);
+        this.zookeeperManageTab = new ZookeeperManageTab(this);
         this.animalTab = new AnimalManagementTab(this);
     }
 
@@ -129,12 +132,13 @@ public class MainManagementScreen extends Screen {
             ).withIcon(ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/animals.png"), 32, 32, 32, 32));
         } else {
             addRenderableWidget(new ZooButton(20, 14, 86, 22, ZooTranslations.component("zootycoon.ui.btn.back"), b -> {
-                setView(ViewState.ROOT_GRID);
+                setView(currentView == ViewState.ZOOKEEPER_MANAGE ? ViewState.STAFF_RECRUITMENT : ViewState.ROOT_GRID);
             }).setCustomIcon(ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/back.png"), 17, 9, 17, 9).asPrimary());
 
             switch (currentView) {
                 case ENCLOSURES_CATALOG -> enclosuresTab.init(this);
                 case STAFF_RECRUITMENT -> staffTab.init(this);
+                case ZOOKEEPER_MANAGE -> zookeeperManageTab.init(this);
                 case ANIMAL_MANAGEMENT -> animalTab.init();
                 default -> {}
             }
@@ -159,6 +163,7 @@ public class MainManagementScreen extends Screen {
             String subviewKey = switch (currentView) {
                 case ENCLOSURES_CATALOG -> "zootycoon.ui.subview.catalog";
                 case STAFF_RECRUITMENT -> "zootycoon.ui.subview.staff";
+                case ZOOKEEPER_MANAGE -> "zootycoon.ui.subview.zookeeper_manage";
                 case ANIMAL_MANAGEMENT -> "zootycoon.ui.subview.animals";
                 default -> "zootycoon.ui.title";
             };
@@ -186,6 +191,7 @@ public class MainManagementScreen extends Screen {
         switch (currentView) {
             case ENCLOSURES_CATALOG -> enclosuresTab.render(graphics, mouseX, mouseY, delta);
             case STAFF_RECRUITMENT -> staffTab.render(graphics, mouseX, mouseY, delta);
+            case ZOOKEEPER_MANAGE -> zookeeperManageTab.render(graphics, mouseX, mouseY, delta);
             case ANIMAL_MANAGEMENT -> animalTab.render(graphics, mouseX, mouseY, delta);
             default -> {}
         }
@@ -202,6 +208,9 @@ public class MainManagementScreen extends Screen {
             case STAFF_RECRUITMENT -> {
                 if (staffTab.mouseClicked(mouseX, mouseY, button)) return true;
             }
+            case ZOOKEEPER_MANAGE -> {
+                if (zookeeperManageTab.mouseClicked(mouseX, mouseY, button)) return true;
+            }
             case ANIMAL_MANAGEMENT -> {
                 if (animalTab.mouseClicked(mouseX, mouseY, button)) return true;
             }
@@ -212,6 +221,9 @@ public class MainManagementScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (currentView == ViewState.ZOOKEEPER_MANAGE) {
+            if (zookeeperManageTab.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) return true;
+        }
         if (currentView == ViewState.ANIMAL_MANAGEMENT) {
             if (animalTab.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) return true;
         }

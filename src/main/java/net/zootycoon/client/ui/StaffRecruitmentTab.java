@@ -45,6 +45,11 @@ public class StaffRecruitmentTab {
             ClientPlayNetworking.send(new ZooNetworkPayloads.HireStaffPayload("zookeeper"));
         }).asEmerald());
 
+        // Button 2b: Kelola Zookeeper (call / fire idle zookeepers)
+        screen.addWidgetPublic(new ZooButton(startX + (cardWidth + cardGap) + 12, btnY - 40, cardWidth - 24, 20, ZooTranslations.component("zootycoon.ui.staff.btn_manage_zookeeper"), b -> {
+            screen.setView(MainManagementScreen.ViewState.ZOOKEEPER_MANAGE);
+        }).asPrimary());
+
         // Button 3: Rekrut Security
         screen.addWidgetPublic(new ZooButton(startX + (cardWidth + cardGap) * 2 + 12, btnY, cardWidth - 24, btnHeight, ZooTranslations.component("zootycoon.ui.staff.btn_hire_security"), b -> {
             ClientPlayNetworking.send(new ZooNetworkPayloads.HireStaffPayload("security"));
