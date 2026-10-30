@@ -1259,7 +1259,25 @@ private static final String[] NAMES = new String[]{
         ItemStack leftover = this.fuelInventory.addItem(stack);
         if (leftover.isEmpty()) return ItemStack.EMPTY;
 
-        // If inventory is full of other fuel/coolant types, make room for urgent need
+        // If SimpleContainer.addItem left items, search empty slots or merge into same items
+        for (int i = 0; i < FUEL_SLOTS && !leftover.isEmpty(); i++) {
+            ItemStack slot = this.fuelInventory.getItem(i);
+            if (slot.isEmpty()) {
+                this.fuelInventory.setItem(i, leftover.copy());
+                leftover = ItemStack.EMPTY;
+                break;
+            } else if (ItemStack.isSameItemSameComponents(slot, leftover)) {
+                int space = slot.getMaxStackSize() - slot.getCount();
+                if (space > 0) {
+                    int add = Math.min(space, leftover.getCount());
+                    slot.grow(add);
+                    leftover.shrink(add);
+                }
+            }
+        }
+        if (leftover.isEmpty()) return ItemStack.EMPTY;
+
+        // If inventory is still full of other fuel/coolant types, make room for urgent need
         boolean isIce = ZooCoolerBlock.getCoolingTicks(stack) > 0;
         for (int i = 0; i < FUEL_SLOTS && !leftover.isEmpty(); i++) {
             ItemStack slot = this.fuelInventory.getItem(i);

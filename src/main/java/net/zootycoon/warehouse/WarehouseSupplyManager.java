@@ -16,6 +16,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -473,6 +474,8 @@ public class WarehouseSupplyManager {
             req.targetItems.add(new ItemStack(Items.ICE, 16));
             req.targetItems.add(new ItemStack(Items.PACKED_ICE, 16));
             req.targetItems.add(new ItemStack(Items.BLUE_ICE, 16));
+            req.targetItems.add(new ItemStack(Items.SNOW_BLOCK, 16));
+            req.targetItems.add(new ItemStack(Items.SNOWBALL, 16));
             req.requiredRawIngredients.put(Items.ICE, 16);
             return req;
         }
@@ -576,6 +579,15 @@ public class WarehouseSupplyManager {
 
     private static boolean consumeAndFulfill(ServerLevel sLevel, EmptyBarrelBlockEntity barrel, StaffSupplyRequest req) {
         Entity ent = resolveEntityByUuid(sLevel, req.staffUuid);
+        if (ent == null && req.staffEntityId > 0) {
+            ent = sLevel.getEntity(req.staffEntityId);
+        }
+        if (ent == null && sLevel.getServer() != null) {
+            for (ServerLevel lvl : sLevel.getServer().getAllLevels()) {
+                ent = lvl.getEntity(req.staffUuid);
+                if (ent != null) break;
+            }
+        }
         if (ent == null || !ent.isAlive()) return false;
 
         if ("CASHIER".equals(req.staffType) && ent instanceof ZooCashierEntity cashier) {
@@ -920,9 +932,17 @@ public class WarehouseSupplyManager {
     }
 
     public static void fulfillStaffRequestManually(ServerLevel sLevel, ServerPlayer player, BlockPos barrelPos, UUID staffUuid) {
-        if (sLevel == null || player == null || barrelPos == null || staffUuid == null) return;
-        if (player.blockPosition().distSqr(barrelPos) > 64.0D) return;
-        if (!(sLevel.getBlockEntity(barrelPos) instanceof EmptyBarrelBlockEntity barrel)) return;
+        if (sLevel == null || player == null || staffUuid == null) return;
+
+        EmptyBarrelBlockEntity barrel = null;
+        if (player.containerMenu instanceof ChestMenu chestMenu && chestMenu.getContainer() instanceof EmptyBarrelBlockEntity openBarrel) {
+            barrel = openBarrel;
+        } else if (barrelPos != null && sLevel.getBlockEntity(barrelPos) instanceof EmptyBarrelBlockEntity be) {
+            if (player.blockPosition().distSqr(barrelPos) <= 64.0D) {
+                barrel = be;
+            }
+        }
+        if (barrel == null) return;
 
         StaffSupplyRequest req = ACTIVE_REQUESTS.get(staffUuid);
         if (req == null) {
@@ -933,6 +953,10 @@ public class WarehouseSupplyManager {
         if (req != null && canBarrelFulfill(sLevel, barrel, req)) {
             if (consumeAndFulfill(sLevel, barrel, req)) {
                 ACTIVE_REQUESTS.remove(req.staffUuid);
+                barrel.setChanged();
+                if (player.containerMenu instanceof ChestMenu) {
+                    player.containerMenu.broadcastChanges();
+                }
                 barrel.syncToViewingPlayers(sLevel);
                 sLevel.playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.PLAYERS, 0.9F, 1.0F);
                 ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.warehouse.fulfilled", 1);
@@ -941,7 +965,14 @@ public class WarehouseSupplyManager {
     }
 
     public static void giveRecipeNoteToPlayer(ServerLevel sLevel, ServerPlayer player, BlockPos barrelPos, UUID staffUuid) {
-        if (sLevel.getBlockEntity(barrelPos) instanceof EmptyBarrelBlockEntity barrel) {
+        EmptyBarrelBlockEntity barrel = null;
+        if (player.containerMenu instanceof ChestMenu chestMenu && chestMenu.getContainer() instanceof EmptyBarrelBlockEntity openBarrel) {
+            barrel = openBarrel;
+        } else if (barrelPos != null && sLevel.getBlockEntity(barrelPos) instanceof EmptyBarrelBlockEntity be) {
+            barrel = be;
+        }
+
+        if (barrel != null) {
             refreshStaffRequests(sLevel, barrel, barrel.getCategory());
         }
 
@@ -1046,6 +1077,10 @@ public class WarehouseSupplyManager {
         Component customItemName;
         if ("CASHIER".equals(req.staffType)) {
             customItemName = Component.translatable("zootycoon.warehouse.note.recipe_name", req.staffName);
+        } else if (isCoolingRequest(req)) {
+            customItemName = Component.literal("Catatan Pendingin: " + (req.animalName != null ? req.animalName : req.staffName));
+        } else if (isHeatingRequest(req)) {
+            customItemName = Component.literal("Catatan Pemanas: " + (req.animalName != null ? req.animalName : req.staffName));
         } else if (EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(req.category)) {
             customItemName = Component.translatable("zootycoon.warehouse.note.care_name", req.animalName != null ? req.animalName : req.staffName);
         } else {

@@ -638,19 +638,17 @@ public class EmptyBarrelChestOverlay {
             } else {
                 List<Component> lines = new ArrayList<>();
                 lines.add(hoveredStack.getHoverName());
-                if ("ANIMAL_CARE".equalsIgnoreCase(activeCategory)
-                        || hoveredDto.subtitle().toLowerCase().contains("pendingin")
+                if (net.zootycoon.block.ZooCoolerBlock.getCoolingTicks(hoveredStack) > 0) {
+                    lines.add(Component.literal("Bisa gunakan semua varian es (Ice, Packed Ice, Blue Ice, Salju)").withStyle(ChatFormatting.AQUA));
+                } else if (net.zootycoon.block.ZooHeaterBlock.getFuelTicks(hoveredStack) > 0) {
+                    lines.add(Component.literal("Bisa gunakan Coal, Charcoal, atau Block of Coal").withStyle(ChatFormatting.GOLD));
+                } else if (net.zootycoon.animal.AnimalBathingManager.isWateringCan(hoveredStack) || hoveredStack.is(net.minecraft.world.item.Items.BRUSH)) {
+                    lines.add(Component.literal("Alat untuk memandikan dan membersihkan satwa").withStyle(ChatFormatting.GREEN));
+                } else if ("ANIMAL_CARE".equalsIgnoreCase(activeCategory)
+                        || (hoveredDto != null && hoveredDto.subtitle() != null && (hoveredDto.subtitle().toLowerCase().contains("pendingin")
                         || hoveredDto.subtitle().toLowerCase().contains("pemanas")
-                        || hoveredDto.subtitle().toLowerCase().contains("mandi")) {
-                    if (net.zootycoon.block.ZooCoolerBlock.getCoolingTicks(hoveredStack) > 0) {
-                        lines.add(Component.literal("Bisa gunakan semua varian es (Ice, Packed Ice, Blue Ice, Salju)").withStyle(ChatFormatting.AQUA));
-                    } else if (net.zootycoon.block.ZooHeaterBlock.getFuelTicks(hoveredStack) > 0) {
-                        lines.add(Component.literal("Bisa gunakan Coal, Charcoal, atau Block of Coal").withStyle(ChatFormatting.GOLD));
-                    } else if (net.zootycoon.animal.AnimalBathingManager.isWateringCan(hoveredStack) || hoveredStack.is(net.minecraft.world.item.Items.BRUSH)) {
-                        lines.add(Component.literal("Alat untuk memandikan dan membersihkan satwa").withStyle(ChatFormatting.GREEN));
-                    } else {
-                        lines.add(Component.literal("Alat Perawatan Satwa").withStyle(ChatFormatting.GRAY));
-                    }
+                        || hoveredDto.subtitle().toLowerCase().contains("mandi")))) {
+                    lines.add(Component.literal("Alat Perawatan Satwa").withStyle(ChatFormatting.GRAY));
                 } else {
                     lines.add(Component.literal(ZooTranslations.get("zootycoon.warehouse.tooltip.zookeeper_food")).withStyle(ChatFormatting.GRAY));
                 }

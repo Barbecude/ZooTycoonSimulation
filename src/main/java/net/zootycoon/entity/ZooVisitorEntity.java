@@ -1905,17 +1905,21 @@ public class ZooVisitorEntity extends PathfinderMob {
                 return null;
             }
             boolean allowedToEat = visitor.hasWatchedAnimal()
-                    || visitor.stayTime > 800
+                    || visitor.stayTime > 400
                     || visitor.getHunger() >= 35
                     || visitor.getThirst() >= 25
                     || visitor.currentComplaint == VisitorComplaint.HUNGRY
                     || visitor.currentComplaint == VisitorComplaint.THIRSTY;
-            if (!visitor.getTags().contains("ticket_purchased") || visitor.guidingPlayerUuid != null || !allowedToEat) {
+            boolean hasTicketOrInsideZoo = visitor.getTags().contains("ticket_purchased");
+            if (!hasTicketOrInsideZoo && visitor.level() instanceof net.minecraft.server.level.ServerLevel sLevel) {
+                hasTicketOrInsideZoo = net.zootycoon.claim.ZooClaimManager.get(sLevel).isInsideAnyClaim(visitor.blockPosition());
+            }
+            if (!hasTicketOrInsideZoo || visitor.guidingPlayerUuid != null || !allowedToEat) {
                 return null;
             }
 
-            boolean wantsDrink = visitor.canDrink() && (visitor.getThirst() >= 25 || visitor.getMood() == VisitorMood.THIRSTY || visitor.currentComplaint == VisitorComplaint.THIRSTY);
-            boolean wantsBurger = visitor.canEat() && (visitor.getHunger() >= 35 || visitor.getMood() == VisitorMood.HUNGRY || visitor.currentComplaint == VisitorComplaint.HUNGRY);
+            boolean wantsDrink = (visitor.canDrink() || visitor.getThirst() >= 40) && (visitor.getThirst() >= 25 || visitor.getMood() == VisitorMood.THIRSTY || visitor.currentComplaint == VisitorComplaint.THIRSTY);
+            boolean wantsBurger = (visitor.canEat() || visitor.getHunger() >= 45) && (visitor.getHunger() >= 35 || visitor.getMood() == VisitorMood.HUNGRY || visitor.currentComplaint == VisitorComplaint.HUNGRY);
 
             if (wantsDrink && wantsBurger) {
                 return visitor.getThirst() >= visitor.getHunger() ? "DRINK" : "BURGER";
@@ -3104,10 +3108,14 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         @Override
         public boolean canUse() {
-            if (visitor.isTimeToLeave() || !visitor.getTags().contains("ticket_purchased")) {
+            if (visitor.isTimeToLeave()) {
                 return false;
             }
-            if (!visitor.hasWatchedAnimal()) {
+            boolean insideOrTicket = visitor.getTags().contains("ticket_purchased");
+            if (!insideOrTicket && visitor.level() instanceof net.minecraft.server.level.ServerLevel sLevel) {
+                insideOrTicket = net.zootycoon.claim.ZooClaimManager.get(sLevel).isInsideAnyClaim(visitor.blockPosition());
+            }
+            if (!insideOrTicket) {
                 return false;
             }
             return super.canUse();
@@ -3190,6 +3198,9 @@ public class ZooVisitorEntity extends PathfinderMob {
         @Override
         public boolean canContinueToUse() {
             if (visitor.isTimeToLeave() || visitor.needsToilet()) return false;
+            if (visitor.postPurchaseEatMode <= 0 && (visitor.getHunger() >= 45 || visitor.getThirst() >= 40)) {
+                return false;
+            }
             if (isSeated) {
                 return sitTicks > 0 && visitor.isPassenger();
             }
@@ -3214,11 +3225,13 @@ public class ZooVisitorEntity extends PathfinderMob {
             if (visitor.isPassenger()) {
                 visitor.stopRiding();
             }
+            visitor.setPose(net.minecraft.world.entity.Pose.STANDING);
             visitor.setDestinationType("NONE");
             this.targetPos = null;
             this.isSeated = false;
             this.sitTicks = 0;
-            visitor.sitCooldown = 400 + visitor.getRandom().nextInt(400); // 20-40 seconds cooldown between sits
+            visitor.sitCooldown = 400 + visitor.getRandom().nextInt(300); // 20-35 seconds cooldown between sits
+            visitor.setDeltaMovement((visitor.getRandom().nextFloat() - 0.5F) * 0.12F, 0.05F, (visitor.getRandom().nextFloat() - 0.5F) * 0.12F);
         }
 
         @Override
@@ -3233,7 +3246,9 @@ public class ZooVisitorEntity extends PathfinderMob {
                 }
                 if (sitTicks <= 0) {
                     visitor.stopRiding();
+                    visitor.setPose(net.minecraft.world.entity.Pose.STANDING);
                     isSeated = false;
+                    visitor.setDeltaMovement((visitor.getRandom().nextFloat() - 0.5F) * 0.12F, 0.05F, (visitor.getRandom().nextFloat() - 0.5F) * 0.12F);
                 }
                 return;
             }
@@ -3250,7 +3265,7 @@ public class ZooVisitorEntity extends PathfinderMob {
                             visitor.resolveComplaint();
                         }
                         this.isSeated = true;
-                        this.sitTicks = 180 + visitor.getRandom().nextInt(240); // 9-21 seconds sitting
+                        this.sitTicks = 100 + visitor.getRandom().nextInt(100); // 5-10 seconds sitting
                         visitor.getNavigation().stop();
                         if (visitor.postPurchaseEatMode == EAT_MODE_SEAT && visitor.consumeBitesRemaining <= 0) {
                             visitor.startConsuming(visitor.getMainHandItem(), visitor.isDrinkingItem, 28);
