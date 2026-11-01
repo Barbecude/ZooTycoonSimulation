@@ -154,6 +154,21 @@ public class ZooAnimalHungerManager {
         }
     }
 
+    public static boolean isOffspring(Entity entity) {
+        if (entity == null) return false;
+        return entity.getTags().contains("zoo_offspring");
+    }
+
+    public static String getParentUuidString(Entity entity) {
+        if (entity == null) return "";
+        for (String tag : entity.getTags()) {
+            if (tag.startsWith("zoo_parent_")) {
+                return tag.substring("zoo_parent_".length());
+            }
+        }
+        return "";
+    }
+
     public static boolean registerAnimalFromSpyglass(ServerPlayer player, LivingEntity animal) {
         return registerAnimalFromSpyglass(player, animal, true);
     }

@@ -30,8 +30,11 @@ import net.zootycoon.util.ZooTranslations;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class AnimalManagementTab {
 
@@ -70,6 +73,62 @@ public class AnimalManagementTab {
     private int zkDropdownW = 170;
     private int zkDropdownH = 0;
     private int zkScrollOffset = 0;
+
+    private ZooButton sellButton;
+    private final Set<String> expandedParents = new HashSet<>();
+
+    public static class AnimalListItem {
+        public final ZooNetworkPayloads.AnimalSyncData data;
+        public final boolean isChild;
+        public final boolean hasChildren;
+        public final boolean isExpanded;
+        public final int childCount;
+
+        public AnimalListItem(ZooNetworkPayloads.AnimalSyncData data, boolean isChild, boolean hasChildren, boolean isExpanded, int childCount) {
+            this.data = data;
+            this.isChild = isChild;
+            this.hasChildren = hasChildren;
+            this.isExpanded = isExpanded;
+            this.childCount = childCount;
+        }
+    }
+
+    private List<AnimalListItem> buildDisplayItems() {
+        List<ZooNetworkPayloads.AnimalSyncData> all = getValidAnimals();
+        List<AnimalListItem> items = new ArrayList<>();
+
+        Map<String, List<ZooNetworkPayloads.AnimalSyncData>> childrenMap = new LinkedHashMap<>();
+        Set<String> knownParentUuids = new HashSet<>();
+        for (var a : all) {
+            if (!a.isOffspring()) {
+                knownParentUuids.add(a.uuid());
+            }
+        }
+
+        for (var a : all) {
+            if (a.isOffspring() && !a.parentUuid().isEmpty() && knownParentUuids.contains(a.parentUuid())) {
+                childrenMap.computeIfAbsent(a.parentUuid(), k -> new ArrayList<>()).add(a);
+            }
+        }
+
+        for (var a : all) {
+            boolean isChildOfKnownParent = a.isOffspring() && !a.parentUuid().isEmpty() && knownParentUuids.contains(a.parentUuid());
+            if (!isChildOfKnownParent) {
+                List<ZooNetworkPayloads.AnimalSyncData> kids = childrenMap.get(a.uuid());
+                boolean hasKids = kids != null && !kids.isEmpty();
+                boolean isExp = hasKids && expandedParents.contains(a.uuid());
+                items.add(new AnimalListItem(a, false, hasKids, isExp, hasKids ? kids.size() : 0));
+
+                if (hasKids && isExp) {
+                    for (var kid : kids) {
+                        items.add(new AnimalListItem(kid, true, false, false, 0));
+                    }
+                }
+            }
+        }
+
+        return items;
+    }
     private boolean isDraggingSidebarScrollbar = false;
 
     private int scrollOffset = 0;
@@ -117,6 +176,20 @@ public class AnimalManagementTab {
         }).setCustomIcon(TRASH_ICON, 12, 12).asDanger();
         screen.addWidgetPublic(removeButton);
 
+        int sellBtnX = infoX + removeBtnW + 8;
+        int sellBtnW = 126;
+        sellButton = new ZooButton(sellBtnX, removeBtnY, sellBtnW, 18, ZooTranslations.component("zootycoon.ui.animals.btn_sell"), b -> {
+            if (selectedData != null && selectedData.isOffspring()) {
+                int idToSell = selectedData.entityId();
+                ClientPlayNetworking.send(new ZooNetworkPayloads.SellAnimalPayload(idToSell));
+                ZooTycoonClient.clientAnimals.removeIf(a -> a.entityId() == idToSell);
+                selectedData = null;
+                updateSelectedData(true);
+            }
+        }).asEmerald();
+        sellButton.visible = false;
+        screen.addWidgetPublic(sellButton);
+
         // Rename modal widgets
         int modalW = 220;
         int modalH = 96;
@@ -149,10 +222,11 @@ public class AnimalManagementTab {
             String newName = modalNameInput.getValue().trim();
             ClientPlayNetworking.send(new ZooNetworkPayloads.RenameAnimalPayload(selectedData.entityId(), newName));
             selectedData = new ZooNetworkPayloads.AnimalSyncData(
-                    selectedData.entityId(), selectedData.entityTypeId(), newName,
+                    selectedData.entityId(), selectedData.uuid(), selectedData.entityTypeId(), newName,
                     selectedData.hunger(), selectedData.thirst(), selectedData.cleanliness(), selectedData.health(), selectedData.maxHealth(),
                     selectedData.hasZookeeper(), selectedData.zookeeperName(),
-                    selectedData.habitatStatus(), selectedData.habitatNeeds(), selectedData.tempCategory()
+                    selectedData.habitatStatus(), selectedData.habitatNeeds(), selectedData.tempCategory(),
+                    selectedData.isOffspring(), selectedData.parentUuid()
             );
             closeRenameModal();
             requestSync();
@@ -172,6 +246,7 @@ public class AnimalManagementTab {
         if (modalSaveButton != null) modalSaveButton.visible = true;
         if (modalCancelButton != null) modalCancelButton.visible = true;
         if (removeButton != null) removeButton.visible = false;
+        if (sellButton != null) sellButton.visible = false;
     }
 
     private void closeRenameModal() {
@@ -183,6 +258,9 @@ public class AnimalManagementTab {
         if (modalSaveButton != null) modalSaveButton.visible = false;
         if (modalCancelButton != null) modalCancelButton.visible = false;
         if (removeButton != null) removeButton.visible = (selectedData != null);
+        if (sellButton != null) {
+            sellButton.visible = (selectedData != null && selectedData.isOffspring());
+        }
         screen.setFocused(null);
     }
 
@@ -226,6 +304,15 @@ public class AnimalManagementTab {
             if (removeButton != null && !renameModalOpen) {
                 removeButton.visible = true;
             }
+            if (sellButton != null && !renameModalOpen) {
+                if (selectedData.isOffspring()) {
+                    int price = net.zootycoon.economy.ZooEconomyEngine.getAnimalSellPrice(selectedData.entityTypeId());
+                    sellButton.setMessage(Component.literal("Jual (" + price + " Emerald)"));
+                    sellButton.visible = true;
+                } else {
+                    sellButton.visible = false;
+                }
+            }
             if (forceTextReset || selectedData.entityId() != lastSelectedEntityId) {
                 lastSelectedEntityId = selectedData.entityId();
                 detailsScrollOffset = 0;
@@ -234,6 +321,9 @@ public class AnimalManagementTab {
         } else {
             if (removeButton != null) {
                 removeButton.visible = false;
+            }
+            if (sellButton != null) {
+                sellButton.visible = false;
             }
             lastSelectedEntityId = -1;
             closeRenameModal();
@@ -265,8 +355,8 @@ public class AnimalManagementTab {
         graphics.fill(sidebarX, sidebarY, sidebarX + 1, sidebarY + sidebarH, 0xFF2A3140);
         graphics.fill(sidebarX + sidebarW - 1, sidebarY, sidebarX + sidebarW, sidebarY + sidebarH, 0xFF2A3140);
 
-        List<ZooNetworkPayloads.AnimalSyncData> animals = getValidAnimals();
-        int totalContentH = animals.size() * ITEM_HEIGHT + 8;
+        List<AnimalListItem> displayItems = buildDisplayItems();
+        int totalContentH = displayItems.size() * ITEM_HEIGHT + 8;
         int maxScroll = Math.max(0, totalContentH - sidebarH);
         scrollOffset = Math.clamp(scrollOffset, 0, maxScroll);
 
@@ -276,16 +366,22 @@ public class AnimalManagementTab {
 
         int itemRightMargin = maxScroll > 0 ? 8 : 3;
         int curY = sidebarY + 4 - scrollOffset;
-        for (var a : animals) {
+        for (var item : displayItems) {
+            var a = item.data;
             if (curY + ITEM_HEIGHT >= sidebarY && curY <= sidebarY + sidebarH) {
                 boolean isSelected = (selectedData != null && selectedData.entityId() == a.entityId());
                 int itemBg = isSelected ? 0xFF243048 : 0xFF181C26;
-                graphics.fill(sidebarX + 3, curY, sidebarX + sidebarW - itemRightMargin, curY + ITEM_HEIGHT - 2, itemBg);
+                int indent = item.isChild ? 16 : 0;
+                int cardRight = sidebarX + sidebarW - itemRightMargin;
+
+                graphics.fill(sidebarX + 3 + indent, curY, cardRight, curY + ITEM_HEIGHT - 2, itemBg);
                 if (isSelected) {
-                    graphics.fill(sidebarX + 3, curY, sidebarX + 5, curY + ITEM_HEIGHT - 2, 0xFF58A6FF);
+                    graphics.fill(sidebarX + 3 + indent, curY, sidebarX + 5 + indent, curY + ITEM_HEIGHT - 2, 0xFF58A6FF);
                 }
 
-                int cardRight = sidebarX + sidebarW - itemRightMargin;
+                if (item.isChild) {
+                    graphics.drawString(font, Component.literal("\u2514"), sidebarX + 6, curY + 9, 0xFF8B949E, false);
+                }
 
                 // 1. Check problem conditions: no zookeeper OR stats / habitat problem
                 boolean hasNoZk = !a.hasZookeeper();
@@ -300,7 +396,7 @@ public class AnimalManagementTab {
 
                 // 2. Mini 3D Animal Model (di samping kiri nama satwa)
                 int modelSize = 22;
-                int modelX = sidebarX + 6;
+                int modelX = sidebarX + 6 + indent;
                 int modelY = curY + 2;
 
                 LivingEntity miniEntity = resolveLivingEntity(mc, a);
@@ -322,13 +418,20 @@ public class AnimalManagementTab {
 
                 // 3. Animal Name in normal white (di samping kanan model 3D)
                 String displayName = a.customName().isEmpty() ? formatSpecies(a.entityTypeId()) : a.customName();
-                int textX = sidebarX + 32;
+                int textX = sidebarX + 32 + indent;
                 int textY = curY + 9;
                 int exX = cardRight - 14;
                 int exY = curY + 8;
-                int maxNameW = Math.max(20, (hasProblem ? exX - 4 : cardRight - 4) - textX);
+                int arrowX = cardRight - (hasProblem ? 24 : 12);
+                int maxNameW = Math.max(20, (item.hasChildren ? arrowX - 4 : (hasProblem ? exX - 4 : cardRight - 4)) - textX);
                 String trimmedName = font.plainSubstrByWidth(displayName, maxNameW);
                 graphics.drawString(font, Component.literal(trimmedName).withStyle(ChatFormatting.WHITE), textX, textY, 0xFFFFFFFF, false);
+
+                // Dropdown indicator arrow for parent
+                if (item.hasChildren) {
+                    String arrow = item.isExpanded ? "\u25BC" : "\u25B6";
+                    graphics.drawString(font, Component.literal(arrow), arrowX, curY + 8, item.isExpanded ? 0xFF58A6FF : 0xFF8B949E, false);
+                }
 
                 // 4. Alert Exclamation Mark (align kanan)
                 if (hasProblem) {
@@ -1064,8 +1167,8 @@ public class AnimalManagementTab {
 
         // Check if clicked sidebar scrollbar thumb/track
         if (mouseX >= sidebarX + sidebarW - 8 && mouseX <= sidebarX + sidebarW && mouseY >= sidebarY && mouseY <= sidebarY + sidebarH) {
-            List<ZooNetworkPayloads.AnimalSyncData> animals = getValidAnimals();
-            int totalContentH = animals.size() * ITEM_HEIGHT + 8;
+            List<AnimalListItem> displayItems = buildDisplayItems();
+            int totalContentH = displayItems.size() * ITEM_HEIGHT + 8;
             int maxScroll = Math.max(0, totalContentH - sidebarH);
             if (maxScroll > 0) {
                 this.isDraggingSidebarScrollbar = true;
@@ -1076,15 +1179,32 @@ public class AnimalManagementTab {
         }
 
         if (mouseX >= sidebarX && mouseX <= sidebarX + sidebarW && mouseY >= sidebarY && mouseY <= sidebarY + sidebarH) {
-            List<ZooNetworkPayloads.AnimalSyncData> animals = getValidAnimals();
+            List<AnimalListItem> displayItems = buildDisplayItems();
             double relativeY = (mouseY - (sidebarY + 4)) + scrollOffset;
             if (relativeY >= 0) {
                 int clickedIdx = (int) (relativeY / ITEM_HEIGHT);
-                if (clickedIdx >= 0 && clickedIdx < animals.size()) {
-                    this.selectedData = animals.get(clickedIdx);
+                if (clickedIdx >= 0 && clickedIdx < displayItems.size()) {
+                    var item = displayItems.get(clickedIdx);
+                    int cardRight = sidebarX + sidebarW - 8;
+                    int arrowX = cardRight - 24;
+
+                    // If clicked on dropdown arrow area of parent
+                    if (item.hasChildren && mouseX >= arrowX - 6 && mouseX <= cardRight) {
+                        if (expandedParents.contains(item.data.uuid())) {
+                            expandedParents.remove(item.data.uuid());
+                        } else {
+                            expandedParents.add(item.data.uuid());
+                        }
+                        return true;
+                    }
+
+                    this.selectedData = item.data;
                     this.lastSelectedEntityId = selectedData.entityId();
                     this.detailsScrollOffset = 0;
                     this.zookeeperDropdownOpen = false;
+                    if (item.hasChildren) {
+                        expandedParents.add(item.data.uuid());
+                    }
                     closeRenameModal();
                     return true;
                 }
@@ -1218,8 +1338,8 @@ public class AnimalManagementTab {
         int sidebarH = screen.height - sidebarY - 14;
 
         if (mouseX >= sidebarX && mouseX <= sidebarX + sidebarW && mouseY >= sidebarY && mouseY <= sidebarY + sidebarH) {
-            List<ZooNetworkPayloads.AnimalSyncData> animals = getValidAnimals();
-            int totalContentH = animals.size() * ITEM_HEIGHT + 8;
+            List<AnimalListItem> displayItems = buildDisplayItems();
+            int totalContentH = displayItems.size() * ITEM_HEIGHT + 8;
             int maxScroll = Math.max(0, totalContentH - sidebarH);
             if (maxScroll > 0) {
                 this.scrollOffset = Math.clamp(this.scrollOffset - (int) (verticalAmount * 24), 0, maxScroll);
@@ -1249,8 +1369,8 @@ public class AnimalManagementTab {
         if (isDraggingSidebarScrollbar) {
             int sidebarY = 48;
             int sidebarH = screen.height - sidebarY - 14;
-            List<ZooNetworkPayloads.AnimalSyncData> animals = getValidAnimals();
-            int totalContentH = animals.size() * ITEM_HEIGHT + 8;
+            List<AnimalListItem> displayItems = buildDisplayItems();
+            int totalContentH = displayItems.size() * ITEM_HEIGHT + 8;
             int maxScroll = Math.max(0, totalContentH - sidebarH);
             if (maxScroll > 0 && sidebarH > 0) {
                 double progress = Math.clamp((mouseY - sidebarY) / (double) sidebarH, 0.0, 1.0);

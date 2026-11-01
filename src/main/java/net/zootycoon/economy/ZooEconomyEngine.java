@@ -668,6 +668,52 @@ public final class ZooEconomyEngine {
     }
 
     /**
+     * Menghitung harga jual anak satwa (offspring) berdasarkan kelangkaan dan tingkat kesulitan menangkap.
+     */
+    public static int getAnimalSellPrice(String entityTypeId) {
+        if (entityTypeId == null) return 80;
+        String id = entityTypeId.toLowerCase(Locale.ROOT);
+        if (id.contains(":")) id = id.substring(id.indexOf(':') + 1);
+
+        // 1. Expensive / Legendary / Deep Pelagic & Glacial Apex (600 - 800)
+        if (id.contains("orca") || id.contains("cachalot") || id.contains("whale")
+                || id.contains("white_shark") || id.contains("great_white")
+                || id.contains("mammoth") || id.contains("froststalker")
+                || id.contains("giant_squid") || id.contains("mantis_shrimp")) {
+            return 750;
+        }
+
+        // 2. Rare / Apex / Dangerous / Exotic (300 - 450)
+        if (id.contains("elephant") || id.contains("snow_leopard") || id.contains("komodo")
+                || id.contains("gorilla") || id.contains("alligator") || id.contains("crocodile")
+                || id.contains("anaconda") || id.contains("eagle") || id.contains("vulture")
+                || id.contains("cassowary") || id.contains("polar_bear")
+                || id.contains("guster") || id.contains("bunfungus") || id.contains("mungus")
+                || id.contains("rocky_roller") || id.contains("flutter")) {
+            return 350;
+        }
+
+        // 3. Medium / Wild Savanna & Forest (150 - 250)
+        if (id.contains("lion") || id.contains("tiger") || id.contains("hippo")
+                || id.contains("giraffe") || id.contains("kangaroo") || id.contains("raccoon")
+                || id.contains("bear") || id.contains("grizzly") || id.contains("panda")
+                || id.contains("anteater") || id.contains("capuchin") || id.contains("monkey")
+                || id.contains("wolf") || id.contains("fox")) {
+            return 200;
+        }
+
+        // 4. Common / Domestic / Petting (50 - 100)
+        if (id.contains("sheep") || id.contains("mini_sheep") || id.contains("deer")
+                || id.contains("zebra") || id.contains("ostrich") || id.contains("camel")
+                || id.contains("penguin") || id.contains("capybara") || id.contains("tortoise")
+                || id.contains("cow") || id.contains("pig") || id.contains("chicken") || id.contains("rabbit")) {
+            return 80;
+        }
+
+        return 100;
+    }
+
+    /**
      * Mengambil biaya rekrut staf sekali bayar saat mempekerjakan NPC.
      */
     public static int getStaffHiringCost(String type) {

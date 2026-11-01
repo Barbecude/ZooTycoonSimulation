@@ -8,6 +8,7 @@
     "LivingEntityAccessor",
     "MobAccessor",
     "ZooAnimalDespawnMixin",
+    "AnimalBreedingMixin",
     "ItemStackMaxStackSizeMixin",
     "ItemDefaultMaxStackSizeMixin",
     "compat.FieldGuideScanUnlockMixin"

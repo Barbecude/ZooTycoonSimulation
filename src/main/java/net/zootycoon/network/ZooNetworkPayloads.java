@@ -5,6 +5,7 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -15,6 +16,8 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -499,9 +502,20 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // 16d. Sell Offspring Animal Payload (C2S)
+    public record SellAnimalPayload(int entityId) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<SellAnimalPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("sell_animal"));
+        public static final StreamCodec<FriendlyByteBuf, SellAnimalPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> buf.writeInt(payload.entityId),
+                buf -> new SellAnimalPayload(buf.readInt())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     // 17. Sync Animals Payload (S2C)
     public record AnimalSyncData(
             int entityId,
+            String uuid,
             String entityTypeId,
             String customName,
             int hunger,
@@ -513,7 +527,9 @@ public class ZooNetworkPayloads {
             String zookeeperName,
             String habitatStatus,
             String habitatNeeds,
-            String tempCategory
+            String tempCategory,
+            boolean isOffspring,
+            String parentUuid
     ) {}
 
     public record SyncAnimalsPayload(List<AnimalSyncData> animals) implements CustomPacketPayload {
@@ -523,6 +539,7 @@ public class ZooNetworkPayloads {
                     buf.writeInt(payload.animals.size());
                     for (var d : payload.animals) {
                         buf.writeInt(d.entityId());
+                        buf.writeUtf(d.uuid() != null ? d.uuid() : "");
                         buf.writeUtf(d.entityTypeId());
                         buf.writeUtf(d.customName());
                         buf.writeInt(d.hunger());
@@ -535,6 +552,8 @@ public class ZooNetworkPayloads {
                         buf.writeUtf(d.habitatStatus() != null ? d.habitatStatus() : "");
                         buf.writeUtf(d.habitatNeeds() != null ? d.habitatNeeds() : "");
                         buf.writeUtf(d.tempCategory() != null ? d.tempCategory() : "");
+                        buf.writeBoolean(d.isOffspring());
+                        buf.writeUtf(d.parentUuid() != null ? d.parentUuid() : "");
                     }
                 },
                 buf -> {
@@ -542,10 +561,11 @@ public class ZooNetworkPayloads {
                     List<AnimalSyncData> list = new ArrayList<>(size);
                     for (int i = 0; i < size; i++) {
                         list.add(new AnimalSyncData(
-                                buf.readInt(), buf.readUtf(), buf.readUtf(), buf.readInt(), buf.readInt(), buf.readInt(),
+                                buf.readInt(), buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readInt(), buf.readInt(), buf.readInt(),
                                 buf.readFloat(), buf.readFloat(),
                                 buf.readBoolean(), buf.readUtf(),
-                                buf.readUtf(), buf.readUtf(), buf.readUtf()
+                                buf.readUtf(), buf.readUtf(), buf.readUtf(),
+                                buf.readBoolean(), buf.readUtf()
                         ));
                     }
                     return new SyncAnimalsPayload(list);
@@ -1153,6 +1173,7 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playC2S().register(RenameAnimalPayload.TYPE, RenameAnimalPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(UnregisterAnimalPayload.TYPE, UnregisterAnimalPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ScanAnimalPayload.TYPE, ScanAnimalPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(SellAnimalPayload.TYPE, SellAnimalPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(FeedAnimalFromGuiPayload.TYPE, FeedAnimalFromGuiPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestAnimalSyncPayload.TYPE, RequestAnimalSyncPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SupplyZookeeperFoodPayload.TYPE, SupplyZookeeperFoodPayload.CODEC);
@@ -1553,6 +1574,32 @@ public class ZooNetworkPayloads {
                 net.minecraft.world.entity.Entity ent = player.level().getEntity(payload.entityId);
                 if (ent instanceof net.minecraft.world.entity.LivingEntity living && living.isAlive()) {
                     net.zootycoon.animal.ZooAnimalHungerManager.registerAnimalFromSpyglass(player, living);
+                }
+            });
+        });
+
+        // Handler: Sell Offspring Animal
+        ServerPlayNetworking.registerGlobalReceiver(SellAnimalPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                if (player == null || player.level() == null) return;
+                ServerLevel sLevel = (ServerLevel) player.level();
+                net.minecraft.world.entity.Entity ent = sLevel.getEntity(payload.entityId());
+                if (ent instanceof net.minecraft.world.entity.LivingEntity animal && animal.isAlive()) {
+                    if (net.zootycoon.animal.ZooAnimalHungerManager.isOwnedBy(animal, player.getUUID())
+                            && net.zootycoon.animal.ZooAnimalHungerManager.isOffspring(animal)) {
+                        String typeId = BuiltInRegistries.ENTITY_TYPE.getKey(animal.getType()).toString();
+                        int price = net.zootycoon.economy.ZooEconomyEngine.getAnimalSellPrice(typeId);
+                        String animalName = animal.hasCustomName() ? animal.getCustomName().getString() : animal.getType().getDescription().getString();
+
+                        net.zootycoon.economy.TransactionHelper.giveEmeralds(player, price);
+                        sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, animal.getX(), animal.getY() + 0.5D, animal.getZ(), 15, 0.4, 0.5, 0.4, 0.02);
+                        sLevel.playSound(null, animal.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.PLAYERS, 1.0f, 1.0f);
+                        animal.discard();
+
+                        sendToast(player, "zootycoon.toast.title.success", "zootycoon.animal.sold", 1, animalName, price);
+                        sendAnimalSync(player);
+                    }
                 }
             });
         });
@@ -2211,9 +2258,13 @@ public class ZooNetworkPayloads {
                     float temp = net.zootycoon.animal.ZooClimate.getEffectiveTemperature(animal);
                     String tempCategory = net.zootycoon.animal.ZooClimate.getCategory(temp).key;
 
+                    boolean isOffspring = net.zootycoon.animal.ZooAnimalHungerManager.isOffspring(animal);
+                    String parentUuid = net.zootycoon.animal.ZooAnimalHungerManager.getParentUuidString(animal);
+                    String animalUuid = animal.getStringUUID();
+
                     list.add(new AnimalSyncData(
-                            animal.getId(), typeId, name, hunger, thirst, cleanliness, health, maxHealth,
-                            hasZk, zkName, habitatStatus, habitatNeeds, tempCategory
+                            animal.getId(), animalUuid, typeId, name, hunger, thirst, cleanliness, health, maxHealth,
+                            hasZk, zkName, habitatStatus, habitatNeeds, tempCategory, isOffspring, parentUuid
                     ));
                 }
             }
