@@ -167,7 +167,35 @@ public class FeedingTroughDialogScreen extends Screen {
         return null;
     }
 
-    private static Item getPrimaryFood(String entityTypeId) {
+    private List<ItemStack> get5FoodsForAnimal(LivingEntity entity, String species) {
+        if (entity != null) {
+            List<ItemStack> list = AnimalDietRegistry.getFoodsForAnimal(entity);
+            if (list != null && !list.isEmpty()) {
+                return list.stream().limit(5).toList();
+            }
+        }
+        LivingEntity dummy = resolveEntityBySpecies(species);
+        if (dummy != null) {
+            List<ItemStack> list = AnimalDietRegistry.getFoodsForAnimal(dummy);
+            if (list != null && !list.isEmpty()) {
+                return list.stream().limit(5).toList();
+            }
+        }
+        var diet = AnimalDietRegistry.getDiet(species);
+        if (diet != null && !diet.acceptedFoods.isEmpty()) {
+            return diet.acceptedFoods.stream().limit(5).map(ItemStack::new).toList();
+        }
+        return List.of(new ItemStack(Items.WHEAT));
+    }
+
+    private Item getPrimaryFood(String entityTypeId) {
+        LivingEntity dummy = resolveEntityBySpecies(entityTypeId);
+        if (dummy != null) {
+            List<ItemStack> list = AnimalDietRegistry.getFoodsForAnimal(dummy);
+            if (list != null && !list.isEmpty()) {
+                return list.get(0).getItem();
+            }
+        }
         var diet = AnimalDietRegistry.getDiet(entityTypeId);
         if (diet != null && !diet.acceptedFoods.isEmpty()) {
             return diet.acceptedFoods.get(0);
@@ -243,26 +271,23 @@ public class FeedingTroughDialogScreen extends Screen {
             graphics.drawString(this.font, Component.literal("Pakan:").withStyle(ChatFormatting.YELLOW),
                     textLeft, pakanY, 0xFFFFFF55, false);
 
-            var diet = AnimalDietRegistry.getDiet(assignedAnimalSpecies);
-            List<Item> acceptedFoods = (diet != null && !diet.acceptedFoods.isEmpty())
-                    ? diet.acceptedFoods
-                    : (assignedFood != null && assignedFood != Items.AIR ? List.of(assignedFood) : List.of(Items.WHEAT));
+            List<ItemStack> displayFoods = get5FoodsForAnimal(assignedEnt, assignedAnimalSpecies);
 
             int iconX = textLeft + this.font.width("Pakan:") + 4;
             float iconScale = 0.65f;
             int iconDisplaySize = 11;
-            for (Item foodItem : acceptedFoods) {
+            for (ItemStack foodStack : displayFoods) {
                 if (iconX + iconDisplaySize > startX + panelWidth - 115) break;
 
                 graphics.pose().pushPose();
                 graphics.pose().translate(iconX, pakanY - 1, 0);
                 graphics.pose().scale(iconScale, iconScale, 1.0f);
-                graphics.renderItem(new ItemStack(foodItem), 0, 0);
+                graphics.renderItem(foodStack, 0, 0);
                 graphics.pose().popPose();
 
                 if (mouseX >= iconX && mouseX <= iconX + iconDisplaySize
                         && mouseY >= pakanY - 1 && mouseY <= pakanY - 1 + iconDisplaySize) {
-                    hoveredTooltip = foodItem.getDescription();
+                    hoveredTooltip = foodStack.getHoverName();
                 }
 
                 iconX += iconDisplaySize + 2;
@@ -336,11 +361,8 @@ public class FeedingTroughDialogScreen extends Screen {
                     graphics.drawString(this.font, Component.literal(anName).withStyle(isCurrentlyThis ? ChatFormatting.GREEN : ChatFormatting.WHITE),
                             listX + 30, curY + 4, isCurrentlyThis ? 0xFF55FF55 : 0xFFFFFFFF, false);
 
-                    // Small food icons
-                    var diet = AnimalDietRegistry.getDiet(animal.entityTypeId());
-                    List<Item> acceptedFoods = (diet != null && !diet.acceptedFoods.isEmpty())
-                            ? diet.acceptedFoods
-                            : List.of(getPrimaryFood(animal.entityTypeId()));
+                    // Small food icons (Up to 5 foods - Single Source of Truth matching Animal Management)
+                    List<ItemStack> displayFoods = get5FoodsForAnimal(ent, animal.entityTypeId());
 
                     int btnX = listX + listW - 56;
                     int iconX = listX + 30;
@@ -348,19 +370,19 @@ public class FeedingTroughDialogScreen extends Screen {
                     float iconScale = 0.65f;
                     int iconDisplaySize = 11;
 
-                    for (Item foodItem : acceptedFoods) {
+                    for (ItemStack foodStack : displayFoods) {
                         if (iconX + iconDisplaySize > btnX - 4) break;
 
                         graphics.pose().pushPose();
                         graphics.pose().translate(iconX, iconY, 0);
                         graphics.pose().scale(iconScale, iconScale, 1.0f);
-                        graphics.renderItem(new ItemStack(foodItem), 0, 0);
+                        graphics.renderItem(foodStack, 0, 0);
                         graphics.pose().popPose();
 
                         if (mouseX >= iconX && mouseX <= iconX + iconDisplaySize
                                 && mouseY >= iconY && mouseY <= iconY + iconDisplaySize
                                 && mouseY >= listY && mouseY <= listY + listH) {
-                            hoveredTooltip = foodItem.getDescription();
+                            hoveredTooltip = foodStack.getHoverName();
                         }
 
                         iconX += iconDisplaySize + 2;

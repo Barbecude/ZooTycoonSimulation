@@ -331,16 +331,17 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
-    public record ZookeeperSyncData(UUID uuid, String name, int entityId, boolean isAssigned, int assignedAnimalId) {
+    public record ZookeeperSyncData(UUID uuid, String name, int entityId, boolean isAssigned, int assignedAnimalId, boolean isCalling) {
         public static void encode(FriendlyByteBuf buf, ZookeeperSyncData data) {
             buf.writeUUID(data.uuid);
             buf.writeUtf(data.name);
             buf.writeInt(data.entityId);
             buf.writeBoolean(data.isAssigned);
             buf.writeInt(data.assignedAnimalId);
+            buf.writeBoolean(data.isCalling);
         }
         public static ZookeeperSyncData decode(FriendlyByteBuf buf) {
-            return new ZookeeperSyncData(buf.readUUID(), buf.readUtf(), buf.readInt(), buf.readBoolean(), buf.readInt());
+            return new ZookeeperSyncData(buf.readUUID(), buf.readUtf(), buf.readInt(), buf.readBoolean(), buf.readInt(), buf.readBoolean());
         }
     }
 
@@ -2174,7 +2175,8 @@ public class ZooNetworkPayloads {
                             zk.setAssignedAnimalUuid(null);
                         }
                     }
-                    keepers.add(new ZookeeperSyncData(zk.getUUID(), zk.getName().getString(), zk.getId(), isAssigned, assignedAnimalId));
+                    boolean isCalling = zk.isBeingCalled();
+                    keepers.add(new ZookeeperSyncData(zk.getUUID(), zk.getName().getString(), zk.getId(), isAssigned, assignedAnimalId, isCalling));
                 }
 
                 if (entity instanceof net.minecraft.world.entity.LivingEntity animal

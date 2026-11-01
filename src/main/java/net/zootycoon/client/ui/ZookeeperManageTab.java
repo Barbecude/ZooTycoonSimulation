@@ -10,7 +10,9 @@ import net.zootycoon.util.ZooTranslations;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /** Sub view of the staff screen: list zookeepers, call idle ones to the player or fire them. */
@@ -23,6 +25,7 @@ public class ZookeeperManageTab {
     private static final long CONFIRM_MS = 3000L;
 
     private final MainManagementScreen parent;
+    private final Set<UUID> pendingCalledKeepers = new HashSet<>();
     private float scrollOffset = 0.0f;
     private UUID confirmFireUuid = null;
     private long confirmFireUntil = 0L;
@@ -95,17 +98,35 @@ public class ZookeeperManageTab {
         graphics.fill(x + w - 1, y, x + w, y + ROW_H, 0xFF242A38);
 
         boolean busy = zk.isAssigned();
+        boolean isCalling = zk.isCalling() || pendingCalledKeepers.contains(zk.uuid());
+        if (!zk.isCalling()) {
+            pendingCalledKeepers.remove(zk.uuid());
+        }
+
         graphics.drawString(mc.font, Component.literal(zk.name()), x + 10, y + 5, 0xFFE6EDF3, false);
-        String status = ZooTranslations.get(busy ? "zootycoon.ui.staff.manage.working" : "zootycoon.ui.staff.manage.idle");
-        graphics.drawString(mc.font, Component.literal(status), x + 10, y + 17, busy ? 0xFF8B949E : 0xFF55FF55, false);
+        String status;
+        int statusColor;
+        if (busy) {
+            status = ZooTranslations.get("zootycoon.ui.staff.manage.working");
+            statusColor = 0xFF8B949E;
+        } else if (isCalling) {
+            status = ZooTranslations.get("zootycoon.ui.staff.manage.calling");
+            statusColor = 0xFFFFAA00;
+        } else {
+            status = ZooTranslations.get("zootycoon.ui.staff.manage.idle");
+            statusColor = 0xFF55FF55;
+        }
+        graphics.drawString(mc.font, Component.literal(status), x + 10, y + 17, statusColor, false);
 
         int by = y + (ROW_H - BTN_H) / 2;
         int fireX = x + w - FIRE_W - 8;
         int callX = fireX - CALL_W - 6;
 
         boolean confirming = zk.uuid().equals(confirmFireUuid) && System.currentTimeMillis() < confirmFireUntil;
-        drawButton(graphics, mc, callX, by, CALL_W, ZooTranslations.get("zootycoon.ui.staff.manage.btn_call"),
-                !busy, false, mouseX, mouseY, top, bottom);
+        boolean canCall = !busy && !isCalling;
+        drawButton(graphics, mc, callX, by, CALL_W,
+                ZooTranslations.get(isCalling ? "zootycoon.ui.staff.manage.btn_calling" : "zootycoon.ui.staff.manage.btn_call"),
+                canCall, false, mouseX, mouseY, top, bottom);
         drawButton(graphics, mc, fireX, by, FIRE_W,
                 ZooTranslations.get(confirming ? "zootycoon.ui.staff.manage.btn_confirm" : "zootycoon.ui.staff.manage.btn_fire"),
                 !busy, true, mouseX, mouseY, top, bottom);
@@ -142,9 +163,13 @@ public class ZookeeperManageTab {
             int callX = fireX - CALL_W - 6;
             if (mouseY >= by && mouseY <= by + BTN_H) {
                 if (mouseX >= callX && mouseX <= callX + CALL_W) {
+                    boolean isCalling = zk.isCalling() || pendingCalledKeepers.contains(zk.uuid());
                     if (zk.isAssigned()) {
                         ZooHudOverlay.showToast("zootycoon.toast.title.warning", "zootycoon.staff.manage.busy", ZooHudOverlay.TOAST_WARNING);
+                    } else if (isCalling) {
+                        // Already called and on the way, button is disabled
                     } else {
+                        pendingCalledKeepers.add(zk.uuid());
                         ClientPlayNetworking.send(new ZooNetworkPayloads.ManageZookeeperPayload(zk.uuid(), 0));
                     }
                     return true;

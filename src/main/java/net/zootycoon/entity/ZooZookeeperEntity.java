@@ -349,7 +349,7 @@ private static final String[] NAMES = new String[]{
     }
 
     public boolean isBeingCalled() {
-        return callTicks > 0;
+        return this.callTargetUuid != null && this.callTicks > 0;
     }
 
     /** Sends this idle zookeeper walking to the player; teleports a bit closer if the path gets stuck. */
@@ -374,10 +374,17 @@ private static final String[] NAMES = new String[]{
     }
 
     private void finishCall() {
+        UUID prevTarget = this.callTargetUuid;
         this.callTicks = 0;
         this.callTargetUuid = null;
         this.callStuckTicks = 0;
         this.getNavigation().stop();
+        if (prevTarget != null && this.level() instanceof ServerLevel sLevel) {
+            ServerPlayer target = sLevel.getServer().getPlayerList().getPlayer(prevTarget);
+            if (target != null) {
+                ZooNetworkPayloads.sendAnimalSync(target);
+            }
+        }
     }
 
     private void tickCall(ServerLevel sLevel) {
