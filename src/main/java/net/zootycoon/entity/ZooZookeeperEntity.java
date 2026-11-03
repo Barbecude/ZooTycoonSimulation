@@ -63,6 +63,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -320,6 +321,29 @@ private static final String[] NAMES = new String[]{
             return ent instanceof LivingEntity living && living.isAlive();
         }
         return false;
+    }
+
+    public List<LivingEntity> getAssignedFamily(ServerLevel sLevel) {
+        if (sLevel == null) return Collections.emptyList();
+        LivingEntity parent = null;
+        if (this.assignedAnimalUuid != null) {
+            Entity ent = sLevel.getEntity(this.assignedAnimalUuid);
+            if (ent instanceof LivingEntity l && l.isAlive()) {
+                parent = l;
+            }
+        }
+        if (parent == null) return Collections.emptyList();
+        List<LivingEntity> family = new ArrayList<>();
+        family.add(parent);
+        String parentTag = "zoo_parent_" + parent.getStringUUID();
+        final String parentUuidStr = parent.getStringUUID();
+        List<LivingEntity> offspring = sLevel.getEntitiesOfClass(
+                LivingEntity.class,
+                parent.getBoundingBox().inflate(48.0D),
+                e -> e.isAlive() && (e.getTags().contains(parentTag) || parentUuidStr.equals(ZooAnimalHungerManager.getParentUuidStr(e)))
+        );
+        family.addAll(offspring);
+        return family;
     }
 
     /**
@@ -770,18 +794,30 @@ private static final String[] NAMES = new String[]{
         this.entityData.set(SWEEPING, false);
 
         // ========================================================
-        // 2a. PRIORITY 2a: Thermal Management for assigned animal
+        // 2a. PRIORITY 2a: Thermal Management for assigned animal or offspring
         // Checks if animal is freezing or overheating
         // ========================================================
         if (assignedAnimal != null) {
-            HabitatProfile habProfile = HabitatProfileLoader.getProfile(assignedAnimal);
+            LivingEntity thermalTarget = assignedAnimal;
+            for (LivingEntity member : getAssignedFamily(sLevel)) {
+                HabitatProfile p = HabitatProfileLoader.getProfile(member);
+                if (p != null) {
+                    float effT = ZooClimate.getEffectiveTemperature(sLevel, member.blockPosition());
+                    if (effT < p.minTemperature() || effT > p.maxTemperature()) {
+                        thermalTarget = member;
+                        break;
+                    }
+                }
+            }
+
+            HabitatProfile habProfile = HabitatProfileLoader.getProfile(thermalTarget);
             if (habProfile != null) {
-                float effectiveTemp = ZooClimate.getEffectiveTemperature(sLevel, assignedAnimal.blockPosition());
+                float effectiveTemp = ZooClimate.getEffectiveTemperature(sLevel, thermalTarget.blockPosition());
                 boolean tooCold = effectiveTemp < habProfile.minTemperature();
                 boolean tooHot = effectiveTemp > habProfile.maxTemperature();
 
                 if (tooCold) {
-                    BlockPos nearestHeater = findNearestHeater(sLevel, assignedAnimal.blockPosition(), 20.0D);
+                    BlockPos nearestHeater = findNearestHeater(sLevel, thermalTarget.blockPosition(), 20.0D);
                     if (nearestHeater != null) {
                         if (hasCoal()) {
                             currentDutyState = "REFUEL_HEATER";
@@ -815,7 +851,7 @@ private static final String[] NAMES = new String[]{
                         currentDutyState = "NEED_HEATER_NEARBY";
                     }
                 } else if (tooHot) {
-                    BlockPos nearestCooler = findNearestCooler(sLevel, assignedAnimal.blockPosition(), 20.0D);
+                    BlockPos nearestCooler = findNearestCooler(sLevel, thermalTarget.blockPosition(), 20.0D);
                     if (nearestCooler != null) {
                         if (hasIce()) {
                             currentDutyState = "REFUEL_COOLER";
@@ -861,13 +897,22 @@ private static final String[] NAMES = new String[]{
         }
 
         // ========================================================
-        // 2b. PRIORITY 2b: Bathe assigned animal if dirty (cleanliness <= 60%) and tools are available
+        // 2b. PRIORITY 2b: Bathe assigned animal or its offspring if dirty (cleanliness <= 60%) and tools are available
         // ========================================================
         if (assignedAnimal != null && this.hasBathingTools()) {
-            int cleanliness = ZooAnimalHungerManager.getCleanliness(assignedAnimal);
-            if (cleanliness <= 60) {
+            LivingEntity dirtyTarget = null;
+            int lowestCleanliness = 60;
+            for (LivingEntity member : getAssignedFamily(sLevel)) {
+                int c = ZooAnimalHungerManager.getCleanliness(member);
+                if (c <= 60 && c <= lowestCleanliness) {
+                    lowestCleanliness = c;
+                    dirtyTarget = member;
+                }
+            }
+
+            if (dirtyTarget != null) {
                 currentDutyState = "BATHING";
-                tickBathingDuty(sLevel);
+                tickBathingDuty(sLevel, dirtyTarget);
                 return;
             }
         }
@@ -884,7 +929,7 @@ private static final String[] NAMES = new String[]{
         }
 
         // ========================================================
-        // 2b. PRIORITY 2b: Feeding Duty for assigned animal
+        // 2b. PRIORITY 2b: Feeding Duty for assigned animal and offspring
         // Handles both Thrown Food (Carnivores/Predators) and Trough (Herbivores/Omnivores)
         // ========================================================
         if (assignedAnimal != null) {
@@ -892,28 +937,37 @@ private static final String[] NAMES = new String[]{
             boolean isThrownMeat = (diet != null && diet.feedingType == AnimalDietRegistry.FeedingType.THROWN_MEAT);
 
             if (isThrownMeat) {
-                // Carnivores / Thrown food: Zookeeper throws food directly to the animal
-                int hunger = ZooAnimalHungerManager.getHunger(assignedAnimal);
-                if (hunger <= 75) {
+                // Carnivores / Thrown food: Zookeeper throws food directly to the animal or its hungry offspring
+                LivingEntity hungryTarget = null;
+                int minHunger = 75;
+                for (LivingEntity member : getAssignedFamily(sLevel)) {
+                    int h = ZooAnimalHungerManager.getHunger(member);
+                    if (h <= 75 && h <= minHunger) {
+                        minHunger = h;
+                        hungryTarget = member;
+                    }
+                }
+
+                if (hungryTarget != null) {
                     if (this.getFoodStock() > 0) {
                         currentDutyState = "FEEDING_ANIMAL";
                         ItemStack heldFood = this.peekFirstFood();
                         Item targetFoodItem = !heldFood.isEmpty() ? heldFood.getItem() : ((diet != null && !diet.acceptedFoods.isEmpty()) ? diet.acceptedFoods.get(0) : Items.BEEF);
                         this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(targetFoodItem));
 
-                        double distSq = this.distanceToSqr(assignedAnimal);
+                        double distSq = this.distanceToSqr(hungryTarget);
                         if (distSq > 4.5 * 4.5) {
-                            this.getNavigation().moveTo(assignedAnimal, 1.25);
+                            this.getNavigation().moveTo(hungryTarget, 1.25);
                             return;
                         } else {
                             this.getNavigation().stop();
-                            this.getLookControl().setLookAt(assignedAnimal, 30.0F, 30.0F);
+                            this.getLookControl().setLookAt(hungryTarget, 30.0F, 30.0F);
                             this.swing(InteractionHand.MAIN_HAND);
 
                             ItemStack takenFood = this.takeFirstFood(1);
                             ItemStack throwStack = !takenFood.isEmpty() ? takenFood : new ItemStack(targetFoodItem, 1);
                             ItemEntity itemEntity = new ItemEntity(sLevel, this.getX(), this.getEyeY() - 0.2, this.getZ(), throwStack);
-                            Vec3 targetPos = assignedAnimal.position().add(0, assignedAnimal.getBbHeight() * 0.25, 0);
+                            Vec3 targetPos = hungryTarget.position().add(0, hungryTarget.getBbHeight() * 0.25, 0);
                             Vec3 throwVec = targetPos.subtract(itemEntity.position()).normalize().scale(0.38);
                             itemEntity.setDeltaMovement(throwVec.x, throwVec.y + 0.12, throwVec.z);
                             itemEntity.setDefaultPickUpDelay();
@@ -1089,6 +1143,25 @@ private static final String[] NAMES = new String[]{
         String animalName = hasAnimal ? (animal.hasCustomName() ? animal.getCustomName().getString() : animal.getType().getDescription().getString()) : "-";
         int hunger = hasAnimal ? ZooAnimalHungerManager.getHunger(animal) : 0;
 
+        LivingEntity mostUrgentAnimal = animal;
+        int lowestHunger = hunger;
+        if (hasAnimal && this.level() instanceof ServerLevel sLevel) {
+            for (LivingEntity member : getAssignedFamily(sLevel)) {
+                int mh = ZooAnimalHungerManager.getHunger(member);
+                if (mh < lowestHunger) {
+                    lowestHunger = mh;
+                    mostUrgentAnimal = member;
+                }
+            }
+        }
+        hunger = lowestHunger;
+        String dialogAnimalName = (mostUrgentAnimal != null && mostUrgentAnimal.hasCustomName())
+                ? mostUrgentAnimal.getCustomName().getString()
+                : (mostUrgentAnimal != null ? mostUrgentAnimal.getType().getDescription().getString() : animalName);
+        if (mostUrgentAnimal != null && mostUrgentAnimal != animal && mostUrgentAnimal.getTags().contains("zoo_offspring") && !mostUrgentAnimal.hasCustomName()) {
+            dialogAnimalName = "Anak " + dialogAnimalName;
+        }
+
         List<String> foods = new ArrayList<>();
         if (hasAnimal) {
             var diet = AnimalDietRegistry.getDiet(animal);
@@ -1103,32 +1176,51 @@ private static final String[] NAMES = new String[]{
         } else if (!hasAnimal) {
             dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.speech_no_animal");
         } else {
-            HabitatProfile habProfile = HabitatProfileLoader.getProfile(animal);
-            float effectiveTemp = ZooClimate.getEffectiveTemperature(animal);
-            boolean tooCold = habProfile != null && effectiveTemp < habProfile.minTemperature();
-            boolean tooHot = habProfile != null && effectiveTemp > habProfile.maxTemperature();
-
-            if (tooCold) {
-                BlockPos heater = findNearestHeater((ServerLevel) this.level(), animal.blockPosition(), 20.0D);
-                if (heater == null) {
-                    dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.need_heater_block", animalName);
-                } else if (!hasCoal()) {
-                    dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.need_coal", animalName);
+            LivingEntity coldAnimal = null;
+            LivingEntity hotAnimal = null;
+            LivingEntity dirtyAnimal = null;
+            if (this.level() instanceof ServerLevel sLevel) {
+                for (LivingEntity m : getAssignedFamily(sLevel)) {
+                    HabitatProfile p = HabitatProfileLoader.getProfile(m);
+                    float t = ZooClimate.getEffectiveTemperature(m);
+                    if (p != null) {
+                        if (t < p.minTemperature() && coldAnimal == null) coldAnimal = m;
+                        if (t > p.maxTemperature() && hotAnimal == null) hotAnimal = m;
+                    }
+                    if (ZooAnimalHungerManager.getCleanliness(m) <= 60 && dirtyAnimal == null) {
+                        dirtyAnimal = m;
+                    }
                 }
-            } else if (tooHot) {
-                BlockPos cooler = findNearestCooler((ServerLevel) this.level(), animal.blockPosition(), 20.0D);
+            }
+            if (coldAnimal == null && hotAnimal == null) {
+                HabitatProfile habProfile = HabitatProfileLoader.getProfile(animal);
+                float effectiveTemp = ZooClimate.getEffectiveTemperature(animal);
+                if (habProfile != null && effectiveTemp < habProfile.minTemperature()) coldAnimal = animal;
+                if (habProfile != null && effectiveTemp > habProfile.maxTemperature()) hotAnimal = animal;
+            }
+
+            if (coldAnimal != null) {
+                String cName = coldAnimal.hasCustomName() ? coldAnimal.getCustomName().getString() : (coldAnimal != animal ? "Anak " + animalName : animalName);
+                BlockPos heater = findNearestHeater((ServerLevel) this.level(), coldAnimal.blockPosition(), 20.0D);
+                if (heater == null) {
+                    dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.need_heater_block", cName);
+                } else if (!hasCoal()) {
+                    dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.need_coal", cName);
+                }
+            } else if (hotAnimal != null) {
+                String hName = hotAnimal.hasCustomName() ? hotAnimal.getCustomName().getString() : (hotAnimal != animal ? "Anak " + animalName : animalName);
+                BlockPos cooler = findNearestCooler((ServerLevel) this.level(), hotAnimal.blockPosition(), 20.0D);
                 if (cooler == null) {
-                    dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.need_cooler_block", animalName);
+                    dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.need_cooler_block", hName);
                 } else if (!hasIce()) {
-                    dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.need_ice", animalName);
+                    dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.need_ice", hName);
                 }
             }
 
             if (dialogText.isEmpty()) {
-                int cleanlinessVal = ZooAnimalHungerManager.getCleanliness(animal);
-                boolean isDirty = (cleanlinessVal <= 60);
-                if (isDirty && !this.hasBathingTools()) {
-                    dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.need_bathing_tools", animalName);
+                if (dirtyAnimal != null && !this.hasBathingTools()) {
+                    String dName = dirtyAnimal.hasCustomName() ? dirtyAnimal.getCustomName().getString() : (dirtyAnimal != animal ? "Anak " + animalName : animalName);
+                    dialogText = ZooTranslations.get("zootycoon.dialog.zookeeper.need_bathing_tools", dName);
                 } else {
                     ChatFormatting hungerColor = hunger <= 25 ? ChatFormatting.RED : (hunger <= 60 ? ChatFormatting.YELLOW : ChatFormatting.GREEN);
                     String hungerColoredStr = hungerColor + String.valueOf(hunger) + "%" + ChatFormatting.RESET;
@@ -1137,19 +1229,19 @@ private static final String[] NAMES = new String[]{
 
                     if (this.getFoodStock() <= 0) {
                         dialogText = isThrownDiet
-                                ? ZooTranslations.get("zootycoon.dialog.zookeeper.empty_stock_throw", animalName, hungerColoredStr)
-                                : ZooTranslations.get("zootycoon.dialog.zookeeper.empty_stock", animalName, hungerColoredStr);
+                                ? ZooTranslations.get("zootycoon.dialog.zookeeper.empty_stock_throw", dialogAnimalName, hungerColoredStr)
+                                : ZooTranslations.get("zootycoon.dialog.zookeeper.empty_stock", dialogAnimalName, hungerColoredStr);
                     } else {
                         dialogText = isThrownDiet
-                                ? ZooTranslations.get("zootycoon.dialog.zookeeper.speech_with_animal_throw", animalName, hungerColoredStr, String.valueOf(this.getFoodStock()))
-                                : ZooTranslations.get("zootycoon.dialog.zookeeper.speech_with_animal", animalName, hungerColoredStr, String.valueOf(this.getFoodStock()));
+                                ? ZooTranslations.get("zootycoon.dialog.zookeeper.speech_with_animal_throw", dialogAnimalName, hungerColoredStr, String.valueOf(this.getFoodStock()))
+                                : ZooTranslations.get("zootycoon.dialog.zookeeper.speech_with_animal", dialogAnimalName, hungerColoredStr, String.valueOf(this.getFoodStock()));
                     }
                 }
             }
         }
 
         ServerPlayNetworking.send(player, new ZooNetworkPayloads.OpenZookeeperScreenPayload(
-                this.getUUID(), keeperName, hasAnimal, animalName, hunger, this.getFoodStock(), dialogText, foods
+                this.getUUID(), keeperName, hasAnimal, dialogAnimalName, hunger, this.getFoodStock(), dialogText, foods
         ));
     }
 
@@ -1161,7 +1253,10 @@ private static final String[] NAMES = new String[]{
                 assignedAnimal = l;
             }
         }
+        tickBathingDuty(sLevel, assignedAnimal);
+    }
 
+    private void tickBathingDuty(ServerLevel sLevel, LivingEntity assignedAnimal) {
         if (assignedAnimal == null || !this.hasBathingTools()) {
             stopBathing();
             return;

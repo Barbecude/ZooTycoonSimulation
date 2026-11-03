@@ -96,10 +96,16 @@ public class AnimalEatFromTroughGoal extends MoveToBlockGoal {
 
         for (BlockPos pos : ZooFeedingTroughBlock.KNOWN_TROUGHS) {
             double distSq = mobPos.distSqr(pos);
-            if (distSq <= 32.0D * 32.0D && distSq < bestDistSq) {
+            if (distSq <= 40.0D * 40.0D) {
                 if (this.isValidTarget(this.mob.level(), pos)) {
-                    bestDistSq = distSq;
-                    bestPos = pos;
+                    BlockEntity be = this.mob.level().getBlockEntity(pos);
+                    boolean isMyOrParentTrough = (be instanceof ZooFeedingTroughBlockEntity t && t.isAssigned() && t.isAssignedTo(this.mob));
+                    // Heavily favor the assigned parent/child trough
+                    double effectiveDistSq = isMyOrParentTrough ? (distSq * 0.25D) : distSq;
+                    if (effectiveDistSq < bestDistSq) {
+                        bestDistSq = effectiveDistSq;
+                        bestPos = pos;
+                    }
                 }
             }
         }

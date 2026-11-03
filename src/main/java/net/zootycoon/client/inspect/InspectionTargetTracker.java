@@ -88,7 +88,7 @@ public class InspectionTargetTracker {
 
         // If holding right-click with magnifying glass, maintain active target lock
         if (player.isUsingItem() && player.getUseItem().is(ZooItems.MAGNIFYING_GLASS)) {
-            if (currentTarget != null && currentTarget.isAlive() && isZooRegisteredAnimal(currentTarget)) {
+            if (currentTarget != null && currentTarget.isAlive() && ZooAnimalHungerManager.isZooAnimalCandidate(currentTarget)) {
                 if (player.distanceToSqr(currentTarget) <= 24.0 * 24.0) {
                     targetRetentionTicks = 30;
                     return;
@@ -152,8 +152,8 @@ public class InspectionTargetTracker {
             maxDistSqr = eyePos.distanceToSqr(blockHit.getLocation());
         }
 
-        // A. Direct check on vanilla crosshairPickEntity (strictly registered animals only)
-        if (mc.crosshairPickEntity instanceof LivingEntity living && living.isAlive() && isZooRegisteredAnimal(living)) {
+        // A. Direct check on vanilla crosshairPickEntity (zoo animal candidate)
+        if (mc.crosshairPickEntity instanceof LivingEntity living && living.isAlive() && ZooAnimalHungerManager.isZooAnimalCandidate(living)) {
             double distSqr = player.distanceToSqr(living);
             if (distSqr <= maxDistSqr) {
                 targetRetentionTicks = 15;
@@ -161,27 +161,25 @@ public class InspectionTargetTracker {
             }
         }
 
-        // B. Extended raycast up to 16 blocks (strictly registered animals only)
+        // B. Extended raycast up to 16 blocks (zoo animal candidate)
         AABB searchBox = player.getBoundingBox().expandTowards(lookVec.scale(16.0)).inflate(1.0);
         EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(
                 player,
                 eyePos,
                 reachVec,
                 searchBox,
-                e -> e instanceof LivingEntity l && l.isAlive() && !e.isSpectator(),
+                e -> e instanceof LivingEntity l && l.isAlive() && !e.isSpectator() && ZooAnimalHungerManager.isZooAnimalCandidate(l),
                 maxDistSqr
         );
 
         if (entityHit != null && entityHit.getEntity() instanceof LivingEntity living) {
-            if (isZooRegisteredAnimal(living)) {
-                targetRetentionTicks = 15;
-                return living;
-            }
+            targetRetentionTicks = 15;
+            return living;
         }
 
         // C. Hologram Card Volume Raycast:
         // When inspecting an animal, allow looking up at the hologram card floating above its head
-        if (currentTarget != null && currentTarget.isAlive() && isZooRegisteredAnimal(currentTarget)) {
+        if (currentTarget != null && currentTarget.isAlive() && ZooAnimalHungerManager.isZooAnimalCandidate(currentTarget)) {
             double targetDistSqr = player.distanceToSqr(currentTarget);
             if (targetDistSqr <= 16.0 * 16.0) {
                 // Expanded bounding box covering both the animal and the hologram floating above it

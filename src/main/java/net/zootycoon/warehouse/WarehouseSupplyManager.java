@@ -32,6 +32,7 @@ import net.zootycoon.network.WarehousePayloads;
 import net.zootycoon.network.ZooNetworkPayloads;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -313,15 +314,24 @@ public class WarehouseSupplyManager {
                 }
             } else if (entity instanceof ZooZookeeperEntity keeper) {
                 if (EmptyBarrelBlockEntity.CAT_ANIMAL_FOOD.equalsIgnoreCase(category)) {
-                    if (keeper.hasActiveAssignedAnimal() && keeper.getFoodStock() <= ZOOKEEPER_LOW_STOCK_THRESHOLD) {
+                    if (keeper.hasActiveAssignedAnimal()) {
                         UUID animalId = keeper.getAssignedAnimalUuid();
                         LivingEntity animal = resolveAnimal(sLevel, animalId);
                         if (animal != null) {
-                            List<ItemStack> expectedFoods = AnimalDietRegistry.getFoodsForAnimal(animal);
-                            StaffSupplyRequest existing = ACTIVE_REQUESTS.get(keeper.getUUID());
-                            if (existing == null || !animalId.equals(existing.animalUuid) || existing.targetItems.size() != expectedFoods.size()) {
-                                StaffSupplyRequest created = createZookeeperRequest(keeper, animal);
-                                ACTIVE_REQUESTS.put(keeper.getUUID(), created);
+                            boolean anyHungry = false;
+                            for (LivingEntity m : keeper.getAssignedFamily(sLevel)) {
+                                if (net.zootycoon.animal.ZooAnimalHungerManager.getHunger(m) <= 75) {
+                                    anyHungry = true;
+                                    break;
+                                }
+                            }
+                            if (keeper.getFoodStock() <= ZOOKEEPER_LOW_STOCK_THRESHOLD || anyHungry) {
+                                List<ItemStack> expectedFoods = AnimalDietRegistry.getFoodsForAnimal(animal);
+                                StaffSupplyRequest existing = ACTIVE_REQUESTS.get(keeper.getUUID());
+                                if (existing == null || !animalId.equals(existing.animalUuid) || existing.targetItems.size() != expectedFoods.size()) {
+                                    StaffSupplyRequest created = createZookeeperRequest(keeper, animal);
+                                    ACTIVE_REQUESTS.put(keeper.getUUID(), created);
+                                }
                             }
                         }
                     }
@@ -434,69 +444,81 @@ public class WarehouseSupplyManager {
 
     private static StaffSupplyRequest evaluateZookeeperCareRequest(ServerLevel sLevel, ZooZookeeperEntity keeper, LivingEntity animal) {
         String keeperName = keeper.getName().getString();
-        String animalName = animal.hasCustomName()
-                ? animal.getCustomName().getString()
-                : animal.getType().getDescription().getString();
 
-        var habProfile = net.zootycoon.animal.habitat.HabitatProfileLoader.getProfile(animal);
-        float effectiveTemp = net.zootycoon.animal.ZooClimate.getEffectiveTemperature(sLevel, animal.blockPosition());
-        boolean tooCold = habProfile != null && effectiveTemp < habProfile.minTemperature();
-        boolean tooHot = habProfile != null && effectiveTemp > habProfile.maxTemperature();
-
-        if (tooCold && !keeper.hasCoal()) {
-            StaffSupplyRequest req = new StaffSupplyRequest(
-                    keeper.getUUID(),
-                    keeper.getId(),
-                    EmptyBarrelBlockEntity.CAT_ANIMAL_CARE,
-                    "ZOOKEEPER",
-                    keeperName,
-                    "Kebutuhan: Pemanas (" + animalName + " Kedinginan)"
-            );
-            req.animalUuid = animal.getUUID();
-            req.animalName = animalName;
-            req.targetItems.add(new ItemStack(Items.COAL, 16));
-            req.targetItems.add(new ItemStack(Items.CHARCOAL, 16));
-            req.requiredRawIngredients.put(Items.COAL, 16);
-            return req;
+        // Check assigned parent and any offspring in the enclosure
+        List<LivingEntity> family = keeper.getAssignedFamily(sLevel);
+        if (family.isEmpty()) {
+            family = Collections.singletonList(animal);
         }
 
-        if (tooHot && !keeper.hasIce()) {
-            StaffSupplyRequest req = new StaffSupplyRequest(
-                    keeper.getUUID(),
-                    keeper.getId(),
-                    EmptyBarrelBlockEntity.CAT_ANIMAL_CARE,
-                    "ZOOKEEPER",
-                    keeperName,
-                    "Kebutuhan: Pendingin (" + animalName + " Kepanasan)"
-            );
-            req.animalUuid = animal.getUUID();
-            req.animalName = animalName;
-            req.targetItems.add(new ItemStack(Items.ICE, 16));
-            req.targetItems.add(new ItemStack(Items.PACKED_ICE, 16));
-            req.targetItems.add(new ItemStack(Items.BLUE_ICE, 16));
-            req.targetItems.add(new ItemStack(Items.SNOW_BLOCK, 16));
-            req.targetItems.add(new ItemStack(Items.SNOWBALL, 16));
-            req.requiredRawIngredients.put(Items.ICE, 16);
-            return req;
-        }
+        for (LivingEntity m : family) {
+            String mName = m.hasCustomName()
+                    ? m.getCustomName().getString()
+                    : m.getType().getDescription().getString();
+            if (m.getTags().contains("zoo_offspring") && !m.hasCustomName()) {
+                mName = "Anak " + mName;
+            }
 
-        int clean = net.zootycoon.animal.ZooAnimalHungerManager.getCleanliness(animal);
-        if (clean <= 60 && !keeper.hasBathingTools()) {
-            StaffSupplyRequest req = new StaffSupplyRequest(
-                    keeper.getUUID(),
-                    keeper.getId(),
-                    EmptyBarrelBlockEntity.CAT_ANIMAL_CARE,
-                    "ZOOKEEPER",
-                    keeperName,
-                    "Kebutuhan: Alat Mandi (" + animalName + " Kotor)"
-            );
-            req.animalUuid = animal.getUUID();
-            req.animalName = animalName;
-            req.targetItems.add(new ItemStack(ZooItems.COPPER_WATERING_CAN, 1));
-            req.targetItems.add(new ItemStack(Items.BRUSH, 1));
-            req.requiredRawIngredients.put(ZooItems.COPPER_WATERING_CAN, 1);
-            req.requiredRawIngredients.put(Items.BRUSH, 1);
-            return req;
+            var habProfile = net.zootycoon.animal.habitat.HabitatProfileLoader.getProfile(m);
+            float effectiveTemp = net.zootycoon.animal.ZooClimate.getEffectiveTemperature(sLevel, m.blockPosition());
+            boolean tooCold = habProfile != null && effectiveTemp < habProfile.minTemperature();
+            boolean tooHot = habProfile != null && effectiveTemp > habProfile.maxTemperature();
+
+            if (tooCold && !keeper.hasCoal()) {
+                StaffSupplyRequest req = new StaffSupplyRequest(
+                        keeper.getUUID(),
+                        keeper.getId(),
+                        EmptyBarrelBlockEntity.CAT_ANIMAL_CARE,
+                        "ZOOKEEPER",
+                        keeperName,
+                        "Kebutuhan: Pemanas (" + mName + " Kedinginan)"
+                );
+                req.animalUuid = m.getUUID();
+                req.animalName = mName;
+                req.targetItems.add(new ItemStack(Items.COAL, 16));
+                req.targetItems.add(new ItemStack(Items.CHARCOAL, 16));
+                req.requiredRawIngredients.put(Items.COAL, 16);
+                return req;
+            }
+
+            if (tooHot && !keeper.hasIce()) {
+                StaffSupplyRequest req = new StaffSupplyRequest(
+                        keeper.getUUID(),
+                        keeper.getId(),
+                        EmptyBarrelBlockEntity.CAT_ANIMAL_CARE,
+                        "ZOOKEEPER",
+                        keeperName,
+                        "Kebutuhan: Pendingin (" + mName + " Kepanasan)"
+                );
+                req.animalUuid = m.getUUID();
+                req.animalName = mName;
+                req.targetItems.add(new ItemStack(Items.ICE, 16));
+                req.targetItems.add(new ItemStack(Items.PACKED_ICE, 16));
+                req.targetItems.add(new ItemStack(Items.BLUE_ICE, 16));
+                req.targetItems.add(new ItemStack(Items.SNOW_BLOCK, 16));
+                req.targetItems.add(new ItemStack(Items.SNOWBALL, 16));
+                req.requiredRawIngredients.put(Items.ICE, 16);
+                return req;
+            }
+
+            int clean = net.zootycoon.animal.ZooAnimalHungerManager.getCleanliness(m);
+            if (clean <= 60 && !keeper.hasBathingTools()) {
+                StaffSupplyRequest req = new StaffSupplyRequest(
+                        keeper.getUUID(),
+                        keeper.getId(),
+                        EmptyBarrelBlockEntity.CAT_ANIMAL_CARE,
+                        "ZOOKEEPER",
+                        keeperName,
+                        "Kebutuhan: Alat Mandi (" + mName + " Kotor)"
+                );
+                req.animalUuid = m.getUUID();
+                req.animalName = mName;
+                req.targetItems.add(new ItemStack(ZooItems.COPPER_WATERING_CAN, 1));
+                req.targetItems.add(new ItemStack(Items.BRUSH, 1));
+                req.requiredRawIngredients.put(ZooItems.COPPER_WATERING_CAN, 1);
+                req.requiredRawIngredients.put(Items.BRUSH, 1);
+                return req;
+            }
         }
 
         return null;

@@ -140,6 +140,17 @@ public class ZooFeedingTroughBlockEntity extends BlockEntity implements Containe
         if (assignedAnimalId != -1 && assignedAnimalId == animal.getId()) {
             return true;
         }
+        // Seamless eating: offspring automatically share their parent's assigned feeding trough
+        if (assignedAnimalUuid != null) {
+            String parentTag = "zoo_parent_" + assignedAnimalUuid;
+            if (animal.getTags().contains(parentTag)) {
+                return true;
+            }
+            UUID parentUuid = net.zootycoon.animal.ZooAnimalHungerManager.getParentUuid(animal);
+            if (assignedAnimalUuid.equals(parentUuid)) {
+                return true;
+            }
+        }
         ResourceLocation loc = BuiltInRegistries.ENTITY_TYPE.getKey(animal.getType());
         if (loc != null && !assignedAnimalSpecies.isEmpty() && loc.toString().equalsIgnoreCase(assignedAnimalSpecies)) {
             return true;

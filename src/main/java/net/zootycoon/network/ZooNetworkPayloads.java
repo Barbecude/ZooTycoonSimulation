@@ -1952,6 +1952,16 @@ public class ZooNetworkPayloads {
                             }
                         }
                         net.zootycoon.animal.ZooAnimalHungerManager.setAssignedZookeeper(animal, payload.zookeeperUuid());
+
+                        // Automatically update all living offspring of this parent as well
+                        String parentTag = "zoo_parent_" + animal.getStringUUID();
+                        for (ServerLevel sl : player.level().getServer().getAllLevels()) {
+                            for (net.minecraft.world.entity.Entity e : sl.getAllEntities()) {
+                                if (e.getTags().contains(parentTag)) {
+                                    net.zootycoon.animal.ZooAnimalHungerManager.setAssignedZookeeper(e, payload.zookeeperUuid());
+                                }
+                            }
+                        }
                         String zkAssignedName = "";
                         if (payload.zookeeperUuid() != null) {
                             for (ServerLevel sl : player.level().getServer().getAllLevels()) {

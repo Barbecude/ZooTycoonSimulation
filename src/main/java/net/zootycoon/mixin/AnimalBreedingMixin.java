@@ -45,6 +45,15 @@ public abstract class AnimalBreedingMixin {
                 baby.addTag("zoo_offspring");
                 baby.addTag("zoo_parent_" + parentA.getStringUUID());
 
+                // Auto-assign zookeeper from parent to baby
+                UUID parentZkUuid = ZooAnimalHungerManager.getAssignedZookeeper(parentA);
+                if (parentZkUuid == null && parentB != null) {
+                    parentZkUuid = ZooAnimalHungerManager.getAssignedZookeeper(parentB);
+                }
+                if (parentZkUuid != null) {
+                    ZooAnimalHungerManager.setAssignedZookeeper(baby, parentZkUuid);
+                }
+
                 serverLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, baby.getX(), baby.getY() + 0.5D, baby.getZ(), 10, 0.3, 0.3, 0.3, 0.02);
 
                 ServerPlayer ownerPlayer = serverLevel.getServer().getPlayerList().getPlayer(ownerUuid);

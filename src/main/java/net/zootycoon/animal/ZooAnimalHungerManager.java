@@ -845,6 +845,23 @@ public class ZooAnimalHungerManager {
         return true;
     }
 
+    public static UUID getParentUuid(Entity entity) {
+        if (entity == null) return null;
+        for (String tag : entity.getTags()) {
+            if (tag.startsWith("zoo_parent_")) {
+                try {
+                    return UUID.fromString(tag.substring("zoo_parent_".length()));
+                } catch (Exception ignored) {}
+            }
+        }
+        return null;
+    }
+
+    public static String getParentUuidStr(Entity entity) {
+        UUID u = getParentUuid(entity);
+        return u != null ? u.toString() : "";
+    }
+
     public static UUID getAssignedZookeeper(Entity entity) {
         if (entity == null) return null;
         UUID cached = ZOOKEEPER_MAP.get(entity.getUUID());
@@ -859,6 +876,20 @@ public class ZooAnimalHungerManager {
                 } catch (Exception ignored) {}
             }
         }
+
+        // Offspring inherits assigned zookeeper from parent automatically
+        UUID parentUuid = getParentUuid(entity);
+        if (parentUuid != null) {
+            UUID parentZk = ZOOKEEPER_MAP.get(parentUuid);
+            if (parentZk != null) return parentZk;
+            if (entity.level() instanceof ServerLevel sLevel) {
+                Entity parentEnt = sLevel.getEntity(parentUuid);
+                if (parentEnt != null) {
+                    return getAssignedZookeeper(parentEnt);
+                }
+            }
+        }
+
         return null;
     }
 

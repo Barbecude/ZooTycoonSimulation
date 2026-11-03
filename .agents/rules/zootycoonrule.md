@@ -30,6 +30,8 @@ Konfirmasi sebelum refactor: Saat melakukan bugfix, fokus hanya pada perbaikan b
 
 jangan pernah kasih zookeper awalan makanan, hanya player yang harus ngasih makanan ke zookeper setelah itu zookeper baru ngisi makanan ke feeding through
 
+lokasi makanan satwa AnimalDietRegistry.java
+
 fungsi yg udah fix (tidak boleh sampe rusak karena mengubah kode):
 1. Logic builder dan ui dialog nya
 2. Logic pemilihan zookeper untuk hewan
