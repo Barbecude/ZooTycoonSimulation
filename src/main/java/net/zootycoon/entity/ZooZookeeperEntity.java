@@ -64,7 +64,9 @@ import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public class ZooZookeeperEntity extends PathfinderMob {
@@ -315,34 +317,93 @@ private static final String[] NAMES = new String[]{
     }
 
     public boolean hasActiveAssignedAnimal() {
-        if (this.assignedAnimalUuid == null) return false;
+        if (this.assignedAnimalUuid == null) {
+            if (this.level() instanceof ServerLevel sLevel) {
+                for (LivingEntity m : getAssignedFamily(sLevel)) {
+                    if (m.isAlive()) {
+                        this.assignedAnimalUuid = m.getUUID();
+                        this.entityData.set(HAS_ASSIGNED_ANIMAL, true);
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
         if (this.level() instanceof ServerLevel sLevel) {
             Entity ent = sLevel.getEntity(this.assignedAnimalUuid);
-            return ent instanceof LivingEntity living && living.isAlive();
+            if (ent instanceof LivingEntity living && living.isAlive()) {
+                return true;
+            }
+            for (LivingEntity m : getAssignedFamily(sLevel)) {
+                if (m.isAlive()) {
+                    this.assignedAnimalUuid = m.getUUID();
+                    this.entityData.set(HAS_ASSIGNED_ANIMAL, true);
+                    return true;
+                }
+            }
+            this.assignedAnimalUuid = null;
+            this.entityData.set(HAS_ASSIGNED_ANIMAL, false);
         }
         return false;
     }
 
     public List<LivingEntity> getAssignedFamily(ServerLevel sLevel) {
         if (sLevel == null) return Collections.emptyList();
-        LivingEntity parent = null;
+        List<LivingEntity> family = new ArrayList<>();
+        Set<UUID> seen = new HashSet<>();
+
+        // 1. Primary assigned animal
         if (this.assignedAnimalUuid != null) {
             Entity ent = sLevel.getEntity(this.assignedAnimalUuid);
+            if (ent == null && sLevel.getServer() != null) {
+                for (ServerLevel sl : sLevel.getServer().getAllLevels()) {
+                    ent = sl.getEntity(this.assignedAnimalUuid);
+                    if (ent != null) break;
+                }
+            }
             if (ent instanceof LivingEntity l && l.isAlive()) {
-                parent = l;
+                family.add(l);
+                seen.add(l.getUUID());
             }
         }
-        if (parent == null) return Collections.emptyList();
-        List<LivingEntity> family = new ArrayList<>();
-        family.add(parent);
-        String parentTag = "zoo_parent_" + parent.getStringUUID();
-        final String parentUuidStr = parent.getStringUUID();
-        List<LivingEntity> offspring = sLevel.getEntitiesOfClass(
+
+        // 2. Any other living animals in enclosure/sector assigned to this zookeeper
+        String myZkTag = "zoo_zk_" + this.getStringUUID();
+        UUID myZkUuid = this.getUUID();
+        List<LivingEntity> nearby = sLevel.getEntitiesOfClass(
                 LivingEntity.class,
-                parent.getBoundingBox().inflate(48.0D),
-                e -> e.isAlive() && (e.getTags().contains(parentTag) || parentUuidStr.equals(ZooAnimalHungerManager.getParentUuidStr(e)))
+                this.getBoundingBox().inflate(96.0D),
+                e -> e.isAlive() && (e.getTags().contains(myZkTag) || myZkUuid.equals(ZooAnimalHungerManager.getAssignedZookeeper(e)))
         );
-        family.addAll(offspring);
+        for (LivingEntity e : nearby) {
+            if (seen.add(e.getUUID())) {
+                family.add(e);
+            }
+        }
+
+        // If primary was missing or dead, promote first valid member
+        if (!family.isEmpty() && (this.assignedAnimalUuid == null || !seen.contains(this.assignedAnimalUuid))) {
+            this.assignedAnimalUuid = family.get(0).getUUID();
+            this.entityData.set(HAS_ASSIGNED_ANIMAL, true);
+        }
+
+        // 3. Any offspring belonging to any member in family
+        List<LivingEntity> offspringToAdd = new ArrayList<>();
+        for (LivingEntity parent : family) {
+            String parentTag = "zoo_parent_" + parent.getStringUUID();
+            final String parentUuidStr = parent.getStringUUID();
+            List<LivingEntity> offspring = sLevel.getEntitiesOfClass(
+                    LivingEntity.class,
+                    parent.getBoundingBox().inflate(48.0D),
+                    e -> e.isAlive() && !seen.contains(e.getUUID()) && (e.getTags().contains(parentTag) || parentUuidStr.equals(ZooAnimalHungerManager.getParentUuidStr(e)))
+            );
+            for (LivingEntity off : offspring) {
+                if (seen.add(off.getUUID())) {
+                    offspringToAdd.add(off);
+                }
+            }
+        }
+        family.addAll(offspringToAdd);
         return family;
     }
 
@@ -718,10 +779,19 @@ private static final String[] NAMES = new String[]{
             }
             if (ent instanceof LivingEntity living && living.isAlive()) {
                 assignedAnimal = living;
-            } else if (ent != null && !ent.isAlive()) {
-                // If animal is dead, immediately clear assignment so zookeeper can be reused
-                this.assignedAnimalUuid = null;
-                this.entityData.set(HAS_ASSIGNED_ANIMAL, false);
+            } else {
+                for (LivingEntity m : getAssignedFamily(sLevel)) {
+                    if (m.isAlive()) {
+                        assignedAnimal = m;
+                        this.assignedAnimalUuid = m.getUUID();
+                        this.entityData.set(HAS_ASSIGNED_ANIMAL, true);
+                        break;
+                    }
+                }
+                if (assignedAnimal == null) {
+                    this.assignedAnimalUuid = null;
+                    this.entityData.set(HAS_ASSIGNED_ANIMAL, false);
+                }
             }
         }
 
@@ -1013,15 +1083,31 @@ private static final String[] NAMES = new String[]{
                                 || (foodInTrough.getCount() < 32 && (this.hasMatchingFoodForTrough(foodInTrough) || (!availableFood.isEmpty() && foodInTrough.is(availableFood.getItem())) || foodInTrough.is(targetFoodItem)));
 
                         if (canRefillWithMyFood) {
-                            if (troughBe.isAssignedTo(assignedAnimal)) {
+                            boolean matchesFamily = false;
+                            for (LivingEntity member : getAssignedFamily(sLevel)) {
+                                if (troughBe.isAssignedTo(member)) {
+                                    matchesFamily = true;
+                                    break;
+                                }
+                            }
+                            if (matchesFamily) {
                                 if (distSq < minAssignedDistSq) {
                                     minAssignedDistSq = distSq;
                                     designatedTrough = troughPos;
                                 }
-                            } else if (!troughBe.isAssigned() && (assignedAnimal.blockPosition().distSqr(troughPos) <= 32 * 32 || distSq <= 32 * 32)) {
-                                if (distSq < minFallbackDistSq) {
-                                    minFallbackDistSq = distSq;
-                                    fallbackTrough = troughPos;
+                            } else if (!troughBe.isAssigned()) {
+                                boolean nearAnyMember = false;
+                                for (LivingEntity member : getAssignedFamily(sLevel)) {
+                                    if (member.blockPosition().distSqr(troughPos) <= 32 * 32) {
+                                        nearAnyMember = true;
+                                        break;
+                                    }
+                                }
+                                if (nearAnyMember || distSq <= 32 * 32) {
+                                    if (distSq < minFallbackDistSq) {
+                                        minFallbackDistSq = distSq;
+                                        fallbackTrough = troughPos;
+                                    }
                                 }
                             }
                         }
@@ -1095,14 +1181,23 @@ private static final String[] NAMES = new String[]{
                 this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
             }
 
-            this.getLookControl().setLookAt(assignedAnimal, 30.0F, 30.0F);
+            LivingEntity targetToFollow = assignedAnimal;
+            double closestDistSq = this.distanceToSqr(assignedAnimal);
+            for (LivingEntity member : getAssignedFamily(sLevel)) {
+                double d = this.distanceToSqr(member);
+                if (d < closestDistSq) {
+                    closestDistSq = d;
+                    targetToFollow = member;
+                }
+            }
 
-            double distSq = this.distanceToSqr(assignedAnimal);
+            this.getLookControl().setLookAt(targetToFollow, 30.0F, 30.0F);
+
             // Natural 5-block following distance:
             // Move closer if further than 6 blocks, stop when at or within 5 blocks
-            if (distSq > 6.0 * 6.0) {
-                this.getNavigation().moveTo(assignedAnimal, 1.05D);
-            } else if (distSq <= 5.0 * 5.0) {
+            if (closestDistSq > 6.0 * 6.0) {
+                this.getNavigation().moveTo(targetToFollow, 1.05D);
+            } else if (closestDistSq <= 5.0 * 5.0) {
                 this.getNavigation().stop();
             }
             return;

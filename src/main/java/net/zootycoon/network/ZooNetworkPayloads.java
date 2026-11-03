@@ -1946,7 +1946,16 @@ public class ZooNetworkPayloads {
                             for (ServerLevel sl : player.level().getServer().getAllLevels()) {
                                 net.minecraft.world.entity.Entity oldZkEnt = sl.getEntity(oldZkUuid);
                                 if (oldZkEnt instanceof net.zootycoon.entity.ZooZookeeperEntity oldKeeper) {
-                                    oldKeeper.setAssignedAnimalUuid(null);
+                                    if (animal.getUUID().equals(oldKeeper.getAssignedAnimalUuid())) {
+                                        net.minecraft.world.entity.LivingEntity remaining = null;
+                                        for (net.minecraft.world.entity.LivingEntity m : oldKeeper.getAssignedFamily(sl)) {
+                                            if (m != animal && m.isAlive()) {
+                                                remaining = m;
+                                                break;
+                                            }
+                                        }
+                                        oldKeeper.setAssignedAnimalUuid(remaining != null ? remaining.getUUID() : null);
+                                    }
                                     break;
                                 }
                             }
@@ -1962,6 +1971,32 @@ public class ZooNetworkPayloads {
                                 }
                             }
                         }
+
+                        // Also assign any other unassigned animals of the same species in the zoo to this keeper
+                        if (payload.zookeeperUuid() != null) {
+                            for (ServerLevel slSame : player.level().getServer().getAllLevels()) {
+                                for (net.minecraft.world.entity.Entity e : slSame.getAllEntities()) {
+                                    if (e instanceof net.minecraft.world.entity.LivingEntity other
+                                            && other != animal
+                                            && other.isAlive()
+                                            && net.zootycoon.animal.ZooAnimalHungerManager.isTagged(other)
+                                            && net.zootycoon.animal.ZooAnimalHungerManager.isOwnedBy(other, player.getUUID())
+                                            && other.getType().equals(animal.getType())
+                                            && net.zootycoon.animal.ZooAnimalHungerManager.getAssignedZookeeper(other) == null) {
+                                        net.zootycoon.animal.ZooAnimalHungerManager.setAssignedZookeeper(other, payload.zookeeperUuid());
+                                        String otherParentTag = "zoo_parent_" + other.getStringUUID();
+                                        for (ServerLevel slChild : player.level().getServer().getAllLevels()) {
+                                            for (net.minecraft.world.entity.Entity child : slChild.getAllEntities()) {
+                                                if (child.getTags().contains(otherParentTag)) {
+                                                    net.zootycoon.animal.ZooAnimalHungerManager.setAssignedZookeeper(child, payload.zookeeperUuid());
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         String zkAssignedName = "";
                         if (payload.zookeeperUuid() != null) {
                             for (ServerLevel sl : player.level().getServer().getAllLevels()) {
@@ -1973,7 +2008,10 @@ public class ZooNetworkPayloads {
                                         for (ServerLevel sl2 : player.level().getServer().getAllLevels()) {
                                             net.minecraft.world.entity.Entity prevAnimalEnt = sl2.getEntity(prevAnimalUuid);
                                             if (prevAnimalEnt instanceof net.minecraft.world.entity.LivingEntity prevLiving) {
-                                                net.zootycoon.animal.ZooAnimalHungerManager.setAssignedZookeeper(prevLiving, null);
+                                                // Unassign previous animal ONLY if it is a different species
+                                                if (!prevLiving.getType().equals(animal.getType())) {
+                                                    net.zootycoon.animal.ZooAnimalHungerManager.setAssignedZookeeper(prevLiving, null);
+                                                }
                                                 break;
                                             }
                                         }
@@ -2229,7 +2267,22 @@ public class ZooNetworkPayloads {
                             }
                         }
                         if (!isAssigned) {
-                            zk.setAssignedAnimalUuid(null);
+                            for (ServerLevel sl : player.level().getServer().getAllLevels()) {
+                                for (net.minecraft.world.entity.Entity ent : sl.getAllEntities()) {
+                                    if (ent instanceof net.minecraft.world.entity.LivingEntity living && living.isAlive() && net.zootycoon.animal.ZooAnimalHungerManager.isTagged(living)) {
+                                        if (zk.getUUID().equals(net.zootycoon.animal.ZooAnimalHungerManager.getAssignedZookeeper(living))) {
+                                            assignedAnimalId = living.getId();
+                                            isAssigned = true;
+                                            zk.setAssignedAnimalUuid(living.getUUID());
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (isAssigned) break;
+                            }
+                            if (!isAssigned) {
+                                zk.setAssignedAnimalUuid(null);
+                            }
                         }
                     }
                     boolean isCalling = zk.isBeingCalled();
@@ -2250,10 +2303,13 @@ public class ZooNetworkPayloads {
                     boolean hasZk = false;
                     String zkName = "";
                     if (zkUuid != null) {
-                        net.minecraft.world.entity.Entity zkEnt = sLevel.getEntity(zkUuid);
-                        if (zkEnt instanceof net.zootycoon.entity.ZooZookeeperEntity zke) {
-                            hasZk = true;
-                            zkName = zke.getName().getString();
+                        for (ServerLevel sl : player.level().getServer().getAllLevels()) {
+                            net.minecraft.world.entity.Entity zkEnt = sl.getEntity(zkUuid);
+                            if (zkEnt instanceof net.zootycoon.entity.ZooZookeeperEntity zke) {
+                                hasZk = true;
+                                zkName = zke.getName().getString();
+                                break;
+                            }
                         }
                     }
 

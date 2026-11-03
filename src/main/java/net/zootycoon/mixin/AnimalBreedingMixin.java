@@ -50,6 +50,9 @@ public abstract class AnimalBreedingMixin {
                 if (parentZkUuid == null && parentB != null) {
                     parentZkUuid = ZooAnimalHungerManager.getAssignedZookeeper(parentB);
                 }
+                if (parentZkUuid == null) {
+                    parentZkUuid = ZooAnimalHungerManager.findExistingZookeeperForSpecies(serverLevel, ownerUuid, baby.getType());
+                }
                 if (parentZkUuid != null) {
                     ZooAnimalHungerManager.setAssignedZookeeper(baby, parentZkUuid);
                 }

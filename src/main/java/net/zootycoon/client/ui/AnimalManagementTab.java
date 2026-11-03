@@ -950,11 +950,14 @@ public class AnimalManagementTab {
             boolean assignedToThisAnimal = (selectedData.hasZookeeper() && zk.name().equals(selectedData.zookeeperName()))
                     || (zk.isAssigned() && zk.assignedAnimalId() == selectedData.entityId());
 
-            boolean assignedToOther = (zk.isAssigned() && zk.assignedAnimalId() != selectedData.entityId() && zk.assignedAnimalId() > 0)
-                    || ZooTycoonClient.clientAnimals.stream().anyMatch(a -> a.entityId() != selectedData.entityId() && a.hasZookeeper() && a.zookeeperName().equals(zk.name()));
+            boolean assignedToDifferentSpecies = ZooTycoonClient.clientAnimals.stream().anyMatch(
+                    a -> a.entityId() != selectedData.entityId()
+                            && a.hasZookeeper()
+                            && a.zookeeperName().equals(zk.name())
+                            && !a.entityTypeId().equalsIgnoreCase(selectedData.entityTypeId())
+            );
 
-            // User requirement: "jangan munculkan zookeper yg sudah dipilih atau sudah punya hewan yg dibina"
-            if (!assignedToThisAnimal && !assignedToOther) {
+            if (!assignedToThisAnimal && !assignedToDifferentSpecies) {
                 list.add(zk);
             }
         }

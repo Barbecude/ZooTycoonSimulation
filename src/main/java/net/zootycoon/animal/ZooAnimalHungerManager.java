@@ -27,6 +27,7 @@ import net.zootycoon.block.ZooFeedingTroughBlockEntity;
 import net.zootycoon.claim.ZooClaim;
 import net.zootycoon.claim.ZooClaimManager;
 import net.zootycoon.compat.SereneSeasonsCompat;
+import net.zootycoon.entity.ZooZookeeperEntity;
 import net.zootycoon.item.ZooItems;
 import net.zootycoon.network.ZooNetworkPayloads;
 
@@ -198,6 +199,9 @@ public class ZooAnimalHungerManager {
         setHunger(animal, MAX_HUNGER);
         setThirst(animal, MAX_THIRST);
         setCleanliness(animal, MAX_CLEANLINESS);
+
+        // Auto-assign existing zookeeper of same species in the zoo, including offspring
+        autoAssignSameSpeciesZookeeper(player, animal);
 
         ServerLevel level = (ServerLevel) player.level();
         level.playSound(null, animal.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0f, 1.2f);
@@ -901,6 +905,89 @@ public class ZooAnimalHungerManager {
         } else {
             ZOOKEEPER_MAP.put(entity.getUUID(), zookeeperUuid);
             entity.addTag("zoo_zk_" + zookeeperUuid);
+        }
+    }
+
+    public static UUID findExistingZookeeperForSpecies(ServerLevel level, UUID ownerUuid, net.minecraft.world.entity.EntityType<?> speciesType) {
+        if (level == null || ownerUuid == null || speciesType == null || level.getServer() == null) return null;
+
+        for (ServerLevel sLevel : level.getServer().getAllLevels()) {
+            for (Entity ent : sLevel.getAllEntities()) {
+                if (ent instanceof LivingEntity other
+                        && other.isAlive()
+                        && isTagged(other)
+                        && isOwnedBy(other, ownerUuid)
+                        && other.getType().equals(speciesType)) {
+                    UUID zk = getAssignedZookeeper(other);
+                    if (zk != null) {
+                        for (ServerLevel sl : level.getServer().getAllLevels()) {
+                            Entity zkEnt = sl.getEntity(zk);
+                            if (zkEnt instanceof ZooZookeeperEntity keeper && keeper.isAlive()) {
+                                return zk;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    public static void autoAssignSameSpeciesZookeeper(ServerPlayer player, LivingEntity animal) {
+        if (player == null || animal == null || !animal.isAlive()) return;
+        UUID ownerUuid = player.getUUID();
+
+        // 1. Check if this animal already has a zookeeper assigned
+        UUID alreadyAssigned = getAssignedZookeeper(animal);
+        if (alreadyAssigned != null) {
+            return;
+        }
+
+        // 2. Check if this animal is an offspring with a parent in the zoo that has a zookeeper
+        UUID parentUuid = getParentUuid(animal);
+        if (parentUuid != null && player.level().getServer() != null) {
+            for (ServerLevel sLevel : player.level().getServer().getAllLevels()) {
+                Entity parentEnt = sLevel.getEntity(parentUuid);
+                if (parentEnt instanceof LivingEntity parentLiving) {
+                    UUID parentZk = getAssignedZookeeper(parentLiving);
+                    if (parentZk != null) {
+                        setAssignedZookeeper(animal, parentZk);
+                        return;
+                    }
+                }
+            }
+        }
+
+        // 3. Search for existing registered animal in this player's zoo of the SAME species with a keeper
+        if (player.level() instanceof ServerLevel sLevel) {
+            UUID keeperUuidToAssign = findExistingZookeeperForSpecies(sLevel, ownerUuid, animal.getType());
+            if (keeperUuidToAssign != null) {
+                setAssignedZookeeper(animal, keeperUuidToAssign);
+
+                // Also assign any offspring of this newly registered animal
+                String parentTag = "zoo_parent_" + animal.getStringUUID();
+                final UUID keeperFinalUuid = keeperUuidToAssign;
+                for (ServerLevel sl : player.level().getServer().getAllLevels()) {
+                    for (Entity e : sl.getAllEntities()) {
+                        if (e instanceof LivingEntity living && e.isAlive()) {
+                            if (e.getTags().contains(parentTag) || animal.getStringUUID().equals(getParentUuidStr(e))) {
+                                setAssignedZookeeper(living, keeperFinalUuid);
+                            }
+                        }
+                    }
+                }
+
+                // Ensure the zookeeper has an assigned primary animal if unassigned
+                for (ServerLevel sl : player.level().getServer().getAllLevels()) {
+                    Entity zkEnt = sl.getEntity(keeperUuidToAssign);
+                    if (zkEnt instanceof ZooZookeeperEntity keeper) {
+                        if (keeper.getAssignedAnimalUuid() == null) {
+                            keeper.setAssignedAnimalUuid(animal.getUUID());
+                        }
+                        break;
+                    }
+                }
+            }
         }
     }
 
