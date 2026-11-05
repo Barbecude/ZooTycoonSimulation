@@ -103,6 +103,7 @@ public class CashierManageTab {
         String roleStr = switch (c.role() != null ? c.role().toLowerCase() : "") {
             case "burger" -> ZooTranslations.get("zootycoon.ui.staff.manage.cashier_role_burger");
             case "drink" -> ZooTranslations.get("zootycoon.ui.staff.manage.cashier_role_drink");
+            case "ice_cream" -> ZooTranslations.get("zootycoon.ui.staff.manage.cashier_role_ice_cream");
             case "ticket" -> ZooTranslations.get("zootycoon.ui.staff.manage.cashier_role_ticket");
             default -> ZooTranslations.get("zootycoon.ui.staff.manage.cashier_role_none");
         };
@@ -114,7 +115,7 @@ public class CashierManageTab {
         if ("ticket".equalsIgnoreCase(c.role())) {
             stockInfo = ZooTranslations.get("zootycoon.ui.staff.manage.cashier_stock_infinite");
             stockColor = 0xFF55FFFF;
-        } else if ("burger".equalsIgnoreCase(c.role()) || "drink".equalsIgnoreCase(c.role())) {
+        } else if ("burger".equalsIgnoreCase(c.role()) || "drink".equalsIgnoreCase(c.role()) || "ice_cream".equalsIgnoreCase(c.role())) {
             stockInfo = ZooTranslations.get("zootycoon.ui.staff.manage.cashier_stock", c.totalStock());
             stockColor = c.totalStock() == 0 ? 0xFFFF5555 : (c.totalStock() < 16 ? 0xFFFFAA00 : 0xFF55FF55);
         } else {

@@ -9,8 +9,12 @@ import net.zootycoon.client.model.ZooVisitorModel;
 import net.zootycoon.entity.ZooCashierEntity;
 
 public class ZooCashierRenderer extends HumanoidMobRenderer<ZooCashierEntity, HumanoidModel<ZooCashierEntity>> {
-    private static final ResourceLocation TEXTURE =
-            ZooTycoonMod.id("textures/entity/visitor/visitor_0.png");
+    private static final ResourceLocation TEXTURE_BURGER =
+            ZooTycoonMod.id("textures/entity/staff/cashier_burger.png");
+    private static final ResourceLocation TEXTURE_DRINKS =
+            ZooTycoonMod.id("textures/entity/staff/cashier_drinks.png");
+    private static final ResourceLocation TEXTURE_ICE_CREAM =
+            ZooTycoonMod.id("textures/entity/staff/cashier_ice_cream.png");
 
     public ZooCashierRenderer(EntityRendererProvider.Context context) {
         super(context, new HumanoidModel<>(context.bakeLayer(ZooVisitorModel.LAYER_LOCATION)), 0.5f);
@@ -18,7 +22,13 @@ public class ZooCashierRenderer extends HumanoidMobRenderer<ZooCashierEntity, Hu
 
     @Override
     public ResourceLocation getTextureLocation(ZooCashierEntity entity) {
-        return TEXTURE;
+        String role = entity.getCashierRole();
+        if ("DRINK".equalsIgnoreCase(role)) {
+            return TEXTURE_DRINKS;
+        } else if ("ICE_CREAM".equalsIgnoreCase(role)) {
+            return TEXTURE_ICE_CREAM;
+        }
+        return TEXTURE_BURGER;
     }
 }
 

@@ -15,7 +15,7 @@ public class EmptyBarrelCategoryScreen extends Screen {
 
     private final BlockPos barrelPos;
     private final int panelWidth = 260;
-    private final int panelHeight = 196;
+    private final int panelHeight = 222;
     private int startX;
     private int startY;
 
@@ -50,22 +50,29 @@ public class EmptyBarrelCategoryScreen extends Screen {
         ).setItemIcon(new ItemStack(Items.HONEY_BOTTLE)).asPrimary();
         addRenderableWidget(drinkBtn);
 
-        ZooButton animalFoodBtn = new ZooButton(
+        ZooButton iceCreamBtn = new ZooButton(
                 btnX, firstBtnY + (btnH + gap) * 2, btnW, btnH,
+                ZooTranslations.component("zootycoon.warehouse.category.btn.ice_cream"),
+                b -> selectCategory(EmptyBarrelBlockEntity.CAT_ICE_CREAM)
+        ).setItemIcon(new ItemStack(net.zootycoon.item.ZooItems.ICE_CREAM)).asPrimary();
+        addRenderableWidget(iceCreamBtn);
+
+        ZooButton animalFoodBtn = new ZooButton(
+                btnX, firstBtnY + (btnH + gap) * 3, btnW, btnH,
                 ZooTranslations.component("zootycoon.warehouse.category.btn.animal_food"),
                 b -> selectCategory(EmptyBarrelBlockEntity.CAT_ANIMAL_FOOD)
         ).setItemIcon(new ItemStack(Items.WHEAT)).asPrimary();
         addRenderableWidget(animalFoodBtn);
 
         ZooButton animalCareBtn = new ZooButton(
-                btnX, firstBtnY + (btnH + gap) * 3, btnW, btnH,
+                btnX, firstBtnY + (btnH + gap) * 4, btnW, btnH,
                 ZooTranslations.component("zootycoon.warehouse.category.btn.animal_care"),
                 b -> selectCategory(EmptyBarrelBlockEntity.CAT_ANIMAL_CARE)
         ).setItemIcon(new ItemStack(Items.BRUSH)).asPrimary();
         addRenderableWidget(animalCareBtn);
 
         ZooButton cancelBtn = new ZooButton(
-                btnX, firstBtnY + (btnH + gap) * 4 + 4, btnW, 20,
+                btnX, firstBtnY + (btnH + gap) * 5 + 4, btnW, 20,
                 ZooTranslations.component("zootycoon.dialog.btn.close"),
                 b -> onClose()
         ).asSecondary();

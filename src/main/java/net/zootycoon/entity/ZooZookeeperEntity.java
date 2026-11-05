@@ -88,110 +88,58 @@ public class ZooZookeeperEntity extends PathfinderMob {
             SynchedEntityData.defineId(ZooZookeeperEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> HAS_ASSIGNED_ANIMAL =
             SynchedEntityData.defineId(ZooZookeeperEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Boolean> IS_MALE =
+            SynchedEntityData.defineId(ZooZookeeperEntity.class, EntityDataSerializers.BOOLEAN);
 
+    private static final String[] MALE_NAMES = new String[]{
+            // 50 nama 1 kata
+            "Budi", "Bambang", "Joko", "Agus", "Surya",
+            "Bayu", "Eko", "Hadi", "Indra", "Rian",
+            "Fajar", "Gilang", "Dimas", "Rizky", "Randi",
+            "Aris", "Dedi", "Asep", "Cecep", "Ujang",
+            "Teguh", "Wahyu", "Bagas", "Ilham", "Danang",
+            "Yanto", "Rudi", "Anton", "Doni", "Hendra",
+            "Tono", "Irfan", "Yoga", "Panji", "Aditya",
+            "Lukman", "Ferdi", "Kurnia", "Satria", "Putra",
+            "Wawan", "Sigit", "Gunawan", "Heru", "Tirta",
+            "Arya", "Reza", "Guntur", "Dodi", "Rahmat",
+            // 50 nama 2 kata
+            "Budi Santoso", "Bambang Pamungkas", "Joko Susilo", "Agus Setiawan", "Surya Wijaya",
+            "Bayu Pratama", "Eko Prasetyo", "Hadi Wibowo", "Indra Kusuma", "Rian Hidayat",
+            "Fajar Nugraha", "Gilang Ramadhan", "Dimas Anggara", "Rizky Fauzi", "Randi Saputra",
+            "Aris Munandar", "Dedi Suryadi", "Asep Sunandar", "Cecep Gorbachev", "Ujang Bedog",
+            "Teguh Prakoso", "Wahyu Utomo", "Bagas Kara", "Ilham Akbar", "Danang Sutrisno",
+            "Yanto Kopling", "Rudi Hartono", "Anton Medan", "Doni Salman", "Hendra Gunawan",
+            "Tono Martono", "Irfan Hakim", "Yoga Pratama", "Panji Petualang", "Aditya Rahman",
+            "Lukman Sardi", "Ferdi Sambo", "Kurnia Mega", "Satria Baja", "Putra Bangsa",
+            "Wawan Bakso", "Sigit Rendang", "Heru Kucing", "Tirta Amarta", "Arya Kamandanu",
+            "Reza Rahadian", "Guntur Bumi", "Dodi Sudrajat", "Yusuf Mansur", "Rahmat Hidayat"
+    };
 
-private static final String[] NAMES = new String[]{
-        "Siti Nurhalu",
-        "Putri Kerupuk",
-        "Dewi Galon",
-        "Tasya Tupperware",
-        "Nabila Nasi Padang",
-        "Salsa Sarden",
-        "Melati Microwave",
-        "Vina Vitamin",
-        "Lala Laler",
-        "Nana Nanas",
-        "Siska Sambalado",
-        "Kiki Kompor",
-        "Ratna Rice Cooker",
-        "Lilis Lemper",
-        "Margaret baskom",
-        "Dina Dispenser",
-        "Rina Rendang",
-        "Wati Wajan",
-        "Yuni Yoghurt",
-        "Tati Teflon",
-        "Mimin Mie Instan",
-        "Euis Es Teh",
-        "Neneng Nugget",
-        "Popon Pisang",
-        "Cici Cilok",
-        "Bunga Bakwan",
-        "Sari Sandal",
-        "Lulu Lontong",
-        "Fifi Fanta",
-        "Gigi Gorengan",
-        "Hani Handuk",
-        "Ika Ikan Asin",
-        "Juju Jengkol",
-        "Kokom Kolak",
-        "Lina Lele",
-        "Maya Martabak",
-        "Nia Nastar",
-        "Okta Odading",
-        "Pipit Pempek",
-        "Qori Quaker",
-        "Rara Rujak",
-        "Susi Soto",
-        "Titin Tahu",
-        "Ulfa Uduk",
-        "Vera Vespa",
-        "Wulan Waffle",
-        "Xena Xiaomi",
-        "Yayuk Yakult",
-        "Zahra Zebra",
-        "Ayu Angsa",
-        "Bella Bubur",
-        "Citra Cendol",
-        "Dita Donat",
-        "Eka Empal",
-        "Feni Fotokopi",
-        "Gita Gado-gado",
-        "Hesti Helm",
-        "Indah Indomie",
-        "Jeni Jamu",
-        "Kania Kerak Telor",
-        "Laras Lapis",
-        "Mega Mendoan",
-        "Nita Nasi Kuning",
-        "Oci Opor",
-        "Prita Pecel",
-        "Rani Risol",
-        "Sinta Serabi",
-        "Tika Tempe",
-        "Umi Ulekan",
-        "Vita Vetsin",
-        "Winda Wedang",
-        "Yanti Yupi",
-        "Zara Zipper",
-        "Anggi Angkringan",
-        "Bety Batagor",
-        "Cinta Cireng",
-        "Dewi Dadar",
-        "Elsa Emping",
-        "Farah Fanbelt",
-        "Gina Getuk",
-        "Heni Hansaplast",
-        "Ines Iler",
-        "Jihan Jagung",
-        "Kartika Kecap",
-        "Lia Lumpia",
-        "Mira Molen",
-        "Nisa Nutrisari",
-        "Olla Ongol-ongol",
-        "Putu Pop Mie",
-        "Ririn Rambutan",
-        "Sarah Sapu Lidi",
-        "Tuti Tolak Angin",
-        "Uci Ulat Sagu",
-        "Wiwik Wingko",
-        "Yola Yonkers",
-        "Zaskia Zuppa",
-        "Bunga Balado",
-        "Dewi Dendeng",
-        "Mawar Mangkok",
-        "Tiara Terasi"
-};
+    private static final String[] FEMALE_NAMES = new String[]{
+            // 50 nama 1 kata
+            "Siti", "Putri", "Dewi", "Tasya", "Nabila",
+            "Salsa", "Melati", "Vina", "Lala", "Nana",
+            "Siska", "Kiki", "Ratna", "Lilis", "Dina",
+            "Rina", "Wati", "Yuni", "Tati", "Euis",
+            "Neneng", "Cici", "Bunga", "Sari", "Lulu",
+            "Fifi", "Hani", "Ika", "Maya", "Nia",
+            "Rara", "Susi", "Titin", "Ulfa", "Vera",
+            "Wulan", "Zahra", "Ayu", "Bella", "Citra",
+            "Dita", "Eka", "Feni", "Gita", "Hesti",
+            "Indah", "Jeni", "Laras", "Mega", "Tiara",
+            // 50 nama 2 kata
+            "Siti Nurhalu", "Putri Kerupuk", "Dewi Galon", "Tasya Tupperware", "Nabila Padang",
+            "Salsa Sarden", "Melati Microwave", "Vina Vitamin", "Lala Laler", "Nana Nanas",
+            "Siska Sambalado", "Kiki Kompor", "Ratna Rice", "Lilis Lemper", "Margaret Baskom",
+            "Dina Dispenser", "Rina Rendang", "Wati Wajan", "Yuni Yoghurt", "Tati Teflon",
+            "Euis EsTeh", "Neneng Nugget", "Popon Pisang", "Cici Cilok", "Bunga Bakwan",
+            "Sari Sandal", "Lulu Lontong", "Fifi Fanta", "Gigi Gorengan", "Hani Handuk",
+            "Ika Ikan", "Juju Jengkol", "Kokom Kolak", "Lina Lele", "Maya Martabak",
+            "Nia Nastar", "Pipit Pempek", "Rara Rujak", "Susi Soto", "Titin Tahu",
+            "Ulfa Uduk", "Vera Vespa", "Wulan Waffle", "Yayuk Yakult", "Zahra Zebra",
+            "Ayu Angsa", "Bella Bubur", "Citra Cendol", "Dita Donat", "Tiara Terasi"
+    };
 
 
     private UUID ownerUuid = null;
@@ -234,6 +182,7 @@ private static final String[] NAMES = new String[]{
         builder.define(HAS_BATHING_TOOLS, false);
         builder.define(BATHING_ACTION, 0);
         builder.define(HAS_ASSIGNED_ANIMAL, false);
+        builder.define(IS_MALE, false);
     }
 
     public ZooZookeeperEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
@@ -245,8 +194,11 @@ private static final String[] NAMES = new String[]{
         this.setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.TRAPDOOR, 0.0F);
 
         if (!level.isClientSide()) {
-            int nameIdx = this.random.nextInt(NAMES.length);
-            this.setCustomName(Component.literal(NAMES[nameIdx]));
+            boolean male = this.random.nextBoolean();
+            this.entityData.set(IS_MALE, male);
+            String[] pool = male ? MALE_NAMES : FEMALE_NAMES;
+            int nameIdx = this.random.nextInt(pool.length);
+            this.setCustomName(Component.literal(pool[nameIdx]));
             this.setCustomNameVisible(true);
             this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
             this.addTag("zootycoon_staff");
@@ -454,8 +406,16 @@ private static final String[] NAMES = new String[]{
         return family;
     }
 
+    public boolean isMale() {
+        return this.entityData.get(IS_MALE);
+    }
+
+    public void setIsMale(boolean male) {
+        this.entityData.set(IS_MALE, male);
+    }
+
     /**
-     * Picks a name from the 100-name pool that no other zookeeper in the game currently uses.
+     * Picks a name from the 100-name pool (matching gender) that no other zookeeper in the game currently uses.
      * Duplicates are only allowed when every name in the pool is already taken.
      */
     public void assignUniqueName(ServerLevel sLevel) {
@@ -469,12 +429,13 @@ private static final String[] NAMES = new String[]{
                 }
             }
         }
+        String[] pool = isMale() ? MALE_NAMES : FEMALE_NAMES;
         java.util.List<String> free = new java.util.ArrayList<>();
-        for (String n : NAMES) {
+        for (String n : pool) {
             if (!used.contains(n)) free.add(n);
         }
         String chosen = free.isEmpty()
-                ? NAMES[this.random.nextInt(NAMES.length)]
+                ? pool[this.random.nextInt(pool.length)]
                 : free.get(this.random.nextInt(free.size()));
         this.setCustomName(Component.literal(chosen));
         this.setCustomNameVisible(true);
@@ -683,7 +644,8 @@ private static final String[] NAMES = new String[]{
             if (str.contains(" - Zookeeper") || str.contains("Zookeeper - ") || str.equalsIgnoreCase("Zookeeper")) {
                 String cleaned = str.replace(" - Zookeeper", "").replace("Zookeeper - ", "").trim();
                 if (cleaned.isEmpty() || cleaned.equalsIgnoreCase("Zookeeper")) {
-                    cleaned = NAMES[Math.abs(this.getUUID().hashCode()) % NAMES.length];
+                    String[] pool = isMale() ? MALE_NAMES : FEMALE_NAMES;
+                    cleaned = pool[Math.abs(this.getUUID().hashCode()) % pool.length];
                 }
                 this.setCustomName(Component.literal(cleaned));
             }
@@ -2114,6 +2076,7 @@ private static final String[] NAMES = new String[]{
         tag.put("FuelInventory", fuelTag);
 
         tag.putString("DutyState", currentDutyState);
+        tag.putBoolean("IsMale", isMale());
         tag.putBoolean("HasWateringCan", hasWateringCan);
         if (!wateringCanStack.isEmpty()) {
             tag.put("WateringCanStack", wateringCanStack.save(this.registryAccess()));
@@ -2170,6 +2133,9 @@ private static final String[] NAMES = new String[]{
 
         if (tag.contains("DutyState")) {
             this.currentDutyState = tag.getString("DutyState");
+        }
+        if (tag.contains("IsMale")) {
+            this.setIsMale(tag.getBoolean("IsMale"));
         }
         if (tag.contains("HasWateringCan")) {
             this.hasWateringCan = tag.getBoolean("HasWateringCan");

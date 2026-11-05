@@ -43,6 +43,7 @@ public class EmptyBarrelBlockEntity extends BlockEntity implements Container, Me
     public static final String CAT_UNASSIGNED = "UNASSIGNED";
     public static final String CAT_BURGER = "BURGER";
     public static final String CAT_DRINK = "DRINK";
+    public static final String CAT_ICE_CREAM = "ICE_CREAM";
     public static final String CAT_ANIMAL_FOOD = "ANIMAL_FOOD";
     public static final String CAT_ANIMAL_CARE = "ANIMAL_CARE";
 
@@ -277,6 +278,7 @@ public class EmptyBarrelBlockEntity extends BlockEntity implements Container, Me
         return switch (getCategory()) {
             case CAT_BURGER -> Component.translatable("zootycoon.warehouse.barrel.title.burger");
             case CAT_DRINK -> Component.translatable("zootycoon.warehouse.barrel.title.drink");
+            case CAT_ICE_CREAM -> Component.translatable("zootycoon.warehouse.barrel.title.ice_cream");
             case CAT_ANIMAL_FOOD -> Component.translatable("zootycoon.warehouse.barrel.title.animal_food");
             case CAT_ANIMAL_CARE -> Component.translatable("zootycoon.warehouse.barrel.title.animal_care");
             default -> Component.translatable("block.zootycoon.empty_barrel");

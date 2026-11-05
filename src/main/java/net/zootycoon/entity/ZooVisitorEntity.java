@@ -83,7 +83,7 @@ public class ZooVisitorEntity extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> IS_LEAVING =
             SynchedEntityData.defineId(ZooVisitorEntity.class, EntityDataSerializers.BOOLEAN);
 
-    public static final int MAX_VARIANTS = 23;
+    public static final int MAX_VARIANTS = 30; // 0..22 custom visitors + 23..29 Mojang default skins (Ari, Efe, Kai, Makena, Noor, Sunny, Zuri - no Steve/Alex)
     private static final int MAX_STAY = 9600; // 8 minutes (9600 ticks)
 
     public enum VisitorMood {

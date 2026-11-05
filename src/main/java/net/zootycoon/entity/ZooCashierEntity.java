@@ -159,6 +159,7 @@ public class ZooCashierEntity extends PathfinderMob {
                                 ? !v.getTags().contains("ticket_purchased")
                                 : (v.getTags().contains("ticket_purchased") && (
                                     ("BURGER".equalsIgnoreCase(role) && v.canEat()) ||
+                                    ("ICE_CREAM".equalsIgnoreCase(role) && v.canEat()) ||
                                     ("DRINK".equalsIgnoreCase(role) && v.canDrink())
                                   )))) {
                         candidates.add(v);
@@ -239,13 +240,11 @@ public class ZooCashierEntity extends PathfinderMob {
     }
 
     public void setCashierRole(String role) {
-        if ("ICE_CREAM".equalsIgnoreCase(role)) {
-            role = "DRINK";
-        }
         this.entityData.set(CASHIER_ROLE, role);
         switch (role) {
             case "BURGER" -> this.setCustomName(Component.literal("Kasir Stand Burger"));
             case "DRINK" -> this.setCustomName(Component.literal("Kasir Stand Minuman"));
+            case "ICE_CREAM" -> this.setCustomName(Component.literal("Kasir Stand Es Krim"));
             case "TICKET" -> this.setCustomName(Component.literal("Kasir Loket Tiket"));
             default -> this.setCustomName(Component.literal("Kasir Zoo"));
         }
@@ -312,7 +311,7 @@ public class ZooCashierEntity extends PathfinderMob {
             this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.PAPER));
             return;
         }
-        if ("BURGER".equalsIgnoreCase(role) || "DRINK".equalsIgnoreCase(role)) {
+        if ("BURGER".equalsIgnoreCase(role) || "DRINK".equalsIgnoreCase(role) || "ICE_CREAM".equalsIgnoreCase(role)) {
             ItemStack firstValid = ItemStack.EMPTY;
             for (int i = 0; i < STOCK_SLOTS; i++) {
                 ItemStack st = this.stockInventory.getItem(i);
@@ -341,11 +340,28 @@ public class ZooCashierEntity extends PathfinderMob {
         String namespace = id.getNamespace().toLowerCase(Locale.ROOT);
         String path = id.getPath().toLowerCase(Locale.ROOT);
 
-        // Croptopia rule: only juice from croptopia is accepted (for DRINK); reject all other croptopia items
+        // Croptopia rule: only juice from croptopia is accepted (for DRINK) or ice cream (for ICE_CREAM); reject all other croptopia items
         if ("croptopia".equals(namespace)) {
-            if ("DRINK".equalsIgnoreCase(role) || "ICE_CREAM".equalsIgnoreCase(role)) {
-                return path.endsWith("_juice");
+            if ("ICE_CREAM".equalsIgnoreCase(role)) {
+                return path.contains("ice_cream");
             }
+            if ("DRINK".equalsIgnoreCase(role)) {
+                return path.endsWith("_juice") && !path.contains("ice_cream");
+            }
+            return false;
+        }
+
+        if ("ICE_CREAM".equalsIgnoreCase(role)) {
+            if (stack.getItem() instanceof net.minecraft.world.item.BlockItem) {
+                return false;
+            }
+            if (path.contains("ice_cream")) {
+                return true;
+            }
+            return stack.getTags().anyMatch(t -> t.location().getPath().toLowerCase(Locale.ROOT).contains("ice_cream"));
+        }
+
+        if (path.contains("ice_cream")) {
             return false;
         }
 
@@ -361,7 +377,7 @@ public class ZooCashierEntity extends PathfinderMob {
             return stack.getTags().anyMatch(t -> t.location().getPath().toLowerCase(Locale.ROOT).contains("burger"));
         }
 
-        if ("DRINK".equalsIgnoreCase(role) || "ICE_CREAM".equalsIgnoreCase(role)) {
+        if ("DRINK".equalsIgnoreCase(role)) {
             if (stack.getItem() instanceof net.minecraft.world.item.BlockItem) {
                 return false;
             }
@@ -377,7 +393,7 @@ public class ZooCashierEntity extends PathfinderMob {
                     || path.contains("honey_bottle") || path.contains("honey") || path.contains("saguaro")) {
                 return false;
             }
-            if (path.contains("ice_cream") || path.contains("apple_sauce")) {
+            if (path.contains("apple_sauce")) {
                 return true;
             }
             String[] tokens = path.split("_");
@@ -503,7 +519,7 @@ public class ZooCashierEntity extends PathfinderMob {
         }
         return switch (role) {
             case "TICKET" -> !v.getTags().contains("ticket_purchased");
-            case "BURGER" -> v.hasWatchedAnimal() && v.canEat() && (v.getHunger() >= 35 || v.getMood() == ZooVisitorEntity.VisitorMood.HUNGRY
+            case "BURGER", "ICE_CREAM" -> v.hasWatchedAnimal() && v.canEat() && (v.getHunger() >= 35 || v.getMood() == ZooVisitorEntity.VisitorMood.HUNGRY
                     || (v.getGuidedPlayerUuid() != null && v.getHunger() >= 15));
             case "DRINK" -> v.hasWatchedAnimal() && v.canDrink() && (v.getThirst() >= 25 || v.getMood() == ZooVisitorEntity.VisitorMood.THIRSTY
                     || (v.getGuidedPlayerUuid() != null && v.getThirst() >= 15));
@@ -676,6 +692,32 @@ public class ZooCashierEntity extends PathfinderMob {
                             serviceTicks = 0;
                             serveCooldown = 15;
                         }
+                    } else if ("ICE_CREAM".equals(role)) {
+                        // Cold sparkles and scooping sounds
+                        if (serviceTicks % 20 == 0) {
+                            sLevel.playSound(null, this.blockPosition(), SoundEvents.SNOW_STEP, SoundSource.NEUTRAL, 0.7F, 1.2F);
+                            sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_WORK_CLERIC, SoundSource.NEUTRAL, 0.5F, 1.3F);
+                            sLevel.sendParticles(ParticleTypes.SNOWFLAKE, this.getX(), this.getY() + 1.1D, this.getZ(), 4, 0.15, 0.1, 0.15, 0.02);
+                        }
+                        if (serviceTicks <= 0) {
+                            ItemStack soldIceCream = consumeOneStockItem();
+                            if (!soldIceCream.isEmpty()) {
+                                removeFromQueue(customer.getUUID());
+                                int price = getItemPrice(role, soldIceCream);
+                                creditOwner(sLevel, price);
+                                this.totalSalesCount++;
+                                sLevel.playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.7F, 1.2F);
+                                sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.7F, 1.1F);
+                                sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 5, 0.25, 0.25, 0.25, 0.02);
+                                if (customer.getGuidedPlayerUuid() != null) {
+                                    customer.completeGuideReward(sLevel, "ICE_CREAM");
+                                }
+                                customer.onTransactionComplete(this.blockPosition(), "ICE_CREAM", soldIceCream, false);
+                            }
+                            servingCustomerUuid = null;
+                            serviceTicks = 0;
+                            serveCooldown = 15;
+                        }
                     }
                 } else {
                     servingCustomerUuid = null;
@@ -701,6 +743,15 @@ public class ZooCashierEntity extends PathfinderMob {
                             servingCustomerUuid = customer.getUUID();
                             serviceTicks = 80; // 4 seconds to prepare drink
                             sLevel.playSound(null, this.blockPosition(), SoundEvents.BOTTLE_FILL, SoundSource.NEUTRAL, 0.7F, 1.0F);
+                        }
+                    }
+                } else if ("ICE_CREAM".equals(role)) {
+                    if (!isOutOfStock()) {
+                        ZooVisitorEntity customer = resolveNextReadyCustomer(sLevel, role);
+                        if (customer != null) {
+                            servingCustomerUuid = customer.getUUID();
+                            serviceTicks = 60; // 3 seconds to scoop ice cream
+                            sLevel.playSound(null, this.blockPosition(), SoundEvents.SNOW_STEP, SoundSource.NEUTRAL, 0.7F, 1.2F);
                         }
                     }
                 } else if ("TICKET".equals(role)) {

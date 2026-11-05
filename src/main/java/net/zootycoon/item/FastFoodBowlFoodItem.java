@@ -36,3 +36,4 @@ public class FastFoodBowlFoodItem extends Item {
         return stack;
     }
 }
+

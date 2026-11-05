@@ -228,7 +228,12 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
                     ? ZooTranslations.component("zootycoon.dialog.cashier.speech.burger_ready")
                     : ZooTranslations.component("zootycoon.dialog.cashier.speech.burger_empty");
         }
-        if ("DRINK".equalsIgnoreCase(role) || "ICE_CREAM".equalsIgnoreCase(role)) {
+        if ("ICE_CREAM".equalsIgnoreCase(role)) {
+            return stocked
+                    ? ZooTranslations.component("zootycoon.dialog.cashier.speech.ice_cream_ready")
+                    : ZooTranslations.component("zootycoon.dialog.cashier.speech.ice_cream_empty");
+        }
+        if ("DRINK".equalsIgnoreCase(role)) {
             return stocked
                     ? ZooTranslations.component("zootycoon.dialog.cashier.speech.drink_ready")
                     : ZooTranslations.component("zootycoon.dialog.cashier.speech.drink_empty");
@@ -294,7 +299,13 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
             }).asPrimary();
             addRenderableWidget(drinkBtn);
 
-            var ticketBtn = new ZooButton(rightX, startBtnY + btnH + gap, rightW, btnH,
+            var iceCreamBtn = new ZooButton(rightX, startBtnY + btnH + gap, colW, btnH,
+                    ZooTranslations.component("zootycoon.dialog.cashier.btn.ice_cream"), b -> {
+                ClientPlayNetworking.send(new ZooNetworkPayloads.SetCashierRolePayload(this.entityId, "ICE_CREAM"));
+            }).asPrimary();
+            addRenderableWidget(iceCreamBtn);
+
+            var ticketBtn = new ZooButton(rightX + colW + 6, startBtnY + btnH + gap, colW, btnH,
                     ZooTranslations.component("zootycoon.dialog.cashier.btn.ticket"), b -> {
                 ClientPlayNetworking.send(new ZooNetworkPayloads.SetCashierRolePayload(this.entityId, "TICKET"));
             }).asPrimary();

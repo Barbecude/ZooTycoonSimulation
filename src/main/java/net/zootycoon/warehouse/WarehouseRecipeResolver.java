@@ -21,10 +21,12 @@ public class WarehouseRecipeResolver {
 
     private static List<Item> cachedBurgerItems = null;
     private static List<Item> cachedDrinkItems = null;
+    private static List<Item> cachedIceCreamItems = null;
 
     public static void reset() {
         cachedBurgerItems = null;
         cachedDrinkItems = null;
+        cachedIceCreamItems = null;
     }
 
     public static List<Item> getAvailableMenuItems(ServerLevel level, String role) {
@@ -34,7 +36,13 @@ public class WarehouseRecipeResolver {
             }
             return cachedBurgerItems;
         }
-        if ("DRINK".equalsIgnoreCase(role) || "ICE_CREAM".equalsIgnoreCase(role)) {
+        if ("ICE_CREAM".equalsIgnoreCase(role)) {
+            if (cachedIceCreamItems == null || cachedIceCreamItems.isEmpty()) {
+                cachedIceCreamItems = scanMenuItems(level, "ICE_CREAM");
+            }
+            return cachedIceCreamItems;
+        }
+        if ("DRINK".equalsIgnoreCase(role)) {
             if (cachedDrinkItems == null || cachedDrinkItems.isEmpty()) {
                 cachedDrinkItems = scanMenuItems(level, "DRINK");
             }
@@ -75,6 +83,9 @@ public class WarehouseRecipeResolver {
         }
         if ("BURGER".equalsIgnoreCase(role)) {
             return List.of(Items.BREAD, Items.COOKED_BEEF);
+        }
+        if ("ICE_CREAM".equalsIgnoreCase(role)) {
+            return List.of(net.zootycoon.item.ZooItems.ICE_CREAM);
         }
         return List.of(net.zootycoon.item.ZooItems.MATCHA_LATTE);
     }
@@ -300,6 +311,20 @@ public class WarehouseRecipeResolver {
     private static void populateFallbackRawIngredients(Item menuItem, String role, Map<Item, Integer> rawMap) {
         ResourceLocation id = BuiltInRegistries.ITEM.getKey(menuItem);
         String path = id != null ? id.getPath().toLowerCase(Locale.ROOT) : "";
+
+        if ("ICE_CREAM".equalsIgnoreCase(role) || path.contains("ice_cream")) {
+            rawMap.put(Items.BOWL, 1);
+            rawMap.put(Items.MILK_BUCKET, 1);
+            rawMap.put(Items.SUGAR, 1);
+            if (path.contains("chocolate")) {
+                rawMap.put(Items.COCOA_BEANS, 1);
+            } else if (path.contains("berry") || path.contains("strawberry")) {
+                rawMap.put(Items.SWEET_BERRIES, 1);
+            } else if (path.contains("fruit") || path.contains("apple")) {
+                rawMap.put(Items.APPLE, 1);
+            }
+            return;
+        }
 
         if ("BURGER".equalsIgnoreCase(role)) {
             rawMap.put(Items.WHEAT, 1);

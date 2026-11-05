@@ -350,7 +350,7 @@ public class WarehouseSupplyManager {
 
             if (entity instanceof ZooCashierEntity cashier) {
                 String role = cashier.getCashierRole();
-                if (("BURGER".equalsIgnoreCase(role) || "DRINK".equalsIgnoreCase(role))
+                if (("BURGER".equalsIgnoreCase(role) || "DRINK".equalsIgnoreCase(role) || "ICE_CREAM".equalsIgnoreCase(role))
                         && role.equalsIgnoreCase(category)
                         && cashier.getTotalStockCount() <= CASHIER_LOW_STOCK_THRESHOLD) {
                     if (!ACTIVE_REQUESTS.containsKey(cashier.getUUID())) {
@@ -512,7 +512,8 @@ public class WarehouseSupplyManager {
         if (rawMap.isEmpty()) return null;
 
         String name = cashier.getName().getString();
-        String sub = "BURGER".equalsIgnoreCase(role) ? "Stand Burger" : "Stand Minuman";
+        String sub = "BURGER".equalsIgnoreCase(role) ? "Stand Burger"
+                : ("ICE_CREAM".equalsIgnoreCase(role) ? "Stand Es Krim" : "Stand Minuman");
         StaffSupplyRequest req = new StaffSupplyRequest(
                 cashier.getUUID(),
                 cashier.getId(),

@@ -41,3 +41,4 @@ public class FastFoodDrinkItem extends Item {
         return SoundEvents.GENERIC_DRINK;
     }
 }
+

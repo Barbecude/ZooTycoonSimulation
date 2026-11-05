@@ -8,8 +8,10 @@ import net.zootycoon.client.model.ZooZookeeperModel;
 import net.zootycoon.entity.ZooZookeeperEntity;
 
 public class ZooZookeeperRenderer extends HumanoidMobRenderer<ZooZookeeperEntity, ZooZookeeperModel> {
-    private static final ResourceLocation TEXTURE =
+    private static final ResourceLocation TEXTURE_FEMALE =
             ZooTycoonMod.id("textures/entity/staff/zookeeper.png");
+    private static final ResourceLocation TEXTURE_MALE =
+            ZooTycoonMod.id("textures/entity/staff/zookeeper_men.png");
 
     public ZooZookeeperRenderer(EntityRendererProvider.Context context) {
         super(context, new ZooZookeeperModel(context.bakeLayer(ZooZookeeperModel.LAYER_LOCATION)), 0.5f);
@@ -17,6 +19,6 @@ public class ZooZookeeperRenderer extends HumanoidMobRenderer<ZooZookeeperEntity
 
     @Override
     public ResourceLocation getTextureLocation(ZooZookeeperEntity entity) {
-        return TEXTURE;
+        return entity.isMale() ? TEXTURE_MALE : TEXTURE_FEMALE;
     }
 }
