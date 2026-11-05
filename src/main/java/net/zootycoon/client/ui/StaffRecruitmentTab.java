@@ -111,7 +111,9 @@ public class StaffRecruitmentTab {
             } else if (dropdownBtn != null && dropdownBtn.isMouseOver(mouseX, mouseY)) {
                 return false;
             } else {
+                // Consume the closing click so it does not reach widgets under the menu
                 isDropdownOpen = false;
+                return true;
             }
         }
         return false;
@@ -182,10 +184,15 @@ public class StaffRecruitmentTab {
                         ZooTranslations.get("zootycoon.ui.staff.cashier.stat3")
                 )
         );
+    }
 
-        // Dropdown Overlay Menu (rendered on top of cards)
+    // Called by MainManagementScreen after widgets are drawn
+    public void renderOverlay(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         if (isDropdownOpen) {
-            renderDropdownMenu(graphics, mc, mouseX, mouseY);
+            graphics.pose().pushPose();
+            graphics.pose().translate(0, 0, 400);
+            renderDropdownMenu(graphics, Minecraft.getInstance(), mouseX, mouseY);
+            graphics.pose().popPose();
         }
     }
 

@@ -69,8 +69,16 @@ public class SchematicCatalogTab {
     public void init(MainManagementScreen screen) {
         ZooSchematicRegistry.loadCustomSchematics();
         this.schematics = ZooSchematicRegistry.getByCategory(category);
-        if (selectedSchematic != null && !schematics.contains(selectedSchematic)) {
+        // The registry rebuilds its instances on reload, so re-resolve the selection by id
+        if (selectedSchematic != null) {
+            String selectedId = selectedSchematic.getId();
             selectedSchematic = null;
+            for (ZooSchematic schem : schematics) {
+                if (java.util.Objects.equals(schem.getId(), selectedId)) {
+                    selectedSchematic = schem;
+                    break;
+                }
+            }
         }
         if (selectedSchematic == null && !schematics.isEmpty()) {
             updateSelected(schematics.get(0));

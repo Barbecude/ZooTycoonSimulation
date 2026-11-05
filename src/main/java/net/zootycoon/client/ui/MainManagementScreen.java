@@ -219,6 +219,11 @@ public class MainManagementScreen extends Screen {
         }
 
         super.render(graphics, mouseX, mouseY, delta);
+
+        // Overlays drawn after widgets so nothing renders on top of them
+        if (currentView == ViewState.STAFF_RECRUITMENT) {
+            staffTab.renderOverlay(graphics, mouseX, mouseY, delta);
+        }
     }
 
     @Override
