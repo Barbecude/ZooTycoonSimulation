@@ -19,6 +19,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
@@ -27,6 +28,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import net.zootycoon.animal.AnimalDietRegistry;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,6 +43,28 @@ public class ZooFeedingTroughBlock extends BaseEntityBlock {
 
     public static void reset() {
         KNOWN_TROUGHS.clear();
+    }
+
+    /**
+     * Re-registers loaded troughs around a position. A block entity that is unloaded and reloaded
+     * (or replaced) can evict its own position from the cache while still existing in the world.
+     */
+    public static void syncKnownTroughs(ServerLevel level, BlockPos center, int radius) {
+        int minCx = (center.getX() - radius) >> 4;
+        int maxCx = (center.getX() + radius) >> 4;
+        int minCz = (center.getZ() - radius) >> 4;
+        int maxCz = (center.getZ() + radius) >> 4;
+        for (int cx = minCx; cx <= maxCx; cx++) {
+            for (int cz = minCz; cz <= maxCz; cz++) {
+                LevelChunk chunk = level.getChunkSource().getChunkNow(cx, cz);
+                if (chunk == null) continue;
+                for (BlockEntity be : new ArrayList<>(chunk.getBlockEntities().values())) {
+                    if (be instanceof ZooFeedingTroughBlockEntity && !be.isRemoved()) {
+                        KNOWN_TROUGHS.add(be.getBlockPos().immutable());
+                    }
+                }
+            }
+        }
     }
 
     public ZooFeedingTroughBlock() {

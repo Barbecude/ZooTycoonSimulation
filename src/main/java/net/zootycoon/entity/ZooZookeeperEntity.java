@@ -1084,6 +1084,9 @@ public class ZooZookeeperEntity extends PathfinderMob {
                 BlockPos fallbackTrough = null;
                 double minFallbackDistSq = Double.MAX_VALUE;
 
+                ZooFeedingTroughBlock.syncKnownTroughs(sLevel, myPos, 48);
+                List<LivingEntity> troughFamily = getAssignedFamily(sLevel);
+
                 for (BlockPos troughPos : ZooFeedingTroughBlock.KNOWN_TROUGHS) {
                     if (ownerUuid != null && !claimManager.isClaimedBy(troughPos, ownerUuid)) continue;
                     double distSq = myPos.distSqr(troughPos);
@@ -1093,7 +1096,9 @@ public class ZooZookeeperEntity extends PathfinderMob {
                     if (be instanceof ZooFeedingTroughBlockEntity troughBe) {
                         if (troughBe.hasWater()) continue;
                         ItemStack foodInTrough = troughBe.getFoodStack();
-                        boolean canRefillWithMyFood = foodInTrough.isEmpty()
+                        // Leftover no family member can eat would block refilling forever
+                        boolean unusableLeftover = !foodInTrough.isEmpty() && !isFoodEatenByAny(troughFamily, foodInTrough);
+                        boolean canRefillWithMyFood = foodInTrough.isEmpty() || unusableLeftover
                                 || (foodInTrough.getCount() < 32 && (this.hasMatchingFoodForTrough(foodInTrough) || (!availableFood.isEmpty() && foodInTrough.is(availableFood.getItem())) || foodInTrough.is(targetFoodItem)));
 
                         if (canRefillWithMyFood) {
@@ -1150,6 +1155,13 @@ public class ZooZookeeperEntity extends PathfinderMob {
                             if (be instanceof ZooFeedingTroughBlockEntity troughBe) {
                                 int toInsert = Math.min(8, this.getFoodStock());
                                 ItemStack currentInTrough = troughBe.getFoodStack();
+                                if (!currentInTrough.isEmpty() && !isFoodEatenByAny(getAssignedFamily(sLevel), currentInTrough)) {
+                                    ItemStack junk = troughBe.extractFood(64);
+                                    if (!junk.isEmpty()) {
+                                        sLevel.addFreshEntity(new ItemEntity(sLevel, needRefillTrough.getX() + 0.5, needRefillTrough.getY() + 1.0, needRefillTrough.getZ() + 0.5, junk));
+                                    }
+                                    currentInTrough = ItemStack.EMPTY;
+                                }
                                 ItemStack takenFood = !currentInTrough.isEmpty() ? this.takeMatchingFood(currentInTrough, toInsert) : this.takeFirstFood(toInsert);
                                 if (!takenFood.isEmpty()) {
                                     int initialCount = takenFood.getCount();
@@ -1902,6 +1914,13 @@ public class ZooZookeeperEntity extends PathfinderMob {
             }
         }
         return ItemStack.EMPTY;
+    }
+
+    private static boolean isFoodEatenByAny(List<LivingEntity> animals, ItemStack stack) {
+        for (LivingEntity animal : animals) {
+            if (AnimalDietRegistry.isFoodValid(animal, stack)) return true;
+        }
+        return false;
     }
 
     public boolean hasMatchingFoodForTrough(ItemStack troughStack) {
