@@ -775,6 +775,10 @@ public class WarehouseSupplyManager {
             return false;
         }
 
+        // Taking raw items and raising the cashier stock re-runs the request refresh mid-delivery; without
+        // this flag it would drop the request as "stocked" before the unfinished menus are recorded
+        req.partiallyDelivered = true;
+
         SimpleContainer stock = cashier.getStockInventory();
         for (int m = 0; m < fulfilledMenus.size(); m++) {
             ItemStack menuStack = fulfilledMenus.get(m);
@@ -837,6 +841,21 @@ public class WarehouseSupplyManager {
     }
 
     private static boolean consumeAndFulfill(ServerLevel sLevel, EmptyBarrelBlockEntity barrel, StaffSupplyRequest req) {
+        // Same guard as in fulfillCashierRequest: the staff stock changes while items are handed over
+        boolean wasPartial = req.partiallyDelivered;
+        req.partiallyDelivered = true;
+        boolean delivered = false;
+        try {
+            delivered = deliverToStaff(sLevel, barrel, req);
+        } finally {
+            if (!delivered) {
+                req.partiallyDelivered = wasPartial;
+            }
+        }
+        return delivered;
+    }
+
+    private static boolean deliverToStaff(ServerLevel sLevel, EmptyBarrelBlockEntity barrel, StaffSupplyRequest req) {
         Entity ent = resolveEntityByUuid(sLevel, req.staffUuid);
         if (ent == null && req.staffEntityId > 0) {
             ent = sLevel.getEntity(req.staffEntityId);
