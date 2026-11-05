@@ -20,7 +20,9 @@ https://github.com/Let-s-Do-Collection/FarmAndCharm
 data hewan:
 https://docs.google.com/document/d/1jJZwJqmeuR9pmZL68d9drwBwZZVqxTd8_w1RZepzcl4
 
-fungsi yang sudah ada jangan sampe rusak
+pindahkan semua string yg ada di kode ini ke src\main\resources\assets\zootycoon\lang\id_id.json
+src\main\resources\assets\zootycoon\lang\en_us.json
+
 
 Scope guard yang ketat: Dilarang mengubah atau menyentuh file, class, dan komponen UI yang tidak disebutkan secara eksplisit dalam instruksi pengguna. Jika tugas hanya menyebut feeding trough, jangan pernah menyentuh file zookeeper, cashier, builder, atau file lainnya.
 

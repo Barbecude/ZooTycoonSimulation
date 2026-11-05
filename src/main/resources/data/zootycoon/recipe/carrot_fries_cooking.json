@@ -1,21 +1,21 @@
 {
-    "ingredients":  [
-                        {
-                            "item":  "minecraft:carrot"
-                        },
-                        {
-                            "item":  "minecraft:carrot"
-                        }
-                    ],
-    "experience":  1,
-    "recipe_book_tab":  "meals",
-    "container":  {
-                      "item":  "zootycoon:fries_bowl"
-                  },
-    "type":  "farmersdelight:cooking",
-    "cookingtime":  200,
-    "result":  {
-                   "count":  1,
-                   "id":  "zootycoon:carrot_fries"
-               }
+    "ingredients": [
+        {
+            "item": "minecraft:carrot"
+        },
+        {
+            "item": "minecraft:carrot"
+        }
+    ],
+    "experience": 1.0,
+    "recipe_book_tab": "meals",
+    "container": {
+        "id": "zootycoon:fries_bowl"
+    },
+    "type": "farmersdelight:cooking",
+    "cookingtime": 200,
+    "result": {
+        "count": 1,
+        "id": "zootycoon:carrot_fries"
+    }
 }

@@ -839,6 +839,33 @@ public final class ZooEconomyEngine {
     }
 
     /**
+     * Menghitung biaya emerald untuk pembelian suplai pakan atau alat perawatan Zookeeper.
+     */
+    public static int calculateZookeeperSupplyCost(WarehousePayloads.StaffRequestDto req) {
+        if (req == null) return 30;
+        String sub = req.subtitle() != null ? req.subtitle().toLowerCase(Locale.ROOT) : "";
+        if (sub.contains("pemanas") || sub.contains("kedinginan")) {
+            int count = req.requiredCount() > 0 ? req.requiredCount() : 16;
+            return Math.max(10, count * 2);
+        } else if (sub.contains("pendingin") || sub.contains("kepanasan")) {
+            int count = req.requiredCount() > 0 ? req.requiredCount() : 16;
+            return Math.max(10, count * 2);
+        } else if (sub.contains("alat mandi") || sub.contains("kotor")) {
+            return 40;
+        } else {
+            int needed = req.requiredCount() > 0 ? req.requiredCount() : 32;
+            int unitPrice = 2;
+            if (req.targetItems() != null && !req.targetItems().isEmpty()) {
+                ItemStack first = req.targetItems().get(0);
+                if (first != null && !first.isEmpty()) {
+                    unitPrice = Math.max(1, Math.min(4, getRawIngredientUnitPrice(first.getItem()) / 2));
+                }
+            }
+            return Math.max(10, needed * unitPrice);
+        }
+    }
+
+    /**
      * Menghitung upah harian yang harus dibayar kepada staf kebun binatang.
      */
     public static int calculateDailyWages(int zookeepers, int security, int cashiers) {
