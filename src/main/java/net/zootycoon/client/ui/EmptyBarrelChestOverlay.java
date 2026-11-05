@@ -258,11 +258,19 @@ public class EmptyBarrelChestOverlay {
     private static final int ZOOKEEPER_FOOD_COLS = 5;
 
     private static int getCardHeight(WarehousePayloads.StaffRequestDto req, int cardW) {
-        if ("CASHIER".equalsIgnoreCase(req.staffType())) {
-            return CARD_HEIGHT;
-        }
         int slotSize = 18;
         int slotGap = 2;
+        if ("CASHIER".equalsIgnoreCase(req.staffType())) {
+            int infoXOffset = 3 + 34 + 5;
+            int infoW = cardW - infoXOffset - 4;
+            int colsPerRow = Math.max(1, (infoW + slotGap) / (slotSize + slotGap));
+            int variantCount = req.targetItems().size();
+            int rows = Math.max(1, (int) Math.ceil((double) Math.max(1, variantCount) / colsPerRow));
+            int gridH = rows * slotSize + Math.max(0, rows - 1) * slotGap;
+            int actionBtnYOffset = 25 + gridH + 3;
+            int actionBtnH = 17;
+            return Math.max(CARD_HEIGHT, actionBtnYOffset + actionBtnH + 4);
+        }
         int colsPerRow = ZOOKEEPER_FOOD_COLS;
         List<ItemStack> targets = req.targetItems();
         boolean hasMultipleFoodRows = targets.size() > colsPerRow;
@@ -418,20 +426,29 @@ public class EmptyBarrelChestOverlay {
             int actionBtnY = cardY + 46;
 
             if ("CASHIER".equalsIgnoreCase(req.staffType())) {
-                int maxVariants = Math.min(2, targets.size());
-                int curX = infoX;
-                for (int v = 0; v < maxVariants; v++) {
+                int totalVariants = targets.size();
+                int colsPerRow = Math.max(1, (infoW + slotGap) / (slotSize + slotGap));
+                int rows = Math.max(1, (int) Math.ceil((double) Math.max(1, totalVariants) / colsPerRow));
+                int gridH = rows * slotSize + Math.max(0, rows - 1) * slotGap;
+                actionBtnY = slotY + gridH + 3;
+
+                for (int v = 0; v < totalVariants; v++) {
                     ItemStack st = targets.get(v);
-                    graphics.fill(curX, slotY, curX + slotSize, slotY + slotSize, 0xFF12151D);
-                    graphics.renderOutline(curX, slotY, slotSize, slotSize, 0xFF334155);
-                    graphics.renderFakeItem(st, curX + 1, slotY + 1);
-                    graphics.renderItemDecorations(font, st, curX + 1, slotY + 1, String.valueOf(st.getCount()));
+                    int col = v % colsPerRow;
+                    int row = v / colsPerRow;
+                    int curX = infoX + col * (slotSize + slotGap);
+                    int curY = slotY + row * (slotSize + slotGap);
+
+                    graphics.fill(curX, curY, curX + slotSize, curY + slotSize, 0xFF12151D);
+                    graphics.renderOutline(curX, curY, slotSize, slotSize, 0xFF334155);
+                    graphics.renderFakeItem(st, curX + 1, curY + 1);
+                    graphics.renderItemDecorations(font, st, curX + 1, curY + 1, String.valueOf(st.getCount()));
 
                     // Check badge on top-right of slot if that menu item's ingredients are complete in the barrel!
                     boolean itemReady = (v < req.menuItems().size()) && req.menuItems().get(v).isReadyInBarrel();
                     if (itemReady) {
                         int bX = curX + slotSize - 6;
-                        int bY = slotY - 1;
+                        int bY = curY - 1;
                         graphics.fill(bX, bY, bX + 6, bY + 6, 0xFF163821);
                         graphics.renderOutline(bX, bY, 6, 6, 0xFF38A169);
                         graphics.fill(bX + 1, bY + 2, bX + 2, bY + 4, 0xFF55FF55);
@@ -440,22 +457,21 @@ public class EmptyBarrelChestOverlay {
                         graphics.fill(bX + 4, bY + 1, bX + 5, bY + 3, 0xFF55FF55);
                     }
 
-                    if (mouseX >= curX && mouseX <= curX + slotSize && mouseY >= slotY && mouseY <= slotY + slotSize
+                    if (mouseX >= curX && mouseX <= curX + slotSize && mouseY >= curY && mouseY <= curY + slotSize
                             && mouseY >= listY && mouseY <= listY + listH) {
                         hoveredStack = st;
                         hoveredDto = req;
                         hoveredVariantIndex = v;
                     }
 
-                    if (maxVariants == 1) {
+                    if (totalVariants == 1) {
                         String itemName = st.getHoverName().getString();
                         int nameMaxW = infoW - slotSize - 4;
                         if (font.width(itemName) > nameMaxW) {
                             itemName = font.plainSubstrByWidth(itemName, Math.max(8, nameMaxW - font.width(".."))) + "..";
                         }
-                        graphics.drawString(font, itemName, curX + slotSize + 4, slotY + 5, 0xFFE2E8F0, false);
+                        graphics.drawString(font, itemName, curX + slotSize + 4, curY + 5, 0xFFE2E8F0, false);
                     }
-                    curX += slotSize + 4;
                 }
             } else {
                 int colsPerRow = ZOOKEEPER_FOOD_COLS;
@@ -591,7 +607,9 @@ public class EmptyBarrelChestOverlay {
             String checkTip;
             if (hoveredCheckDto.allReadyToFulfill()) {
                 if ("CASHIER".equalsIgnoreCase(hoveredCheckDto.staffType())) {
-                    checkTip = "Kirim Bahan Mentah ke Kasir";
+                    boolean allReady = hoveredCheckDto.menuItems().isEmpty()
+                            || hoveredCheckDto.menuItems().stream().allMatch(WarehousePayloads.MenuItemRequestDto::isReadyInBarrel);
+                    checkTip = allReady ? "Kirim Semua Pesanan ke Kasir" : "Kirim Menu yang Siap ke Kasir";
                 } else if (hoveredCheckDto.subtitle().toLowerCase().contains("pendingin")) {
                     checkTip = "Kirim Pendingin ke Zookeeper";
                 } else if (hoveredCheckDto.subtitle().toLowerCase().contains("pemanas")) {
@@ -704,7 +722,13 @@ public class EmptyBarrelChestOverlay {
                 int slotGap = 2;
                 int actionBtnY = cardY + 46;
 
-                if (!"CASHIER".equalsIgnoreCase(req.staffType())) {
+                if ("CASHIER".equalsIgnoreCase(req.staffType())) {
+                    int totalVariants = req.targetItems().size();
+                    int colsPerRow = Math.max(1, (infoW + slotGap) / (slotSize + slotGap));
+                    int rows = Math.max(1, (int) Math.ceil((double) Math.max(1, totalVariants) / colsPerRow));
+                    int gridH = rows * slotSize + Math.max(0, rows - 1) * slotGap;
+                    actionBtnY = slotY + gridH + 3;
+                } else {
                     List<ItemStack> targets = req.targetItems();
                     int colsPerRow = ZOOKEEPER_FOOD_COLS;
                     boolean hasMultipleFoodRows = targets.size() > colsPerRow;
@@ -748,7 +772,11 @@ public class EmptyBarrelChestOverlay {
                         Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
                         BlockPos posToSend = activeBarrelPos != null ? activeBarrelPos : BlockPos.ZERO;
                         ClientPlayNetworking.send(new WarehousePayloads.FulfillStaffRequestPayload(posToSend, req.staffUuid()));
-                        activeRequests.removeIf(r -> r.staffUuid().equals(req.staffUuid()));
+                        boolean allItemsReady = req.menuItems().isEmpty()
+                                || req.menuItems().stream().allMatch(WarehousePayloads.MenuItemRequestDto::isReadyInBarrel);
+                        if (allItemsReady) {
+                            activeRequests.removeIf(r -> r.staffUuid().equals(req.staffUuid()));
+                        }
                     } else {
                         Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.DISPENSER_FAIL, 1.2F));
                     }

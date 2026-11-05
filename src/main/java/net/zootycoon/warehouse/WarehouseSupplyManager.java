@@ -131,11 +131,6 @@ public class WarehouseSupplyManager {
         List<WarehousePayloads.StaffRequestDto> dtos = new ArrayList<>();
 
         for (StaffSupplyRequest req : matching) {
-            boolean allReady = canBarrelFulfill(sLevel, barrel, req);
-            if (allReady && req.readySinceGameTime < 0L) {
-                req.readySinceGameTime = sLevel.getGameTime();
-            }
-
             List<ItemStack> targets = new ArrayList<>();
             for (ItemStack st : req.targetItems) {
                 targets.add(st.copy());
@@ -236,6 +231,23 @@ public class WarehouseSupplyManager {
                 requiredCount = req.requiredFoodCount > 0 ? req.requiredFoodCount : ZOOKEEPER_DEFAULT_REQUIRED_FOOD;
                 LivingEntity animal = resolveAnimal(sLevel, req.animalUuid);
                 currentCount = Math.min(requiredCount, countValidAnimalFoodInBarrel(barrel, animal, req.targetItems));
+            }
+
+            boolean allReady;
+            if ("CASHIER".equals(req.staffType)) {
+                allReady = !menuDtos.isEmpty() && menuDtos.stream().anyMatch(WarehousePayloads.MenuItemRequestDto::isReadyInBarrel);
+                if (canBarrelFulfill(sLevel, barrel, req)) {
+                    if (req.readySinceGameTime < 0L) {
+                        req.readySinceGameTime = sLevel.getGameTime();
+                    }
+                } else {
+                    req.readySinceGameTime = -1L;
+                }
+            } else {
+                allReady = canBarrelFulfill(sLevel, barrel, req);
+                if (allReady && req.readySinceGameTime < 0L) {
+                    req.readySinceGameTime = sLevel.getGameTime();
+                }
             }
 
             dtos.add(new WarehousePayloads.StaffRequestDto(
@@ -676,6 +688,107 @@ public class WarehouseSupplyManager {
         }
     }
 
+    public static boolean fulfillCashierRequest(ServerLevel sLevel, EmptyBarrelBlockEntity barrel, StaffSupplyRequest req) {
+        Entity ent = resolveEntityByUuid(sLevel, req.staffUuid);
+        if (ent == null && req.staffEntityId > 0) {
+            ent = sLevel.getEntity(req.staffEntityId);
+        }
+        if (ent == null && sLevel.getServer() != null) {
+            for (ServerLevel lvl : sLevel.getServer().getAllLevels()) {
+                ent = lvl.getEntity(req.staffUuid);
+                if (ent != null) break;
+            }
+        }
+        if (!(ent instanceof ZooCashierEntity cashier) || !cashier.isAlive()) return false;
+
+        List<ItemStack> virtualPool = new ArrayList<>();
+        for (int i = 0; i < barrel.getContainerSize(); i++) {
+            ItemStack st = barrel.getItem(i);
+            if (!st.isEmpty()) {
+                virtualPool.add(st.copy());
+            }
+        }
+
+        List<ItemStack> fulfilledMenus = new ArrayList<>();
+        List<Map<Item, Integer>> fulfilledIngredients = new ArrayList<>();
+
+        for (ItemStack targetSt : req.targetItems) {
+            Map<Item, Integer> singleRaws = WarehouseRecipeResolver.resolveRawIngredientsForSingleItem(sLevel, req.category, targetSt.getItem());
+            if (singleRaws.isEmpty()) continue;
+
+            boolean itemReady = true;
+            for (Map.Entry<Item, Integer> entry : singleRaws.entrySet()) {
+                int needed = entry.getValue() * targetSt.getCount();
+                int have = countItemInVirtualPool(virtualPool, entry.getKey());
+                if (have < needed) {
+                    itemReady = false;
+                    break;
+                }
+            }
+
+            if (itemReady) {
+                for (Map.Entry<Item, Integer> entry : singleRaws.entrySet()) {
+                    int toConsume = entry.getValue() * targetSt.getCount();
+                    consumeFromVirtualPool(virtualPool, entry.getKey(), toConsume);
+                }
+                fulfilledMenus.add(targetSt);
+                fulfilledIngredients.add(singleRaws);
+            }
+        }
+
+        if (fulfilledMenus.isEmpty()) {
+            return false;
+        }
+
+        SimpleContainer stock = cashier.getStockInventory();
+        for (int m = 0; m < fulfilledMenus.size(); m++) {
+            ItemStack menuStack = fulfilledMenus.get(m);
+            Map<Item, Integer> singleRaws = fulfilledIngredients.get(m);
+
+            // 1. Consume raw ingredients from barrel
+            for (Map.Entry<Item, Integer> entry : singleRaws.entrySet()) {
+                int totalToTake = entry.getValue() * menuStack.getCount();
+                removeItemsFromBarrel(barrel, entry.getKey(), totalToTake);
+            }
+
+            // 2. Add finished menu item stack to cashier stock inventory
+            ItemStack toInsert = menuStack.copy();
+            for (int i = 0; i < stock.getContainerSize() && !toInsert.isEmpty(); i++) {
+                ItemStack slotStack = stock.getItem(i);
+                if (slotStack.isEmpty()) {
+                    stock.setItem(i, toInsert.copy());
+                    toInsert.setCount(0);
+                } else if (ItemStack.isSameItemSameComponents(slotStack, toInsert)) {
+                    int space = slotStack.getMaxStackSize() - slotStack.getCount();
+                    if (space > 0) {
+                        int add = Math.min(space, toInsert.getCount());
+                        slotStack.grow(add);
+                        toInsert.shrink(add);
+                    }
+                }
+            }
+        }
+
+        // 3. Remove fulfilled items from request
+        req.targetItems.removeAll(fulfilledMenus);
+
+        // 4. Update requiredRawIngredients for remaining menu items
+        req.requiredRawIngredients.clear();
+        if (!req.targetItems.isEmpty()) {
+            Map<Item, Integer> remainingRaws = WarehouseRecipeResolver.resolveRawIngredientsForMenus(sLevel, req.category, req.targetItems);
+            req.requiredRawIngredients.putAll(remainingRaws);
+            req.readySinceGameTime = -1L;
+        } else {
+            ACTIVE_REQUESTS.remove(req.staffUuid);
+        }
+
+        cashier.updateStockStatus();
+        sLevel.playSound(null, barrel.getBlockPos(), SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8F, 1.1F);
+        sLevel.playSound(null, cashier.blockPosition(), SoundEvents.VILLAGER_WORK_BUTCHER, SoundSource.NEUTRAL, 0.8F, 1.1F);
+        sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, cashier.getX(), cashier.getY() + 1.2D, cashier.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
+        return true;
+    }
+
     private static boolean consumeAndFulfill(ServerLevel sLevel, EmptyBarrelBlockEntity barrel, StaffSupplyRequest req) {
         Entity ent = resolveEntityByUuid(sLevel, req.staffUuid);
         if (ent == null && req.staffEntityId > 0) {
@@ -690,37 +803,7 @@ public class WarehouseSupplyManager {
         if (ent == null || !ent.isAlive()) return false;
 
         if ("CASHIER".equals(req.staffType) && ent instanceof ZooCashierEntity cashier) {
-            if (!canBarrelFulfill(sLevel, barrel, req)) return false;
-
-            // Consume raw ingredients from barrel
-            for (Map.Entry<Item, Integer> entry : req.requiredRawIngredients.entrySet()) {
-                removeItemsFromBarrel(barrel, entry.getKey(), entry.getValue());
-            }
-
-            // Add crafted menu items to cashier stock inventory
-            SimpleContainer stock = cashier.getStockInventory();
-            for (ItemStack menuStack : req.targetItems) {
-                ItemStack toInsert = menuStack.copy();
-                for (int i = 0; i < stock.getContainerSize() && !toInsert.isEmpty(); i++) {
-                    ItemStack slotStack = stock.getItem(i);
-                    if (slotStack.isEmpty()) {
-                        stock.setItem(i, toInsert.copy());
-                        toInsert.setCount(0);
-                    } else if (ItemStack.isSameItemSameComponents(slotStack, toInsert)) {
-                        int space = slotStack.getMaxStackSize() - slotStack.getCount();
-                        if (space > 0) {
-                            int add = Math.min(space, toInsert.getCount());
-                            slotStack.grow(add);
-                            toInsert.shrink(add);
-                        }
-                    }
-                }
-            }
-            cashier.updateStockStatus();
-            sLevel.playSound(null, barrel.getBlockPos(), SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8F, 1.1F);
-            sLevel.playSound(null, cashier.blockPosition(), SoundEvents.VILLAGER_WORK_BUTCHER, SoundSource.NEUTRAL, 0.8F, 1.1F);
-            sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, cashier.getX(), cashier.getY() + 1.2D, cashier.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
-            return true;
+            return fulfillCashierRequest(sLevel, barrel, req);
         }
 
         if ("ZOOKEEPER".equals(req.staffType) && ent instanceof ZooZookeeperEntity keeper) {
@@ -1050,18 +1133,30 @@ public class WarehouseSupplyManager {
             req = ACTIVE_REQUESTS.get(staffUuid);
         }
 
-        if (req != null && canBarrelFulfill(sLevel, barrel, req)) {
-            ACTIVE_REQUESTS.remove(req.staffUuid);
-            if (consumeAndFulfill(sLevel, barrel, req)) {
-                barrel.setChanged();
-                if (player.containerMenu instanceof ChestMenu) {
-                    player.containerMenu.broadcastChanges();
+        if (req != null) {
+            if ("CASHIER".equals(req.staffType)) {
+                if (fulfillCashierRequest(sLevel, barrel, req)) {
+                    barrel.setChanged();
+                    if (player.containerMenu instanceof ChestMenu) {
+                        player.containerMenu.broadcastChanges();
+                    }
+                    barrel.syncToViewingPlayers(sLevel);
+                    sLevel.playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.PLAYERS, 0.9F, 1.0F);
+                    ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.warehouse.fulfilled", 1);
                 }
-                barrel.syncToViewingPlayers(sLevel);
-                sLevel.playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.PLAYERS, 0.9F, 1.0F);
-                ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.warehouse.fulfilled", 1);
-            } else {
-                ACTIVE_REQUESTS.put(req.staffUuid, req);
+            } else if (canBarrelFulfill(sLevel, barrel, req)) {
+                ACTIVE_REQUESTS.remove(req.staffUuid);
+                if (consumeAndFulfill(sLevel, barrel, req)) {
+                    barrel.setChanged();
+                    if (player.containerMenu instanceof ChestMenu) {
+                        player.containerMenu.broadcastChanges();
+                    }
+                    barrel.syncToViewingPlayers(sLevel);
+                    sLevel.playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.PLAYERS, 0.9F, 1.0F);
+                    ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.warehouse.fulfilled", 1);
+                } else {
+                    ACTIVE_REQUESTS.put(req.staffUuid, req);
+                }
             }
         }
     }
