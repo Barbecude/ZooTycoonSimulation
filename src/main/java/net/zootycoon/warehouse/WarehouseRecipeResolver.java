@@ -52,9 +52,10 @@ public class WarehouseRecipeResolver {
             ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
             if (id == null) continue;
             String path = id.getPath().toLowerCase(Locale.ROOT);
-            // Skip potions, splash potions, ominous bottles, bucket fluids
+            // Skip potions, splash potions, ominous bottles, bucket fluids, honey bottle, and saguaro
             if (path.contains("potion") || path.contains("ominous") || path.contains("spawn_egg")
-                    || path.equals("water_bottle") || path.contains("bucket") || path.contains("bottle_of_")) {
+                    || path.equals("water_bottle") || path.contains("bucket") || path.contains("bottle_of_")
+                    || path.contains("honey_bottle") || path.contains("honey") || path.contains("saguaro")) {
                 continue;
             }
             ItemStack stack = new ItemStack(item);
@@ -75,7 +76,7 @@ public class WarehouseRecipeResolver {
         if ("BURGER".equalsIgnoreCase(role)) {
             return List.of(Items.BREAD, Items.COOKED_BEEF);
         }
-        return List.of(Items.HONEY_BOTTLE, Items.MILK_BUCKET);
+        return List.of(net.zootycoon.item.ZooItems.MATCHA_LATTE);
     }
 
     public static List<ItemStack> pickRandomMenus(ServerLevel level, String role, Random random) {

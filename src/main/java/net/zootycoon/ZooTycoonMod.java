@@ -354,7 +354,7 @@ public class ZooTycoonMod implements ModInitializer {
             return net.minecraft.world.InteractionResult.PASS;
         });
 
-        // Knife on Leaves -> Green Tea Leaves drop event (20% chance, leaves > 3 blocks above ground)
+        // Knife on Leaves -> Green Tea Leaves drop event (20% chance on any leaves)
         net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents.AFTER.register((level, player, pos, state, blockEntity) -> {
             net.zootycoon.util.ZooSeatHelper.unregisterSeat(pos);
             if (level.isClientSide() || player == null || player.isCreative()) {
@@ -363,19 +363,7 @@ public class ZooTycoonMod implements ModInitializer {
             if (state.is(net.minecraft.tags.BlockTags.LEAVES)) {
                 ItemStack held = player.getMainHandItem();
                 if (isKnife(held)) {
-                    // Ground distance check: ensure downward 1..3 blocks have no solid/ground blocks
-                    boolean nearGround = false;
-                    for (int dy = 1; dy <= 3; dy++) {
-                        var downPos = pos.below(dy);
-                        var downState = level.getBlockState(downPos);
-                        if (downState.is(net.minecraft.tags.BlockTags.DIRT)
-                                || downState.is(net.minecraft.tags.BlockTags.BASE_STONE_OVERWORLD)
-                                || downState.isSolidRender(level, downPos)) {
-                            nearGround = true;
-                            break;
-                        }
-                    }
-                    if (!nearGround && level.random.nextFloat() < 0.20F) {
+                    if (level.random.nextFloat() < 0.20F) {
                         net.minecraft.world.level.block.Block.popResource(level, pos, new ItemStack(ZooItems.GREEN_TEA_LEAVES));
                     }
                 }

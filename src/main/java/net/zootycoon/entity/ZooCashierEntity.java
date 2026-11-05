@@ -371,7 +371,8 @@ public class ZooCashierEntity extends PathfinderMob {
                     || path.contains("soup") || path.contains("broth") || path.contains("curry")
                     || path.contains("leaves") || path.contains("seed") || path.contains("beans")
                     || path.contains("powder") || path.contains("cup") || path.contains("sandwich")
-                    || path.contains("burger") || path.contains("pie") || path.contains("cake")) {
+                    || path.contains("burger") || path.contains("pie") || path.contains("cake")
+                    || path.contains("honey_bottle") || path.contains("honey") || path.contains("saguaro")) {
                 return false;
             }
             String[] tokens = path.split("_");
