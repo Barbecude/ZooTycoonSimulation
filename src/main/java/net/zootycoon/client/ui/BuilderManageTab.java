@@ -98,7 +98,9 @@ public class BuilderManageTab {
         graphics.fill(x, y, x + 1, y + ROW_H, 0xFF242A38);
         graphics.fill(x + w - 1, y, x + w, y + ROW_H, 0xFF242A38);
 
-        boolean busy = b.isWorking() || b.isAwaitingPayment();
+        // A builder waiting for its wage has finished its job and can still be called, but not fired
+        boolean busy = b.isWorking();
+        boolean fireBlocked = b.isWorking() || b.isAwaitingPayment();
         boolean isCalling = b.isCalling() || pendingCalledBuilders.contains(b.uuid());
         if (!b.isCalling()) {
             pendingCalledBuilders.remove(b.uuid());
@@ -133,7 +135,7 @@ public class BuilderManageTab {
                 canCall, false, mouseX, mouseY, top, bottom);
         drawButton(graphics, mc, fireX, by, FIRE_W,
                 ZooTranslations.get(confirming ? "zootycoon.ui.staff.manage.btn_confirm" : "zootycoon.ui.staff.manage.btn_fire"),
-                !busy, true, mouseX, mouseY, top, bottom);
+                !fireBlocked, true, mouseX, mouseY, top, bottom);
     }
 
     private void drawButton(GuiGraphics graphics, Minecraft mc, int x, int y, int w, String label,
@@ -168,8 +170,8 @@ public class BuilderManageTab {
             if (mouseY >= by && mouseY <= by + BTN_H) {
                 if (mouseX >= callX && mouseX <= callX + CALL_W) {
                     boolean isCalling = b.isCalling() || pendingCalledBuilders.contains(b.uuid());
-                    if (b.isWorking() || b.isAwaitingPayment()) {
-                        ZooHudOverlay.showToast("zootycoon.toast.title.warning", "zootycoon.staff.manage.busy", ZooHudOverlay.TOAST_WARNING);
+                    if (b.isWorking()) {
+                        ZooHudOverlay.showToast("zootycoon.toast.title.warning", "zootycoon.staff.manage.busy.builder", ZooHudOverlay.TOAST_WARNING);
                     } else if (isCalling) {
                         // In flight
                     } else {
@@ -180,7 +182,7 @@ public class BuilderManageTab {
                 }
                 if (mouseX >= fireX && mouseX <= fireX + FIRE_W) {
                     if (b.isWorking() || b.isAwaitingPayment()) {
-                        ZooHudOverlay.showToast("zootycoon.toast.title.warning", "zootycoon.staff.manage.busy", ZooHudOverlay.TOAST_WARNING);
+                        ZooHudOverlay.showToast("zootycoon.toast.title.warning", "zootycoon.staff.manage.busy.builder", ZooHudOverlay.TOAST_WARNING);
                     } else if (b.uuid().equals(confirmFireUuid) && System.currentTimeMillis() < confirmFireUntil) {
                         confirmFireUuid = null;
                         ClientPlayNetworking.send(new ZooNetworkPayloads.ManageStaffGenericPayload("builder", b.uuid(), 1));

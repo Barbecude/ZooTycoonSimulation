@@ -277,10 +277,11 @@ public class ZooCashierEntity extends PathfinderMob {
     }
 
     public void callToPlayer(ServerPlayer player) {
-        this.callTargetUuid = player.getUUID();
-        this.callTicks = 600;
         this.teleportTo(player.getX() + 0.5D, player.getY(), player.getZ() + 0.5D);
         this.setFacingDirection(player.getDirection().getOpposite());
+        // The teleport is instant, so the cashier has already arrived and is no longer being called
+        this.callTargetUuid = null;
+        this.callTicks = 0;
     }
 
     public List<ItemStack> getStockItemsList() {

@@ -389,7 +389,7 @@ public class ZooStaffManager {
             net.minecraft.world.entity.Entity ent = lvl.getEntity(staffUuid);
             if (ent != null && ent.isAlive()) {
                 if ("builder".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooBuilderEntity b) {
-                    if (b.getSiteId() != null || b.isAwaitingPayment()) return 2;
+                    if (b.hasActiveJob()) return 2;
                     b.callToPlayer(player);
                     return 0;
                 } else if ("security".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooSecurityEntity sec) {

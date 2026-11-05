@@ -1580,6 +1580,8 @@ public class ZooNetworkPayloads {
                 if (success) {
                     player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.PLAYER_LEVELUP, net.minecraft.sounds.SoundSource.PLAYERS, 0.8f, 1.2f);
                     sendToast(player, "zootycoon.toast.title.success", "zootycoon.staff.hired", 1, payload.staffType());
+                    // Refresh the staff lists so the new hire shows up in the manage tabs right away
+                    sendAnimalSync(player);
                 } else {
                     sendToast(player, "zootycoon.toast.title.error", "zootycoon.staff.not_enough_emeralds", 3);
                 }
@@ -1616,13 +1618,19 @@ public class ZooNetworkPayloads {
                 int result = fire
                         ? staffManager.fireStaff(player, payload.staffType(), payload.staffUuid())
                         : staffManager.callStaff(player, payload.staffType(), payload.staffUuid());
+                // Per staff type message keys, e.g. zootycoon.staff.manage.called.cashier
+                String staffType = payload.staffType() == null ? "" : payload.staffType().toLowerCase(java.util.Locale.ROOT);
+                String typeSuffix = switch (staffType) {
+                    case "builder", "security", "cashier" -> "." + staffType;
+                    default -> "";
+                };
                 if (result == 0) {
                     sendToast(player, "zootycoon.toast.title.success",
-                            fire ? "zootycoon.staff.manage.fired" : "zootycoon.staff.manage.called", 1);
+                            (fire ? "zootycoon.staff.manage.fired" : "zootycoon.staff.manage.called") + typeSuffix, 1);
                 } else if (result == 2) {
-                    sendToast(player, "zootycoon.toast.title.warning", "zootycoon.staff.manage.busy", 2);
+                    sendToast(player, "zootycoon.toast.title.warning", "zootycoon.staff.manage.busy" + typeSuffix, 2);
                 } else {
-                    sendToast(player, "zootycoon.toast.title.error", "zootycoon.staff.manage.not_found", 3);
+                    sendToast(player, "zootycoon.toast.title.error", "zootycoon.staff.manage.not_found" + typeSuffix, 3);
                 }
                 sendAnimalSync(player);
             });
@@ -2446,7 +2454,7 @@ public class ZooNetworkPayloads {
                         }
                     }
                     if (isOwner) {
-                        boolean isWorking = b.getSiteId() != null;
+                        boolean isWorking = b.hasActiveJob();
                         boolean isAwaitingPayment = b.isAwaitingPayment();
                         String projectName = "";
                         if (isAwaitingPayment) {

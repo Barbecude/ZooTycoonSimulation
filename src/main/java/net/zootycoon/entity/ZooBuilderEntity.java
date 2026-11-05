@@ -194,23 +194,17 @@ public class ZooBuilderEntity extends PathfinderMob {
             }
         }
 
-        if (callTicks > 0) {
-            callTicks--;
-            if (callTicks <= 0) callTargetUuid = null;
+        if (callTargetUuid != null && this.level() instanceof ServerLevel callLevel) {
+            tickCall(callLevel);
         }
 
         // ==========================================
         // POST-CONSTRUCTION: AWAITING WAGE PAYMENT
         // Kuli follows player and collects Emeralds!
-        if (callTicks > 0) {
-            callTicks--;
-            if (callTicks <= 0) callTargetUuid = null;
-        }
-
         // ==========================================
         if (this.awaitingPayment) {
-            // 1. Follow payer
-            if (this.payerUuid != null) {
+            // 1. Follow payer (a pending call takes over navigation)
+            if (this.payerUuid != null && !isBeingCalled()) {
                 Player payer = this.level().getPlayerByUUID(this.payerUuid);
                 if (payer != null && payer.isAlive()) {
                     double distSq = this.distanceToSqr(payer);
@@ -333,14 +327,58 @@ public class ZooBuilderEntity extends PathfinderMob {
         return callTargetUuid != null && callTicks > 0;
     }
 
+    /** True only while the builder still has an unfinished construction site. */
+    public boolean hasActiveJob() {
+        ConstructionSite site = resolveSite();
+        return site != null && !site.isCompleted();
+    }
+
     public void callToPlayer(ServerPlayer player) {
-        if (siteId != null || awaitingPayment) return;
+        if (hasActiveJob()) return;
         this.callTargetUuid = player.getUUID();
         this.callTicks = 600;
         if (this.distanceToSqr(player) > 32.0D * 32.0D) {
             this.teleportTo(player.getX() + 1.0, player.getY(), player.getZ() + 1.0);
         } else {
             this.getNavigation().moveTo(player, 1.25D);
+        }
+    }
+
+    private void finishCall() {
+        UUID prevTarget = this.callTargetUuid;
+        this.callTicks = 0;
+        this.callTargetUuid = null;
+        this.getNavigation().stop();
+        if (prevTarget != null && this.level() instanceof ServerLevel sLevel) {
+            ServerPlayer target = sLevel.getServer().getPlayerList().getPlayer(prevTarget);
+            if (target != null) {
+                ZooNetworkPayloads.sendAnimalSync(target);
+            }
+        }
+    }
+
+    private void tickCall(ServerLevel sLevel) {
+        ServerPlayer target = sLevel.getServer().getPlayerList().getPlayer(callTargetUuid);
+        if (target == null || target.level() != sLevel) {
+            finishCall();
+            return;
+        }
+        callTicks--;
+        double distSq = this.distanceToSqr(target);
+        if (distSq <= 9.0D) {
+            this.getLookControl().setLookAt(target, 30.0F, 30.0F);
+            finishCall();
+            return;
+        }
+        // Give up walking when the timer runs out or the path is exhausted far away
+        boolean stuck = this.tickCount % 20 == 0 && this.getNavigation().isDone() && callTicks < 560;
+        if (callTicks <= 0 || stuck) {
+            this.teleportTo(target.getX() + 1.0, target.getY(), target.getZ() + 1.0);
+            finishCall();
+            return;
+        }
+        if (this.tickCount % 10 == 0) {
+            this.getNavigation().moveTo(target, 1.25D);
         }
     }
 
