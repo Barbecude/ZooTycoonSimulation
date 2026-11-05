@@ -13,10 +13,13 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -193,6 +196,7 @@ private static final String[] NAMES = new String[]{
 
     private UUID ownerUuid = null;
     private UUID assignedAnimalUuid = null;
+    private UUID currentBathingTargetUuid = null;
     private String currentDutyState = "IDLE"; // "REFILL", "NEED_FOOD", "SWEEPING", "BATHING", "IDLE"
     private int actionCooldown = 0;
     private int bathingStepTicks = 0;
@@ -388,18 +392,61 @@ private static final String[] NAMES = new String[]{
         }
 
         // 3. Any offspring belonging to any member in family
+        // Search around each parent (64 blocks) AND around the zookeeper (96 blocks)
         List<LivingEntity> offspringToAdd = new ArrayList<>();
+        Set<EntityType<?>> familySpecies = new HashSet<>();
+        for (LivingEntity member : family) {
+            familySpecies.add(member.getType());
+        }
+
+        // Look around the zookeeper for any baby animals of the same species or with offspring tags
+        List<LivingEntity> potentialBabies = sLevel.getEntitiesOfClass(
+                LivingEntity.class,
+                this.getBoundingBox().inflate(96.0D),
+                e -> e.isAlive() && !seen.contains(e.getUUID()) && (
+                        familySpecies.contains(e.getType()) && (
+                                (e instanceof AgeableMob ageable && ageable.isBaby())
+                                || (e instanceof Animal an && an.isBaby())
+                                || e.getTags().contains("zoo_offspring")
+                        )
+                )
+        );
+        for (LivingEntity baby : potentialBabies) {
+            if (seen.add(baby.getUUID())) {
+                offspringToAdd.add(baby);
+                if (!ZooAnimalHungerManager.isTagged(baby)) {
+                    ZooAnimalHungerManager.setTagged(baby, true);
+                    if (this.ownerUuid != null) {
+                        ZooAnimalHungerManager.setOwner(baby, this.ownerUuid);
+                    }
+                    ZooAnimalHungerManager.setAssignedZookeeper(baby, this.getUUID());
+                }
+            }
+        }
+
+        // Also check around each parent for specific parent tags or baby of same species
         for (LivingEntity parent : family) {
             String parentTag = "zoo_parent_" + parent.getStringUUID();
             final String parentUuidStr = parent.getStringUUID();
             List<LivingEntity> offspring = sLevel.getEntitiesOfClass(
                     LivingEntity.class,
-                    parent.getBoundingBox().inflate(48.0D),
-                    e -> e.isAlive() && !seen.contains(e.getUUID()) && (e.getTags().contains(parentTag) || parentUuidStr.equals(ZooAnimalHungerManager.getParentUuidStr(e)))
+                    parent.getBoundingBox().inflate(64.0D),
+                    e -> e.isAlive() && !seen.contains(e.getUUID()) && (
+                            e.getTags().contains(parentTag)
+                            || parentUuidStr.equals(ZooAnimalHungerManager.getParentUuidStr(e))
+                            || (e.getType().equals(parent.getType()) && ((e instanceof AgeableMob a && a.isBaby()) || (e instanceof Animal an && an.isBaby())))
+                    )
             );
             for (LivingEntity off : offspring) {
                 if (seen.add(off.getUUID())) {
                     offspringToAdd.add(off);
+                    if (!ZooAnimalHungerManager.isTagged(off)) {
+                        ZooAnimalHungerManager.setTagged(off, true);
+                        if (this.ownerUuid != null) {
+                            ZooAnimalHungerManager.setOwner(off, this.ownerUuid);
+                        }
+                        ZooAnimalHungerManager.setAssignedZookeeper(off, this.getUUID());
+                    }
                 }
             }
         }
@@ -969,9 +1016,9 @@ private static final String[] NAMES = new String[]{
         // ========================================================
         // 2b. PRIORITY 2b: Bathe assigned animal or its offspring if dirty (cleanliness <= 60%) and tools are available
         // ========================================================
-        if (assignedAnimal != null && this.hasBathingTools()) {
-            LivingEntity dirtyTarget = null;
-            int lowestCleanliness = 60;
+        LivingEntity dirtyTarget = null;
+        int lowestCleanliness = 60;
+        if (assignedAnimal != null) {
             for (LivingEntity member : getAssignedFamily(sLevel)) {
                 int c = ZooAnimalHungerManager.getCleanliness(member);
                 if (c <= 60 && c <= lowestCleanliness) {
@@ -979,11 +1026,16 @@ private static final String[] NAMES = new String[]{
                     dirtyTarget = member;
                 }
             }
+        }
 
-            if (dirtyTarget != null) {
+        if (dirtyTarget != null) {
+            if (this.hasBathingTools()) {
                 currentDutyState = "BATHING";
+                this.currentBathingTargetUuid = dirtyTarget.getUUID();
                 tickBathingDuty(sLevel, dirtyTarget);
                 return;
+            } else {
+                currentDutyState = "NEED_BATHING_TOOLS";
             }
         }
 
@@ -1341,14 +1393,39 @@ private static final String[] NAMES = new String[]{
     }
 
     private void tickBathingDuty(ServerLevel sLevel) {
-        LivingEntity assignedAnimal = null;
-        if (this.assignedAnimalUuid != null) {
-            Entity ent = sLevel.getEntity(this.assignedAnimalUuid);
+        LivingEntity target = null;
+        if (this.currentBathingTargetUuid != null) {
+            Entity ent = sLevel.getEntity(this.currentBathingTargetUuid);
+            if (ent == null && sLevel.getServer() != null) {
+                for (ServerLevel sl : sLevel.getServer().getAllLevels()) {
+                    ent = sl.getEntity(this.currentBathingTargetUuid);
+                    if (ent != null) break;
+                }
+            }
             if (ent instanceof LivingEntity l && l.isAlive()) {
-                assignedAnimal = l;
+                target = l;
             }
         }
-        tickBathingDuty(sLevel, assignedAnimal);
+
+        if (target == null) {
+            int lowestCleanliness = 60;
+            for (LivingEntity member : getAssignedFamily(sLevel)) {
+                int c = ZooAnimalHungerManager.getCleanliness(member);
+                if (c <= 60 && c <= lowestCleanliness) {
+                    lowestCleanliness = c;
+                    target = member;
+                }
+            }
+            if (target != null) {
+                this.currentBathingTargetUuid = target.getUUID();
+            }
+        }
+
+        if (target == null) {
+            stopBathing();
+            return;
+        }
+        tickBathingDuty(sLevel, target);
     }
 
     private void tickBathingDuty(ServerLevel sLevel, LivingEntity assignedAnimal) {
@@ -1363,7 +1440,7 @@ private static final String[] NAMES = new String[]{
             return;
         }
 
-        double maxBathDist = Math.max(3.2, (assignedAnimal.getBbWidth() * 0.5) + 2.0);
+        double maxBathDist = Math.max(3.8, (assignedAnimal.getBbWidth() * 0.5) + 2.6);
         double distSq = this.distanceToSqr(assignedAnimal);
 
         boolean isWet = net.zootycoon.animal.AnimalBathingManager.isWet(assignedAnimal);
@@ -1376,13 +1453,17 @@ private static final String[] NAMES = new String[]{
         this.getLookControl().setLookAt(assignedAnimal, 30.0F, 30.0F);
 
         if (distSq > maxBathDist * maxBathDist) {
-            this.getNavigation().moveTo(assignedAnimal, 1.25);
+            this.getNavigation().moveTo(assignedAnimal, 1.35);
             this.setBathingAction(0);
             return;
         }
 
         // Close enough: stop moving and perform bathing actions
         this.getNavigation().stop();
+        if (assignedAnimal instanceof Mob animalMob && animalMob.getNavigation().isInProgress()) {
+            animalMob.getNavigation().stop();
+            animalMob.getLookControl().setLookAt(this, 15.0F, 15.0F);
+        }
 
         if (!isWet) {
             // Step 1: Pour water with watering can
@@ -1445,6 +1526,7 @@ private static final String[] NAMES = new String[]{
 
     private void stopBathing() {
         this.currentDutyState = "IDLE";
+        this.currentBathingTargetUuid = null;
         this.setBathingAction(0);
         this.bathingStepTicks = 0;
         this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
@@ -1508,15 +1590,24 @@ private static final String[] NAMES = new String[]{
     }
 
     public void handleBathingToolsTransfer(ServerPlayer player) {
-        LivingEntity animal = null;
-        if (assignedAnimalUuid != null && this.level() instanceof ServerLevel sLevel) {
+        boolean anyDirty = false;
+        if (this.level() instanceof ServerLevel sLevel) {
+            for (LivingEntity m : getAssignedFamily(sLevel)) {
+                if (ZooAnimalHungerManager.getCleanliness(m) <= 60) {
+                    anyDirty = true;
+                    break;
+                }
+            }
+        }
+        if (!anyDirty && assignedAnimalUuid != null && this.level() instanceof ServerLevel sLevel) {
             Entity ent = sLevel.getEntity(assignedAnimalUuid);
-            if (ent instanceof LivingEntity l && l.isAlive()) animal = l;
+            if (ent instanceof LivingEntity l && l.isAlive() && ZooAnimalHungerManager.getCleanliness(l) <= 60) {
+                anyDirty = true;
+            }
         }
 
-        int cleanlinessVal = (animal != null) ? ZooAnimalHungerManager.getCleanliness(animal) : 100;
-        if (cleanlinessVal > 60) {
-            // Animal is clean! Zookeeper does not need tools
+        if (!anyDirty) {
+            // Animal and all offspring are clean! Zookeeper does not need tools
             return;
         }
 

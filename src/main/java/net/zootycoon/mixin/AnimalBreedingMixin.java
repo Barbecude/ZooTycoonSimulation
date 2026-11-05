@@ -44,6 +44,9 @@ public abstract class AnimalBreedingMixin {
                 ZooAnimalHungerManager.setOwner(baby, ownerUuid);
                 baby.addTag("zoo_offspring");
                 baby.addTag("zoo_parent_" + parentA.getStringUUID());
+                ZooAnimalHungerManager.setHunger(baby, ZooAnimalHungerManager.MAX_HUNGER);
+                ZooAnimalHungerManager.setThirst(baby, ZooAnimalHungerManager.MAX_THIRST);
+                ZooAnimalHungerManager.setCleanliness(baby, ZooAnimalHungerManager.MAX_CLEANLINESS);
 
                 // Auto-assign zookeeper from parent to baby
                 UUID parentZkUuid = ZooAnimalHungerManager.getAssignedZookeeper(parentA);
