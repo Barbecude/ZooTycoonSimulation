@@ -38,6 +38,8 @@ public class ZooSecurityEntity extends PathfinderMob {
     };
 
     private UUID ownerUuid = null;
+    private UUID callTargetUuid = null;
+    private int callTicks = 0;
 
     public ZooSecurityEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
@@ -162,6 +164,10 @@ public class ZooSecurityEntity extends PathfinderMob {
     @Override
     public void tick() {
         super.tick();
+        if (callTicks > 0) {
+            callTicks--;
+            if (callTicks <= 0) callTargetUuid = null;
+        }
         if (!level().isClientSide() && level() instanceof net.minecraft.server.level.ServerLevel sLevel) {
             net.zootycoon.claim.ZooClaimManager claimManager = net.zootycoon.claim.ZooClaimManager.get(sLevel);
             if (ownerUuid == null && tickCount % 20 == 0) {
@@ -249,6 +255,20 @@ public class ZooSecurityEntity extends PathfinderMob {
 
     public UUID getOwnerUuid() {
         return ownerUuid;
+    }
+
+    public boolean isBeingCalled() {
+        return callTargetUuid != null && callTicks > 0;
+    }
+
+    public void callToPlayer(ServerPlayer player) {
+        this.callTargetUuid = player.getUUID();
+        this.callTicks = 600;
+        if (this.distanceToSqr(player) > 32.0D * 32.0D) {
+            this.teleportTo(player.getX() + 1.0, player.getY(), player.getZ() + 1.0);
+        } else {
+            this.getNavigation().moveTo(player, 1.25D);
+        }
     }
 
     @Override

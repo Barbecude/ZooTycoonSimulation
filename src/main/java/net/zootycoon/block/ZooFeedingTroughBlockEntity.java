@@ -198,6 +198,20 @@ public class ZooFeedingTroughBlockEntity extends BlockEntity implements Containe
     }
 
     @Override
+    public void setLevel(net.minecraft.world.level.Level level) {
+        super.setLevel(level);
+        if (level != null && !level.isClientSide()) {
+            ZooFeedingTroughBlock.KNOWN_TROUGHS.add(this.worldPosition.immutable());
+        }
+    }
+
+    @Override
+    public void setRemoved() {
+        super.setRemoved();
+        ZooFeedingTroughBlock.KNOWN_TROUGHS.remove(this.worldPosition);
+    }
+
+    @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         this.items.set(0, ItemStack.EMPTY);

@@ -79,19 +79,40 @@ public class WarehouseRecipeResolver {
     }
 
     public static List<ItemStack> pickRandomMenus(ServerLevel level, String role, Random random) {
+        return pickRandomMenus(level, role, random, 0);
+    }
+
+    public static List<ItemStack> pickRandomMenus(ServerLevel level, String role, Random random, int salesVolume) {
         List<Item> pool = new ArrayList<>(getAvailableMenuItems(level, role));
         if (pool.isEmpty()) {
             return List.of();
         }
-        // Maximum 2 menu variants per restock request
-        int variantCount = (pool.size() >= 2 && random.nextBoolean()) ? 2 : 1;
-        List<ItemStack> chosen = new ArrayList<>(variantCount);
 
+        // Dynamic variant count: scales up to 5 variants based on sales volume
+        int maxVariants = Math.min(pool.size(), 5);
+        int variantCount;
+        int minPortions;
+        int maxPortions;
+
+        if (salesVolume < 5) {
+            variantCount = Math.min(maxVariants, (pool.size() >= 2 && random.nextBoolean()) ? 2 : 1);
+            minPortions = 16;
+            maxPortions = 32;
+        } else if (salesVolume < 15) {
+            variantCount = Math.min(maxVariants, 2 + random.nextInt(2)); // 2 to 3 variants
+            minPortions = 32;
+            maxPortions = 48;
+        } else {
+            variantCount = Math.min(maxVariants, 3 + random.nextInt(3)); // 3 to 5 variants
+            minPortions = 48;
+            maxPortions = 64;
+        }
+
+        List<ItemStack> chosen = new ArrayList<>(variantCount);
         for (int i = 0; i < variantCount && !pool.isEmpty(); i++) {
             int idx = random.nextInt(pool.size());
             Item item = pool.remove(idx);
-            // Total portions across the request is 8 to 16
-            int portions = (variantCount == 1) ? (8 + random.nextInt(5)) : (5 + random.nextInt(4));
+            int portions = minPortions + random.nextInt(Math.max(1, maxPortions - minPortions + 1));
             chosen.add(new ItemStack(item, portions));
         }
         return chosen;

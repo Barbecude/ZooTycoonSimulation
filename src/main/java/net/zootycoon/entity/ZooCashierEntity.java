@@ -69,6 +69,10 @@ public class ZooCashierEntity extends PathfinderMob {
     private int fomoCooldown = 0;
     private UUID servingCustomerUuid = null;
     private int serviceTicks = 0;
+    private int totalSalesCount = 0;
+    private UUID ownerUuid = null;
+    private UUID callTargetUuid = null;
+    private int callTicks = 0;
     private long lastVisitorSpawnTick = -1L;
     private static long lastTicketToastTick = 0L;
 
@@ -254,6 +258,29 @@ public class ZooCashierEntity extends PathfinderMob {
 
     public SimpleContainer getStockInventory() {
         return this.stockInventory;
+    }
+
+    public int getTotalSalesCount() {
+        return this.totalSalesCount;
+    }
+
+    public UUID getOwnerUuid() {
+        return ownerUuid;
+    }
+
+    public void setOwnerUuid(UUID ownerUuid) {
+        this.ownerUuid = ownerUuid;
+    }
+
+    public boolean isBeingCalled() {
+        return callTargetUuid != null && callTicks > 0;
+    }
+
+    public void callToPlayer(ServerPlayer player) {
+        this.callTargetUuid = player.getUUID();
+        this.callTicks = 600;
+        this.teleportTo(player.getX() + 0.5D, player.getY(), player.getZ() + 0.5D);
+        this.setFacingDirection(player.getDirection().getOpposite());
     }
 
     public List<ItemStack> getStockItemsList() {
@@ -533,6 +560,10 @@ public class ZooCashierEntity extends PathfinderMob {
     public void tick() {
         super.tick();
         if (this.level().isClientSide()) return;
+        if (callTicks > 0) {
+            callTicks--;
+            if (callTicks <= 0) callTargetUuid = null;
+        }
         if (serveCooldown > 0) serveCooldown--;
         if (fomoCooldown > 0) fomoCooldown--;
 
@@ -599,6 +630,7 @@ public class ZooCashierEntity extends PathfinderMob {
                                 removeFromQueue(customer.getUUID());
                                 int price = getItemPrice(role, soldBurger);
                                 creditOwner(sLevel, price);
+                                this.totalSalesCount++;
                                 sLevel.playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.7F, 1.2F);
                                 sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.7F, 1.1F);
                                 sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 5, 0.25, 0.25, 0.25, 0.02);
@@ -624,6 +656,7 @@ public class ZooCashierEntity extends PathfinderMob {
                                 removeFromQueue(customer.getUUID());
                                 int price = getItemPrice(role, soldDrink);
                                 creditOwner(sLevel, price);
+                                this.totalSalesCount++;
                                 sLevel.playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.7F, 1.2F);
                                 sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.7F, 1.1F);
                                 sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 5, 0.25, 0.25, 0.25, 0.02);
@@ -764,8 +797,12 @@ public class ZooCashierEntity extends PathfinderMob {
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
+        if (ownerUuid != null) {
+            tag.putString("OwnerUuid", ownerUuid.toString());
+        }
         tag.putString("CashierRole", getCashierRole());
         tag.putInt("FacingDir", this.entityData.get(FACING_DIR));
+        tag.putInt("TotalSalesCount", totalSalesCount);
         tag.putLong("LastVisitorSpawnTick", lastVisitorSpawnTick);
         ListTag itemsTag = new ListTag();
         for (int i = 0; i < STOCK_SLOTS; i++) {
@@ -782,6 +819,11 @@ public class ZooCashierEntity extends PathfinderMob {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
+        if (tag.contains("OwnerUuid")) {
+            try {
+                this.ownerUuid = UUID.fromString(tag.getString("OwnerUuid"));
+            } catch (Exception ignored) {}
+        }
         if (tag.contains("LastVisitorSpawnTick")) {
             lastVisitorSpawnTick = tag.getLong("LastVisitorSpawnTick");
         }
@@ -795,6 +837,9 @@ public class ZooCashierEntity extends PathfinderMob {
                     this.stockInventory.setItem(slot, ItemStack.parseOptional(this.registryAccess(), slotTag));
                 }
             }
+        }
+        if (tag.contains("TotalSalesCount")) {
+            totalSalesCount = tag.getInt("TotalSalesCount");
         }
         if (tag.contains("FacingDir")) {
             setFacingDirection(Direction.from2DDataValue(tag.getInt("FacingDir")));

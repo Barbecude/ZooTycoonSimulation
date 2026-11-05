@@ -278,7 +278,21 @@ public class ZooStaffManager {
 
         ServerLevel sLevel = (ServerLevel) player.level();
         switch (type.toLowerCase()) {
-            case "builder", "kuli" -> rec.builders++;
+            case "builder", "kuli" -> {
+                rec.builders++;
+                var b = ZooEntities.BUILDER.create(sLevel);
+                if (b != null) {
+                    b.setPos(player.getX() + 0.5, player.getY(), player.getZ() + 0.5);
+                    b.setPayerUuid(player.getUUID());
+                    b.setPersistenceRequired();
+                    sLevel.addFreshEntity(b);
+                    sLevel.sendParticles(
+                            ParticleTypes.HAPPY_VILLAGER,
+                            b.getX(), b.getY() + 1.0, b.getZ(), 15, 0.4, 0.5, 0.4, 0.02
+                    );
+                    sLevel.playSound(null, b.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0f, 1.0f);
+                }
+            }
             case "zookeeper" -> {
                 rec.zookeepers++;
                 var zk = ZooEntities.ZOOKEEPER.create(sLevel);
@@ -313,6 +327,7 @@ public class ZooStaffManager {
                 var cashier = ZooEntities.CASHIER.create(sLevel);
                 if (cashier != null) {
                     cashier.setPos(player.getX() + 0.5, player.getY(), player.getZ() + 0.5);
+                    cashier.setOwnerUuid(player.getUUID());
                     cashier.setFacingDirection(player.getDirection().getOpposite());
                     sLevel.addFreshEntity(cashier);
                     sLevel.sendParticles(
@@ -366,6 +381,68 @@ public class ZooStaffManager {
         saveToFile();
         syncToPlayer(player);
         return 0;
+    }
+
+    public int callStaff(ServerPlayer player, String staffType, UUID staffUuid) {
+        if (staffUuid == null || server == null) return 1;
+        for (ServerLevel lvl : server.getAllLevels()) {
+            net.minecraft.world.entity.Entity ent = lvl.getEntity(staffUuid);
+            if (ent != null && ent.isAlive()) {
+                if ("builder".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooBuilderEntity b) {
+                    if (b.getSiteId() != null || b.isAwaitingPayment()) return 2;
+                    b.callToPlayer(player);
+                    return 0;
+                } else if ("security".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooSecurityEntity sec) {
+                    sec.callToPlayer(player);
+                    return 0;
+                } else if ("cashier".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooCashierEntity c) {
+                    c.callToPlayer(player);
+                    return 0;
+                } else if ("zookeeper".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooZookeeperEntity zk) {
+                    if (zk.hasActiveAssignedAnimal()) return 2;
+                    zk.callToPlayer(player);
+                    return 0;
+                }
+            }
+        }
+        return 1;
+    }
+
+    public int fireStaff(ServerPlayer player, String staffType, UUID staffUuid) {
+        if (staffUuid == null || server == null) return 1;
+        for (ServerLevel lvl : server.getAllLevels()) {
+            net.minecraft.world.entity.Entity ent = lvl.getEntity(staffUuid);
+            if (ent != null && ent.isAlive()) {
+                StaffRecord rec = getRecord(player.getUUID());
+                if ("builder".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooBuilderEntity b) {
+                    if (b.getSiteId() != null) return 2;
+                    b.discard();
+                    rec.builders = Math.max(0, rec.builders - 1);
+                    saveToFile();
+                    syncToPlayer(player);
+                    ZooNetworkPayloads.sendAnimalSync(player);
+                    return 0;
+                } else if ("security".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooSecurityEntity sec) {
+                    sec.discard();
+                    rec.security = Math.max(0, rec.security - 1);
+                    saveToFile();
+                    syncToPlayer(player);
+                    ZooNetworkPayloads.sendAnimalSync(player);
+                    return 0;
+                } else if ("cashier".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooCashierEntity c) {
+                    net.minecraft.world.Containers.dropContents(lvl, c.blockPosition(), c.getStockInventory());
+                    c.discard();
+                    rec.cashiers = Math.max(0, rec.cashiers - 1);
+                    saveToFile();
+                    syncToPlayer(player);
+                    ZooNetworkPayloads.sendAnimalSync(player);
+                    return 0;
+                } else if ("zookeeper".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooZookeeperEntity zk) {
+                    return fireZookeeper(player, staffUuid);
+                }
+            }
+        }
+        return 1;
     }
 
     public void syncToPlayer(ServerPlayer player) {

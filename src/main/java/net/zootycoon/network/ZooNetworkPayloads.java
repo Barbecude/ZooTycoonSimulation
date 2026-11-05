@@ -370,6 +370,124 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    public record BuilderSyncData(UUID uuid, String name, int entityId, boolean isWorking, String projectName, boolean isAwaitingPayment, boolean isCalling) {
+        public static void encode(FriendlyByteBuf buf, BuilderSyncData data) {
+            buf.writeUUID(data.uuid);
+            buf.writeUtf(data.name != null ? data.name : "");
+            buf.writeInt(data.entityId);
+            buf.writeBoolean(data.isWorking);
+            buf.writeUtf(data.projectName != null ? data.projectName : "");
+            buf.writeBoolean(data.isAwaitingPayment);
+            buf.writeBoolean(data.isCalling);
+        }
+        public static BuilderSyncData decode(FriendlyByteBuf buf) {
+            return new BuilderSyncData(buf.readUUID(), buf.readUtf(), buf.readInt(), buf.readBoolean(), buf.readUtf(), buf.readBoolean(), buf.readBoolean());
+        }
+    }
+
+    public record SyncBuildersPayload(List<BuilderSyncData> builders) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<SyncBuildersPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("sync_builders"));
+        public static final StreamCodec<FriendlyByteBuf, SyncBuildersPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeInt(payload.builders.size());
+                    for (var b : payload.builders) {
+                        BuilderSyncData.encode(buf, b);
+                    }
+                },
+                buf -> {
+                    int count = buf.readInt();
+                    List<BuilderSyncData> list = new ArrayList<>(count);
+                    for (int i = 0; i < count; i++) {
+                        list.add(BuilderSyncData.decode(buf));
+                    }
+                    return new SyncBuildersPayload(list);
+                }
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    public record SecuritySyncData(UUID uuid, String name, int entityId, boolean isAggro, boolean isCalling) {
+        public static void encode(FriendlyByteBuf buf, SecuritySyncData data) {
+            buf.writeUUID(data.uuid);
+            buf.writeUtf(data.name != null ? data.name : "");
+            buf.writeInt(data.entityId);
+            buf.writeBoolean(data.isAggro);
+            buf.writeBoolean(data.isCalling);
+        }
+        public static SecuritySyncData decode(FriendlyByteBuf buf) {
+            return new SecuritySyncData(buf.readUUID(), buf.readUtf(), buf.readInt(), buf.readBoolean(), buf.readBoolean());
+        }
+    }
+
+    public record SyncSecurityPayload(List<SecuritySyncData> security) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<SyncSecurityPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("sync_security"));
+        public static final StreamCodec<FriendlyByteBuf, SyncSecurityPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeInt(payload.security.size());
+                    for (var s : payload.security) {
+                        SecuritySyncData.encode(buf, s);
+                    }
+                },
+                buf -> {
+                    int count = buf.readInt();
+                    List<SecuritySyncData> list = new ArrayList<>(count);
+                    for (int i = 0; i < count; i++) {
+                        list.add(SecuritySyncData.decode(buf));
+                    }
+                    return new SyncSecurityPayload(list);
+                }
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    public record CashierSyncData(UUID uuid, String name, int entityId, String role, int totalStock, boolean isCalling) {
+        public static void encode(FriendlyByteBuf buf, CashierSyncData data) {
+            buf.writeUUID(data.uuid);
+            buf.writeUtf(data.name != null ? data.name : "");
+            buf.writeInt(data.entityId);
+            buf.writeUtf(data.role != null ? data.role : "");
+            buf.writeInt(data.totalStock);
+            buf.writeBoolean(data.isCalling);
+        }
+        public static CashierSyncData decode(FriendlyByteBuf buf) {
+            return new CashierSyncData(buf.readUUID(), buf.readUtf(), buf.readInt(), buf.readUtf(), buf.readInt(), buf.readBoolean());
+        }
+    }
+
+    public record SyncCashiersPayload(List<CashierSyncData> cashiers) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<SyncCashiersPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("sync_cashiers"));
+        public static final StreamCodec<FriendlyByteBuf, SyncCashiersPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeInt(payload.cashiers.size());
+                    for (var c : payload.cashiers) {
+                        CashierSyncData.encode(buf, c);
+                    }
+                },
+                buf -> {
+                    int count = buf.readInt();
+                    List<CashierSyncData> list = new ArrayList<>(count);
+                    for (int i = 0; i < count; i++) {
+                        list.add(CashierSyncData.decode(buf));
+                    }
+                    return new SyncCashiersPayload(list);
+                }
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    public record ManageStaffGenericPayload(String staffType, UUID staffUuid, int action) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<ManageStaffGenericPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("manage_staff_generic"));
+        public static final StreamCodec<FriendlyByteBuf, ManageStaffGenericPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeUtf(payload.staffType);
+                    buf.writeUUID(payload.staffUuid);
+                    buf.writeInt(payload.action);
+                },
+                buf -> new ManageStaffGenericPayload(buf.readUtf(), buf.readUUID(), buf.readInt())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     // 11. Open Builder Screen Payload (S2C)
     public record OpenBuilderScreenPayload(
             UUID siteId, String schematicName, float progress,
@@ -1194,10 +1312,14 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playC2S().register(CompletePlayerBathingPayload.TYPE, CompletePlayerBathingPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ResolveVisitorComplaintPayload.TYPE, ResolveVisitorComplaintPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SupplyZookeeperFuelPayload.TYPE, SupplyZookeeperFuelPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(ManageStaffGenericPayload.TYPE, ManageStaffGenericPayload.CODEC);
 
         PayloadTypeRegistry.playS2C().register(SyncClaimsPayload.TYPE, SyncClaimsPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncStudioStatePayload.TYPE, SyncStudioStatePayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncStaffPayload.TYPE, SyncStaffPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(SyncBuildersPayload.TYPE, SyncBuildersPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(SyncSecurityPayload.TYPE, SyncSecurityPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(SyncCashiersPayload.TYPE, SyncCashiersPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenBuilderScreenPayload.TYPE, OpenBuilderScreenPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenZookeeperScreenPayload.TYPE, OpenZookeeperScreenPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenSecurityScreenPayload.TYPE, OpenSecurityScreenPayload.CODEC);
@@ -1473,6 +1595,27 @@ public class ZooNetworkPayloads {
                 int result = fire
                         ? staffManager.fireZookeeper(player, payload.zookeeperUuid())
                         : staffManager.callZookeeper(player, payload.zookeeperUuid());
+                if (result == 0) {
+                    sendToast(player, "zootycoon.toast.title.success",
+                            fire ? "zootycoon.staff.manage.fired" : "zootycoon.staff.manage.called", 1);
+                } else if (result == 2) {
+                    sendToast(player, "zootycoon.toast.title.warning", "zootycoon.staff.manage.busy", 2);
+                } else {
+                    sendToast(player, "zootycoon.toast.title.error", "zootycoon.staff.manage.not_found", 3);
+                }
+                sendAnimalSync(player);
+            });
+        });
+
+        // Handler: Manage Staff Generic (builder, security, cashier)
+        ServerPlayNetworking.registerGlobalReceiver(ManageStaffGenericPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                var staffManager = net.zootycoon.economy.ZooStaffManager.get(context.server());
+                boolean fire = payload.action() == 1;
+                int result = fire
+                        ? staffManager.fireStaff(player, payload.staffType(), payload.staffUuid())
+                        : staffManager.callStaff(player, payload.staffType(), payload.staffUuid());
                 if (result == 0) {
                     sendToast(player, "zootycoon.toast.title.success",
                             fire ? "zootycoon.staff.manage.fired" : "zootycoon.staff.manage.called", 1);
@@ -2237,6 +2380,9 @@ public class ZooNetworkPayloads {
         if (player == null || player.level().getServer() == null) return;
         List<AnimalSyncData> list = new ArrayList<>();
         List<ZookeeperSyncData> keepers = new ArrayList<>();
+        List<BuilderSyncData> builders = new ArrayList<>();
+        List<SecuritySyncData> securityList = new ArrayList<>();
+        List<CashierSyncData> cashiers = new ArrayList<>();
 
         for (ServerLevel sLevel : player.level().getServer().getAllLevels()) {
             for (net.minecraft.world.entity.Entity entity : sLevel.getAllEntities()) {
@@ -2289,6 +2435,87 @@ public class ZooNetworkPayloads {
                     keepers.add(new ZookeeperSyncData(zk.getUUID(), zk.getName().getString(), zk.getId(), isAssigned, assignedAnimalId, isCalling));
                 }
 
+                if (entity instanceof net.zootycoon.entity.ZooBuilderEntity b) {
+                    boolean isOwner = player.getUUID().equals(b.getOwnerUuid());
+                    if (!isOwner && b.getOwnerUuid() == null) {
+                        boolean inClaim = net.zootycoon.claim.ZooClaimManager.get(sLevel).isClaimedBy(b.blockPosition(), player.getUUID());
+                        boolean nearPlayer = b.distanceToSqr(player) <= 128.0D * 128.0D;
+                        if (inClaim || nearPlayer) {
+                            b.setOwnerUuid(player.getUUID());
+                            isOwner = true;
+                        }
+                    }
+                    if (isOwner) {
+                        boolean isWorking = b.getSiteId() != null;
+                        boolean isAwaitingPayment = b.isAwaitingPayment();
+                        String projectName = "";
+                        if (isAwaitingPayment) {
+                            projectName = b.getFinishedProjectName();
+                        } else if (isWorking) {
+                            var site = net.zootycoon.construction.ConstructionManager.getSite(b.getSiteId()).orElse(null);
+                            projectName = (site != null && site.getSchematic() != null) ? site.getSchematic().getName() : "";
+                        }
+                        builders.add(new BuilderSyncData(
+                                b.getUUID(),
+                                b.getName().getString(),
+                                b.getId(),
+                                isWorking,
+                                projectName,
+                                isAwaitingPayment,
+                                b.isBeingCalled()
+                        ));
+                    }
+                }
+
+                if (entity instanceof net.zootycoon.entity.ZooSecurityEntity sec) {
+                    boolean isOwner = player.getUUID().equals(sec.getOwnerUuid());
+                    if (!isOwner && sec.getOwnerUuid() == null) {
+                        boolean inClaim = net.zootycoon.claim.ZooClaimManager.get(sLevel).isClaimedBy(sec.blockPosition(), player.getUUID());
+                        boolean nearPlayer = sec.distanceToSqr(player) <= 128.0D * 128.0D;
+                        if (inClaim || nearPlayer) {
+                            sec.setOwnerUuid(player.getUUID());
+                            isOwner = true;
+                        }
+                    }
+                    if (isOwner) {
+                        boolean isAggro = sec.getTarget() != null && sec.getTarget().isAlive();
+                        securityList.add(new SecuritySyncData(
+                                sec.getUUID(),
+                                sec.getName().getString(),
+                                sec.getId(),
+                                isAggro,
+                                sec.isBeingCalled()
+                        ));
+                    }
+                }
+
+                if (entity instanceof net.zootycoon.entity.ZooCashierEntity c) {
+                    boolean isOwner = player.getUUID().equals(c.getOwnerUuid());
+                    if (!isOwner && c.getOwnerUuid() == null) {
+                        boolean inClaim = net.zootycoon.claim.ZooClaimManager.get(sLevel).isClaimedBy(c.blockPosition(), player.getUUID());
+                        boolean nearPlayer = c.distanceToSqr(player) <= 128.0D * 128.0D;
+                        if (inClaim || nearPlayer) {
+                            c.setOwnerUuid(player.getUUID());
+                            isOwner = true;
+                        }
+                    }
+                    if (isOwner) {
+                        int stockCount = 0;
+                        for (int i = 0; i < net.zootycoon.entity.ZooCashierEntity.STOCK_SLOTS; i++) {
+                            ItemStack st = c.getStockInventory().getItem(i);
+                            if (!st.isEmpty()) stockCount += st.getCount();
+                        }
+                        cashiers.add(new CashierSyncData(
+                                c.getUUID(),
+                                c.getName().getString(),
+                                c.getId(),
+                                c.getCashierRole(),
+                                stockCount,
+                                c.isBeingCalled()
+                        ));
+                    }
+                }
+
                 if (entity instanceof net.minecraft.world.entity.LivingEntity animal
                         && net.zootycoon.animal.ZooAnimalHungerManager.isTagged(animal)
                         && net.zootycoon.animal.ZooAnimalHungerManager.isZooAnimalCandidate(animal)
@@ -2338,6 +2565,9 @@ public class ZooNetworkPayloads {
 
         ServerPlayNetworking.send(player, new SyncAnimalsPayload(list));
         ServerPlayNetworking.send(player, new SyncZookeepersPayload(keepers));
+        ServerPlayNetworking.send(player, new SyncBuildersPayload(builders));
+        ServerPlayNetworking.send(player, new SyncSecurityPayload(securityList));
+        ServerPlayNetworking.send(player, new SyncCashiersPayload(cashiers));
     }
 
     private static boolean canMergeStock(ItemStack a, ItemStack b) {

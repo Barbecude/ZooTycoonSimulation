@@ -44,9 +44,9 @@ import java.util.UUID;
 
 public class WarehouseSupplyManager {
 
-    public static final int CASHIER_LOW_STOCK_THRESHOLD = 8;
-    public static final int ZOOKEEPER_LOW_STOCK_THRESHOLD = 16;
-    public static final int ZOOKEEPER_REQUIRED_FOOD = 32;
+    public static final int CASHIER_LOW_STOCK_THRESHOLD = 24;
+    public static final int ZOOKEEPER_LOW_STOCK_THRESHOLD = 32;
+    public static final int ZOOKEEPER_DEFAULT_REQUIRED_FOOD = 64;
     public static final long FULFILLMENT_DELAY_TICKS = 80L; // 4 seconds delay
 
     public static class StaffSupplyRequest {
@@ -58,6 +58,7 @@ public class WarehouseSupplyManager {
         public String subtitle;
         public UUID animalUuid;
         public String animalName;
+        public int requiredFoodCount = ZOOKEEPER_DEFAULT_REQUIRED_FOOD;
 
         // For Cashier: 1 or 2 random finished burger/drink stacks
         // For Zookeeper: accepted food display stacks
@@ -232,7 +233,7 @@ public class WarehouseSupplyManager {
                     currentCount = (hasCan ? 1 : 0) + (hasBrush ? 1 : 0);
                 }
             } else {
-                requiredCount = ZOOKEEPER_REQUIRED_FOOD;
+                requiredCount = req.requiredFoodCount > 0 ? req.requiredFoodCount : ZOOKEEPER_DEFAULT_REQUIRED_FOOD;
                 LivingEntity animal = resolveAnimal(sLevel, req.animalUuid);
                 currentCount = Math.min(requiredCount, countValidAnimalFoodInBarrel(barrel, animal, req.targetItems));
             }
@@ -317,6 +318,7 @@ public class WarehouseSupplyManager {
                         StaffSupplyRequest created = createCashierRequest(sLevel, cashier, role.toUpperCase());
                         if (created != null) {
                             ACTIVE_REQUESTS.put(cashier.getUUID(), created);
+                            notifyNewStaffRequest(sLevel, barrel, created);
                         }
                     }
                 }
@@ -330,8 +332,9 @@ public class WarehouseSupplyManager {
                                 List<ItemStack> expectedFoods = AnimalDietRegistry.getFoodsForAnimal(animal);
                                 StaffSupplyRequest existing = ACTIVE_REQUESTS.get(keeper.getUUID());
                                 if (existing == null || !animalId.equals(existing.animalUuid) || existing.targetItems.size() != expectedFoods.size()) {
-                                    StaffSupplyRequest created = createZookeeperRequest(keeper, animal);
+                                    StaffSupplyRequest created = createZookeeperRequest(sLevel, keeper, animal);
                                     ACTIVE_REQUESTS.put(keeper.getUUID(), created);
+                                    notifyNewStaffRequest(sLevel, barrel, created);
                                 }
                             } else {
                                 StaffSupplyRequest existing = ACTIVE_REQUESTS.get(keeper.getUUID());
@@ -348,7 +351,11 @@ public class WarehouseSupplyManager {
                         if (animal != null) {
                             StaffSupplyRequest careReq = evaluateZookeeperCareRequest(sLevel, keeper, animal);
                             if (careReq != null) {
+                                boolean isNew = !ACTIVE_REQUESTS.containsKey(keeper.getUUID());
                                 ACTIVE_REQUESTS.put(keeper.getUUID(), careReq);
+                                if (isNew) {
+                                    notifyNewStaffRequest(sLevel, barrel, careReq);
+                                }
                             } else {
                                 StaffSupplyRequest existing = ACTIVE_REQUESTS.get(keeper.getUUID());
                                 if (existing != null && EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(existing.category)) {
@@ -395,8 +402,63 @@ public class WarehouseSupplyManager {
         return false;
     }
 
+    private static final Map<UUID, Long> LAST_REQUEST_TOAST_TIME = new HashMap<>();
+
+    private static void notifyNewStaffRequest(ServerLevel sLevel, EmptyBarrelBlockEntity barrel, StaffSupplyRequest req) {
+        if (sLevel == null || req == null) return;
+        long now = sLevel.getGameTime();
+        Long lastTime = LAST_REQUEST_TOAST_TIME.get(req.staffUuid);
+        if (lastTime != null && now - lastTime < 2400L) { // 2 minutes anti-spam
+            return;
+        }
+        LAST_REQUEST_TOAST_TIME.put(req.staffUuid, now);
+
+        String message;
+        if ("CASHIER".equals(req.staffType)) {
+            StringBuilder itemsSummary = new StringBuilder();
+            for (int i = 0; i < req.targetItems.size(); i++) {
+                ItemStack st = req.targetItems.get(i);
+                if (i > 0) itemsSummary.append(", ");
+                itemsSummary.append(st.getCount()).append("x ").append(st.getHoverName().getString());
+            }
+            message = "Cashier meminta " + itemsSummary;
+        } else if (EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(req.category)) {
+            String careItem = isHeatingRequest(req) ? "Pemanas" : (isCoolingRequest(req) ? "Pendingin" : "Alat Mandi");
+            message = "Zookeeper Meminta " + careItem + " untuk " + (req.animalName != null ? req.animalName : "Satwa");
+        } else {
+            StringBuilder foodSummary = new StringBuilder();
+            if (!req.targetItems.isEmpty()) {
+                ItemStack first = req.targetItems.get(0);
+                foodSummary.append(first.getCount()).append("x ").append(first.getHoverName().getString());
+                if (req.targetItems.size() > 1) {
+                    foodSummary.append(" (+").append(req.targetItems.size() - 1).append(" opsi)");
+                }
+            } else {
+                foodSummary.append(req.requiredFoodCount).append("x Pakan");
+            }
+            message = "Zookeeper Meminta " + foodSummary + " untuk " + (req.animalName != null ? req.animalName : "Satwa");
+        }
+
+        BlockPos refPos = barrel != null ? barrel.getBlockPos() : null;
+        for (ServerPlayer player : sLevel.players()) {
+            boolean inSameArea = false;
+            if (refPos != null && player.blockPosition().distSqr(refPos) <= 64.0D * 64.0D) {
+                inSameArea = true;
+            } else {
+                var claimManager = ZooClaimManager.get(sLevel);
+                if (claimManager.isClaimedBy(player.blockPosition(), player.getUUID())) {
+                    inSameArea = true;
+                }
+            }
+            if (inSameArea) {
+                ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.info", message, 0);
+            }
+        }
+    }
+
     private static StaffSupplyRequest createCashierRequest(ServerLevel sLevel, ZooCashierEntity cashier, String role) {
-        List<ItemStack> menus = WarehouseRecipeResolver.pickRandomMenus(sLevel, role, RANDOM);
+        int salesVolume = cashier.getTotalSalesCount();
+        List<ItemStack> menus = WarehouseRecipeResolver.pickRandomMenus(sLevel, role, RANDOM, salesVolume);
         if (menus.isEmpty()) return null;
 
         Map<Item, Integer> rawMap = WarehouseRecipeResolver.resolveRawIngredientsForMenus(sLevel, role, menus);
@@ -417,7 +479,7 @@ public class WarehouseSupplyManager {
         return req;
     }
 
-    private static StaffSupplyRequest createZookeeperRequest(ZooZookeeperEntity keeper, LivingEntity animal) {
+    private static StaffSupplyRequest createZookeeperRequest(ServerLevel sLevel, ZooZookeeperEntity keeper, LivingEntity animal) {
         String keeperName = keeper.getName().getString();
         String animalName = animal.hasCustomName()
                 ? animal.getCustomName().getString()
@@ -434,16 +496,24 @@ public class WarehouseSupplyManager {
         req.animalUuid = animal.getUUID();
         req.animalName = animalName;
 
+        List<LivingEntity> family = keeper.getAssignedFamily(sLevel);
+        int familySize = Math.max(1, family.size());
+        int foodPerVariant = Math.min(64, 32 + familySize * 16);
+        int totalFoodNeeded = Math.min(256, Math.max(64, familySize * 64));
+        req.requiredFoodCount = totalFoodNeeded;
+
         List<ItemStack> allFoods = AnimalDietRegistry.getFoodsForAnimal(animal);
         if (allFoods != null && !allFoods.isEmpty()) {
+            int addedVariants = 0;
             for (ItemStack foodSt : allFoods) {
-                if (foodSt != null && !foodSt.isEmpty()) {
-                    req.targetItems.add(new ItemStack(foodSt.getItem(), ZOOKEEPER_REQUIRED_FOOD));
+                if (foodSt != null && !foodSt.isEmpty() && addedVariants < 5) {
+                    req.targetItems.add(new ItemStack(foodSt.getItem(), foodPerVariant));
+                    addedVariants++;
                 }
             }
         }
         if (req.targetItems.isEmpty()) {
-            req.targetItems.add(new ItemStack(Items.WHEAT, ZOOKEEPER_REQUIRED_FOOD));
+            req.targetItems.add(new ItemStack(Items.WHEAT, foodPerVariant));
         }
         return req;
     }
@@ -601,7 +671,8 @@ public class WarehouseSupplyManager {
         } else {
             LivingEntity animal = resolveAnimal(sLevel, req.animalUuid);
             int have = countValidAnimalFoodInBarrel(barrel, animal, req.targetItems);
-            return have >= ZOOKEEPER_REQUIRED_FOOD;
+            int needed = req.requiredFoodCount > 0 ? req.requiredFoodCount : ZOOKEEPER_DEFAULT_REQUIRED_FOOD;
+            return have >= needed;
         }
     }
 
@@ -755,7 +826,8 @@ public class WarehouseSupplyManager {
             LivingEntity animal = resolveAnimal(sLevel, req.animalUuid);
             if (!canBarrelFulfill(sLevel, barrel, req)) return false;
 
-            int remainingToTake = ZOOKEEPER_REQUIRED_FOOD;
+            int needed = req.requiredFoodCount > 0 ? req.requiredFoodCount : ZOOKEEPER_DEFAULT_REQUIRED_FOOD;
+            int remainingToTake = needed;
             SimpleContainer keeperInv = keeper.getFoodInventory();
 
             for (int i = 0; i < barrel.getContainerSize() && remainingToTake > 0; i++) {
@@ -1072,7 +1144,8 @@ public class WarehouseSupplyManager {
                 }
             }
         } else {
-            String title = "Pakan " + (req.animalName != null ? req.animalName : "Satwa") + " (Min. 32)";
+            int needed = req.requiredFoodCount > 0 ? req.requiredFoodCount : ZOOKEEPER_DEFAULT_REQUIRED_FOOD;
+            String title = "Pakan " + (req.animalName != null ? req.animalName : "Satwa") + " (Min. " + needed + ")";
             tag.putString("SchematicName", title);
 
             String sectionTitle = "Pakan " + (req.animalName != null ? req.animalName : "Satwa");
@@ -1081,7 +1154,7 @@ public class WarehouseSupplyManager {
                 if (key != null) {
                     CompoundTag itemTag = new CompoundTag();
                     itemTag.putString("id", key.toString());
-                    itemTag.putInt("needed", ZOOKEEPER_REQUIRED_FOOD);
+                    itemTag.putInt("needed", needed);
                     itemTag.putBoolean("checked", false);
                     itemTag.putString("section", sectionTitle);
                     materialsList.add(itemTag);

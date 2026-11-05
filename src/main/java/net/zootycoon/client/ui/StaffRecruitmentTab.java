@@ -68,7 +68,7 @@ public class StaffRecruitmentTab {
         // Card 1: Kelola Kuli Bangunan
         screen.addWidgetPublic(new ZooButton(startX + 12, btnY, cardWidth - 24, btnHeight,
                 ZooTranslations.component("zootycoon.ui.staff.btn_manage_builder"), b -> {
-            ZooHudOverlay.showToast("zootycoon.toast.title.info", "zootycoon.staff.manage.builder_info", ZooHudOverlay.TOAST_INFO);
+            screen.setView(MainManagementScreen.ViewState.BUILDER_MANAGE);
         }).asPrimary());
 
         // Card 2: Kelola Zookeeper
@@ -80,13 +80,13 @@ public class StaffRecruitmentTab {
         // Card 3: Kelola Security
         screen.addWidgetPublic(new ZooButton(startX + (cardWidth + cardGap) * 2 + 12, btnY, cardWidth - 24, btnHeight,
                 ZooTranslations.component("zootycoon.ui.staff.btn_manage_security"), b -> {
-            ZooHudOverlay.showToast("zootycoon.toast.title.info", "zootycoon.staff.manage.security_info", ZooHudOverlay.TOAST_INFO);
+            screen.setView(MainManagementScreen.ViewState.SECURITY_MANAGE);
         }).asPrimary());
 
         // Card 4: Kelola Kasir Zoo
         screen.addWidgetPublic(new ZooButton(startX + (cardWidth + cardGap) * 3 + 12, btnY, cardWidth - 24, btnHeight,
                 ZooTranslations.component("zootycoon.ui.staff.btn_manage_cashier"), b -> {
-            ZooHudOverlay.showToast("zootycoon.toast.title.info", "zootycoon.staff.manage.cashier_info", ZooHudOverlay.TOAST_INFO);
+            screen.setView(MainManagementScreen.ViewState.CASHIER_MANAGE);
         }).asPrimary());
     }
 

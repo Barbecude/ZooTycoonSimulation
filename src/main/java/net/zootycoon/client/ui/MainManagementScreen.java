@@ -21,6 +21,9 @@ public class MainManagementScreen extends Screen {
         ENCLOSURES_CATALOG,
         STAFF_RECRUITMENT,
         ZOOKEEPER_MANAGE,
+        BUILDER_MANAGE,
+        SECURITY_MANAGE,
+        CASHIER_MANAGE,
         ANIMAL_MANAGEMENT
     }
 
@@ -28,6 +31,9 @@ public class MainManagementScreen extends Screen {
     private final SchematicCatalogTab enclosuresTab;
     private final StaffRecruitmentTab staffTab;
     private final ZookeeperManageTab zookeeperManageTab;
+    private final BuilderManageTab builderManageTab;
+    private final SecurityManageTab securityManageTab;
+    private final CashierManageTab cashierManageTab;
     private final AnimalManagementTab animalTab;
 
     public MainManagementScreen() {
@@ -35,6 +41,9 @@ public class MainManagementScreen extends Screen {
         this.enclosuresTab = new SchematicCatalogTab(this, "enclosures");
         this.staffTab = new StaffRecruitmentTab(this);
         this.zookeeperManageTab = new ZookeeperManageTab(this);
+        this.builderManageTab = new BuilderManageTab(this);
+        this.securityManageTab = new SecurityManageTab(this);
+        this.cashierManageTab = new CashierManageTab(this);
         this.animalTab = new AnimalManagementTab(this);
     }
 
@@ -132,13 +141,20 @@ public class MainManagementScreen extends Screen {
             ).withIcon(ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/animals.png"), 32, 32, 32, 32));
         } else {
             addRenderableWidget(new ZooButton(20, 14, 86, 22, ZooTranslations.component("zootycoon.ui.btn.back"), b -> {
-                setView(currentView == ViewState.ZOOKEEPER_MANAGE ? ViewState.STAFF_RECRUITMENT : ViewState.ROOT_GRID);
+                boolean isStaffSub = currentView == ViewState.ZOOKEEPER_MANAGE
+                        || currentView == ViewState.BUILDER_MANAGE
+                        || currentView == ViewState.SECURITY_MANAGE
+                        || currentView == ViewState.CASHIER_MANAGE;
+                setView(isStaffSub ? ViewState.STAFF_RECRUITMENT : ViewState.ROOT_GRID);
             }).setCustomIcon(ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/back.png"), 17, 9, 17, 9).asPrimary());
 
             switch (currentView) {
                 case ENCLOSURES_CATALOG -> enclosuresTab.init(this);
                 case STAFF_RECRUITMENT -> staffTab.init(this);
                 case ZOOKEEPER_MANAGE -> zookeeperManageTab.init(this);
+                case BUILDER_MANAGE -> builderManageTab.init(this);
+                case SECURITY_MANAGE -> securityManageTab.init(this);
+                case CASHIER_MANAGE -> cashierManageTab.init(this);
                 case ANIMAL_MANAGEMENT -> animalTab.init();
                 default -> {}
             }
@@ -164,6 +180,9 @@ public class MainManagementScreen extends Screen {
                 case ENCLOSURES_CATALOG -> "zootycoon.ui.subview.catalog";
                 case STAFF_RECRUITMENT -> "zootycoon.ui.subview.staff";
                 case ZOOKEEPER_MANAGE -> "zootycoon.ui.subview.zookeeper_manage";
+                case BUILDER_MANAGE -> "zootycoon.ui.subview.builder_manage";
+                case SECURITY_MANAGE -> "zootycoon.ui.subview.security_manage";
+                case CASHIER_MANAGE -> "zootycoon.ui.subview.cashier_manage";
                 case ANIMAL_MANAGEMENT -> "zootycoon.ui.subview.animals";
                 default -> "zootycoon.ui.title";
             };
@@ -192,6 +211,9 @@ public class MainManagementScreen extends Screen {
             case ENCLOSURES_CATALOG -> enclosuresTab.render(graphics, mouseX, mouseY, delta);
             case STAFF_RECRUITMENT -> staffTab.render(graphics, mouseX, mouseY, delta);
             case ZOOKEEPER_MANAGE -> zookeeperManageTab.render(graphics, mouseX, mouseY, delta);
+            case BUILDER_MANAGE -> builderManageTab.render(graphics, mouseX, mouseY, delta);
+            case SECURITY_MANAGE -> securityManageTab.render(graphics, mouseX, mouseY, delta);
+            case CASHIER_MANAGE -> cashierManageTab.render(graphics, mouseX, mouseY, delta);
             case ANIMAL_MANAGEMENT -> animalTab.render(graphics, mouseX, mouseY, delta);
             default -> {}
         }
@@ -211,6 +233,15 @@ public class MainManagementScreen extends Screen {
             case ZOOKEEPER_MANAGE -> {
                 if (zookeeperManageTab.mouseClicked(mouseX, mouseY, button)) return true;
             }
+            case BUILDER_MANAGE -> {
+                if (builderManageTab.mouseClicked(mouseX, mouseY, button)) return true;
+            }
+            case SECURITY_MANAGE -> {
+                if (securityManageTab.mouseClicked(mouseX, mouseY, button)) return true;
+            }
+            case CASHIER_MANAGE -> {
+                if (cashierManageTab.mouseClicked(mouseX, mouseY, button)) return true;
+            }
             case ANIMAL_MANAGEMENT -> {
                 if (animalTab.mouseClicked(mouseX, mouseY, button)) return true;
             }
@@ -223,6 +254,15 @@ public class MainManagementScreen extends Screen {
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         if (currentView == ViewState.ZOOKEEPER_MANAGE) {
             if (zookeeperManageTab.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) return true;
+        }
+        if (currentView == ViewState.BUILDER_MANAGE) {
+            if (builderManageTab.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) return true;
+        }
+        if (currentView == ViewState.SECURITY_MANAGE) {
+            if (securityManageTab.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) return true;
+        }
+        if (currentView == ViewState.CASHIER_MANAGE) {
+            if (cashierManageTab.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) return true;
         }
         if (currentView == ViewState.ANIMAL_MANAGEMENT) {
             if (animalTab.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) return true;

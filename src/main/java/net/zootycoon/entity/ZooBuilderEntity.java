@@ -54,6 +54,8 @@ public class ZooBuilderEntity extends PathfinderMob {
     };
 
     private UUID siteId = null;
+    private UUID callTargetUuid = null;
+    private int callTicks = 0;
 
     // Post-construction wage payment state
     private boolean awaitingPayment = false;
@@ -192,9 +194,19 @@ public class ZooBuilderEntity extends PathfinderMob {
             }
         }
 
+        if (callTicks > 0) {
+            callTicks--;
+            if (callTicks <= 0) callTargetUuid = null;
+        }
+
         // ==========================================
         // POST-CONSTRUCTION: AWAITING WAGE PAYMENT
         // Kuli follows player and collects Emeralds!
+        if (callTicks > 0) {
+            callTicks--;
+            if (callTicks <= 0) callTargetUuid = null;
+        }
+
         // ==========================================
         if (this.awaitingPayment) {
             // 1. Follow payer
@@ -295,6 +307,41 @@ public class ZooBuilderEntity extends PathfinderMob {
             this.addTag("zootycoon_builder");
         }
         updateNeedsIndicator();
+    }
+
+    public UUID getPayerUuid() {
+        return payerUuid;
+    }
+
+    public void setPayerUuid(UUID uuid) {
+        this.payerUuid = uuid;
+    }
+
+    public UUID getOwnerUuid() {
+        return payerUuid;
+    }
+
+    public void setOwnerUuid(UUID uuid) {
+        this.payerUuid = uuid;
+    }
+
+    public String getFinishedProjectName() {
+        return finishedProjectName != null ? finishedProjectName : "";
+    }
+
+    public boolean isBeingCalled() {
+        return callTargetUuid != null && callTicks > 0;
+    }
+
+    public void callToPlayer(ServerPlayer player) {
+        if (siteId != null || awaitingPayment) return;
+        this.callTargetUuid = player.getUUID();
+        this.callTicks = 600;
+        if (this.distanceToSqr(player) > 32.0D * 32.0D) {
+            this.teleportTo(player.getX() + 1.0, player.getY(), player.getZ() + 1.0);
+        } else {
+            this.getNavigation().moveTo(player, 1.25D);
+        }
     }
 
     @Override

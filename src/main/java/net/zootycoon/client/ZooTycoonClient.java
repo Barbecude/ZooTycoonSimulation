@@ -66,6 +66,9 @@ public class ZooTycoonClient implements ClientModInitializer {
     }
     public static java.util.List<ZooNetworkPayloads.AnimalSyncData> clientAnimals = new java.util.ArrayList<>();
     public static java.util.List<ZooNetworkPayloads.ZookeeperSyncData> clientZookeeperList = new java.util.ArrayList<>();
+    public static java.util.List<ZooNetworkPayloads.BuilderSyncData> clientBuilderList = new java.util.ArrayList<>();
+    public static java.util.List<ZooNetworkPayloads.SecuritySyncData> clientSecurityList = new java.util.ArrayList<>();
+    public static java.util.List<ZooNetworkPayloads.CashierSyncData> clientCashierList = new java.util.ArrayList<>();
     public static final java.util.Map<Integer, ZooNetworkPayloads.AnimalSyncData> clientAnimalMap = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static int clientScopeTicks = 0;
@@ -235,6 +238,24 @@ public class ZooTycoonClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.SyncZookeepersPayload.TYPE, (payload, context) -> {
             context.client().execute(() -> {
                 clientZookeeperList = new java.util.ArrayList<>(payload.zookeepers());
+            });
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.SyncBuildersPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                clientBuilderList = new java.util.ArrayList<>(payload.builders());
+            });
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.SyncSecurityPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                clientSecurityList = new java.util.ArrayList<>(payload.security());
+            });
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.SyncCashiersPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                clientCashierList = new java.util.ArrayList<>(payload.cashiers());
             });
         });
 
@@ -454,6 +475,9 @@ public class ZooTycoonClient implements ClientModInitializer {
             clientAnimals.clear();
             clientAnimalMap.clear();
             clientZookeeperList.clear();
+            clientBuilderList.clear();
+            clientSecurityList.clear();
+            clientCashierList.clear();
             clientEmeraldBalance = 0;
             clientBuilders = 1;
             clientActiveBuilders = 0;
@@ -473,6 +497,9 @@ public class ZooTycoonClient implements ClientModInitializer {
             clientAnimals.clear();
             clientAnimalMap.clear();
             clientZookeeperList.clear();
+            clientBuilderList.clear();
+            clientSecurityList.clear();
+            clientCashierList.clear();
             clientEmeraldBalance = 0;
             net.zootycoon.client.inspect.InspectionTargetTracker.reset();
             net.zootycoon.client.inspect.InspectionClientCache.clear();
