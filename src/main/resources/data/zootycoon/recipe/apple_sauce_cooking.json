@@ -1,0 +1,24 @@
+{
+    "ingredients":  [
+                        {
+                            "item":  "minecraft:apple"
+                        },
+                        {
+                            "item":  "minecraft:apple"
+                        },
+                        {
+                            "item":  "minecraft:sugar"
+                        }
+                    ],
+    "experience":  1,
+    "recipe_book_tab":  "meals",
+    "container":  {
+                      "item":  "minecraft:bowl"
+                  },
+    "type":  "farmersdelight:cooking",
+    "cookingtime":  200,
+    "result":  {
+                   "count":  1,
+                   "id":  "zootycoon:apple_sauce"
+               }
+}

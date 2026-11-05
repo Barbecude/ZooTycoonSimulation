@@ -1,0 +1,13 @@
+{
+    "cookingtime":  200,
+    "experience":  0.35,
+    "ingredient":  {
+                       "item":  "farmersdelight:chicken_cuts"
+                   },
+    "type":  "minecraft:smelting",
+    "category":  "food",
+    "result":  {
+                   "count":  1,
+                   "id":  "zootycoon:chicken_nuggets"
+               }
+}

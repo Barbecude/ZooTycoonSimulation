@@ -1,0 +1,19 @@
+{
+    "ingredients":  [
+                        {
+                            "item":  "minecraft:bread"
+                        },
+                        {
+                            "item":  "zootycoon:cheese"
+                        },
+                        {
+                            "item":  "farmersdelight:tomato"
+                        }
+                    ],
+    "category":  "misc",
+    "result":  {
+                   "count":  1,
+                   "id":  "zootycoon:cheese_wrap"
+               },
+    "type":  "minecraft:crafting_shapeless"
+}

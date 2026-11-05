@@ -1,0 +1,19 @@
+{
+    "ingredients":  [
+                        {
+                            "item":  "minecraft:glass_bottle"
+                        },
+                        {
+                            "item":  "minecraft:sugar"
+                        },
+                        {
+                            "item":  "minecraft:milk_bucket"
+                        }
+                    ],
+    "category":  "misc",
+    "result":  {
+                   "count":  1,
+                   "id":  "zootycoon:creaming_soda"
+               },
+    "type":  "minecraft:crafting_shapeless"
+}

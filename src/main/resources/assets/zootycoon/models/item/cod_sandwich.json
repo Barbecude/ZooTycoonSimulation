@@ -1,0 +1,6 @@
+{
+    "textures":  {
+                     "layer0":  "zootycoon:item/cod_sandwich"
+                 },
+    "parent":  "minecraft:item/generated"
+}

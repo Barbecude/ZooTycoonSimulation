@@ -1,0 +1,19 @@
+{
+    "ingredients":  [
+                        {
+                            "item":  "minecraft:bread"
+                        },
+                        {
+                            "item":  "farmersdelight:cooked_cod_slice"
+                        },
+                        {
+                            "item":  "farmersdelight:cabbage_leaf"
+                        }
+                    ],
+    "category":  "misc",
+    "result":  {
+                   "count":  1,
+                   "id":  "zootycoon:cod_sandwich"
+               },
+    "type":  "minecraft:crafting_shapeless"
+}

@@ -1,0 +1,19 @@
+{
+    "ingredients":  [
+                        {
+                            "item":  "minecraft:bread"
+                        },
+                        {
+                            "item":  "farmersdelight:cooked_salmon_slice"
+                        },
+                        {
+                            "item":  "farmersdelight:cabbage_leaf"
+                        }
+                    ],
+    "category":  "misc",
+    "result":  {
+                   "count":  1,
+                   "id":  "zootycoon:salmon_sandwich"
+               },
+    "type":  "minecraft:crafting_shapeless"
+}

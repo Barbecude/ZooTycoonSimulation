@@ -1,0 +1,19 @@
+{
+    "ingredients":  [
+                        {
+                            "item":  "zootycoon:fries_bowl"
+                        },
+                        {
+                            "item":  "minecraft:carrot"
+                        },
+                        {
+                            "item":  "minecraft:carrot"
+                        }
+                    ],
+    "category":  "misc",
+    "result":  {
+                   "count":  1,
+                   "id":  "zootycoon:carrot_fries"
+               },
+    "type":  "minecraft:crafting_shapeless"
+}

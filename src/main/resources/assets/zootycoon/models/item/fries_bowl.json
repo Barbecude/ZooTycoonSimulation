@@ -1,0 +1,6 @@
+{
+    "textures":  {
+                     "layer0":  "zootycoon:item/fries_bowl"
+                 },
+    "parent":  "minecraft:item/generated"
+}

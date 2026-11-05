@@ -353,7 +353,9 @@ public class ZooCashierEntity extends PathfinderMob {
             if (stack.getItem() instanceof net.minecraft.world.item.BlockItem) {
                 return false;
             }
-            if (path.contains("burger")) {
+            if (path.contains("burger") || path.contains("sandwich") || path.contains("wrap")
+                    || path.contains("fries") || path.contains("nugget") || path.contains("croque")
+                    || path.contains("fried_onions")) {
                 return true;
             }
             return stack.getTags().anyMatch(t -> t.location().getPath().toLowerCase(Locale.ROOT).contains("burger"));
@@ -363,7 +365,7 @@ public class ZooCashierEntity extends PathfinderMob {
             if (stack.getItem() instanceof net.minecraft.world.item.BlockItem) {
                 return false;
             }
-            if (path.contains("oil") || path.contains("sauce") || path.contains("molasses")
+            if (path.contains("oil") || (path.contains("sauce") && !path.contains("apple_sauce")) || path.contains("molasses")
                     || path.contains("vinegar") || path.contains("bucket") || path.contains("dough")
                     || path.contains("potion") || path.contains("ominous") || path.contains("spawn_egg")
                     || path.equals("water_bottle") || path.equals("milk_bottle") || path.contains("bottle_of")
@@ -374,6 +376,9 @@ public class ZooCashierEntity extends PathfinderMob {
                     || path.contains("burger") || path.contains("pie") || path.contains("cake")
                     || path.contains("honey_bottle") || path.contains("honey") || path.contains("saguaro")) {
                 return false;
+            }
+            if (path.contains("ice_cream") || path.contains("apple_sauce")) {
+                return true;
             }
             String[] tokens = path.split("_");
             for (String token : tokens) {

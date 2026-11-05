@@ -1,0 +1,20 @@
+{
+    "key":  {
+                "R":  {
+                          "item":  "minecraft:red_dye"
+                      },
+                "P":  {
+                          "item":  "minecraft:paper"
+                      }
+            },
+    "category":  "misc",
+    "pattern":  [
+                    "PRP",
+                    " P "
+                ],
+    "result":  {
+                   "count":  3,
+                   "id":  "zootycoon:fries_bowl"
+               },
+    "type":  "minecraft:crafting_shaped"
+}

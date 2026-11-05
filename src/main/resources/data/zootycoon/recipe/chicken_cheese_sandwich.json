@@ -1,0 +1,19 @@
+{
+    "ingredients":  [
+                        {
+                            "item":  "minecraft:bread"
+                        },
+                        {
+                            "item":  "farmersdelight:cooked_chicken_cuts"
+                        },
+                        {
+                            "item":  "zootycoon:cheese"
+                        }
+                    ],
+    "category":  "misc",
+    "result":  {
+                   "count":  1,
+                   "id":  "zootycoon:chicken_cheese_sandwich"
+               },
+    "type":  "minecraft:crafting_shapeless"
+}

@@ -1,0 +1,6 @@
+{
+    "textures":  {
+                     "layer0":  "zootycoon:item/iced_tea"
+                 },
+    "parent":  "minecraft:item/generated"
+}

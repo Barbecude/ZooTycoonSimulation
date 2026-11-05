@@ -608,10 +608,12 @@ public final class ZooEconomyEngine {
                         // Tier 2: Burger Standar (40 - 50 Emerald)
                         if (path.contains("hamburger_with_cheese") || path.contains("cheeseburger")) return BURGER_TIER_2_PRICE;
                         if (path.contains("hamburger_with_egg") || path.contains("tofuburger") || path.contains("steak_sandwich")) return 40;
+                        if (path.contains("croque") || path.contains("chicken_cheese_sandwich")
+                                || path.contains("sandwich") || path.contains("wrap")) return 40;
                         if ("croptopia".equals(namespace) && path.contains("hamburger")) return 40;
 
-                        // Tier 1: Simple Burger (30 Emerald)
-                        if (path.contains("simple_hamburger")) return BURGER_TIER_1_PRICE;
+                        // Tier 1: Simple Burger & Fast Food Sides (30 Emerald)
+                        if (path.contains("simple_hamburger") || path.contains("fries") || path.contains("nugget") || path.contains("fried_onions")) return BURGER_TIER_1_PRICE;
                     }
                     FoodProperties food = stack.get(DataComponents.FOOD);
                     if (food != null && food.nutrition() >= 10) return 40;
@@ -630,13 +632,14 @@ public final class ZooEconomyEngine {
                         if (path.contains("beer") || path.contains("wine") || path.contains("mead")) return DRINK_TIER_3_PRICE;
                         if (path.contains("chocolate_milkshake")) return 50;
 
-                        // Tier 2: Teh Herbal Farm and Charm, Seduhan FD & Smoothies (40 Emerald)
+                        // Tier 2: Teh Herbal Farm and Charm, Seduhan FD, Smoothies & Ice Cream (40 Emerald)
                         if ("farm_and_charm".equals(namespace) && path.contains("tea")) return DRINK_TIER_2_PRICE;
                         if ("farmersdelight".equals(namespace) && (path.contains("apple_cider") || path.contains("hot_cocoa"))) return DRINK_TIER_2_PRICE;
-                        if (path.contains("smoothie") || path.contains("milkshake") || path.contains("latte")) return DRINK_TIER_2_PRICE;
+                        if (path.contains("smoothie") || path.contains("milkshake") || path.contains("latte") || path.contains("ice_cream")) return DRINK_TIER_2_PRICE;
 
-                        // Tier 1: Jus Buah Croptopia & Kopi/Teh Dasar (20 Emerald)
-                        if (path.contains("juice") || path.contains("tea") || path.contains("coffee") || path.contains("limeade") || path.contains("lemonade")) {
+                        // Tier 1: Jus Buah Croptopia, Soda, & Kopi/Teh Dasar (20 Emerald)
+                        if (path.contains("juice") || path.contains("tea") || path.contains("coffee") || path.contains("limeade")
+                                || path.contains("lemonade") || path.contains("soda") || path.contains("apple_sauce")) {
                             return DRINK_TIER_1_PRICE;
                         }
                     }

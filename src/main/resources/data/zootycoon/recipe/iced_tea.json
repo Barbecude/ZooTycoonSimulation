@@ -1,0 +1,22 @@
+{
+    "ingredients":  [
+                        {
+                            "item":  "minecraft:glass_bottle"
+                        },
+                        {
+                            "item":  "minecraft:sugar"
+                        },
+                        {
+                            "item":  "zootycoon:green_tea_leaves"
+                        },
+                        {
+                            "item":  "minecraft:snowball"
+                        }
+                    ],
+    "category":  "misc",
+    "result":  {
+                   "count":  1,
+                   "id":  "zootycoon:iced_tea"
+               },
+    "type":  "minecraft:crafting_shapeless"
+}

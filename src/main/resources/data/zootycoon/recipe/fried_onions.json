@@ -1,0 +1,16 @@
+{
+    "ingredients":  [
+                        {
+                            "item":  "zootycoon:fries_bowl"
+                        },
+                        {
+                            "item":  "farmersdelight:onion"
+                        }
+                    ],
+    "category":  "misc",
+    "result":  {
+                   "count":  1,
+                   "id":  "zootycoon:fried_onions"
+               },
+    "type":  "minecraft:crafting_shapeless"
+}

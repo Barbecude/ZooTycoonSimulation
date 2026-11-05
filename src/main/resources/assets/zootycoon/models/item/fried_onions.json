@@ -1,0 +1,6 @@
+{
+    "textures":  {
+                     "layer0":  "zootycoon:item/fried_onions"
+                 },
+    "parent":  "minecraft:item/generated"
+}

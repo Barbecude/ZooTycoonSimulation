@@ -1,0 +1,19 @@
+{
+    "ingredients":  [
+                        {
+                            "item":  "minecraft:bread"
+                        },
+                        {
+                            "item":  "minecraft:cooked_rabbit"
+                        },
+                        {
+                            "item":  "minecraft:carrot"
+                        }
+                    ],
+    "category":  "misc",
+    "result":  {
+                   "count":  1,
+                   "id":  "zootycoon:rabbit_sandwich"
+               },
+    "type":  "minecraft:crafting_shapeless"
+}

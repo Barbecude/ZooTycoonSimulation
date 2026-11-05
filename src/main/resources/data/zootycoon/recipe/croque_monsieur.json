@@ -1,0 +1,19 @@
+{
+    "ingredients":  [
+                        {
+                            "item":  "minecraft:bread"
+                        },
+                        {
+                            "item":  "farmersdelight:cooked_bacon"
+                        },
+                        {
+                            "item":  "zootycoon:cheese"
+                        }
+                    ],
+    "category":  "misc",
+    "result":  {
+                   "count":  1,
+                   "id":  "zootycoon:croque_monsieur"
+               },
+    "type":  "minecraft:crafting_shapeless"
+}

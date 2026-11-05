@@ -1,0 +1,16 @@
+{
+    "ingredients":  [
+                        {
+                            "item":  "zootycoon:fries_bowl"
+                        },
+                        {
+                            "item":  "minecraft:baked_potato"
+                        }
+                    ],
+    "category":  "misc",
+    "result":  {
+                   "count":  1,
+                   "id":  "zootycoon:french_fries"
+               },
+    "type":  "minecraft:crafting_shapeless"
+}

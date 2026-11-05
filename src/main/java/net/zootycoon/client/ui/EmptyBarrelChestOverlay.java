@@ -577,7 +577,7 @@ public class EmptyBarrelChestOverlay {
                 hoveredCheckDto = req;
             }
 
-            boolean isReady = req.allReadyToFulfill();
+            boolean isReady = isCardReadyToFulfill(req);
             int checkBg = isReady ? (checkHovered ? 0xFF1F4E2E : 0xFF163821) : (checkHovered ? 0xFF1A1F29 : 0xFF14171F);
             int checkBorder = isReady ? (checkHovered ? 0xFF58D68D : 0xFF38A169) : (checkHovered ? 0xFF3F4A5C : 0xFF2D3748);
             int checkColor = isReady ? (checkHovered ? 0xFFFFFFFF : 0xFF48BB78) : 0xFF4A5568;
@@ -613,7 +613,7 @@ public class EmptyBarrelChestOverlay {
         // 5. Tooltips
         if (hoveredCheckDto != null) {
             String checkTip;
-            if (hoveredCheckDto.allReadyToFulfill()) {
+            if (isCardReadyToFulfill(hoveredCheckDto)) {
                 if ("CASHIER".equalsIgnoreCase(hoveredCheckDto.staffType())) {
                     boolean allReady = hoveredCheckDto.menuItems().isEmpty()
                             || hoveredCheckDto.menuItems().stream().allMatch(WarehousePayloads.MenuItemRequestDto::isReadyInBarrel);
@@ -776,7 +776,7 @@ public class EmptyBarrelChestOverlay {
 
                 // Square Checklist Delivery Button [✓]
                 if (mouseX >= checkBtnX && mouseX <= checkBtnX + checkBtnSize && mouseY >= btnY && mouseY <= btnY + btnH) {
-                    if (req.allReadyToFulfill()) {
+                    if (isCardReadyToFulfill(req)) {
                         Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
                         BlockPos posToSend = activeBarrelPos != null ? activeBarrelPos : BlockPos.ZERO;
                         ClientPlayNetworking.send(new WarehousePayloads.FulfillStaffRequestPayload(posToSend, req.staffUuid()));
@@ -844,5 +844,14 @@ public class EmptyBarrelChestOverlay {
             dummyStaffCache.put(req.staffUuid(), dummy);
         }
         return dummy;
+    }
+
+    private static boolean isCardReadyToFulfill(WarehousePayloads.StaffRequestDto req) {
+        if (req == null) return false;
+        if (req.allReadyToFulfill()) return true;
+        if ("CASHIER".equalsIgnoreCase(req.staffType())) {
+            return !req.menuItems().isEmpty() && req.menuItems().stream().anyMatch(WarehousePayloads.MenuItemRequestDto::isReadyInBarrel);
+        }
+        return false;
     }
 }

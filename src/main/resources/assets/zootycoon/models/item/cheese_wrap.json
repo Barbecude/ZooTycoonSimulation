@@ -1,0 +1,6 @@
+{
+    "textures":  {
+                     "layer0":  "zootycoon:item/cheese_wrap"
+                 },
+    "parent":  "minecraft:item/generated"
+}

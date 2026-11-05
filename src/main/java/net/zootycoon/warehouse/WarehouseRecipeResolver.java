@@ -234,6 +234,10 @@ public class WarehouseRecipeResolver {
         if (item == Items.BREAD || path.contains("bread") || path.contains("bun") || path.contains("dough") || path.contains("toast")) {
             return Items.WHEAT;
         }
+        // Fries bowl -> paper
+        if (path.contains("fries_bowl")) {
+            return Items.PAPER;
+        }
         // Beef / patty / minced beef -> raw beef
         if (item == Items.COOKED_BEEF || path.contains("beef_patty") || path.contains("minced_beef")
                 || path.contains("cooked_beef") || path.contains("steak")) {

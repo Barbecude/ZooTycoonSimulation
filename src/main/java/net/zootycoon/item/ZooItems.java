@@ -188,6 +188,73 @@ public class ZooItems {
             new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(14).saturationModifier(0.9f).build())
     );
 
+    // Fast Food Delight Additions
+    public static final ResourceKey<Item> FRIES_BOWL_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("fries_bowl"));
+    public static final Item FRIES_BOWL = new Item(new Item.Properties());
+
+    public static final ResourceKey<Item> FRENCH_FRIES_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("french_fries"));
+    public static final Item FRENCH_FRIES = new FastFoodBowlFoodItem(new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(6).saturationModifier(0.6f).build()), () -> FRIES_BOWL);
+
+    public static final ResourceKey<Item> CARROT_FRIES_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("carrot_fries"));
+    public static final Item CARROT_FRIES = new FastFoodBowlFoodItem(new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(6).saturationModifier(0.6f).build()), () -> FRIES_BOWL);
+
+    public static final ResourceKey<Item> FRIED_ONIONS_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("fried_onions"));
+    public static final Item FRIED_ONIONS = new FastFoodBowlFoodItem(new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(6).saturationModifier(0.6f).build()), () -> FRIES_BOWL);
+
+    public static final ResourceKey<Item> CHICKEN_NUGGETS_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("chicken_nuggets"));
+    public static final Item CHICKEN_NUGGETS = new Item(new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(5).saturationModifier(0.6f).build()));
+
+    public static final ResourceKey<Item> CHICKEN_WRAP_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("chicken_wrap"));
+    public static final Item CHICKEN_WRAP = new Item(new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(9).saturationModifier(0.8f).build()));
+
+    public static final ResourceKey<Item> CHEESE_WRAP_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("cheese_wrap"));
+    public static final Item CHEESE_WRAP = new Item(new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(8).saturationModifier(0.7f).build()));
+
+    public static final ResourceKey<Item> COD_SANDWICH_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("cod_sandwich"));
+    public static final Item COD_SANDWICH = new Item(new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(8).saturationModifier(0.7f).build()));
+
+    public static final ResourceKey<Item> SALMON_SANDWICH_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("salmon_sandwich"));
+    public static final Item SALMON_SANDWICH = new Item(new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(9).saturationModifier(0.8f).build()));
+
+    public static final ResourceKey<Item> RABBIT_SANDWICH_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("rabbit_sandwich"));
+    public static final Item RABBIT_SANDWICH = new Item(new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(9).saturationModifier(0.8f).build()));
+
+    public static final ResourceKey<Item> CROQUE_MONSIEUR_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("croque_monsieur"));
+    public static final Item CROQUE_MONSIEUR = new Item(new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(10).saturationModifier(0.8f).build()));
+
+    public static final ResourceKey<Item> CHICKEN_CHEESE_SANDWICH_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("chicken_cheese_sandwich"));
+    public static final Item CHICKEN_CHEESE_SANDWICH = new Item(new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(10).saturationModifier(0.8f).build()));
+
+    public static final ResourceKey<Item> COLA_SODA_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("cola_soda"));
+    public static final Item COLA_SODA = new FastFoodDrinkItem(new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(3).saturationModifier(0.3f).build()));
+
+    public static final ResourceKey<Item> ORANGE_SODA_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("orange_soda"));
+    public static final Item ORANGE_SODA = new FastFoodDrinkItem(new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(3).saturationModifier(0.3f).build()));
+
+    public static final ResourceKey<Item> LEMON_SODA_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("lemon_soda"));
+    public static final Item LEMON_SODA = new FastFoodDrinkItem(new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(3).saturationModifier(0.3f).build()));
+
+    public static final ResourceKey<Item> CREAMING_SODA_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("creaming_soda"));
+    public static final Item CREAMING_SODA = new FastFoodDrinkItem(new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(4).saturationModifier(0.4f).build()));
+
+    public static final ResourceKey<Item> ICED_TEA_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("iced_tea"));
+    public static final Item ICED_TEA = new FastFoodDrinkItem(new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(3).saturationModifier(0.4f).build()));
+
+    public static final ResourceKey<Item> ICE_CREAM_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("ice_cream"));
+    public static final Item ICE_CREAM = new FastFoodBowlFoodItem(new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(5).saturationModifier(0.5f).build()), () -> Items.BOWL);
+
+    public static final ResourceKey<Item> CHOCOLATE_ICE_CREAM_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("chocolate_ice_cream"));
+    public static final Item CHOCOLATE_ICE_CREAM = new FastFoodBowlFoodItem(new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(6).saturationModifier(0.6f).build()), () -> Items.BOWL);
+
+    public static final ResourceKey<Item> SWEET_BERRY_ICE_CREAM_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("sweet_berry_ice_cream"));
+    public static final Item SWEET_BERRY_ICE_CREAM = new FastFoodBowlFoodItem(new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(6).saturationModifier(0.6f).build()), () -> Items.BOWL);
+
+    public static final ResourceKey<Item> FRUIT_ICE_CREAM_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("fruit_ice_cream"));
+    public static final Item FRUIT_ICE_CREAM = new FastFoodBowlFoodItem(new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(7).saturationModifier(0.7f).build()), () -> Items.BOWL);
+
+    public static final ResourceKey<Item> APPLE_SAUCE_KEY = ResourceKey.create(Registries.ITEM, ZooTycoonMod.id("apple_sauce"));
+    public static final Item APPLE_SAUCE = new FastFoodBowlFoodItem(new Item.Properties().stacksTo(16).food(new FoodProperties.Builder().nutrition(6).saturationModifier(0.5f).build()), () -> Items.BOWL);
+
     public static List<ItemStack> createJakesBuildToolsItems() {
         List<ItemStack> list = new ArrayList<>();
 
@@ -389,6 +456,30 @@ public class ZooItems {
         Registry.register(BuiltInRegistries.ITEM, CHEESEBURGER_KEY, CHEESEBURGER);
         Registry.register(BuiltInRegistries.ITEM, DELUXE_CHEESEBURGER_KEY, DELUXE_CHEESEBURGER);
 
+        // Fast Food Delight Registrations
+        Registry.register(BuiltInRegistries.ITEM, FRIES_BOWL_KEY, FRIES_BOWL);
+        Registry.register(BuiltInRegistries.ITEM, FRENCH_FRIES_KEY, FRENCH_FRIES);
+        Registry.register(BuiltInRegistries.ITEM, CARROT_FRIES_KEY, CARROT_FRIES);
+        Registry.register(BuiltInRegistries.ITEM, FRIED_ONIONS_KEY, FRIED_ONIONS);
+        Registry.register(BuiltInRegistries.ITEM, CHICKEN_NUGGETS_KEY, CHICKEN_NUGGETS);
+        Registry.register(BuiltInRegistries.ITEM, CHICKEN_WRAP_KEY, CHICKEN_WRAP);
+        Registry.register(BuiltInRegistries.ITEM, CHEESE_WRAP_KEY, CHEESE_WRAP);
+        Registry.register(BuiltInRegistries.ITEM, COD_SANDWICH_KEY, COD_SANDWICH);
+        Registry.register(BuiltInRegistries.ITEM, SALMON_SANDWICH_KEY, SALMON_SANDWICH);
+        Registry.register(BuiltInRegistries.ITEM, RABBIT_SANDWICH_KEY, RABBIT_SANDWICH);
+        Registry.register(BuiltInRegistries.ITEM, CROQUE_MONSIEUR_KEY, CROQUE_MONSIEUR);
+        Registry.register(BuiltInRegistries.ITEM, CHICKEN_CHEESE_SANDWICH_KEY, CHICKEN_CHEESE_SANDWICH);
+        Registry.register(BuiltInRegistries.ITEM, COLA_SODA_KEY, COLA_SODA);
+        Registry.register(BuiltInRegistries.ITEM, ORANGE_SODA_KEY, ORANGE_SODA);
+        Registry.register(BuiltInRegistries.ITEM, LEMON_SODA_KEY, LEMON_SODA);
+        Registry.register(BuiltInRegistries.ITEM, CREAMING_SODA_KEY, CREAMING_SODA);
+        Registry.register(BuiltInRegistries.ITEM, ICED_TEA_KEY, ICED_TEA);
+        Registry.register(BuiltInRegistries.ITEM, ICE_CREAM_KEY, ICE_CREAM);
+        Registry.register(BuiltInRegistries.ITEM, CHOCOLATE_ICE_CREAM_KEY, CHOCOLATE_ICE_CREAM);
+        Registry.register(BuiltInRegistries.ITEM, SWEET_BERRY_ICE_CREAM_KEY, SWEET_BERRY_ICE_CREAM);
+        Registry.register(BuiltInRegistries.ITEM, FRUIT_ICE_CREAM_KEY, FRUIT_ICE_CREAM);
+        Registry.register(BuiltInRegistries.ITEM, APPLE_SAUCE_KEY, APPLE_SAUCE);
+
         ItemGroupEvents.modifyEntriesEvent(CREATIVE_TAB_KEY).register(entries -> {
             entries.accept(net.zootycoon.block.ZooBlocks.FEEDING_TROUGH_ITEM);
             entries.accept(net.zootycoon.block.ZooBlocks.EMPTY_BARREL_ITEM);
@@ -400,6 +491,30 @@ public class ZooItems {
             entries.accept(CHEESE);
             entries.accept(CHEESEBURGER);
             entries.accept(DELUXE_CHEESEBURGER);
+
+            // Fast Food items in Creative Tab
+            entries.accept(FRIES_BOWL);
+            entries.accept(FRENCH_FRIES);
+            entries.accept(CARROT_FRIES);
+            entries.accept(FRIED_ONIONS);
+            entries.accept(CHICKEN_NUGGETS);
+            entries.accept(CHICKEN_WRAP);
+            entries.accept(CHEESE_WRAP);
+            entries.accept(COD_SANDWICH);
+            entries.accept(SALMON_SANDWICH);
+            entries.accept(RABBIT_SANDWICH);
+            entries.accept(CROQUE_MONSIEUR);
+            entries.accept(CHICKEN_CHEESE_SANDWICH);
+            entries.accept(COLA_SODA);
+            entries.accept(ORANGE_SODA);
+            entries.accept(LEMON_SODA);
+            entries.accept(CREAMING_SODA);
+            entries.accept(ICED_TEA);
+            entries.accept(ICE_CREAM);
+            entries.accept(CHOCOLATE_ICE_CREAM);
+            entries.accept(SWEET_BERRY_ICE_CREAM);
+            entries.accept(FRUIT_ICE_CREAM);
+            entries.accept(APPLE_SAUCE);
             entries.accept(MAGNIFYING_GLASS);
             entries.accept(BROOM);
             entries.accept(BUILDER_NOTE);

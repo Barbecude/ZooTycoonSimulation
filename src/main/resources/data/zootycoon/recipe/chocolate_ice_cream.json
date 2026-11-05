@@ -1,0 +1,16 @@
+{
+    "ingredients":  [
+                        {
+                            "item":  "zootycoon:ice_cream"
+                        },
+                        {
+                            "item":  "minecraft:cocoa_beans"
+                        }
+                    ],
+    "category":  "misc",
+    "result":  {
+                   "count":  1,
+                   "id":  "zootycoon:chocolate_ice_cream"
+               },
+    "type":  "minecraft:crafting_shapeless"
+}
