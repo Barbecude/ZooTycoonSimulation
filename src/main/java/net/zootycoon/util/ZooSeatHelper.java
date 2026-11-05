@@ -171,11 +171,7 @@ public class ZooSeatHelper {
         AABB box = new AABB(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1.0, pos.getY() + 1.0, pos.getZ() + 1.0).inflate(0.1);
         List<Entity> occupants = level.getEntitiesOfClass(Entity.class, box, e -> {
             if (e instanceof ToiletSeatEntity tse) {
-                if (tse.getPassengers().isEmpty()) {
-                    tse.discard();
-                    return false;
-                }
-                return true;
+                return !tse.getPassengers().isEmpty();
             }
             return e.isPassenger() || e.hasPassenger(passenger -> true);
         });
@@ -257,20 +253,27 @@ public class ZooSeatHelper {
         // Determine seating height based on true seat surface (matching player source of truth)
         double seatY = getSeatSurfaceY(level, pos, state);
 
-        // Clean up any stale seat entities at this position before adding fresh entity
+        // Reuse existing empty seat entity or create a fresh one
         AABB box = new AABB(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1.0, pos.getY() + 1.0, pos.getZ() + 1.0).inflate(0.2);
+        ToiletSeatEntity seat = null;
         for (ToiletSeatEntity oldSeat : level.getEntitiesOfClass(ToiletSeatEntity.class, box)) {
             if (oldSeat.getPassengers().isEmpty()) {
-                oldSeat.discard();
+                seat = oldSeat;
+                break;
             }
         }
 
-        // Create invisible seat entity
-        ToiletSeatEntity seat = new ToiletSeatEntity(ZooEntities.TOILET_SEAT, level);
-        seat.setSeatBlockPos(pos);
-        seat.setPos(pos.getX() + 0.5D, seatY, pos.getZ() + 0.5D);
-        seat.setYRot(yRot);
-        level.addFreshEntity(seat);
+        if (seat == null) {
+            seat = new ToiletSeatEntity(ZooEntities.TOILET_SEAT, level);
+            seat.setSeatBlockPos(pos);
+            seat.setPos(pos.getX() + 0.5D, seatY, pos.getZ() + 0.5D);
+            seat.setYRot(yRot);
+            level.addFreshEntity(seat);
+        } else {
+            seat.setSeatBlockPos(pos);
+            seat.setPos(pos.getX() + 0.5D, seatY, pos.getZ() + 0.5D);
+            seat.setYRot(yRot);
+        }
 
         visitor.setYRot(yRot);
         visitor.setYHeadRot(yRot);
