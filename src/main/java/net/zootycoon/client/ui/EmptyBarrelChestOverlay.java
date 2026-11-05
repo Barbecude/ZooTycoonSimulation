@@ -632,7 +632,15 @@ public class EmptyBarrelChestOverlay {
                 graphics.fill(buyBtnX, buyBtnY, buyBtnX + buyBtnW, buyBtnY + buyBtnH, buyBg);
                 graphics.renderOutline(buyBtnX, buyBtnY, buyBtnW, buyBtnH, buyBorder);
 
-                String buyLabel = ZooTranslations.get("zootycoon.warehouse.btn.buy_raw_materials", "Beli Bahan: %d", margin.rawCost());
+                String buyLabel;
+                try {
+                    buyLabel = ZooTranslations.get("zootycoon.warehouse.btn.buy_raw_materials", margin.rawCost());
+                } catch (Exception e) {
+                    buyLabel = "Beli Bahan: " + margin.rawCost();
+                }
+                if (buyLabel.equals("zootycoon.warehouse.btn.buy_raw_materials") || buyLabel.contains("%d")) {
+                    buyLabel = "Beli Bahan: " + margin.rawCost();
+                }
                 int lblBuyW = font.width(buyLabel);
                 int totalBuyW = lblBuyW + 2 + 11;
                 int buyContentX = buyBtnX + Math.max(2, (buyBtnW - totalBuyW) / 2);
@@ -674,12 +682,23 @@ public class EmptyBarrelChestOverlay {
             boolean canAfford = net.zootycoon.economy.TransactionHelper.hasEnoughEmeralds(mc.player, margin.rawCost());
 
             List<Component> tipLines = new ArrayList<>();
-            tipLines.add(Component.literal(ZooTranslations.get("zootycoon.warehouse.tooltip.buy_raw_materials", "Beli Semua Bahan Mentah")).withStyle(ChatFormatting.GOLD));
-            tipLines.add(Component.literal(ZooTranslations.get("zootycoon.warehouse.tooltip.cost_label", "Biaya: %d Emerald", margin.rawCost())).withStyle(canAfford ? ChatFormatting.WHITE : ChatFormatting.RED));
-            tipLines.add(Component.literal(ZooTranslations.get("zootycoon.warehouse.tooltip.total_sales_label", "Total Jual: +%d Emerald", margin.totalRevenue())).withStyle(ChatFormatting.GREEN));
-            tipLines.add(Component.literal(ZooTranslations.get("zootycoon.warehouse.tooltip.margin_label", "Keuntungan (margin): +%d Emerald (%d%%)", margin.netProfit(), margin.marginPercent())).withStyle(ChatFormatting.AQUA));
+            String marginLabel;
+            try {
+                marginLabel = ZooTranslations.get("zootycoon.warehouse.tooltip.margin_label", margin.netProfit(), margin.marginPercent());
+            } catch (Exception e) {
+                marginLabel = "Keuntungan (margin): +" + margin.netProfit() + " Emerald (" + margin.marginPercent() + "%)";
+            }
+            if (marginLabel.equals("zootycoon.warehouse.tooltip.margin_label") || marginLabel.contains("%d")) {
+                marginLabel = "Keuntungan (margin): +" + margin.netProfit() + " Emerald (" + margin.marginPercent() + "%)";
+            }
+            tipLines.add(Component.literal(marginLabel).withStyle(ChatFormatting.GREEN));
+
             if (!canAfford) {
-                tipLines.add(Component.literal(ZooTranslations.get("zootycoon.warehouse.tooltip.not_enough_emeralds", "Saldo Emerald Tidak Cukup!")).withStyle(ChatFormatting.RED));
+                String notEnough = ZooTranslations.get("zootycoon.warehouse.tooltip.not_enough_emeralds");
+                if (notEnough.equals("zootycoon.warehouse.tooltip.not_enough_emeralds")) {
+                    notEnough = "Saldo emerald tidak cukup";
+                }
+                tipLines.add(Component.literal(notEnough).withStyle(ChatFormatting.RED));
             }
             graphics.renderTooltip(font, tipLines, Optional.empty(), mouseX, mouseY);
         } else if (hoveredCheckDto != null) {
