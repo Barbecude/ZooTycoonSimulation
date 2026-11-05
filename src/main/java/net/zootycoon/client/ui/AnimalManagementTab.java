@@ -435,7 +435,9 @@ public class AnimalManagementTab {
                 var habParsed = ZooAnimalHologramRenderer.HabitatParsedInfo.parse(a.habitatNeeds(), a.habitatStatus());
                 boolean isTempProblem = "HEATER".equalsIgnoreCase(habParsed.tempStatus()) || "COOLER".equalsIgnoreCase(habParsed.tempStatus());
                 boolean isWaterMissing = "NO".equalsIgnoreCase(habParsed.waterStatus());
-                boolean isHabProblem = !habParsed.serverUnmet().isEmpty() || isWaterMissing
+                boolean hasNonTempUnmet = habParsed.serverUnmet().stream()
+                        .anyMatch(u -> !u.startsWith("Butuh Heater") && !u.startsWith("Butuh Cooler Box"));
+                boolean isHabProblem = hasNonTempUnmet || isWaterMissing
                         || !habParsed.groundOk() || !habParsed.biomeOk();
                 boolean hasProblem = hasNoZk || isHpLow || isHungry || isThirsty || isDirty || isTempProblem || isHabProblem;
 
