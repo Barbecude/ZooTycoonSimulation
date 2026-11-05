@@ -16,7 +16,8 @@
   "client": [
     "client.MouseHandlerMixin",
     "compat.FieldGuideScanManagerMixin",
-    "client.ItemInHandRendererMixin"
+    "client.ItemInHandRendererMixin",
+    "client.WorldOpenFlowsMixin"
   ],
   "injectors": {
     "defaultRequire": 0
