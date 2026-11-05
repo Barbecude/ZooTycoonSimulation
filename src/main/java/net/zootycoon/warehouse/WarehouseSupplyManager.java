@@ -291,6 +291,14 @@ public class WarehouseSupplyManager {
                     if (keeper.getFoodStock() > ZOOKEEPER_LOW_STOCK_THRESHOLD) {
                         it.remove();
                     }
+                } else if (EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(req.category)) {
+                    if (isHeatingRequest(req) && keeper.hasCoal()) {
+                        it.remove();
+                    } else if (isCoolingRequest(req) && keeper.hasIce()) {
+                        it.remove();
+                    } else if (!isHeatingRequest(req) && !isCoolingRequest(req) && keeper.hasBathingTools()) {
+                        it.remove();
+                    }
                 }
             }
         }
@@ -318,19 +326,17 @@ public class WarehouseSupplyManager {
                         UUID animalId = keeper.getAssignedAnimalUuid();
                         LivingEntity animal = resolveAnimal(sLevel, animalId);
                         if (animal != null) {
-                            boolean anyHungry = false;
-                            for (LivingEntity m : keeper.getAssignedFamily(sLevel)) {
-                                if (net.zootycoon.animal.ZooAnimalHungerManager.getHunger(m) <= 75) {
-                                    anyHungry = true;
-                                    break;
-                                }
-                            }
-                            if (keeper.getFoodStock() <= ZOOKEEPER_LOW_STOCK_THRESHOLD || anyHungry) {
+                            if (keeper.getFoodStock() <= ZOOKEEPER_LOW_STOCK_THRESHOLD) {
                                 List<ItemStack> expectedFoods = AnimalDietRegistry.getFoodsForAnimal(animal);
                                 StaffSupplyRequest existing = ACTIVE_REQUESTS.get(keeper.getUUID());
                                 if (existing == null || !animalId.equals(existing.animalUuid) || existing.targetItems.size() != expectedFoods.size()) {
                                     StaffSupplyRequest created = createZookeeperRequest(keeper, animal);
                                     ACTIVE_REQUESTS.put(keeper.getUUID(), created);
+                                }
+                            } else {
+                                StaffSupplyRequest existing = ACTIVE_REQUESTS.get(keeper.getUUID());
+                                if (existing != null && EmptyBarrelBlockEntity.CAT_ANIMAL_FOOD.equalsIgnoreCase(existing.category)) {
+                                    ACTIVE_REQUESTS.remove(keeper.getUUID());
                                 }
                             }
                         }
@@ -973,8 +979,8 @@ public class WarehouseSupplyManager {
         }
 
         if (req != null && canBarrelFulfill(sLevel, barrel, req)) {
+            ACTIVE_REQUESTS.remove(req.staffUuid);
             if (consumeAndFulfill(sLevel, barrel, req)) {
-                ACTIVE_REQUESTS.remove(req.staffUuid);
                 barrel.setChanged();
                 if (player.containerMenu instanceof ChestMenu) {
                     player.containerMenu.broadcastChanges();
@@ -982,6 +988,8 @@ public class WarehouseSupplyManager {
                 barrel.syncToViewingPlayers(sLevel);
                 sLevel.playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.PLAYERS, 0.9F, 1.0F);
                 ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.warehouse.fulfilled", 1);
+            } else {
+                ACTIVE_REQUESTS.put(req.staffUuid, req);
             }
         }
     }

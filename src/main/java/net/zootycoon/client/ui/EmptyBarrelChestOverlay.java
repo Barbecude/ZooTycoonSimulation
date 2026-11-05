@@ -748,6 +748,7 @@ public class EmptyBarrelChestOverlay {
                         Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
                         BlockPos posToSend = activeBarrelPos != null ? activeBarrelPos : BlockPos.ZERO;
                         ClientPlayNetworking.send(new WarehousePayloads.FulfillStaffRequestPayload(posToSend, req.staffUuid()));
+                        activeRequests.removeIf(r -> r.staffUuid().equals(req.staffUuid()));
                     } else {
                         Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.DISPENSER_FAIL, 1.2F));
                     }
