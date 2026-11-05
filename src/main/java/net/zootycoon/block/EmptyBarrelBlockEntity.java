@@ -23,11 +23,15 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.zootycoon.network.WarehousePayloads;
 import net.zootycoon.warehouse.WarehouseSupplyManager;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -109,6 +113,29 @@ public class EmptyBarrelBlockEntity extends BlockEntity implements Container, Me
         // Sync active requests to any player currently viewing this barrel every 10 ticks
         if (!be.viewingPlayers.isEmpty() && sLevel.getGameTime() % 10 == 0) {
             be.syncToViewingPlayers(sLevel);
+        }
+
+        // Broadcast request progress for the world hologram once per second, staggered per barrel
+        if ((sLevel.getGameTime() + (pos.asLong() & 0xF)) % 20 == 0) {
+            be.broadcastHologram(sLevel);
+        }
+    }
+
+    private static final double HOLOGRAM_SYNC_RANGE_SQ = 24.0D * 24.0D;
+
+    private void broadcastHologram(ServerLevel sLevel) {
+        List<ServerPlayer> nearby = new ArrayList<>();
+        for (ServerPlayer sp : sLevel.players()) {
+            if (sp.distanceToSqr(this.worldPosition.getCenter()) <= HOLOGRAM_SYNC_RANGE_SQ) {
+                nearby.add(sp);
+            }
+        }
+        if (nearby.isEmpty()) return;
+        // An empty list is sent too, so the hologram disappears as soon as requests are fulfilled
+        var payload = new WarehousePayloads.BarrelHologramPayload(this.worldPosition, getCategory(),
+                WarehouseSupplyManager.buildRequestDtos(sLevel, this));
+        for (ServerPlayer sp : nearby) {
+            ServerPlayNetworking.send(sp, payload);
         }
     }
 

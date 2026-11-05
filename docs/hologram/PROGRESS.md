@@ -312,6 +312,16 @@
      - Zookeeper tidak pernah mencoba memandikan satwa akuatik murni.
      - Player tidak dapat menyiram atau menyikat satwa akuatik murni (AnimalBathingManager dan PlayerBathingClientController).
 
+- Hologram Request Empty Barrel (2026-11-05):
+  1. Data:
+     - `WarehouseSupplyManager.buildRequestDtos` diekstrak dari `syncRequestsToPlayer` (perilaku chest overlay tetap sama) dan dipakai juga untuk hologram.
+     - Payload S2C baru `WarehousePayloads.BarrelHologramPayload` (id `barrel_request_hologram`), terpisah dari `SyncBarrelRequestsPayload` agar state `EmptyBarrelChestOverlay` tidak tersentuh.
+     - `EmptyBarrelBlockEntity.serverTick` mengirim payload tiap 20 tick (di-stagger per posisi) ke pemain dalam 24 blok, termasuk list kosong agar hologram hilang setelah request terpenuhi.
+  2. Render (`client/render/EmptyBarrelHologramRenderer.java`):
+     - Billboard di atas barrel (y+1.2), bottom-anchored, skala 0.0125, latar tooltip vanilla, depth test normal, fade in 200 ms / fade out 250 ms, fade jarak 12-16 blok, satu `endBatch`.
+     - Isi: ikon tanda seru + judul kategori, per request nama staff, hitungan `current/required` (kuning) atau "Siap" (hijau), subtitle abu-abu, maks 5 ikon item, progress bar. Maks 3 request, sisanya "+N permintaan lainnya".
+     - Layout dan lebar teks dihitung sekali saat payload diterima, bukan per frame. Cache di-reset saat DISCONNECT/JOIN dan entry kedaluwarsa setelah 3 detik tanpa update.
+
 ## Blocker
 - Tidak ada blocker.
 
@@ -330,3 +340,4 @@
 
 ## Belum terverifikasi
 - Pengujian visual in-game oleh pengguna saat satwa berada di kandang berbunga, kandang berdasar kerikil, dan oseanarium berkarang.
+- Hologram empty barrel belum diuji in-game: tampilan, posisi di atas barrel, dan hilangnya hologram setelah request terpenuhi.

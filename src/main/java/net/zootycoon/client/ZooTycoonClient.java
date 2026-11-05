@@ -463,6 +463,12 @@ public class ZooTycoonClient implements ClientModInitializer {
             });
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(net.zootycoon.network.WarehousePayloads.BarrelHologramPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                net.zootycoon.client.render.EmptyBarrelHologramRenderer.onPayload(payload);
+            });
+        });
+
         net.zootycoon.client.ui.EmptyBarrelChestOverlay.register();
         net.zootycoon.client.ui.CashierDialogScreen.register();
 
@@ -489,6 +495,7 @@ public class ZooTycoonClient implements ClientModInitializer {
             net.zootycoon.client.inspect.InspectionTargetTracker.reset();
             net.zootycoon.client.inspect.InspectionClientCache.clear();
             net.zootycoon.client.ui.EmptyBarrelChestOverlay.reset();
+            net.zootycoon.client.render.EmptyBarrelHologramRenderer.reset();
         });
 
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
@@ -504,6 +511,7 @@ public class ZooTycoonClient implements ClientModInitializer {
             net.zootycoon.client.inspect.InspectionTargetTracker.reset();
             net.zootycoon.client.inspect.InspectionClientCache.clear();
             net.zootycoon.client.ui.EmptyBarrelChestOverlay.reset();
+            net.zootycoon.client.render.EmptyBarrelHologramRenderer.reset();
         });
 
         // 3b. Register Entity Renderer & Model Layer for Humanoid Builder NPC
@@ -592,6 +600,7 @@ public class ZooTycoonClient implements ClientModInitializer {
             net.zootycoon.client.render.ZooWorldIndicatorRenderer.render(context);
             net.zootycoon.client.render.ZooAnimalHologramRenderer.render(context);
             net.zootycoon.client.render.PlayerBathingHologramRenderer.render(context);
+            net.zootycoon.client.render.EmptyBarrelHologramRenderer.render(context);
         });
 
         // 5. Register client-tick particles and overlays + Right Shift menu opening

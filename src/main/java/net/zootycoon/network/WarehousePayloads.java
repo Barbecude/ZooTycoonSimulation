@@ -185,6 +185,38 @@ public class WarehousePayloads {
         }
     }
 
+    /** Broadcast to nearby players for the in-world request hologram; separate from the chest overlay sync. */
+    public record BarrelHologramPayload(BlockPos pos, String category, List<StaffRequestDto> requests) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<BarrelHologramPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("barrel_request_hologram"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, BarrelHologramPayload> CODEC =
+                CustomPacketPayload.codec(
+                        (payload, buf) -> {
+                            buf.writeBlockPos(payload.pos);
+                            buf.writeUtf(payload.category);
+                            buf.writeVarInt(payload.requests.size());
+                            for (StaffRequestDto dto : payload.requests) {
+                                StaffRequestDto.write(buf, dto);
+                            }
+                        },
+                        buf -> {
+                            BlockPos pos = buf.readBlockPos();
+                            String category = buf.readUtf();
+                            int count = buf.readVarInt();
+                            List<StaffRequestDto> list = new ArrayList<>(count);
+                            for (int i = 0; i < count; i++) {
+                                list.add(StaffRequestDto.read(buf));
+                            }
+                            return new BarrelHologramPayload(pos, category, list);
+                        }
+                );
+
+        @Override
+        public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
     public record RequestBarrelRecipeNotePayload(BlockPos pos, UUID staffUuid) implements CustomPacketPayload {
         public static final CustomPacketPayload.Type<RequestBarrelRecipeNotePayload> TYPE =
                 new CustomPacketPayload.Type<>(ZooTycoonMod.id("request_barrel_recipe_note"));
@@ -227,6 +259,7 @@ public class WarehousePayloads {
 
         PayloadTypeRegistry.playS2C().register(OpenBarrelCategoryScreenPayload.TYPE, OpenBarrelCategoryScreenPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncBarrelRequestsPayload.TYPE, SyncBarrelRequestsPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(BarrelHologramPayload.TYPE, BarrelHologramPayload.CODEC);
 
         PayloadTypeRegistry.playC2S().register(SelectBarrelCategoryPayload.TYPE, SelectBarrelCategoryPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestBarrelRecipeNotePayload.TYPE, RequestBarrelRecipeNotePayload.CODEC);

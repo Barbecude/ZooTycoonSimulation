@@ -127,6 +127,16 @@ public class WarehouseSupplyManager {
         String category = barrel.getCategory();
         refreshStaffRequests(sLevel, barrel, category);
 
+        ServerPlayNetworking.send(player, new WarehousePayloads.SyncBarrelRequestsPayload(
+                barrel.getBlockPos(),
+                category,
+                buildRequestDtos(sLevel, barrel)
+        ));
+    }
+
+    /** Builds the per-request progress DTOs for a barrel; shared by the chest overlay and the world hologram. */
+    public static List<WarehousePayloads.StaffRequestDto> buildRequestDtos(ServerLevel sLevel, EmptyBarrelBlockEntity barrel) {
+        String category = barrel.getCategory();
         List<StaffSupplyRequest> matching = getMatchingRequestsForBarrel(sLevel, barrel, category);
         List<WarehousePayloads.StaffRequestDto> dtos = new ArrayList<>();
 
@@ -264,11 +274,7 @@ public class WarehouseSupplyManager {
             ));
         }
 
-        ServerPlayNetworking.send(player, new WarehousePayloads.SyncBarrelRequestsPayload(
-                barrel.getBlockPos(),
-                category,
-                dtos
-        ));
+        return dtos;
     }
 
     private static void refreshStaffRequests(ServerLevel sLevel, EmptyBarrelBlockEntity barrel, String category) {
