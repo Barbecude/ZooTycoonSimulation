@@ -48,6 +48,9 @@ public class WarehouseSupplyManager {
     public static final int ZOOKEEPER_LOW_STOCK_THRESHOLD = 32;
     public static final int ZOOKEEPER_DEFAULT_REQUIRED_FOOD = 64;
     public static final long FULFILLMENT_DELAY_TICKS = 80L; // 4 seconds delay
+    private static final int CARE_ITEM_COUNT = 16;
+    private static final int FUEL_TICKS_PER_ITEM = 3200;     // 51200 ticks = 16 coal
+    private static final int COOLING_TICKS_PER_ITEM = 4800;  // 76800 ticks = 16 ice
 
     public static class StaffSupplyRequest {
         public final UUID staffUuid;
@@ -69,6 +72,13 @@ public class WarehouseSupplyManager {
 
         // Delay tracking once barrel has sufficient items
         public long readySinceGameTime = -1L;
+
+        // Set after a partial delivery: the request stays until every item is delivered,
+        // even if the staff stock already rose above the request threshold
+        public boolean partiallyDelivered = false;
+
+        // Heater / cooler requests: items still owed (starts at 16)
+        public int careRemaining = CARE_ITEM_COUNT;
 
         public StaffSupplyRequest(UUID staffUuid, int staffEntityId, String category, String staffType, String staffName, String subtitle) {
             this.staffUuid = staffUuid;
@@ -106,7 +116,12 @@ public class WarehouseSupplyManager {
                     req.readySinceGameTime = now;
                 } else if (now - req.readySinceGameTime >= 600L) { // 30 seconds = 600 ticks at 20 TPS
                     if (consumeAndFulfill(sLevel, barrel, req)) {
-                        ACTIVE_REQUESTS.remove(req.staffUuid);
+                        if (isRequestComplete(req)) {
+                            ACTIVE_REQUESTS.remove(req.staffUuid);
+                        } else {
+                            req.partiallyDelivered = true;
+                            req.readySinceGameTime = -1L;
+                        }
                         anyFulfilled = true;
                     } else {
                         req.readySinceGameTime = -1L;
@@ -199,7 +214,7 @@ public class WarehouseSupplyManager {
                 }
             } else if (EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(req.category)) {
                 if (isCoolingRequest(req)) {
-                    requiredCount = 16;
+                    requiredCount = req.careRemaining;
                     int count = 0;
                     int coolTicks = 0;
                     for (int i = 0; i < barrel.getContainerSize(); i++) {
@@ -210,9 +225,9 @@ public class WarehouseSupplyManager {
                             coolTicks += cool * st.getCount();
                         }
                     }
-                    currentCount = Math.min(16, Math.max(count, coolTicks / 4800));
+                    currentCount = Math.min(requiredCount, Math.max(count, coolTicks / COOLING_TICKS_PER_ITEM));
                 } else if (isHeatingRequest(req)) {
-                    requiredCount = 16;
+                    requiredCount = req.careRemaining;
                     int count = 0;
                     int fuelTicks = 0;
                     for (int i = 0; i < barrel.getContainerSize(); i++) {
@@ -223,7 +238,7 @@ public class WarehouseSupplyManager {
                             fuelTicks += fuel * st.getCount();
                         }
                     }
-                    currentCount = Math.min(16, Math.max(count, fuelTicks / 3200));
+                    currentCount = Math.min(requiredCount, Math.max(count, fuelTicks / FUEL_TICKS_PER_ITEM));
                 } else {
                     requiredCount = 2;
                     boolean hasCan = false;
@@ -254,8 +269,12 @@ public class WarehouseSupplyManager {
                     req.readySinceGameTime = -1L;
                 }
             } else {
-                allReady = canBarrelFulfill(sLevel, barrel, req);
-                if (allReady && req.readySinceGameTime < 0L) {
+                boolean full = canBarrelFulfill(sLevel, barrel, req);
+                // The checklist can deliver food, fuel or coolant partially; bathing tools still need both
+                boolean bathingTools = EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(req.category)
+                        && !isHeatingRequest(req) && !isCoolingRequest(req);
+                allReady = bathingTools ? full : currentCount > 0;
+                if (full && req.readySinceGameTime < 0L) {
                     req.readySinceGameTime = sLevel.getGameTime();
                 }
             }
@@ -300,18 +319,20 @@ public class WarehouseSupplyManager {
                 if (invalidMenuPresent
                         || !cashier.isRoleAssigned()
                         || !req.category.equalsIgnoreCase(cashier.getCashierRole())
-                        || cashier.getTotalStockCount() > CASHIER_LOW_STOCK_THRESHOLD) {
+                        || (!req.partiallyDelivered && cashier.getTotalStockCount() > CASHIER_LOW_STOCK_THRESHOLD)) {
                     it.remove();
                 }
             } else if (ent instanceof ZooZookeeperEntity keeper) {
                 if (!keeper.hasActiveAssignedAnimal()) {
                     it.remove();
                 } else if (EmptyBarrelBlockEntity.CAT_ANIMAL_FOOD.equalsIgnoreCase(req.category)) {
-                    if (keeper.getFoodStock() > ZOOKEEPER_LOW_STOCK_THRESHOLD) {
+                    if (!req.partiallyDelivered && keeper.getFoodStock() > ZOOKEEPER_LOW_STOCK_THRESHOLD) {
                         it.remove();
                     }
                 } else if (EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(req.category)) {
-                    if (isHeatingRequest(req) && keeper.hasCoal()) {
+                    if (req.partiallyDelivered && (isHeatingRequest(req) || isCoolingRequest(req))) {
+                        // Keep until the remaining fuel or coolant is delivered
+                    } else if (isHeatingRequest(req) && keeper.hasCoal()) {
                         it.remove();
                     } else if (isCoolingRequest(req) && keeper.hasIce()) {
                         it.remove();
@@ -346,7 +367,11 @@ public class WarehouseSupplyManager {
                         UUID animalId = keeper.getAssignedAnimalUuid();
                         LivingEntity animal = resolveAnimal(sLevel, animalId);
                         if (animal != null) {
-                            if (keeper.getFoodStock() <= ZOOKEEPER_LOW_STOCK_THRESHOLD) {
+                            StaffSupplyRequest partial = ACTIVE_REQUESTS.get(keeper.getUUID());
+                            if (partial != null && partial.partiallyDelivered && animalId.equals(partial.animalUuid)
+                                    && EmptyBarrelBlockEntity.CAT_ANIMAL_FOOD.equalsIgnoreCase(partial.category)) {
+                                // A partially delivered request stays as is until it is complete
+                            } else if (keeper.getFoodStock() <= ZOOKEEPER_LOW_STOCK_THRESHOLD) {
                                 List<ItemStack> expectedFoods = AnimalDietRegistry.getFoodsForAnimal(animal);
                                 StaffSupplyRequest existing = ACTIVE_REQUESTS.get(keeper.getUUID());
                                 if (existing == null || !animalId.equals(existing.animalUuid) || existing.targetItems.size() != expectedFoods.size()) {
@@ -366,7 +391,11 @@ public class WarehouseSupplyManager {
                     if (keeper.hasActiveAssignedAnimal()) {
                         UUID animalId = keeper.getAssignedAnimalUuid();
                         LivingEntity animal = resolveAnimal(sLevel, animalId);
-                        if (animal != null) {
+                        StaffSupplyRequest partialCare = ACTIVE_REQUESTS.get(keeper.getUUID());
+                        if (partialCare != null && partialCare.partiallyDelivered
+                                && EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(partialCare.category)) {
+                            // Keep the partially delivered care request (and its remaining count)
+                        } else if (animal != null) {
                             StaffSupplyRequest careReq = evaluateZookeeperCareRequest(sLevel, keeper, animal);
                             if (careReq != null) {
                                 boolean isNew = !ACTIVE_REQUESTS.containsKey(keeper.getUUID());
@@ -661,7 +690,7 @@ public class WarehouseSupplyManager {
                         fuelTicks += fuel * st.getCount();
                     }
                 }
-                return count >= 16 || fuelTicks >= 51200;
+                return count >= req.careRemaining || fuelTicks >= req.careRemaining * FUEL_TICKS_PER_ITEM;
             } else if (isCoolingRequest(req)) {
                 int count = 0;
                 int coolingTicks = 0;
@@ -673,7 +702,7 @@ public class WarehouseSupplyManager {
                         coolingTicks += cool * st.getCount();
                     }
                 }
-                return count >= 16 || coolingTicks >= 76800;
+                return count >= req.careRemaining || coolingTicks >= req.careRemaining * COOLING_TICKS_PER_ITEM;
             } else {
                 boolean hasCan = false;
                 boolean hasBrush = false;
@@ -784,6 +813,7 @@ public class WarehouseSupplyManager {
             Map<Item, Integer> remainingRaws = WarehouseRecipeResolver.resolveRawIngredientsForMenus(sLevel, req.category, req.targetItems);
             req.requiredRawIngredients.putAll(remainingRaws);
             req.readySinceGameTime = -1L;
+            req.partiallyDelivered = true;
         } else {
             ACTIVE_REQUESTS.remove(req.staffUuid);
         }
@@ -793,6 +823,17 @@ public class WarehouseSupplyManager {
         sLevel.playSound(null, cashier.blockPosition(), SoundEvents.VILLAGER_WORK_BUTCHER, SoundSource.NEUTRAL, 0.8F, 1.1F);
         sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, cashier.getX(), cashier.getY() + 1.2D, cashier.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
         return true;
+    }
+
+    /** True once nothing is owed anymore; partial deliveries leave the request open. */
+    private static boolean isRequestComplete(StaffSupplyRequest req) {
+        if ("CASHIER".equals(req.staffType)) {
+            return req.targetItems.isEmpty();
+        }
+        if (EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(req.category)) {
+            return (!isHeatingRequest(req) && !isCoolingRequest(req)) || req.careRemaining <= 0;
+        }
+        return req.requiredFoodCount <= 0;
     }
 
     private static boolean consumeAndFulfill(ServerLevel sLevel, EmptyBarrelBlockEntity barrel, StaffSupplyRequest req) {
@@ -814,11 +855,9 @@ public class WarehouseSupplyManager {
 
         if ("ZOOKEEPER".equals(req.staffType) && ent instanceof ZooZookeeperEntity keeper) {
             if (EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(req.category)) {
-                if (!canBarrelFulfill(sLevel, barrel, req)) return false;
-
                 if (isHeatingRequest(req)) {
-                    int remainingTicks = 51200; // 16 coal equivalent
-                    int remainingCount = 16;
+                    int remainingTicks = req.careRemaining * FUEL_TICKS_PER_ITEM;
+                    int remainingCount = req.careRemaining;
                     int totalGiven = 0;
                     for (int i = 0; i < barrel.getContainerSize() && remainingTicks > 0 && remainingCount > 0; i++) {
                         ItemStack st = barrel.getItem(i);
@@ -845,6 +884,8 @@ public class WarehouseSupplyManager {
                     }
                     barrel.setChanged();
                     if (totalGiven > 0) {
+                        // Fuel worth enough burn time settles the rest of the request
+                        req.careRemaining = remainingTicks <= 0 ? 0 : Math.max(0, remainingCount);
                         sLevel.playSound(null, barrel.getBlockPos(), SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8F, 1.1F);
                         sLevel.playSound(null, keeper.blockPosition(), SoundEvents.FIRECHARGE_USE, SoundSource.NEUTRAL, 0.8F, 1.1F);
                         sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, keeper.getX(), keeper.getY() + 1.2D, keeper.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
@@ -852,8 +893,8 @@ public class WarehouseSupplyManager {
                     }
                     return false;
                 } else if (isCoolingRequest(req)) {
-                    int remainingTicks = 76800; // 16 regular ice equivalent
-                    int remainingCount = 16;
+                    int remainingTicks = req.careRemaining * COOLING_TICKS_PER_ITEM;
+                    int remainingCount = req.careRemaining;
                     int totalGiven = 0;
                     for (int i = 0; i < barrel.getContainerSize() && remainingTicks > 0 && remainingCount > 0; i++) {
                         ItemStack st = barrel.getItem(i);
@@ -880,6 +921,7 @@ public class WarehouseSupplyManager {
                     }
                     barrel.setChanged();
                     if (totalGiven > 0) {
+                        req.careRemaining = remainingTicks <= 0 ? 0 : Math.max(0, remainingCount);
                         sLevel.playSound(null, barrel.getBlockPos(), SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8F, 1.1F);
                         sLevel.playSound(null, keeper.blockPosition(), SoundEvents.GLASS_PLACE, SoundSource.NEUTRAL, 0.8F, 1.1F);
                         sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, keeper.getX(), keeper.getY() + 1.2D, keeper.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
@@ -887,6 +929,8 @@ public class WarehouseSupplyManager {
                     }
                     return false;
                 } else {
+                    // Bathing tools are handed over as a pair
+                    if (!canBarrelFulfill(sLevel, barrel, req)) return false;
                     ItemStack takenCan = ItemStack.EMPTY;
                     ItemStack takenBrush = ItemStack.EMPTY;
                     for (int i = 0; i < barrel.getContainerSize(); i++) {
@@ -913,8 +957,8 @@ public class WarehouseSupplyManager {
                 }
             }
             LivingEntity animal = resolveAnimal(sLevel, req.animalUuid);
-            if (!canBarrelFulfill(sLevel, barrel, req)) return false;
 
+            // Delivers whatever valid food is in the barrel, up to what is still owed
             int needed = req.requiredFoodCount > 0 ? req.requiredFoodCount : ZOOKEEPER_DEFAULT_REQUIRED_FOOD;
             int remainingToTake = needed;
             SimpleContainer keeperInv = keeper.getFoodInventory();
@@ -936,6 +980,11 @@ public class WarehouseSupplyManager {
                     if (!leftover.isEmpty()) break;
                 }
             }
+            if (remainingToTake >= needed) {
+                return false;
+            }
+            req.requiredFoodCount = remainingToTake;
+            barrel.setChanged();
             keeper.updateFoodStockFromInventory();
             sLevel.playSound(null, barrel.getBlockPos(), SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8F, 1.1F);
             sLevel.playSound(null, keeper.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.8F, 1.1F);
@@ -1150,9 +1199,15 @@ public class WarehouseSupplyManager {
                     sLevel.playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.PLAYERS, 0.9F, 1.0F);
                     ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.warehouse.fulfilled", 1);
                 }
-            } else if (canBarrelFulfill(sLevel, barrel, req)) {
-                ACTIVE_REQUESTS.remove(req.staffUuid);
+            } else {
+                // Delivers what is ready; the request stays until every item has been delivered
                 if (consumeAndFulfill(sLevel, barrel, req)) {
+                    if (isRequestComplete(req)) {
+                        ACTIVE_REQUESTS.remove(req.staffUuid);
+                    } else {
+                        req.partiallyDelivered = true;
+                        req.readySinceGameTime = -1L;
+                    }
                     barrel.setChanged();
                     if (player.containerMenu instanceof ChestMenu) {
                         player.containerMenu.broadcastChanges();
@@ -1160,8 +1215,6 @@ public class WarehouseSupplyManager {
                     barrel.syncToViewingPlayers(sLevel);
                     sLevel.playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.PLAYERS, 0.9F, 1.0F);
                     ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.warehouse.fulfilled", 1);
-                } else {
-                    ACTIVE_REQUESTS.put(req.staffUuid, req);
                 }
             }
         }

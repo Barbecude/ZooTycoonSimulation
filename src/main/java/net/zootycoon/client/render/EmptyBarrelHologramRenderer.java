@@ -121,7 +121,11 @@ public class EmptyBarrelHologramRenderer {
         int shown = Math.min(MAX_REQUESTS, payload.requests().size());
         for (int i = 0; i < shown; i++) {
             var dto = payload.requests().get(i);
-            String countText = dto.allReadyToFulfill()
+            // allReadyToFulfill also covers partial delivery, so "ready" here means the full amount is in the barrel
+            boolean ready = dto.requiredCount() > 0
+                    ? dto.currentCount() >= dto.requiredCount()
+                    : dto.allReadyToFulfill();
+            String countText = ready
                     ? readyText
                     : dto.currentCount() + "/" + dto.requiredCount();
             float countW = font.width(countText);
@@ -137,12 +141,12 @@ public class EmptyBarrelHologramRenderer {
             float progress = dto.requiredCount() > 0
                     ? Math.min(1.0f, Math.max(0.0f, dto.currentCount() / (float) dto.requiredCount()))
                     : 0.0f;
-            if (dto.allReadyToFulfill()) progress = 1.0f;
+            if (ready) progress = 1.0f;
 
             contentW = Math.max(contentW, font.width(name) + 6.0f + countW);
             contentW = Math.max(contentW, font.width(subtitle));
             contentW = Math.max(contentW, icons.size() * ICON_SPACING);
-            rows.add(new RequestLayout(name, subtitle, countText, countW, icons, progress, dto.allReadyToFulfill()));
+            rows.add(new RequestLayout(name, subtitle, countText, countW, icons, progress, ready));
         }
 
         int hidden = payload.requests().size() - shown;
