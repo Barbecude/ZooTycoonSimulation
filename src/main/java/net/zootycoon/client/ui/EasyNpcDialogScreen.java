@@ -45,6 +45,14 @@ public abstract class EasyNpcDialogScreen extends Screen {
         return 0;
     }
 
+    protected int getSpeechBubbleY() {
+        return startY + 39;
+    }
+
+    protected boolean shouldRenderSpeechBubble() {
+        return true;
+    }
+
     protected int calculatePanelHeight() {
         int bubbleH = getSpeechBubbleHeight();
         int contentH = getContentHeight();
@@ -112,35 +120,37 @@ public abstract class EasyNpcDialogScreen extends Screen {
 
         // 4. Speech Bubble (Dialogue Box)
         int bubbleX = rightX;
-        int bubbleY = startY + 39;
+        int bubbleY = getSpeechBubbleY();
         int bubbleW = rightW;
         int bubbleH = getSpeechBubbleHeight();
 
-        // Speech bubble frame
-        graphics.fill(bubbleX, bubbleY, bubbleX + bubbleW, bubbleY + bubbleH, 0xFF19202D);
-        graphics.fill(bubbleX, bubbleY, bubbleX + bubbleW, bubbleY + 1, 0xFF313B4E);
-        graphics.fill(bubbleX, bubbleY + bubbleH - 1, bubbleX + bubbleW, bubbleY + bubbleH, 0xFF313B4E);
-        graphics.fill(bubbleX, bubbleY, bubbleX + 1, bubbleY + bubbleH, 0xFF313B4E);
-        graphics.fill(bubbleX + bubbleW - 1, bubbleY, bubbleX + bubbleW, bubbleY + bubbleH, 0xFF313B4E);
+        if (shouldRenderSpeechBubble()) {
+            // Speech bubble frame
+            graphics.fill(bubbleX, bubbleY, bubbleX + bubbleW, bubbleY + bubbleH, 0xFF19202D);
+            graphics.fill(bubbleX, bubbleY, bubbleX + bubbleW, bubbleY + 1, 0xFF313B4E);
+            graphics.fill(bubbleX, bubbleY + bubbleH - 1, bubbleX + bubbleW, bubbleY + bubbleH, 0xFF313B4E);
+            graphics.fill(bubbleX, bubbleY, bubbleX + 1, bubbleY + bubbleH, 0xFF313B4E);
+            graphics.fill(bubbleX + bubbleW - 1, bubbleY, bubbleX + bubbleW, bubbleY + bubbleH, 0xFF313B4E);
 
-        // Pointer triangle notch pointing to NPC on the left
-        graphics.fill(bubbleX - 4, bubbleY + 14, bubbleX, bubbleY + 20, 0xFF19202D);
-        graphics.fill(bubbleX - 4, bubbleY + 14, bubbleX - 3, bubbleY + 20, 0xFF313B4E);
+            // Pointer triangle notch pointing to NPC on the left
+            graphics.fill(bubbleX - 4, bubbleY + 14, bubbleX, bubbleY + 20, 0xFF19202D);
+            graphics.fill(bubbleX - 4, bubbleY + 14, bubbleX - 3, bubbleY + 20, 0xFF313B4E);
 
-        // Typewriter animated word-wrapped dialogue text
-        int visibleChars = Math.max(1, (int) ((System.currentTimeMillis() - dialogStartTime) / 18L));
-        Component typedComponent = truncateComponent(dialogMessage, visibleChars);
-        var wrappedLines = this.font.split(typedComponent, bubbleW - 16);
-        int textY = bubbleY + 8;
-        for (var line : wrappedLines) {
-            if (textY + 9 > bubbleY + bubbleH - 4) break;
-            graphics.drawString(this.font, line, bubbleX + 8, textY, 0xFFE2E8F0, false);
-            textY += 11;
+            // Typewriter animated word-wrapped dialogue text
+            int visibleChars = Math.max(1, (int) ((System.currentTimeMillis() - dialogStartTime) / 18L));
+            Component typedComponent = truncateComponent(dialogMessage, visibleChars);
+            var wrappedLines = this.font.split(typedComponent, bubbleW - 16);
+            int textY = bubbleY + 8;
+            for (var line : wrappedLines) {
+                if (textY + 9 > bubbleY + bubbleH - 4) break;
+                graphics.drawString(this.font, line, bubbleX + 8, textY, 0xFFE2E8F0, false);
+                textY += 11;
+            }
         }
 
-        // 5. Context / Content Area (Only used by BuilderInspectionScreen for missing tools/blocks)
+        // 5. Context / Content Area
         int contentX = rightX;
-        int contentY = bubbleY + bubbleH + 6;
+        int contentY = bubbleY + (shouldRenderSpeechBubble() ? bubbleH + 6 : 0);
         int contentW = rightW;
         int contentH = (startY + panelHeight - 34) - contentY - 4;
 

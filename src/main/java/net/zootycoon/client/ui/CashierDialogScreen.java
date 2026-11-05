@@ -193,8 +193,10 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
         if ("TICKET".equalsIgnoreCase(currentRole) && activeTicketTab == 1) {
             int rightX = startX + 114 + 14;
             int rightW = panelWidth - (rightX - startX) - 12;
-            int listY = startY + 62;
-            int listH = panelHeight - 74;
+            int topY = startY + 60;
+            int totalH = panelHeight - 70;
+            int listY = topY + 4;
+            int listH = totalH - 8;
             if (mouseX >= rightX && mouseX <= rightX + rightW && mouseY >= listY && mouseY <= listY + listH) {
                 int maxScroll = Math.max(0, feedbackTotalContentH - listH);
                 feedbackScrollOffset = Math.clamp(feedbackScrollOffset - verticalAmount * 16.0D, 0, maxScroll);
@@ -358,7 +360,7 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
             addRenderableWidget(closeBtn);
         } else if ("TICKET".equalsIgnoreCase(currentRole)) {
             // Tab Header Buttons: [Tab 1: Pengaturan Tiket] [Tab 2: Masukan Pengunjung]
-            int tabY = startY + 12;
+            int tabY = startY + 38;
             int tabW = 105;
             int tabH = 18;
             this.tabSettingsBtn = new ZooButton(rightX, tabY, tabW, tabH,
@@ -374,9 +376,9 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
             addRenderableWidget(this.tabSettingsBtn);
             addRenderableWidget(this.tabFeedbackBtn);
 
-            // Sort button for Feedback Tab (Urutkan Berdasarkan Urgensi / Waktu)
+            // Sort button for Feedback Tab (aligned with tab row on the right)
             int sortBtnW = 86;
-            this.sortFeedbackBtn = new ZooButton(rightX + rightW - sortBtnW, startY + 38, sortBtnW, 16,
+            this.sortFeedbackBtn = new ZooButton(rightX + rightW - sortBtnW, tabY, sortBtnW, tabH,
                     ZooTranslations.component(sortByUrgency ? "zootycoon.dialog.cashier.feedback.sort_urgency" : "zootycoon.dialog.cashier.feedback.sort_time"), b -> {
                 this.sortByUrgency = !this.sortByUrgency;
                 this.sortFeedbackBtn.setMessage(ZooTranslations.component(sortByUrgency ? "zootycoon.dialog.cashier.feedback.sort_urgency" : "zootycoon.dialog.cashier.feedback.sort_time"));
@@ -385,7 +387,7 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
             addRenderableWidget(this.sortFeedbackBtn);
 
             int bubbleH = getSpeechBubbleHeight();
-            int buttonsY = startY + 39 + bubbleH + 10;
+            int buttonsY = startY + 60 + bubbleH + 8;
 
             int[] tiers = net.zootycoon.economy.ZooEconomyEngine.TICKET_PRICE_TIERS;
             this.tierButtons.clear();
@@ -492,7 +494,7 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
             return 120;
         }
         if ("TICKET".equalsIgnoreCase(currentRole)) {
-            return 32;
+            return 56;
         }
         return 48;
     }
@@ -502,19 +504,16 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
         int rightX = startX + 114 + 14;
         int rightW = panelWidth - (rightX - startX) - 12;
 
-        // Render slate background over speech bubble area so tab 2 looks like a clean dedicated view
-        int topY = startY + 36;
-        int totalH = panelHeight - 46;
+        // Render slate container for visitor feedback list starting below tab row
+        int topY = startY + 60;
+        int totalH = panelHeight - 70;
         graphics.fill(rightX - 2, topY, rightX + rightW + 2, topY + totalH, 0xFF14171F);
         graphics.renderOutline(rightX - 2, topY, rightW + 4, totalH, 0xFF2A3140);
 
-        // Header label
-        graphics.drawString(this.font, ZooTranslations.component("zootycoon.dialog.cashier.tab.feedback"), rightX + 4, topY + 6, 0xFFFFD700, false);
-
         int listX = rightX + 2;
-        int listY = topY + 22;
+        int listY = topY + 4;
         int listW = rightW - 4;
-        int listH = totalH - 26;
+        int listH = totalH - 8;
 
         if (this.visitorFeedbacks.isEmpty()) {
             graphics.drawCenteredString(this.font, ZooTranslations.component("zootycoon.dialog.cashier.feedback.empty"), listX + listW / 2, listY + listH / 2 - 4, 0xFF718096);
@@ -586,17 +585,36 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
     }
 
     @Override
+    protected int getSpeechBubbleY() {
+        if ("TICKET".equalsIgnoreCase(currentRole)) {
+            return startY + 60;
+        }
+        return super.getSpeechBubbleY();
+    }
+
+    @Override
+    protected boolean shouldRenderSpeechBubble() {
+        if ("TICKET".equalsIgnoreCase(currentRole)) {
+            return activeTicketTab == 0;
+        }
+        return true;
+    }
+
+    @Override
     protected void renderDialogContent(GuiGraphics graphics, int contentX, int contentY, int contentW, int contentH, int mouseX, int mouseY, float delta) {
         if ("TICKET".equalsIgnoreCase(currentRole)) {
             if (activeTicketTab == 0) {
                 int bubbleH = getSpeechBubbleHeight();
-                int buttonsY = startY + 39 + bubbleH + 10;
-                int labelY = buttonsY + 25;
+                int buttonsY = startY + 60 + bubbleH + 8;
+                int labelY = buttonsY + 24;
                 String tierLabel = net.zootycoon.economy.ZooEconomyEngine.getTicketPriceTierLabel(this.ticketPrice);
                 graphics.drawString(this.font, Component.literal("Kategori: " + tierLabel), contentX, labelY, 0xFFBBBBBB, false);
             } else {
                 renderFeedbackTab(graphics, contentX, contentY, contentW, contentH, mouseX, mouseY, delta);
             }
+            return;
+        }
+        if ("TICKET".equalsIgnoreCase(currentRole)) {
             return;
         }
 
@@ -801,12 +819,12 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
         if ("TICKET".equalsIgnoreCase(currentRole) && activeTicketTab == 1) {
             int rightX = startX + 114 + 14;
             int rightW = panelWidth - (rightX - startX) - 12;
-            int topY = startY + 36;
-            int totalH = panelHeight - 46;
+            int topY = startY + 60;
+            int totalH = panelHeight - 70;
             int listX = rightX + 2;
-            int listY = topY + 22;
+            int listY = topY + 4;
             int listW = rightW - 4;
-            int listH = totalH - 26;
+            int listH = totalH - 8;
 
             if (mouseX >= listX && mouseX <= listX + listW && mouseY >= listY && mouseY <= listY + listH) {
                 int cardGap = 4;
