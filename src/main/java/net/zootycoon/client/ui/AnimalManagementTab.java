@@ -76,58 +76,99 @@ public class AnimalManagementTab {
 
     private ZooButton sellButton;
     private final Set<String> expandedParents = new HashSet<>();
+    // Expand arrow x per animal uuid from the last frame, so clicks hit exactly where the arrow is drawn
+    private final Map<String, Integer> renderedArrowX = new HashMap<>();
 
     public static class AnimalListItem {
         public final ZooNetworkPayloads.AnimalSyncData data;
+        public final int depth;
         public final boolean isChild;
         public final boolean hasChildren;
         public final boolean isExpanded;
         public final int childCount;
 
-        public AnimalListItem(ZooNetworkPayloads.AnimalSyncData data, boolean isChild, boolean hasChildren, boolean isExpanded, int childCount) {
+        public AnimalListItem(ZooNetworkPayloads.AnimalSyncData data, int depth, boolean hasChildren, boolean isExpanded, int childCount) {
             this.data = data;
-            this.isChild = isChild;
+            this.depth = depth;
+            this.isChild = depth > 0;
             this.hasChildren = hasChildren;
             this.isExpanded = isExpanded;
             this.childCount = childCount;
         }
     }
 
+    // Indent per tree level; capped so deep generations still leave room for the name
+    private static final int TREE_INDENT = 10;
+    private static final int MAX_TREE_INDENT_LEVELS = 5;
+
+    private static int treeIndent(AnimalListItem item) {
+        return Math.min(item.depth, MAX_TREE_INDENT_LEVELS) * TREE_INDENT;
+    }
+
     private List<AnimalListItem> buildDisplayItems() {
         List<ZooNetworkPayloads.AnimalSyncData> all = getValidAnimals();
         List<AnimalListItem> items = new ArrayList<>();
 
-        Map<String, List<ZooNetworkPayloads.AnimalSyncData>> childrenMap = new LinkedHashMap<>();
-        Set<String> knownParentUuids = new HashSet<>();
+        // Any listed animal can be a parent, so offspring that breed again nest one level deeper
+        Set<String> listedUuids = new HashSet<>();
         for (var a : all) {
-            if (!a.isOffspring()) {
-                knownParentUuids.add(a.uuid());
-            }
+            listedUuids.add(a.uuid());
         }
 
+        Map<String, List<ZooNetworkPayloads.AnimalSyncData>> childrenMap = new LinkedHashMap<>();
         for (var a : all) {
-            if (a.isOffspring() && !a.parentUuid().isEmpty() && knownParentUuids.contains(a.parentUuid())) {
+            if (hasListedParent(a, listedUuids)) {
                 childrenMap.computeIfAbsent(a.parentUuid(), k -> new ArrayList<>()).add(a);
             }
         }
 
+        Set<String> visited = new HashSet<>();
         for (var a : all) {
-            boolean isChildOfKnownParent = a.isOffspring() && !a.parentUuid().isEmpty() && knownParentUuids.contains(a.parentUuid());
-            if (!isChildOfKnownParent) {
-                List<ZooNetworkPayloads.AnimalSyncData> kids = childrenMap.get(a.uuid());
-                boolean hasKids = kids != null && !kids.isEmpty();
-                boolean isExp = hasKids && expandedParents.contains(a.uuid());
-                items.add(new AnimalListItem(a, false, hasKids, isExp, hasKids ? kids.size() : 0));
-
-                if (hasKids && isExp) {
-                    for (var kid : kids) {
-                        items.add(new AnimalListItem(kid, true, false, false, 0));
-                    }
-                }
+            if (!hasListedParent(a, listedUuids)) {
+                appendTreeItems(a, 0, childrenMap, visited, items);
+            }
+        }
+        // Animals caught in a parent cycle have no root; list them at the top level
+        for (var a : all) {
+            if (!visited.contains(a.uuid())) {
+                appendTreeItems(a, 0, childrenMap, visited, items);
             }
         }
 
         return items;
+    }
+
+    private static boolean hasListedParent(ZooNetworkPayloads.AnimalSyncData a, Set<String> listedUuids) {
+        return a.isOffspring() && !a.parentUuid().isEmpty()
+                && !a.parentUuid().equals(a.uuid()) && listedUuids.contains(a.parentUuid());
+    }
+
+    private void appendTreeItems(ZooNetworkPayloads.AnimalSyncData node, int depth,
+                                 Map<String, List<ZooNetworkPayloads.AnimalSyncData>> childrenMap,
+                                 Set<String> visited, List<AnimalListItem> out) {
+        if (!visited.add(node.uuid())) return;
+        List<ZooNetworkPayloads.AnimalSyncData> kids = childrenMap.get(node.uuid());
+        boolean hasKids = kids != null && !kids.isEmpty();
+        boolean isExp = hasKids && expandedParents.contains(node.uuid());
+        out.add(new AnimalListItem(node, depth, hasKids, isExp, hasKids ? kids.size() : 0));
+        if (isExp) {
+            for (var kid : kids) {
+                appendTreeItems(kid, depth + 1, childrenMap, visited, out);
+            }
+        } else if (hasKids) {
+            // Collapsed descendants still count as placed so they never surface as roots
+            markSubtreeVisited(node.uuid(), childrenMap, visited);
+        }
+    }
+
+    private static void markSubtreeVisited(String uuid, Map<String, List<ZooNetworkPayloads.AnimalSyncData>> childrenMap, Set<String> visited) {
+        List<ZooNetworkPayloads.AnimalSyncData> kids = childrenMap.get(uuid);
+        if (kids == null) return;
+        for (var kid : kids) {
+            if (visited.add(kid.uuid())) {
+                markSubtreeVisited(kid.uuid(), childrenMap, visited);
+            }
+        }
     }
     private boolean isDraggingSidebarScrollbar = false;
 
@@ -366,12 +407,13 @@ public class AnimalManagementTab {
 
         int itemRightMargin = maxScroll > 0 ? 8 : 3;
         int curY = sidebarY + 4 - scrollOffset;
+        renderedArrowX.clear();
         for (var item : displayItems) {
             var a = item.data;
             if (curY + ITEM_HEIGHT >= sidebarY && curY <= sidebarY + sidebarH) {
                 boolean isSelected = (selectedData != null && selectedData.entityId() == a.entityId());
                 int itemBg = isSelected ? 0xFF243048 : 0xFF181C26;
-                int indent = item.isChild ? 16 : 0;
+                int indent = treeIndent(item);
                 int cardRight = sidebarX + sidebarW - itemRightMargin;
 
                 graphics.fill(sidebarX + 3 + indent, curY, cardRight, curY + ITEM_HEIGHT - 2, itemBg);
@@ -380,7 +422,7 @@ public class AnimalManagementTab {
                 }
 
                 if (item.isChild) {
-                    graphics.drawString(font, Component.literal("\u2514"), sidebarX + 6, curY + 9, 0xFF8B949E, false);
+                    graphics.drawString(font, Component.literal("\u2514"), sidebarX + 3 + indent - 9, curY + 9, 0xFF8B949E, false);
                 }
 
                 // 1. Check problem conditions: no zookeeper OR stats / habitat problem
@@ -388,10 +430,13 @@ public class AnimalManagementTab {
                 boolean isHpLow = (a.health() / Math.max(0.1f, a.maxHealth())) <= 0.5f;
                 boolean isHungry = a.hunger() <= 50;
                 boolean isThirsty = a.thirst() <= 50;
-                boolean isDirty = a.cleanliness() <= 50;
+                boolean isDirty = a.cleanliness() <= 50
+                        && !net.zootycoon.animal.ZooAnimalHungerManager.isPureAquatic(a.entityTypeId());
                 var habParsed = ZooAnimalHologramRenderer.HabitatParsedInfo.parse(a.habitatNeeds(), a.habitatStatus());
                 boolean isTempProblem = "HEATER".equalsIgnoreCase(habParsed.tempStatus()) || "COOLER".equalsIgnoreCase(habParsed.tempStatus());
-                boolean isHabProblem = !habParsed.serverUnmet().isEmpty();
+                boolean isWaterMissing = "NO".equalsIgnoreCase(habParsed.waterStatus());
+                boolean isHabProblem = !habParsed.serverUnmet().isEmpty() || isWaterMissing
+                        || !habParsed.groundOk() || !habParsed.biomeOk();
                 boolean hasProblem = hasNoZk || isHpLow || isHungry || isThirsty || isDirty || isTempProblem || isHabProblem;
 
                 // 2. Mini 3D Animal Model (di samping kiri nama satwa)
@@ -429,13 +474,15 @@ public class AnimalManagementTab {
 
                 // Dropdown indicator arrow for parent
                 if (item.hasChildren) {
+                    renderedArrowX.put(a.uuid(), arrowX);
                     String arrow = item.isExpanded ? "\u25BC" : "\u25B6";
                     graphics.drawString(font, Component.literal(arrow), arrowX, curY + 8, item.isExpanded ? 0xFF58A6FF : 0xFF8B949E, false);
                 }
 
                 // 4. Alert Exclamation Mark (align kanan)
                 if (hasProblem) {
-                    graphics.blit(EXCLAMATION_ICON, exX, exY, 0, 0, 10, 10, 64, 64);
+                    // Scale the whole 64x64 texture into a 10x10 icon
+                    graphics.blit(EXCLAMATION_ICON, exX, exY, 10, 10, 0, 0, 64, 64, 64, 64);
                     if (mouseX >= exX && mouseX <= exX + 10 && mouseY >= exY && mouseY <= exY + 10) {
                         List<Component> problems = new ArrayList<>();
                         problems.add(Component.literal(displayName).withStyle(ChatFormatting.GOLD));
@@ -448,7 +495,23 @@ public class AnimalManagementTab {
                             String tempReason = "HEATER".equalsIgnoreCase(habParsed.tempStatus()) ? "Butuh Heater" : "Butuh Cooler Box";
                             problems.add(Component.literal("• Suhu tidak nyaman (" + tempReason + ")").withStyle(ChatFormatting.RED));
                         }
-                        if (isHabProblem) problems.add(Component.literal("• Kebutuhan habitat bermasalah").withStyle(ChatFormatting.RED));
+                        if (isHabProblem) {
+                            problems.add(Component.literal("• Kebutuhan habitat belum terpenuhi:").withStyle(ChatFormatting.RED));
+                            List<String> unmetLines = new ArrayList<>();
+                            for (String need : habParsed.serverUnmet()) {
+                                // Temperature already has its own line above
+                                if (need.startsWith("Butuh Heater") || need.startsWith("Butuh Cooler Box")) continue;
+                                unmetLines.add(need);
+                            }
+                            if (unmetLines.isEmpty()) {
+                                if (isWaterMissing) unmetLines.add("Butuh Air");
+                                if (!habParsed.groundOk()) unmetLines.add("Jenis tanah belum sesuai");
+                                if (!habParsed.biomeOk()) unmetLines.add("Bioma belum sesuai");
+                            }
+                            for (String line : unmetLines) {
+                                problems.add(Component.literal("  - " + line).withStyle(ChatFormatting.GRAY));
+                            }
+                        }
                         hoveredSidebarProblems = problems;
                     }
                 }
@@ -575,7 +638,7 @@ public class AnimalManagementTab {
         if (!selectedData.hasZookeeper()) {
             int exX = zkBtnX + zkBtnW + 5;
             int exY = zkBtnY + 4;
-            graphics.blit(EXCLAMATION_ICON, exX, exY, 0, 0, 10, 10, 64, 64);
+            graphics.blit(EXCLAMATION_ICON, exX, exY, 10, 10, 0, 0, 64, 64, 64, 64);
             if (!renameModalOpen && !zookeeperDropdownOpen && mouseX >= exX && mouseX <= exX + 10 && mouseY >= exY && mouseY <= exY + 10) {
                 graphics.renderTooltip(font, ZooTranslations.component("zootycoon.ui.animals.no_zookeeper_tooltip").withStyle(ChatFormatting.RED), mouseX, mouseY);
             }
@@ -1188,11 +1251,10 @@ public class AnimalManagementTab {
                 int clickedIdx = (int) (relativeY / ITEM_HEIGHT);
                 if (clickedIdx >= 0 && clickedIdx < displayItems.size()) {
                     var item = displayItems.get(clickedIdx);
-                    int cardRight = sidebarX + sidebarW - 8;
-                    int arrowX = cardRight - 24;
+                    Integer arrowX = renderedArrowX.get(item.data.uuid());
 
-                    // If clicked on dropdown arrow area of parent
-                    if (item.hasChildren && mouseX >= arrowX - 6 && mouseX <= cardRight) {
+                    // If clicked on dropdown arrow area of parent (any tree level)
+                    if (item.hasChildren && arrowX != null && mouseX >= arrowX - 4 && mouseX < arrowX + 9) {
                         if (expandedParents.contains(item.data.uuid())) {
                             expandedParents.remove(item.data.uuid());
                         } else {
