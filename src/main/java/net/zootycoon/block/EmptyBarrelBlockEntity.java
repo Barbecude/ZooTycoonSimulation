@@ -23,6 +23,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.ChestType;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.zootycoon.network.WarehousePayloads;
 import net.zootycoon.warehouse.WarehouseSupplyManager;
@@ -62,15 +63,86 @@ public class EmptyBarrelBlockEntity extends BlockEntity implements Container, Me
         }
     }
 
+    // ==========================================
+    // DOUBLE BARREL
+    // Two joined halves act as one barrel: slots 0-26 belong to the LEFT half, 27-53 to the RIGHT
+    // half, and the LEFT half (the primary) owns the request logic, viewers and hologram.
+    // ==========================================
+
+    /** The joined other half, or null for a single barrel. */
+    public @Nullable EmptyBarrelBlockEntity partner() {
+        if (this.level == null || this.remove) return null;
+        BlockState state = getBlockState();
+        if (!state.hasProperty(EmptyBarrelBlock.TYPE) || state.getValue(EmptyBarrelBlock.TYPE) == ChestType.SINGLE) {
+            return null;
+        }
+        BlockPos otherPos = this.worldPosition.relative(EmptyBarrelBlock.getConnectedDirection(state));
+        if (!this.level.isLoaded(otherPos)) return null;
+        BlockEntity other = this.level.getBlockEntity(otherPos);
+        if (other instanceof EmptyBarrelBlockEntity barrel && barrel != this && !barrel.isRemoved()
+                && barrel.connectsTo(this.worldPosition)) {
+            return barrel;
+        }
+        return null;
+    }
+
+    private boolean connectsTo(BlockPos pos) {
+        BlockState state = getBlockState();
+        return state.hasProperty(EmptyBarrelBlock.TYPE)
+                && state.getValue(EmptyBarrelBlock.TYPE) != ChestType.SINGLE
+                && this.worldPosition.relative(EmptyBarrelBlock.getConnectedDirection(state)).equals(pos);
+    }
+
+    private boolean isLeftHalf() {
+        BlockState state = getBlockState();
+        return !state.hasProperty(EmptyBarrelBlock.TYPE) || state.getValue(EmptyBarrelBlock.TYPE) != ChestType.RIGHT;
+    }
+
+    /** The half that runs the shared logic: the LEFT half of a double barrel, otherwise this one. */
+    public EmptyBarrelBlockEntity primary() {
+        EmptyBarrelBlockEntity other = partner();
+        return other != null && !isLeftHalf() ? other : this;
+    }
+
+    public boolean isSecondaryHalf() {
+        return primary() != this;
+    }
+
+    /** Only the slots stored in this half, used when the block is broken. */
+    public NonNullList<ItemStack> getOwnItems() {
+        return this.items;
+    }
+
+    private boolean ownCategoryAssigned() {
+        return category != null && !category.isEmpty() && !CAT_UNASSIGNED.equalsIgnoreCase(category);
+    }
+
     public String getCategory() {
+        EmptyBarrelBlockEntity other = partner();
+        if (other != null) {
+            // The primary half's category wins; fall back to the other half if only it is assigned
+            EmptyBarrelBlockEntity first = isLeftHalf() ? this : other;
+            EmptyBarrelBlockEntity second = first == this ? other : this;
+            if (first.ownCategoryAssigned()) return first.category;
+            if (second.ownCategoryAssigned()) return second.category;
+        }
         return category != null ? category : CAT_UNASSIGNED;
     }
 
     public boolean isCategoryAssigned() {
-        return category != null && !category.isEmpty() && !CAT_UNASSIGNED.equalsIgnoreCase(category);
+        String cat = getCategory();
+        return !cat.isEmpty() && !CAT_UNASSIGNED.equalsIgnoreCase(cat);
     }
 
     public void setCategoryAndOwner(String newCategory, UUID owner) {
+        applyCategoryAndOwner(newCategory, owner);
+        EmptyBarrelBlockEntity other = partner();
+        if (other != null) {
+            other.applyCategoryAndOwner(newCategory, owner);
+        }
+    }
+
+    private void applyCategoryAndOwner(String newCategory, UUID owner) {
         if (newCategory != null && !newCategory.isEmpty()) {
             this.category = newCategory.toUpperCase();
         }
@@ -84,12 +156,54 @@ public class EmptyBarrelBlockEntity extends BlockEntity implements Container, Me
     }
 
     public UUID getOwnerUuid() {
+        if (ownerUuid == null) {
+            EmptyBarrelBlockEntity other = partner();
+            if (other != null) return other.ownerUuid;
+        }
         return ownerUuid;
     }
 
     public void setOwnerUuid(UUID ownerUuid) {
         this.ownerUuid = ownerUuid;
         setChanged();
+    }
+
+    /** Copies the shared category and owner onto both halves so either keeps them after a split. */
+    private void syncHalves() {
+        EmptyBarrelBlockEntity other = partner();
+        if (other == null) return;
+        String shared = getCategory();
+        UUID owner = getOwnerUuid();
+        for (EmptyBarrelBlockEntity half : new EmptyBarrelBlockEntity[]{this, other}) {
+            boolean changed = false;
+            if (!shared.equalsIgnoreCase(half.category)) {
+                half.category = shared;
+                changed = true;
+            }
+            if (owner != null && !owner.equals(half.ownerUuid)) {
+                half.ownerUuid = owner;
+                changed = true;
+            }
+            if (changed) {
+                half.markDirtyOnly();
+                if (half.level != null) {
+                    half.level.sendBlockUpdated(half.worldPosition, half.getBlockState(), half.getBlockState(), 3);
+                }
+            }
+        }
+    }
+
+    private void markDirtyOnly() {
+        super.setChanged();
+    }
+
+    /** Resolves a combined slot index to the half that stores it. */
+    private EmptyBarrelBlockEntity halfForSlot(int slot) {
+        EmptyBarrelBlockEntity other = partner();
+        if (other == null) return this;
+        EmptyBarrelBlockEntity left = isLeftHalf() ? this : other;
+        EmptyBarrelBlockEntity right = left == this ? other : this;
+        return slot < CONTAINER_SIZE ? left : right;
     }
 
     public void openChestForPlayer(ServerPlayer sp, ServerLevel sLevel) {
@@ -102,6 +216,12 @@ public class EmptyBarrelBlockEntity extends BlockEntity implements Container, Me
     public static void serverTick(Level level, BlockPos pos, BlockState state, EmptyBarrelBlockEntity be) {
         if (!(level instanceof ServerLevel sLevel)) return;
         EmptyBarrelBlock.KNOWN_BARRELS.add(pos.immutable());
+
+        // The secondary half of a double barrel is driven by its primary half
+        if (be.isSecondaryHalf()) return;
+        if (sLevel.getGameTime() % 20 == 0) {
+            be.syncHalves();
+        }
 
         if (!be.isCategoryAssigned()) return;
 
@@ -165,31 +285,35 @@ public class EmptyBarrelBlockEntity extends BlockEntity implements Container, Me
 
     @Override
     public @Nullable AbstractContainerMenu createMenu(int syncId, Inventory playerInventory, Player player) {
-        return ChestMenu.threeRows(syncId, playerInventory, this);
+        return getContainerSize() > CONTAINER_SIZE
+                ? ChestMenu.sixRows(syncId, playerInventory, this)
+                : ChestMenu.threeRows(syncId, playerInventory, this);
     }
 
     @Override
     public int getContainerSize() {
-        return CONTAINER_SIZE;
+        return partner() != null ? CONTAINER_SIZE * 2 : CONTAINER_SIZE;
     }
 
     @Override
     public boolean isEmpty() {
-        for (ItemStack stack : this.items) {
-            if (!stack.isEmpty()) return false;
+        for (int i = 0; i < getContainerSize(); i++) {
+            if (!getItem(i).isEmpty()) return false;
         }
         return true;
     }
 
     @Override
     public ItemStack getItem(int slot) {
-        if (slot < 0 || slot >= this.items.size()) return ItemStack.EMPTY;
-        return this.items.get(slot);
+        if (slot < 0 || slot >= getContainerSize()) return ItemStack.EMPTY;
+        return halfForSlot(slot).items.get(slot % CONTAINER_SIZE);
     }
 
     @Override
     public ItemStack removeItem(int slot, int amount) {
-        ItemStack result = ContainerHelper.removeItem(this.items, slot, amount);
+        if (slot < 0 || slot >= getContainerSize()) return ItemStack.EMPTY;
+        EmptyBarrelBlockEntity half = halfForSlot(slot);
+        ItemStack result = ContainerHelper.removeItem(half.items, slot % CONTAINER_SIZE, amount);
         if (!result.isEmpty()) {
             this.setChanged();
         }
@@ -198,13 +322,14 @@ public class EmptyBarrelBlockEntity extends BlockEntity implements Container, Me
 
     @Override
     public ItemStack removeItemNoUpdate(int slot) {
-        return ContainerHelper.takeItem(this.items, slot);
+        if (slot < 0 || slot >= getContainerSize()) return ItemStack.EMPTY;
+        return ContainerHelper.takeItem(halfForSlot(slot).items, slot % CONTAINER_SIZE);
     }
 
     @Override
     public void setItem(int slot, ItemStack stack) {
-        if (slot < 0 || slot >= this.items.size()) return;
-        this.items.set(slot, stack);
+        if (slot < 0 || slot >= getContainerSize()) return;
+        halfForSlot(slot).items.set(slot % CONTAINER_SIZE, stack);
         stack.limitSize(this.getMaxStackSize(stack));
         this.setChanged();
     }
@@ -212,9 +337,15 @@ public class EmptyBarrelBlockEntity extends BlockEntity implements Container, Me
     @Override
     public void setChanged() {
         super.setChanged();
-        if (this.level instanceof ServerLevel sLevel && isCategoryAssigned()) {
-            WarehouseSupplyManager.tickBarrel(sLevel, this);
-            syncToViewingPlayers(sLevel);
+        EmptyBarrelBlockEntity other = partner();
+        if (other != null) {
+            // Items may live in either half, so both get saved
+            other.markDirtyOnly();
+        }
+        EmptyBarrelBlockEntity main = other != null ? primary() : this;
+        if (this.level instanceof ServerLevel sLevel && main.isCategoryAssigned()) {
+            WarehouseSupplyManager.tickBarrel(sLevel, main);
+            main.syncToViewingPlayers(sLevel);
         }
     }
 
@@ -239,7 +370,7 @@ public class EmptyBarrelBlockEntity extends BlockEntity implements Container, Me
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
-        tag.putString("BarrelCategory", getCategory());
+        tag.putString("BarrelCategory", category != null ? category : CAT_UNASSIGNED);
         if (ownerUuid != null) {
             tag.putUUID("OwnerUuid", ownerUuid);
         }
@@ -249,7 +380,7 @@ public class EmptyBarrelBlockEntity extends BlockEntity implements Container, Me
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
+        this.items = NonNullList.withSize(CONTAINER_SIZE, ItemStack.EMPTY);
         ContainerHelper.loadAllItems(tag, this.items, registries);
         if (tag.contains("BarrelCategory")) {
             this.category = tag.getString("BarrelCategory");

@@ -11,12 +11,16 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.phys.Vec3;
 import net.zootycoon.ZooTycoonMod;
+import net.zootycoon.block.EmptyBarrelBlock;
 import net.zootycoon.client.inspect.HologramBarRenderer;
 import net.zootycoon.network.WarehousePayloads;
 import net.zootycoon.util.ZooTranslations;
@@ -209,6 +213,13 @@ public class EmptyBarrelHologramRenderer {
             double wx = pos.getX() + 0.5D;
             double wy = pos.getY() + ANCHOR_Y;
             double wz = pos.getZ() + 0.5D;
+            // Centre the panel over both halves of a double barrel
+            BlockState state = mc.level.getBlockState(pos);
+            if (state.getBlock() instanceof EmptyBarrelBlock && state.getValue(EmptyBarrelBlock.TYPE) != ChestType.SINGLE) {
+                Direction toOther = EmptyBarrelBlock.getConnectedDirection(state);
+                wx += toOther.getStepX() * 0.5D;
+                wz += toOther.getStepZ() * 0.5D;
+            }
             double dist = Math.sqrt(camPos.distanceToSqr(wx, wy, wz));
             if (dist > MAX_DISTANCE) continue;
             if (dist > FADE_START_DISTANCE) {

@@ -1,33 +1,48 @@
 {
   "variants": {
-    "facing=east,waterlogged=false": {
+    "facing=north,type=single": {
+      "model": "zootycoon:block/empty_barrel"
+    },
+    "facing=north,type=left": {
+      "model": "zootycoon:block/empty_barrel_left"
+    },
+    "facing=north,type=right": {
+      "model": "zootycoon:block/empty_barrel_right"
+    },
+    "facing=east,type=single": {
       "model": "zootycoon:block/empty_barrel",
       "y": 90
     },
-    "facing=east,waterlogged=true": {
-      "model": "zootycoon:block/empty_barrel",
+    "facing=east,type=left": {
+      "model": "zootycoon:block/empty_barrel_left",
       "y": 90
     },
-    "facing=north,waterlogged=false": {
-      "model": "zootycoon:block/empty_barrel"
+    "facing=east,type=right": {
+      "model": "zootycoon:block/empty_barrel_right",
+      "y": 90
     },
-    "facing=north,waterlogged=true": {
-      "model": "zootycoon:block/empty_barrel"
-    },
-    "facing=south,waterlogged=false": {
+    "facing=south,type=single": {
       "model": "zootycoon:block/empty_barrel",
       "y": 180
     },
-    "facing=south,waterlogged=true": {
-      "model": "zootycoon:block/empty_barrel",
+    "facing=south,type=left": {
+      "model": "zootycoon:block/empty_barrel_left",
       "y": 180
     },
-    "facing=west,waterlogged=false": {
+    "facing=south,type=right": {
+      "model": "zootycoon:block/empty_barrel_right",
+      "y": 180
+    },
+    "facing=west,type=single": {
       "model": "zootycoon:block/empty_barrel",
       "y": 270
     },
-    "facing=west,waterlogged=true": {
-      "model": "zootycoon:block/empty_barrel",
+    "facing=west,type=left": {
+      "model": "zootycoon:block/empty_barrel_left",
+      "y": 270
+    },
+    "facing=west,type=right": {
+      "model": "zootycoon:block/empty_barrel_right",
       "y": 270
     }
   }

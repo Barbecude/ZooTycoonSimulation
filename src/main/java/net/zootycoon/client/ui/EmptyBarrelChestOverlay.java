@@ -252,7 +252,15 @@ public class EmptyBarrelChestOverlay {
     }
 
     private static int getPanelY(Screen screen) {
-        return (screen.height - CHEST_HEIGHT) / 2;
+        return (screen.height - getChestHeight(screen)) / 2;
+    }
+
+    // A double barrel opens a six-row chest screen, which is three rows (54px) taller
+    private static int getChestHeight(Screen screen) {
+        if (screen instanceof ContainerScreen cs) {
+            return CHEST_HEIGHT + (cs.getMenu().getRowCount() - 3) * 18;
+        }
+        return CHEST_HEIGHT;
     }
 
     private static final int ZOOKEEPER_FOOD_COLS = 5;
@@ -302,7 +310,7 @@ public class EmptyBarrelChestOverlay {
         int panelW = getPanelWidth(screen);
         int panelX = getPanelX(screen);
         int panelY = getPanelY(screen);
-        int panelH = CHEST_HEIGHT;
+        int panelH = getChestHeight(screen);
 
         // Handle active scrollbar dragging
         if (isDraggingScrollbar) {
@@ -681,7 +689,7 @@ public class EmptyBarrelChestOverlay {
         int panelW = getPanelWidth(screen);
         int panelX = getPanelX(screen);
         int panelY = getPanelY(screen);
-        int panelH = CHEST_HEIGHT;
+        int panelH = getChestHeight(screen);
 
         if (mouseX < panelX || mouseX > panelX + panelW || mouseY < panelY || mouseY > panelY + panelH) {
             return false;
@@ -800,7 +808,7 @@ public class EmptyBarrelChestOverlay {
         int panelW = getPanelWidth(screen);
         int panelX = getPanelX(screen);
         int panelY = getPanelY(screen);
-        int panelH = CHEST_HEIGHT;
+        int panelH = getChestHeight(screen);
 
         if (mouseX >= panelX && mouseX <= panelX + panelW && mouseY >= panelY && mouseY <= panelY + panelH) {
             if (maxScroll > 0) {
