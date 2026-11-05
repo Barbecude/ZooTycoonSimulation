@@ -392,7 +392,24 @@ public class ZooAnimalHungerManager {
                 if (owner != null && level.getGameTime() % 600 == 0) {
                     String name = animal.hasCustomName() ? animal.getCustomName().getString() : animal.getType().getDescription().getString();
                     ZooNetworkPayloads.sendToast(owner, "zootycoon.toast.title.warning", "zootycoon.animal.starving_warning", 2, name, currentHunger);
+                    if (ownerUuid != null) {
+                        net.zootycoon.log.ZooLogManager.recordAnimalHealthIssue(ownerUuid, name, "Kelaparan kritis (" + currentHunger + "%)", 2);
+                    }
                 }
+            }
+
+            // Check critical thirst warning (every ~30s)
+            int animalThirst = getThirst(animal);
+            if (animalThirst <= 20 && animalThirst > 0 && ownerUuid != null && level.getGameTime() % 600 == 100) {
+                String name = animal.hasCustomName() ? animal.getCustomName().getString() : animal.getType().getDescription().getString();
+                net.zootycoon.log.ZooLogManager.recordAnimalHealthIssue(ownerUuid, name, "Kehausan kritis (" + animalThirst + "%)", 2);
+            }
+
+            // Check low health warning
+            if (animal.getHealth() <= animal.getMaxHealth() * 0.4f && animal.isAlive() && ownerUuid != null && level.getGameTime() % 600 == 200) {
+                String name = animal.hasCustomName() ? animal.getCustomName().getString() : animal.getType().getDescription().getString();
+                int hpPct = Math.round((animal.getHealth() / Math.max(0.1f, animal.getMaxHealth())) * 100.0f);
+                net.zootycoon.log.ZooLogManager.recordAnimalHealthIssue(ownerUuid, name, "Darah rendah tersisa " + hpPct + "%", 3);
             }
 
             // Starvation damage & death
@@ -404,6 +421,9 @@ public class ZooAnimalHungerManager {
                     String name = animal.hasCustomName() ? animal.getCustomName().getString() : animal.getType().getDescription().getString();
                     if (owner != null) {
                         ZooNetworkPayloads.sendToast(owner, "zootycoon.toast.title.error", "zootycoon.animal.starved_death", 3, name);
+                    }
+                    if (ownerUuid != null) {
+                        net.zootycoon.log.ZooLogManager.recordAnimalHealthIssue(ownerUuid, name, "Mati karena kelaparan!", 3);
                     }
                     level.playSound(null, animal.blockPosition(), SoundEvents.WITHER_DEATH, SoundSource.NEUTRAL, 0.6f, 0.8f);
                     level.sendParticles(ParticleTypes.SMOKE, animal.getX(), animal.getY() + 0.5, animal.getZ(), 15, 0.3, 0.3, 0.3, 0.05);

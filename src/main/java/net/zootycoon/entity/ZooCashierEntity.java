@@ -657,6 +657,9 @@ public class ZooCashierEntity extends PathfinderMob {
                             if (ticketPrice > 0) {
                                 creditOwner(sLevel, ticketPrice);
                             }
+                            if (ownerUuid != null) {
+                                net.zootycoon.log.ZooLogManager.recordTicketPurchase(ownerUuid, ticketPrice, customer.isChildVisitor());
+                            }
                             sLevel.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.8F, 1.1F);
                             sLevel.playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.7F, 1.2F);
                             sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 6, 0.25, 0.25, 0.25, 0.02);

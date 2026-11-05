@@ -56,6 +56,8 @@ public class ZooTycoonClient implements ClientModInitializer {
     public static int clientEmeraldBalance = 0;
     public static int clientZooRating = 100;
     public static int clientReviewCount = 0;
+    public static java.util.List<ZooNetworkPayloads.ZooLogEntryDto> clientLogs = new java.util.ArrayList<>();
+    public static ZooNetworkPayloads.ZooStatsDto clientStats = new ZooNetworkPayloads.ZooStatsDto(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
     public static double getClientStarRating() {
         return Math.clamp(clientZooRating / 20.0D, 0.0D, 5.0D);
@@ -468,6 +470,13 @@ public class ZooTycoonClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(net.zootycoon.network.WarehousePayloads.BarrelHologramPayload.TYPE, (payload, context) -> {
             context.client().execute(() -> {
                 net.zootycoon.client.render.EmptyBarrelHologramRenderer.onPayload(payload);
+            });
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.SyncZooLogStatsPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                clientLogs = new java.util.ArrayList<>(payload.logs());
+                clientStats = payload.stats();
             });
         });
 

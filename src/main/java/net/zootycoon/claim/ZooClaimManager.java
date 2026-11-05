@@ -100,6 +100,9 @@ public class ZooClaimManager {
                     } catch (Exception ignored) {}
                 }
             }
+            if (tag.contains("zoo_logs_stats", Tag.TAG_COMPOUND)) {
+                net.zootycoon.log.ZooLogManager.loadFromNbt(tag.getCompound("zoo_logs_stats"));
+            }
             if (tag.contains("dismissed_feedbacks", Tag.TAG_COMPOUND)) {
                 CompoundTag fbTag = tag.getCompound("dismissed_feedbacks");
                 dismissedFeedbackIds.clear();
@@ -154,6 +157,7 @@ public class ZooClaimManager {
                 fbTag.put(entry.getKey().toString(), listFb);
             }
             tag.put("dismissed_feedbacks", fbTag);
+            tag.put("zoo_logs_stats", net.zootycoon.log.ZooLogManager.saveToNbt());
 
             NbtIo.writeCompressed(tag, path);
         } catch (IOException e) {

@@ -35,6 +35,9 @@ public class MainManagementScreen extends Screen {
     private final SecurityManageTab securityManageTab;
     private final CashierManageTab cashierManageTab;
     private final AnimalManagementTab animalTab;
+    private final ZooLogStatsModal logStatsModal;
+    private boolean isLogStatsOpen = false;
+    private static final ResourceLocation LOG_HISTORY_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/log_history.png");
 
     public MainManagementScreen() {
         super(ZooTranslations.component("zootycoon.ui.title"));
@@ -45,6 +48,7 @@ public class MainManagementScreen extends Screen {
         this.securityManageTab = new SecurityManageTab(this);
         this.cashierManageTab = new CashierManageTab(this);
         this.animalTab = new AnimalManagementTab(this);
+        this.logStatsModal = new ZooLogStatsModal(this);
     }
 
     public <T extends GuiEventListener & Renderable & NarratableEntry> T addWidgetPublic(T widget) {
@@ -68,6 +72,20 @@ public class MainManagementScreen extends Screen {
     @Override
     protected void init() {
         super.init();
+
+        // Small icon button at top-right for Log & Statistics
+        int logBtnSize = 20;
+        int logBtnX = this.width - logBtnSize - 12;
+        int logBtnY = 10;
+        addRenderableWidget(new ZooButton(logBtnX, logBtnY, logBtnSize, logBtnSize, Component.empty(), b -> {
+            this.isLogStatsOpen = !this.isLogStatsOpen;
+            if (this.isLogStatsOpen) {
+                this.logStatsModal.init();
+                net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+                        new net.zootycoon.network.ZooNetworkPayloads.RequestZooLogStatsPayload()
+                );
+            }
+        }).setCustomIcon(LOG_HISTORY_ICON, 12, 12, 16, 16).asPrimary());
 
         if (currentView == ViewState.ROOT_GRID) {
             int gridTotalWidth = Math.min(this.width - 40, 520);
@@ -224,10 +242,22 @@ public class MainManagementScreen extends Screen {
         if (currentView == ViewState.STAFF_RECRUITMENT) {
             staffTab.renderOverlay(graphics, mouseX, mouseY, delta);
         }
+
+        if (isLogStatsOpen) {
+            logStatsModal.render(graphics, mouseX, mouseY, delta);
+        }
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (isLogStatsOpen) {
+            boolean handled = logStatsModal.mouseClicked(mouseX, mouseY, button);
+            if (!handled) {
+                // Clicked outside modal or on close button
+                isLogStatsOpen = false;
+            }
+            return true;
+        }
         switch (currentView) {
             case ENCLOSURES_CATALOG -> {
                 if (enclosuresTab.mouseClicked(mouseX, mouseY, button)) return true;
@@ -257,6 +287,9 @@ public class MainManagementScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (isLogStatsOpen) {
+            if (logStatsModal.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) return true;
+        }
         if (currentView == ViewState.ZOOKEEPER_MANAGE) {
             if (zookeeperManageTab.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) return true;
         }
@@ -293,6 +326,12 @@ public class MainManagementScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (isLogStatsOpen) {
+            if (keyCode == 256) { // GLFW_KEY_ESCAPE
+                isLogStatsOpen = false;
+                return true;
+            }
+        }
         if (currentView == ViewState.ANIMAL_MANAGEMENT) {
             if (animalTab.keyPressed(keyCode, scanCode, modifiers)) return true;
         }

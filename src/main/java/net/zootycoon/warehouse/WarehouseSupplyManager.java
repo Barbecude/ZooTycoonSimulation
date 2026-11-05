@@ -293,6 +293,19 @@ public class WarehouseSupplyManager {
                     requiredCount,
                     allReady
             ));
+
+            // Log staff request for zoo owner history
+            UUID ownerUuid = null;
+            if (barrel != null) {
+                var claim = net.zootycoon.claim.ZooClaimManager.get(sLevel).getClaimAt(barrel.getBlockPos());
+                if (claim.isPresent()) {
+                    ownerUuid = claim.get().getOwnerUuid();
+                }
+            }
+            if (ownerUuid != null) {
+                String detail = req.subtitle != null && !req.subtitle.isBlank() ? req.subtitle : (targets.isEmpty() ? "Suplai Habis" : targets.get(0).getHoverName().getString());
+                net.zootycoon.log.ZooLogManager.recordStaffRequest(ownerUuid, req.staffType, req.staffName, detail);
+            }
         }
 
         return dtos;

@@ -208,11 +208,13 @@ public class ZooStaffManager {
             if (currentBal >= totalWage) {
                 eco.deductBalance(playerUuid, totalWage, player);
                 setStaffOnStrike(playerUuid, false);
+                net.zootycoon.log.ZooLogManager.recordSalaryPayment(playerUuid, totalWage, staffCount, true);
                 if (player != null) {
                     ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.info", "zootycoon.toast.salary.paid", 0, String.valueOf(totalWage), String.valueOf(staffCount));
                 }
             } else {
                 setStaffOnStrike(playerUuid, true);
+                net.zootycoon.log.ZooLogManager.recordSalaryPayment(playerUuid, totalWage, staffCount, false);
                 if (player != null) {
                     ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.warning", "zootycoon.toast.salary.unpaid", 2);
                 }

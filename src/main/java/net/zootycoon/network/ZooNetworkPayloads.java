@@ -904,6 +904,91 @@ public class ZooNetworkPayloads {
 
     public record VisitorFeedbackItemDto(String feedbackId, String message, int urgencyLevel) {}
 
+    public record ZooLogEntryDto(String id, long timestamp, String category, String title, String description, int emeraldDelta, int urgency) {}
+
+    public record ZooStatsDto(
+            int totalVisitorsToday,
+            int ticketsSoldToday,
+            int ticketRevenueToday,
+            int freeVisitorsToday,
+            int childVisitorsToday,
+            int adultVisitorsToday,
+            int currentVisitorsInZoo,
+            int happyVisitors,
+            int neutralVisitors,
+            int unhappyVisitors
+    ) {}
+
+    // 31. Request Zoo Log & Stats Payload (C2S)
+    public record RequestZooLogStatsPayload() implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<RequestZooLogStatsPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("request_zoo_log_stats"));
+        public static final StreamCodec<FriendlyByteBuf, RequestZooLogStatsPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {},
+                buf -> new RequestZooLogStatsPayload()
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 32. Sync Zoo Log & Stats Payload (S2C)
+    public record SyncZooLogStatsPayload(List<ZooLogEntryDto> logs, ZooStatsDto stats) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<SyncZooLogStatsPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("sync_zoo_log_stats"));
+        public static final StreamCodec<FriendlyByteBuf, SyncZooLogStatsPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeInt(payload.logs.size());
+                    for (ZooLogEntryDto l : payload.logs) {
+                        buf.writeUtf(l.id() != null ? l.id() : "");
+                        buf.writeLong(l.timestamp());
+                        buf.writeUtf(l.category() != null ? l.category() : "");
+                        buf.writeUtf(l.title() != null ? l.title() : "");
+                        buf.writeUtf(l.description() != null ? l.description() : "");
+                        buf.writeInt(l.emeraldDelta());
+                        buf.writeInt(l.urgency());
+                    }
+                    buf.writeInt(payload.stats.totalVisitorsToday());
+                    buf.writeInt(payload.stats.ticketsSoldToday());
+                    buf.writeInt(payload.stats.ticketRevenueToday());
+                    buf.writeInt(payload.stats.freeVisitorsToday());
+                    buf.writeInt(payload.stats.childVisitorsToday());
+                    buf.writeInt(payload.stats.adultVisitorsToday());
+                    buf.writeInt(payload.stats.currentVisitorsInZoo());
+                    buf.writeInt(payload.stats.happyVisitors());
+                    buf.writeInt(payload.stats.neutralVisitors());
+                    buf.writeInt(payload.stats.unhappyVisitors());
+                },
+                buf -> {
+                    int size = buf.readInt();
+                    List<ZooLogEntryDto> logs = new ArrayList<>(size);
+                    for (int i = 0; i < size; i++) {
+                        logs.add(new ZooLogEntryDto(
+                                buf.readUtf(),
+                                buf.readLong(),
+                                buf.readUtf(),
+                                buf.readUtf(),
+                                buf.readUtf(),
+                                buf.readInt(),
+                                buf.readInt()
+                        ));
+                    }
+                    ZooStatsDto stats = new ZooStatsDto(
+                            buf.readInt(),
+                            buf.readInt(),
+                            buf.readInt(),
+                            buf.readInt(),
+                            buf.readInt(),
+                            buf.readInt(),
+                            buf.readInt(),
+                            buf.readInt(),
+                            buf.readInt(),
+                            buf.readInt()
+                    );
+                    return new SyncZooLogStatsPayload(logs, stats);
+                }
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     // 20. Open Cashier Screen Payload (S2C)
     public record OpenCashierScreenPayload(int entityId, String currentRole, String cashierName, List<ItemStack> stockItems, boolean isZooOpen, int ticketPrice, List<VisitorFeedbackItemDto> feedbacks) implements CustomPacketPayload {
         public static final CustomPacketPayload.Type<OpenCashierScreenPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("open_cashier_screen"));
@@ -1324,6 +1409,7 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playC2S().register(SellAnimalPayload.TYPE, SellAnimalPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(FeedAnimalFromGuiPayload.TYPE, FeedAnimalFromGuiPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestAnimalSyncPayload.TYPE, RequestAnimalSyncPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(RequestZooLogStatsPayload.TYPE, RequestZooLogStatsPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SupplyZookeeperFoodPayload.TYPE, SupplyZookeeperFoodPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(GreetVisitorPayload.TYPE, GreetVisitorPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(GuideVisitorPayload.TYPE, GuideVisitorPayload.CODEC);
@@ -1365,6 +1451,7 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
         PayloadTypeRegistry.playS2C().register(ShowToastPayload.TYPE, ShowToastPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(PlayBrushAnimationPayload.TYPE, PlayBrushAnimationPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncAnimalWetPayload.TYPE, SyncAnimalWetPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(SyncZooLogStatsPayload.TYPE, SyncZooLogStatsPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(RequestClientSelectionSavePayload.TYPE, RequestClientSelectionSavePayload.CODEC);
 
         // Handler: Claim Land (Old / Direct)
@@ -1820,6 +1907,13 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
         ServerPlayNetworking.registerGlobalReceiver(RequestAnimalSyncPayload.TYPE, (payload, context) -> {
             ServerPlayer player = context.player();
             context.server().execute(() -> sendAnimalSync(player));
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(RequestZooLogStatsPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                net.zootycoon.log.ZooLogManager.sendSyncToPlayer(player);
+            });
         });
 
         // Handler: Supply Food to Zookeeper from GUI
