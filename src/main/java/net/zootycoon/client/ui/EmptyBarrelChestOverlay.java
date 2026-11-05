@@ -682,20 +682,12 @@ public class EmptyBarrelChestOverlay {
             boolean canAfford = net.zootycoon.economy.TransactionHelper.hasEnoughEmeralds(mc.player, margin.rawCost());
 
             List<Component> tipLines = new ArrayList<>();
-            String marginLabel;
-            try {
-                marginLabel = ZooTranslations.get("zootycoon.warehouse.tooltip.margin_label", margin.netProfit(), margin.marginPercent());
-            } catch (Exception e) {
-                marginLabel = "Keuntungan (margin): +" + margin.netProfit() + " Emerald (" + margin.marginPercent() + "%)";
-            }
-            if (marginLabel.equals("zootycoon.warehouse.tooltip.margin_label") || marginLabel.contains("%d")) {
-                marginLabel = "Keuntungan (margin): +" + margin.netProfit() + " Emerald (" + margin.marginPercent() + "%)";
-            }
+            String marginLabel = "Keuntungan: +" + margin.netProfit() + " Emerald";
             tipLines.add(Component.literal(marginLabel).withStyle(ChatFormatting.GREEN));
 
             if (!canAfford) {
                 String notEnough = ZooTranslations.get("zootycoon.warehouse.tooltip.not_enough_emeralds");
-                if (notEnough.equals("zootycoon.warehouse.tooltip.not_enough_emeralds")) {
+                if (notEnough.equals("zootycoon.warehouse.tooltip.not_enough_emeralds") || notEnough.contains("%d")) {
                     notEnough = "Saldo emerald tidak cukup";
                 }
                 tipLines.add(Component.literal(notEnough).withStyle(ChatFormatting.RED));
