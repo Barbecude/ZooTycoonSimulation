@@ -902,8 +902,10 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    public record VisitorFeedbackItemDto(String feedbackId, String message, int urgencyLevel) {}
+
     // 20. Open Cashier Screen Payload (S2C)
-    public record OpenCashierScreenPayload(int entityId, String currentRole, String cashierName, List<ItemStack> stockItems, boolean isZooOpen, int ticketPrice) implements CustomPacketPayload {
+    public record OpenCashierScreenPayload(int entityId, String currentRole, String cashierName, List<ItemStack> stockItems, boolean isZooOpen, int ticketPrice, List<VisitorFeedbackItemDto> feedbacks) implements CustomPacketPayload {
         public static final CustomPacketPayload.Type<OpenCashierScreenPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("open_cashier_screen"));
         public static final StreamCodec<FriendlyByteBuf, OpenCashierScreenPayload> CODEC = CustomPacketPayload.codec(
                 (payload, buf) -> {
@@ -923,6 +925,13 @@ public class ZooNetworkPayloads {
                             buf.writeUtf(key != null ? key.toString() : "minecraft:air");
                             buf.writeInt(st.getCount());
                         }
+                    }
+                    List<VisitorFeedbackItemDto> fbList = payload.feedbacks != null ? payload.feedbacks : List.of();
+                    buf.writeInt(fbList.size());
+                    for (VisitorFeedbackItemDto fb : fbList) {
+                        buf.writeUtf(fb.feedbackId() != null ? fb.feedbackId() : "");
+                        buf.writeUtf(fb.message() != null ? fb.message() : "");
+                        buf.writeInt(fb.urgencyLevel());
                     }
                 },
                 buf -> {
@@ -947,7 +956,15 @@ public class ZooNetworkPayloads {
                             }
                         }
                     }
-                    return new OpenCashierScreenPayload(entityId, role, name, items, isZooOpen, ticketPrice);
+                    int fbSize = buf.readInt();
+                    List<VisitorFeedbackItemDto> fbList = new ArrayList<>(fbSize);
+                    for (int i = 0; i < fbSize; i++) {
+                        String fbId = buf.readUtf();
+                        String msg = buf.readUtf();
+                        int urgency = buf.readInt();
+                        fbList.add(new VisitorFeedbackItemDto(fbId, msg, urgency));
+                    }
+                    return new OpenCashierScreenPayload(entityId, role, name, items, isZooOpen, ticketPrice, fbList);
                 }
         );
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
@@ -1013,6 +1030,19 @@ public class ZooNetworkPayloads {
                     buf.writeInt(payload.price);
                 },
                 buf -> new SetTicketPricePayload(buf.readInt(), buf.readInt())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 19b. Dismiss Visitor Feedback Payload (C2S)
+    public record DismissVisitorFeedbackPayload(int cashierEntityId, String feedbackId) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<DismissVisitorFeedbackPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("dismiss_visitor_feedback"));
+        public static final StreamCodec<FriendlyByteBuf, DismissVisitorFeedbackPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeInt(payload.cashierEntityId);
+                    buf.writeUtf(payload.feedbackId != null ? payload.feedbackId : "");
+                },
+                buf -> new DismissVisitorFeedbackPayload(buf.readInt(), buf.readUtf())
         );
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
@@ -1302,7 +1332,8 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playC2S().register(CashierSlotClickPayload.TYPE, CashierSlotClickPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RotateCashierPayload.TYPE, RotateCashierPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ToggleZooOpenPayload.TYPE, ToggleZooOpenPayload.CODEC);
-        PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPricePayload.CODEC);
+                PayloadTypeRegistry.playC2S().register(DismissVisitorFeedbackPayload.TYPE, DismissVisitorFeedbackPayload.CODEC);
+PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPricePayload.CODEC);
         PayloadTypeRegistry.playC2S().register(AssignZookeeperPayload.TYPE, AssignZookeeperPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SelectFeedingTroughAnimalPayload.TYPE, SelectFeedingTroughAnimalPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ClearFeedingTroughAnimalPayload.TYPE, ClearFeedingTroughAnimalPayload.CODEC);
@@ -1946,6 +1977,21 @@ public class ZooNetworkPayloads {
 
                 if (ent instanceof net.zootycoon.entity.ZooCashierEntity cashier) {
                     cashier.sendScreenToPlayer(player);
+                }
+            });
+        });
+
+        // Handler: Dismiss Visitor Feedback from Cashier GUI
+        ServerPlayNetworking.registerGlobalReceiver(DismissVisitorFeedbackPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            net.minecraft.server.level.ServerLevel level = (net.minecraft.server.level.ServerLevel) player.level();
+            context.server().execute(() -> {
+                net.minecraft.world.entity.Entity ent = level.getEntity(payload.cashierEntityId());
+                if (ent instanceof net.zootycoon.entity.ZooCashierEntity cashier) {
+                    UUID ownerUuid = cashier.getOwnerUuid();
+                    if (ownerUuid != null && ownerUuid.equals(player.getUUID())) {
+                        ZooClaimManager.get(level).dismissFeedback(ownerUuid, payload.feedbackId());
+                    }
                 }
             });
         });

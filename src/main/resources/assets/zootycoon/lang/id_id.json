@@ -129,7 +129,7 @@
   "zootycoon.ui.staff.btn_manage_builder": "Kelola Kuli",
   "zootycoon.ui.staff.btn_manage_security": "Kelola Security",
   "zootycoon.ui.staff.btn_manage_cashier": "Kelola Kasir",
-  "zootycoon.ui.staff.btn_recruit_dropdown": "Rekrut Staff \u25BE",
+  "zootycoon.ui.staff.btn_recruit_dropdown": "Rekrut Staff ▾",
   "zootycoon.ui.subview.zookeeper_manage": "Kelola Zookeeper",
   "zootycoon.ui.subview.builder_manage": "Kelola Kuli Bangunan",
   "zootycoon.ui.subview.security_manage": "Kelola Security",
@@ -770,5 +770,11 @@
   "zootycoon.dialog.visitor.btn.call_zookeeper": "Panggil Zookeeper Rawat Satwa",
   "zootycoon.dialog.visitor.btn.review_price": "Tinjau Harga Tiket",
   "zootycoon.dialog.visitor.btn.more_animals": "Akan Datangkan Satwa Baru",
-  "zootycoon.visitor.complaint_resolved": "Pengunjung merasa didengar dan ditenangkan."
+  "zootycoon.visitor.complaint_resolved": "Pengunjung merasa didengar dan ditenangkan.",
+  "zootycoon.dialog.cashier.tab.ticket": "Pengaturan Tiket",
+  "zootycoon.dialog.cashier.tab.feedback": "Masukan Pengunjung",
+  "zootycoon.dialog.cashier.feedback.empty": "Belum ada keluhan pengunjung.",
+  "zootycoon.dialog.cashier.feedback.sort_urgency": "Urut: Urgensi",
+  "zootycoon.dialog.cashier.feedback.sort_time": "Urut: Waktu",
+  "zootycoon.dialog.cashier.feedback.dismiss": "Hapus keluhan"
 }

@@ -42,6 +42,7 @@ public class ZooClaimManager {
     private final Map<UUID, ZooClaim> claims = new ConcurrentHashMap<>();
     private final Set<UUID> openZoos = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Map<UUID, Integer> ticketPrices = new ConcurrentHashMap<>();
+    private final Map<UUID, Set<String>> dismissedFeedbackIds = new ConcurrentHashMap<>();
     private MinecraftServer server;
 
     public ZooClaimManager() {
@@ -99,6 +100,21 @@ public class ZooClaimManager {
                     } catch (Exception ignored) {}
                 }
             }
+            if (tag.contains("dismissed_feedbacks", Tag.TAG_COMPOUND)) {
+                CompoundTag fbTag = tag.getCompound("dismissed_feedbacks");
+                dismissedFeedbackIds.clear();
+                for (String key : fbTag.getAllKeys()) {
+                    try {
+                        UUID pUuid = UUID.fromString(key);
+                        ListTag listFb = fbTag.getList(key, Tag.TAG_STRING);
+                        Set<String> set = Collections.newSetFromMap(new ConcurrentHashMap<>());
+                        for (int k = 0; k < listFb.size(); k++) {
+                            set.add(listFb.getString(k));
+                        }
+                        dismissedFeedbackIds.put(pUuid, set);
+                    } catch (Exception ignored) {}
+                }
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -129,10 +145,32 @@ public class ZooClaimManager {
             }
             tag.put("ticket_prices", priceTag);
 
+            CompoundTag fbTag = new CompoundTag();
+            for (var entry : dismissedFeedbackIds.entrySet()) {
+                ListTag listFb = new ListTag();
+                for (String msg : entry.getValue()) {
+                    listFb.add(net.minecraft.nbt.StringTag.valueOf(msg));
+                }
+                fbTag.put(entry.getKey().toString(), listFb);
+            }
+            tag.put("dismissed_feedbacks", fbTag);
+
             NbtIo.writeCompressed(tag, path);
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public boolean isFeedbackDismissed(UUID playerUuid, String feedbackId) {
+        if (playerUuid == null || feedbackId == null) return false;
+        Set<String> set = dismissedFeedbackIds.get(playerUuid);
+        return set != null && set.contains(feedbackId);
+    }
+
+    public void dismissFeedback(UUID playerUuid, String feedbackId) {
+        if (playerUuid == null || feedbackId == null) return;
+        dismissedFeedbackIds.computeIfAbsent(playerUuid, k -> Collections.newSetFromMap(new ConcurrentHashMap<>())).add(feedbackId);
+        saveToFile();
     }
 
     public int getTicketPrice(UUID playerUuid) {

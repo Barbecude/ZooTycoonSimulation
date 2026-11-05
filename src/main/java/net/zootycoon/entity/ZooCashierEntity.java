@@ -838,6 +838,7 @@ public class ZooCashierEntity extends PathfinderMob {
     public void sendScreenToPlayer(ServerPlayer sp) {
         boolean open = false;
         int ticketPrice = net.zootycoon.economy.ZooEconomyEngine.DEFAULT_TICKET_PRICE;
+        List<ZooNetworkPayloads.VisitorFeedbackItemDto> feedbackDtos = new ArrayList<>();
         if (this.level() instanceof ServerLevel sLevel) {
             ZooClaimManager claimManager = ZooClaimManager.get(sLevel);
             var targetClaim = claimManager.getClaimAt(this.blockPosition());
@@ -846,14 +847,30 @@ public class ZooCashierEntity extends PathfinderMob {
                     : sp.getUUID();
             open = claimManager.isZooOpen(ownerUuid);
             ticketPrice = claimManager.getTicketPrice(ownerUuid);
+
+            if (ownerUuid != null && "TICKET".equalsIgnoreCase(this.getCashierRole())) {
+                List<String> complaintNames = net.zootycoon.entity.ZooVisitorEntity.getActiveComplaintsForOwner(sLevel, ownerUuid);
+                for (String cName : complaintNames) {
+                    try {
+                        var comp = net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.valueOf(cName);
+                        String msg = comp.getFeedback();
+                        int urgency = 1;
+                        if (comp == net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.SICK_ANIMALS) urgency = 3;
+                        else if (comp == net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.TOILET || comp == net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.THIRSTY || comp == net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.HUNGRY) urgency = 2;
+                        feedbackDtos.add(new ZooNetworkPayloads.VisitorFeedbackItemDto(cName, msg, urgency));
+                    } catch (Exception ignored) {}
+                }
+            }
         }
+
         ServerPlayNetworking.send(sp, new ZooNetworkPayloads.OpenCashierScreenPayload(
                 this.getId(),
                 this.getCashierRole(),
                 this.getName().getString(),
                 this.getStockItemsList(),
                 open,
-                ticketPrice
+                ticketPrice,
+                feedbackDtos
         ));
     }
 

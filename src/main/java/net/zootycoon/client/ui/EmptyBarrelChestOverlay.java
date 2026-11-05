@@ -293,8 +293,7 @@ public class EmptyBarrelChestOverlay {
         int displayedCount = (isExpanded || !hasMultipleFoodRows) ? targets.size() : colsPerRow;
         int foodRows = Math.max(1, (int) Math.ceil((double) Math.max(1, displayedCount) / colsPerRow));
         int foodGridH = foodRows * slotSize + Math.max(0, foodRows - 1) * slotGap;
-        int toggleBtnH = 15;
-        int actionBtnYOffset = hasMultipleFoodRows ? (25 + foodGridH + 3 + toggleBtnH + 3) : (25 + foodGridH + 3);
+        int actionBtnYOffset = 25 + foodGridH + 3;
         int actionBtnH = 17 + 2 + 16;
         return Math.max(CARD_HEIGHT, actionBtnYOffset + actionBtnH + 4);
     }
@@ -520,34 +519,36 @@ public class EmptyBarrelChestOverlay {
                 int foodGridH = foodRows * slotSize + Math.max(0, foodRows - 1) * slotGap;
 
                 if (hasMultipleFoodRows) {
-                    int toggleBtnX = infoX;
-                    int toggleBtnY = slotY + foodGridH + 3;
-                    int toggleBtnW = infoW;
-                    int toggleBtnH = 15;
-                    boolean toggleHovered = mouseX >= toggleBtnX && mouseX <= toggleBtnX + toggleBtnW
-                            && mouseY >= toggleBtnY && mouseY <= toggleBtnY + toggleBtnH
+                    int lastIndexInFirstRow = colsPerRow - 1;
+                    int chevronX = infoX + lastIndexInFirstRow * (slotSize + slotGap) + slotSize + 3;
+                    int chevronY = slotY + 1;
+                    int chevronSize = 16;
+                    boolean chevronHovered = mouseX >= chevronX && mouseX <= chevronX + chevronSize
+                            && mouseY >= chevronY && mouseY <= chevronY + chevronSize
                             && mouseY >= listY && mouseY <= listY + listH;
 
-                    int tBtnBg = toggleHovered ? 0xFF263045 : 0xFF19202D;
-                    int tBtnBorder = toggleHovered ? 0xFF58A6FF : 0xFF354157;
-                    graphics.fill(toggleBtnX, toggleBtnY, toggleBtnX + toggleBtnW, toggleBtnY + toggleBtnH, tBtnBg);
-                    graphics.renderOutline(toggleBtnX, toggleBtnY, toggleBtnW, toggleBtnH, tBtnBorder);
+                    int chBg = chevronHovered ? 0xFF2A344A : 0xFF161B26;
+                    int chBorder = chevronHovered ? 0xFFFFFFFF : 0xFF354157;
+                    graphics.fill(chevronX, chevronY, chevronX + chevronSize, chevronY + chevronSize, chBg);
+                    graphics.renderOutline(chevronX, chevronY, chevronSize, chevronSize, chBorder);
 
-                    String toggleText = isExpanded ? "▲ Sembunyikan" : "▼ Lihat Semua";
-                    int textW = font.width(toggleText);
+                    String chevronText = isExpanded ? "▲" : "▼";
+                    int chTextW = font.width(chevronText);
                     graphics.drawString(
                             font,
-                            toggleText,
-                            toggleBtnX + (toggleBtnW - textW) / 2,
-                            toggleBtnY + (toggleBtnH - 8) / 2,
-                            toggleHovered ? 0xFFFFFFFF : 0xFFC0CAD8,
+                            chevronText,
+                            chevronX + (chevronSize - chTextW) / 2,
+                            chevronY + (chevronSize - 8) / 2,
+                            chevronHovered ? 0xFFFFFFFF : 0xFF9FB0C7,
                             false
                     );
 
-                    actionBtnY = toggleBtnY + toggleBtnH + 3;
-                } else {
-                    actionBtnY = slotY + foodGridH + 3;
+                    if (chevronHovered) {
+                        String tip = isExpanded ? "Sembunyikan Pakan" : "Lihat Semua Pakan";
+                        graphics.renderTooltip(font, Component.literal(tip), mouseX, mouseY);
+                    }
                 }
+                actionBtnY = slotY + foodGridH + 3;
             }
 
             // Row 4 / 5: Ambil Resep / Ambil Catatan Button + Square Checklist Delivery Button
@@ -858,12 +859,12 @@ public class EmptyBarrelChestOverlay {
                     int foodGridH = foodRows * slotSize + Math.max(0, foodRows - 1) * slotGap;
 
                     if (hasMultipleFoodRows) {
-                        int toggleBtnX = infoX;
-                        int toggleBtnY = slotY + foodGridH + 3;
-                        int toggleBtnW = infoW;
-                        int toggleBtnH = 15;
+                        int lastIndexInFirstRow = colsPerRow - 1;
+                        int chevronX = infoX + lastIndexInFirstRow * (slotSize + slotGap) + slotSize + 3;
+                        int chevronY = slotY + 1;
+                        int chevronSize = 16;
 
-                        if (mouseX >= toggleBtnX && mouseX <= toggleBtnX + toggleBtnW && mouseY >= toggleBtnY && mouseY <= toggleBtnY + toggleBtnH) {
+                        if (mouseX >= chevronX && mouseX <= chevronX + chevronSize && mouseY >= chevronY && mouseY <= chevronY + chevronSize) {
                             Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
                             if (isExpanded) {
                                 expandedFoodCards.remove(req.staffUuid());
@@ -872,10 +873,8 @@ public class EmptyBarrelChestOverlay {
                             }
                             return true;
                         }
-                        actionBtnY = toggleBtnY + toggleBtnH + 3;
-                    } else {
-                        actionBtnY = slotY + foodGridH + 3;
                     }
+                    actionBtnY = slotY + foodGridH + 3;
                 }
 
                 int btnY = actionBtnY;

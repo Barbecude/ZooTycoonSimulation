@@ -134,7 +134,7 @@
   "zootycoon.ui.staff.btn_manage_builder": "Manage Builders",
   "zootycoon.ui.staff.btn_manage_security": "Manage Security",
   "zootycoon.ui.staff.btn_manage_cashier": "Manage Cashiers",
-  "zootycoon.ui.staff.btn_recruit_dropdown": "Hire Staff \u25BE",
+  "zootycoon.ui.staff.btn_recruit_dropdown": "Hire Staff ▾",
   "zootycoon.ui.subview.zookeeper_manage": "Manage Zookeepers",
   "zootycoon.ui.subview.builder_manage": "Manage Builders",
   "zootycoon.ui.subview.security_manage": "Manage Security",
@@ -766,5 +766,11 @@
   "zootycoon.dialog.visitor.btn.call_zookeeper": "Call Zookeeper",
   "zootycoon.dialog.visitor.btn.review_price": "Review Ticket Price",
   "zootycoon.dialog.visitor.btn.more_animals": "Acquire More Animals",
-  "zootycoon.visitor.complaint_resolved": "The visitor feels heard and reassured."
+  "zootycoon.visitor.complaint_resolved": "The visitor feels heard and reassured.",
+  "zootycoon.dialog.cashier.tab.ticket": "Ticket Settings",
+  "zootycoon.dialog.cashier.tab.feedback": "Visitor Feedback",
+  "zootycoon.dialog.cashier.feedback.empty": "No visitor complaints yet.",
+  "zootycoon.dialog.cashier.feedback.sort_urgency": "Sort: Urgency",
+  "zootycoon.dialog.cashier.feedback.sort_time": "Sort: Time",
+  "zootycoon.dialog.cashier.feedback.dismiss": "Dismiss complaint"
 }

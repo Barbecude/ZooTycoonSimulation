@@ -47,8 +47,63 @@ import net.zootycoon.block.ToiletBlockEntity;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Map;
 
 public class ZooVisitorEntity extends PathfinderMob {
+
+    // Persistent collection of recent complaints per zoo owner
+    public static final java.util.Map<java.util.UUID, java.util.Map<String, Long>> RECENT_OWNER_COMPLAINTS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static void recordComplaint(java.util.UUID ownerUuid, String complaintName) {
+        if (ownerUuid == null || complaintName == null || complaintName.isEmpty() || "NONE".equalsIgnoreCase(complaintName)) return;
+        RECENT_OWNER_COMPLAINTS.computeIfAbsent(ownerUuid, k -> new java.util.concurrent.ConcurrentHashMap<>()).put(complaintName, System.currentTimeMillis());
+    }
+
+    public static List<String> getActiveComplaintsForOwner(net.minecraft.server.level.ServerLevel level, java.util.UUID ownerUuid) {
+        if (level == null || ownerUuid == null) return Collections.emptyList();
+        var claimManager = net.zootycoon.claim.ZooClaimManager.get(level);
+        var map = RECENT_OWNER_COMPLAINTS.computeIfAbsent(ownerUuid, k -> new java.util.concurrent.ConcurrentHashMap<>());
+
+        List<Map.Entry<String, Long>> valid = new ArrayList<>();
+        long now = System.currentTimeMillis();
+        for (var entry : map.entrySet()) {
+            if (claimManager.isFeedbackDismissed(ownerUuid, entry.getKey())) continue;
+            // Retain complaints within last 20 minutes
+            if (now - entry.getValue() <= 20 * 60 * 1000L) {
+                valid.add(entry);
+            }
+        }
+        // Also scan living visitors in the claim to catch active complaints
+        for (var claim : claimManager.getClaimsForPlayer(ownerUuid)) {
+            var box = claim.getBox();
+            net.minecraft.world.phys.AABB aabb = new net.minecraft.world.phys.AABB(box.minX(), box.minY(), box.minZ(), box.maxX(), box.maxY(), box.maxZ());
+            List<ZooVisitorEntity> visitors = level.getEntitiesOfClass(ZooVisitorEntity.class, aabb);
+            for (ZooVisitorEntity v : visitors) {
+                if (v.currentComplaint != null && v.currentComplaint != VisitorComplaint.NONE) {
+                    String name = v.currentComplaint.name();
+                    if (!claimManager.isFeedbackDismissed(ownerUuid, name)) {
+                        map.put(name, now);
+                        boolean already = false;
+                        for (var e : valid) {
+                            if (e.getKey().equals(name)) { already = true; break; }
+                        }
+                        if (!already) {
+                            valid.add(Map.entry(name, now));
+                        }
+                    }
+                }
+            }
+        }
+
+        List<String> result = new ArrayList<>();
+        for (var e : valid) {
+            result.add(e.getKey());
+        }
+        return result;
+    }
+
 
     // Variants: 0..22 (corresponds to visitor_0.png .. visitor_22.png)
     private static final EntityDataAccessor<Integer> VARIANT =
@@ -375,6 +430,11 @@ public class ZooVisitorEntity extends PathfinderMob {
         if (complaint == null || complaint == VisitorComplaint.NONE) return;
         if (isHeadingToDestination()) return;
         this.currentComplaint = complaint;
+        if (this.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+            net.zootycoon.claim.ZooClaimManager.get(sl).getClaimAt(this.blockPosition()).ifPresent(c -> {
+                recordComplaint(c.getOwnerUuid(), complaint.name());
+            });
+        }
         if (complaint == VisitorComplaint.SICK_ANIMALS) {
             setMood(VisitorMood.CRYING);
         } else {

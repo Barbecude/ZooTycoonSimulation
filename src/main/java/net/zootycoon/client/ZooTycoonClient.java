@@ -395,6 +395,7 @@ public class ZooTycoonClient implements ClientModInitializer {
                     existing.updateStockItems(payload.stockItems());
                     existing.updateZooOpenState(payload.isZooOpen());
                     existing.updateTicketPrice(payload.ticketPrice());
+                    existing.updateFeedbacks(payload.feedbacks());
                 } else {
                     mc.setScreen(new net.zootycoon.client.ui.CashierDialogScreen(
                             payload.entityId(),
@@ -402,7 +403,8 @@ public class ZooTycoonClient implements ClientModInitializer {
                             payload.cashierName(),
                             payload.stockItems(),
                             payload.isZooOpen(),
-                            payload.ticketPrice()
+                            payload.ticketPrice(),
+                            payload.feedbacks()
                     ));
                 }
             });
