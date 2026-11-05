@@ -389,6 +389,7 @@
   "zootycoon.cashier.role_locked": "This cashier role is permanent and cannot be changed.",
   "zootycoon.cashier.invalid_item_burger": "Burger Stand only accepts burger items.",
   "zootycoon.cashier.invalid_item_drink": "Drink Stand only accepts beverage items.",
+  "zootycoon.cashier.invalid_item_ice_cream": "Ice Cream Stand only accepts ice cream items.",
   "zootycoon.cashier.invalid_item_souvenir": "Souvenir Shop only accepts Plushie Buddies items.",
   "zootycoon.cashier.invalid_item_generic": "This item cannot be sold at this stand.",
   "zootycoon.dialog.cashier.btn.burger": "Burger Stand",

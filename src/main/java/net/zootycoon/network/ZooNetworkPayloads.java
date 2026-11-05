@@ -1995,6 +1995,7 @@ public class ZooNetworkPayloads {
                         String msgKey = switch (role) {
                             case "BURGER" -> "zootycoon.cashier.invalid_item_burger";
                             case "DRINK" -> "zootycoon.cashier.invalid_item_drink";
+                            case "ICE_CREAM" -> "zootycoon.cashier.invalid_item_ice_cream";
                             default -> "zootycoon.cashier.invalid_item_generic";
                         };
                         sendToast(player, "zootycoon.toast.title.warning", msgKey, 2);

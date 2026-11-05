@@ -120,8 +120,80 @@ public final class ZooEconomyEngine {
     public static int OVERPRICED_TICKET_RATING_PENALTY = 2;
 
     // =========================================================================
-    // 4. HARGA MAKANAN & MINUMAN (FOOD & DRINK PRICING TIERS)
+    // 4. HARGA MAKANAN, MINUMAN & ES KRIM (HARDCODED FOOD & DRINK PRICES)
     // =========================================================================
+
+    public static final java.util.Map<String, Integer> HARDCODED_FOOD_PRICES = new java.util.LinkedHashMap<>();
+
+    static {
+        // --- Stand Burger: Burger, Sandwich, Wrap, French Fries & Nuggets ---
+        HARDCODED_FOOD_PRICES.put("deluxe_cheeseburger", 80);
+        HARDCODED_FOOD_PRICES.put("loaded_hamburger", 80);
+        HARDCODED_FOOD_PRICES.put("steak_and_potatoes", 60);
+        HARDCODED_FOOD_PRICES.put("hamburger", 60);
+        HARDCODED_FOOD_PRICES.put("cheeseburger", 50);
+        HARDCODED_FOOD_PRICES.put("hamburger_with_cheese", 50);
+        HARDCODED_FOOD_PRICES.put("hamburger_with_egg", 50);
+        HARDCODED_FOOD_PRICES.put("chicken_cheese_sandwich", 45);
+        HARDCODED_FOOD_PRICES.put("croque_monsieur", 45);
+        HARDCODED_FOOD_PRICES.put("steak_sandwich", 45);
+        HARDCODED_FOOD_PRICES.put("chicken_wrap", 40);
+        HARDCODED_FOOD_PRICES.put("cheese_wrap", 40);
+        HARDCODED_FOOD_PRICES.put("cod_sandwich", 40);
+        HARDCODED_FOOD_PRICES.put("salmon_sandwich", 40);
+        HARDCODED_FOOD_PRICES.put("rabbit_sandwich", 40);
+        HARDCODED_FOOD_PRICES.put("tofuburger", 40);
+        HARDCODED_FOOD_PRICES.put("bacon_sandwich", 40);
+        HARDCODED_FOOD_PRICES.put("fish_sandwich", 40);
+        HARDCODED_FOOD_PRICES.put("simple_hamburger", 30);
+        HARDCODED_FOOD_PRICES.put("french_fries", 30);
+        HARDCODED_FOOD_PRICES.put("chicken_nuggets", 30);
+        HARDCODED_FOOD_PRICES.put("chicken_nugget", 30);
+        HARDCODED_FOOD_PRICES.put("fried_onions", 30);
+
+        // --- Stand Es Krim: Es Krim & Varian Rasa ---
+        HARDCODED_FOOD_PRICES.put("fruit_ice_cream", 45);
+        HARDCODED_FOOD_PRICES.put("chocolate_ice_cream", 40);
+        HARDCODED_FOOD_PRICES.put("sweet_berry_ice_cream", 40);
+        HARDCODED_FOOD_PRICES.put("mango_ice_cream", 40);
+        HARDCODED_FOOD_PRICES.put("pecan_ice_cream", 40);
+        HARDCODED_FOOD_PRICES.put("strawberry_ice_cream", 40);
+        HARDCODED_FOOD_PRICES.put("vanilla_ice_cream", 35);
+        HARDCODED_FOOD_PRICES.put("ice_cream", 35);
+
+        // --- Stand Minuman: Minuman Fermentasi, Susu, Teh, Kopi & Soda ---
+        HARDCODED_FOOD_PRICES.put("beer", 60);
+        HARDCODED_FOOD_PRICES.put("wine", 60);
+        HARDCODED_FOOD_PRICES.put("mead", 60);
+        HARDCODED_FOOD_PRICES.put("rum", 60);
+        HARDCODED_FOOD_PRICES.put("chocolate_milkshake", 50);
+        HARDCODED_FOOD_PRICES.put("matcha_latte", 40);
+        HARDCODED_FOOD_PRICES.put("apple_cider", 40);
+        HARDCODED_FOOD_PRICES.put("hot_cocoa", 40);
+        HARDCODED_FOOD_PRICES.put("strawberry_smoothie", 40);
+        HARDCODED_FOOD_PRICES.put("banana_smoothie", 40);
+        HARDCODED_FOOD_PRICES.put("fruit_smoothie", 40);
+        HARDCODED_FOOD_PRICES.put("creaming_soda", 30);
+        HARDCODED_FOOD_PRICES.put("apple_sauce", 30);
+        HARDCODED_FOOD_PRICES.put("cola_soda", 25);
+        HARDCODED_FOOD_PRICES.put("orange_soda", 25);
+        HARDCODED_FOOD_PRICES.put("lemon_soda", 25);
+        HARDCODED_FOOD_PRICES.put("iced_tea", 25);
+        HARDCODED_FOOD_PRICES.put("green_tea", 25);
+        HARDCODED_FOOD_PRICES.put("yellow_tea", 25);
+        HARDCODED_FOOD_PRICES.put("black_tea", 25);
+        HARDCODED_FOOD_PRICES.put("coffee", 25);
+        HARDCODED_FOOD_PRICES.put("lemonade", 20);
+        HARDCODED_FOOD_PRICES.put("limeade", 20);
+        HARDCODED_FOOD_PRICES.put("apple_juice", 20);
+        HARDCODED_FOOD_PRICES.put("melon_juice", 20);
+        HARDCODED_FOOD_PRICES.put("orange_juice", 20);
+        HARDCODED_FOOD_PRICES.put("grape_juice", 20);
+        HARDCODED_FOOD_PRICES.put("cranberry_juice", 20);
+        HARDCODED_FOOD_PRICES.put("saguaro_juice", 20);
+        HARDCODED_FOOD_PRICES.put("tomato_juice", 20);
+        HARDCODED_FOOD_PRICES.put("pineapple_juice", 20);
+    }
 
     // Makanan (Burger - More Delight, Farmer's Delight, Vanilla)
     public static int BURGER_TIER_1_PRICE = 30; // Simple burger (2 bahan)
@@ -588,68 +660,53 @@ public final class ZooEconomyEngine {
     }
 
     /**
-     * Menghitung harga jual makanan atau minuman di kasir secara berjenjang.
+     * Menghitung harga jual makanan atau minuman di kasir secara hardcode pasti.
      */
     public static int getFoodDrinkPrice(String role, ItemStack stack) {
         if (role == null) return 20;
         try {
-            if ("BURGER".equalsIgnoreCase(role)) {
-                if (stack != null && !stack.isEmpty()) {
-                    ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
-                    if (id != null) {
-                        String namespace = id.getNamespace().toLowerCase(Locale.ROOT);
-                        String path = id.getPath().toLowerCase(Locale.ROOT);
+            if (stack != null && !stack.isEmpty()) {
+                ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+                if (id != null) {
+                    String path = id.getPath().toLowerCase(Locale.ROOT);
 
-                        // Tier 3: Burger Kompleks (60 - 80 Emerald)
-                        if (path.contains("deluxe_cheeseburger") || path.contains("loaded_hamburger")) return BURGER_TIER_3_PRICE;
-                        if ("farmersdelight".equals(namespace) && path.contains("hamburger")) return BURGER_FARMERS_DELIGHT_PRICE;
-                        if (path.contains("steak_and_potatoes")) return 60;
-
-                        // Tier 2: Burger Standar (40 - 50 Emerald)
-                        if (path.contains("hamburger_with_cheese") || path.contains("cheeseburger")) return BURGER_TIER_2_PRICE;
-                        if (path.contains("hamburger_with_egg") || path.contains("tofuburger") || path.contains("steak_sandwich")) return 40;
-                        if (path.contains("croque") || path.contains("chicken_cheese_sandwich")
-                                || path.contains("sandwich") || path.contains("wrap")) return 40;
-                        if ("croptopia".equals(namespace) && path.contains("hamburger")) return 40;
-
-                        // Tier 1: Simple Burger & Fast Food Sides (30 Emerald)
-                        if (path.contains("simple_hamburger") || path.contains("fries") || path.contains("nugget") || path.contains("fried_onions")) return BURGER_TIER_1_PRICE;
+                    // 1. Cek langsung tabel harga hardcode pasti
+                    Integer hardcoded = HARDCODED_FOOD_PRICES.get(path);
+                    if (hardcoded != null) {
+                        return hardcoded;
                     }
-                    FoodProperties food = stack.get(DataComponents.FOOD);
-                    if (food != null && food.nutrition() >= 10) return 40;
-                }
-                return BURGER_TIER_1_PRICE;
-            }
 
-            if ("DRINK".equalsIgnoreCase(role) || "ICE_CREAM".equalsIgnoreCase(role)) {
-                if (stack != null && !stack.isEmpty()) {
-                    ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
-                    if (id != null) {
-                        String namespace = id.getNamespace().toLowerCase(Locale.ROOT);
-                        String path = id.getPath().toLowerCase(Locale.ROOT);
+                    // 2. Fallback pola nama untuk varian mod luar
+                    if ("BURGER".equalsIgnoreCase(role)) {
+                        if (path.contains("deluxe_cheeseburger") || path.contains("loaded_hamburger")) return 80;
+                        if (path.contains("steak_and_potatoes") || path.contains("hamburger")) return 60;
+                        if (path.contains("cheeseburger")) return 50;
+                        if (path.contains("steak_sandwich") || path.contains("croque") || path.contains("chicken_cheese_sandwich")) return 45;
+                        if (path.contains("sandwich") || path.contains("wrap") || path.contains("tofuburger")) return 40;
+                        if (path.contains("french_fries") || path.contains("nugget") || path.contains("fried_onions") || path.contains("simple_hamburger")) return 30;
+                        return BURGER_TIER_1_PRICE;
+                    }
 
-                        // Tier 3: Minuman Fermentasi / Mewah (60 Emerald)
-                        if (path.contains("beer") || path.contains("wine") || path.contains("mead")) return DRINK_TIER_3_PRICE;
-                        if (path.contains("chocolate_milkshake")) return 50;
+                    if ("ICE_CREAM".equalsIgnoreCase(role) || path.contains("ice_cream")) {
+                        if (path.contains("fruit") || path.contains("chocolate") || path.contains("berry")) return 40;
+                        return 35;
+                    }
 
-                        // Tier 2: Teh Herbal Farm and Charm, Seduhan FD, Smoothies & Ice Cream (40 Emerald)
-                        if ("farm_and_charm".equals(namespace) && path.contains("tea")) return DRINK_TIER_2_PRICE;
-                        if ("farmersdelight".equals(namespace) && (path.contains("apple_cider") || path.contains("hot_cocoa"))) return DRINK_TIER_2_PRICE;
-                        if (path.contains("smoothie") || path.contains("milkshake") || path.contains("latte") || path.contains("ice_cream")) return DRINK_TIER_2_PRICE;
-
-                        // Tier 1: Jus Buah Croptopia, Soda, & Kopi/Teh Dasar (20 Emerald)
-                        if (path.contains("juice") || path.contains("tea") || path.contains("coffee") || path.contains("limeade")
-                                || path.contains("lemonade") || path.contains("soda") || path.contains("apple_sauce")) {
-                            return DRINK_TIER_1_PRICE;
-                        }
+                    if ("DRINK".equalsIgnoreCase(role)) {
+                        if (path.contains("beer") || path.contains("wine") || path.contains("mead") || path.contains("rum")) return 60;
+                        if (path.contains("milkshake") || path.contains("smoothie") || path.contains("latte")
+                                || path.contains("cider") || path.contains("cocoa")) return 40;
+                        if (path.contains("soda") || path.contains("tea") || path.contains("coffee")) return 25;
+                        if (path.contains("juice") || path.contains("lemonade") || path.contains("limeade") || path.contains("apple_sauce")) return 20;
+                        return DRINK_TIER_1_PRICE;
                     }
                 }
-                return DRINK_TIER_1_PRICE;
             }
 
-            if ("TICKET".equalsIgnoreCase(role)) {
-                return DEFAULT_TICKET_PRICE;
-            }
+            if ("BURGER".equalsIgnoreCase(role)) return BURGER_TIER_1_PRICE;
+            if ("ICE_CREAM".equalsIgnoreCase(role)) return 35;
+            if ("DRINK".equalsIgnoreCase(role)) return DRINK_TIER_1_PRICE;
+            if ("TICKET".equalsIgnoreCase(role)) return DEFAULT_TICKET_PRICE;
             return 20;
         } catch (Throwable t) {
             return 20;

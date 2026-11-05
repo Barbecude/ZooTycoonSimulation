@@ -1,5 +1,6 @@
 package net.zootycoon.warehouse;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -66,7 +67,17 @@ public class WarehouseRecipeResolver {
                     || path.contains("honey_bottle") || path.contains("honey") || path.contains("saguaro")) {
                 continue;
             }
+            // Explicit guard against iron/gold nuggets, fries bowl, non-french-fries
+            if (path.contains("iron_nugget") || path.contains("gold_nugget") || path.equals("nugget")) {
+                continue;
+            }
+            if (path.contains("fries_bowl") || (path.contains("fries") && !path.contains("french_fries"))) {
+                continue;
+            }
             ItemStack stack = new ItemStack(item);
+            if (!stack.has(DataComponents.FOOD)) {
+                continue;
+            }
             if (ZooCashierEntity.isValidItemForRole(role, stack)) {
                 allValid.add(item);
                 if (findRecipeFor(level, item) != null) {
@@ -327,6 +338,23 @@ public class WarehouseRecipeResolver {
         }
 
         if ("BURGER".equalsIgnoreCase(role)) {
+            if (path.contains("french_fries")) {
+                rawMap.put(Items.POTATO, 2);
+                rawMap.put(Items.PAPER, 1);
+                return;
+            }
+            if (path.contains("fried_onions")) {
+                Item onion = BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath("farmersdelight", "onion"));
+                rawMap.put(onion != Items.AIR ? onion : Items.CARROT, 2);
+                rawMap.put(Items.PAPER, 1);
+                return;
+            }
+            if (path.contains("nugget")) {
+                rawMap.put(Items.CHICKEN, 1);
+                rawMap.put(Items.WHEAT, 1);
+                return;
+            }
+
             rawMap.put(Items.WHEAT, 1);
             if (path.contains("deluxe_cheeseburger")) {
                 rawMap.put(Items.BEEF, 2);

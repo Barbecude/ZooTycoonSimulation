@@ -340,6 +340,28 @@ public class ZooCashierEntity extends PathfinderMob {
         String namespace = id.getNamespace().toLowerCase(Locale.ROOT);
         String path = id.getPath().toLowerCase(Locale.ROOT);
 
+        // Never sell block items
+        if (stack.getItem() instanceof net.minecraft.world.item.BlockItem) {
+            return false;
+        }
+
+        // Concession stands ONLY sell edible foods/drinks
+        if (!stack.has(DataComponents.FOOD)) {
+            return false;
+        }
+
+        // Never sell iron/gold nuggets, raw metal materials, or empty containers
+        if (path.contains("iron_nugget") || path.contains("gold_nugget") || path.equals("nugget")) {
+            return false;
+        }
+        if (path.contains("fries_bowl") || path.equals("fries_bowl")) {
+            return false;
+        }
+        // User rule: "jangan jual kentang goreng selain frienh fries"
+        if (path.contains("fries") && !path.contains("french_fries")) {
+            return false;
+        }
+
         // Croptopia rule: only juice from croptopia is accepted (for DRINK) or ice cream (for ICE_CREAM); reject all other croptopia items
         if ("croptopia".equals(namespace)) {
             if ("ICE_CREAM".equalsIgnoreCase(role)) {
@@ -348,39 +370,43 @@ public class ZooCashierEntity extends PathfinderMob {
             if ("DRINK".equalsIgnoreCase(role)) {
                 return path.endsWith("_juice") && !path.contains("ice_cream");
             }
+            if ("BURGER".equalsIgnoreCase(role)) {
+                return path.contains("hamburger") || path.contains("tofuburger") || path.contains("sandwich");
+            }
             return false;
         }
 
         if ("ICE_CREAM".equalsIgnoreCase(role)) {
-            if (stack.getItem() instanceof net.minecraft.world.item.BlockItem) {
-                return false;
-            }
             if (path.contains("ice_cream")) {
                 return true;
             }
             return stack.getTags().anyMatch(t -> t.location().getPath().toLowerCase(Locale.ROOT).contains("ice_cream"));
         }
 
+        // Ice cream can ONLY be sold by ICE_CREAM cashier
         if (path.contains("ice_cream")) {
             return false;
         }
 
         if ("BURGER".equalsIgnoreCase(role)) {
-            if (stack.getItem() instanceof net.minecraft.world.item.BlockItem) {
+            // Must not be a drink item
+            if (stack.getUseAnimation() == UseAnim.DRINK) {
+                return false;
+            }
+            // Nuggets must strictly be chicken/meat/tofu nuggets (never metal nuggets)
+            if (path.contains("nugget") && !path.contains("chicken") && !path.contains("meat") && !path.contains("tofu")) {
                 return false;
             }
             if (path.contains("burger") || path.contains("sandwich") || path.contains("wrap")
-                    || path.contains("fries") || path.contains("nugget") || path.contains("croque")
-                    || path.contains("fried_onions")) {
+                    || path.contains("french_fries")
+                    || path.contains("chicken_nugget")
+                    || path.contains("croque") || path.contains("fried_onions")) {
                 return true;
             }
             return stack.getTags().anyMatch(t -> t.location().getPath().toLowerCase(Locale.ROOT).contains("burger"));
         }
 
         if ("DRINK".equalsIgnoreCase(role)) {
-            if (stack.getItem() instanceof net.minecraft.world.item.BlockItem) {
-                return false;
-            }
             if (path.contains("oil") || (path.contains("sauce") && !path.contains("apple_sauce")) || path.contains("molasses")
                     || path.contains("vinegar") || path.contains("bucket") || path.contains("dough")
                     || path.contains("potion") || path.contains("ominous") || path.contains("spawn_egg")
@@ -406,7 +432,7 @@ public class ZooCashierEntity extends PathfinderMob {
                     return true;
                 }
             }
-            if (stack.getUseAnimation() == UseAnim.DRINK && stack.has(DataComponents.FOOD)) {
+            if (stack.getUseAnimation() == UseAnim.DRINK) {
                 return true;
             }
             return false;
