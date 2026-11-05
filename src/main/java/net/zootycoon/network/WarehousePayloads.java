@@ -253,6 +253,24 @@ public class WarehousePayloads {
         }
     }
 
+    public record BuyStaffRequestRawIngredientsPayload(BlockPos pos, UUID staffUuid) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<BuyStaffRequestRawIngredientsPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("buy_staff_request_raw_ingredients"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, BuyStaffRequestRawIngredientsPayload> CODEC =
+                CustomPacketPayload.codec(
+                        (payload, buf) -> {
+                            buf.writeBlockPos(payload.pos);
+                            buf.writeUUID(payload.staffUuid);
+                        },
+                        buf -> new BuyStaffRequestRawIngredientsPayload(buf.readBlockPos(), buf.readUUID())
+                );
+
+        @Override
+        public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
     public static void registerCommon() {
         if (registered) return;
         registered = true;
@@ -264,6 +282,7 @@ public class WarehousePayloads {
         PayloadTypeRegistry.playC2S().register(SelectBarrelCategoryPayload.TYPE, SelectBarrelCategoryPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestBarrelRecipeNotePayload.TYPE, RequestBarrelRecipeNotePayload.CODEC);
         PayloadTypeRegistry.playC2S().register(FulfillStaffRequestPayload.TYPE, FulfillStaffRequestPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(BuyStaffRequestRawIngredientsPayload.TYPE, BuyStaffRequestRawIngredientsPayload.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(SelectBarrelCategoryPayload.TYPE, (payload, context) -> {
             ServerPlayer player = context.player();
@@ -295,6 +314,15 @@ public class WarehousePayloads {
             context.server().execute(() -> {
                 if (player.level() instanceof ServerLevel sLevel) {
                     WarehouseSupplyManager.fulfillStaffRequestManually(sLevel, player, payload.pos(), payload.staffUuid());
+                }
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(BuyStaffRequestRawIngredientsPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                if (player.level() instanceof ServerLevel sLevel) {
+                    WarehouseSupplyManager.buyAndFulfillStaffRequest(sLevel, player, payload.pos(), payload.staffUuid());
                 }
             });
         });

@@ -50,6 +50,7 @@ public class EmptyBarrelChestOverlay {
     private static final int CHEST_HEIGHT = 166;
     private static final int CARD_HEIGHT = 68;
     private static final int CARD_GAP = 5;
+    private static final ItemStack EMERALD_STACK = new ItemStack(net.minecraft.world.item.Items.EMERALD);
 
     public record RawIngredientsTooltipData(
             String recipeName,
@@ -63,7 +64,7 @@ public class EmptyBarrelChestOverlay {
         private final int totalEmeraldReward;
         private final List<WarehousePayloads.RawIngredientItemDto> ingredients;
         private static final int ROW_HEIGHT = 14;
-        private static final int HEADER_HEIGHT = 16;
+        private static final int HEADER_HEIGHT = 26;
         private static final ItemStack EMERALD_STACK = new ItemStack(net.minecraft.world.item.Items.EMERALD);
 
         public RawIngredientsClientTooltip(RawIngredientsTooltipData data) {
@@ -82,9 +83,11 @@ public class EmptyBarrelChestOverlay {
         public int getWidth(Font font) {
             int maxW = 0;
             if (recipeName != null && !recipeName.isEmpty()) {
+                String profitPrefix = ZooTranslations.get("zootycoon.warehouse.tooltip.profit_prefix", "Keuntungan: ");
                 String rewardStr = "+" + totalEmeraldReward;
-                int headerW = font.width(recipeName) + 6 + font.width(rewardStr) + 2 + 13;
-                maxW = Math.max(maxW, headerW);
+                int line1W = font.width(recipeName);
+                int line2W = font.width(profitPrefix) + font.width(rewardStr) + 2 + 13;
+                maxW = Math.max(maxW, Math.max(line1W, line2W));
             }
             for (WarehousePayloads.RawIngredientItemDto raw : ingredients) {
                 String text = raw.stack().getCount() + "x " + raw.stack().getHoverName().getString();
@@ -98,22 +101,25 @@ public class EmptyBarrelChestOverlay {
         public void renderImage(Font font, int x, int y, GuiGraphics graphics) {
             int curY = y;
             if (recipeName != null && !recipeName.isEmpty()) {
-                // Recipe Name
+                // Line 1: Recipe Name
                 graphics.pose().pushPose();
                 graphics.pose().translate(0.0f, 0.0f, 400.0f);
-                graphics.drawString(font, recipeName, x, curY + 2, 0xFFFFFFFF, true);
+                graphics.drawString(font, recipeName, x, curY + 1, 0xFFFFFFFF, true);
 
-                // +Emerald Reward Text
-                int nameW = font.width(recipeName);
+                // Line 2: "Keuntungan: " + "+totalEmeraldReward" + Emerald Item Icon
+                int line2Y = curY + 13;
+                String profitPrefix = ZooTranslations.get("zootycoon.warehouse.tooltip.profit_prefix", "Keuntungan: ");
                 String rewardStr = "+" + totalEmeraldReward;
-                graphics.drawString(font, rewardStr, x + nameW + 5, curY + 2, 0xFF55FF55, true);
+                graphics.drawString(font, profitPrefix, x, line2Y, 0xFFE2E8F0, true);
+                int prefixW = font.width(profitPrefix);
+                graphics.drawString(font, rewardStr, x + prefixW, line2Y, 0xFF55FF55, true);
                 graphics.pose().popPose();
 
-                // Emerald Item Icon
+                // Emerald Item Icon on Line 2
                 int rewardW = font.width(rewardStr);
-                int emX = x + nameW + 5 + rewardW + 2;
+                int emX = x + prefixW + rewardW + 2;
                 graphics.pose().pushPose();
-                graphics.pose().translate(emX, curY, 400.0f);
+                graphics.pose().translate(emX, line2Y - 2, 400.0f);
                 graphics.pose().scale(0.75f, 0.75f, 1.0f);
                 graphics.renderFakeItem(EMERALD_STACK, 0, 0);
                 graphics.pose().popPose();
@@ -277,7 +283,7 @@ public class EmptyBarrelChestOverlay {
             int rows = Math.max(1, (int) Math.ceil((double) Math.max(1, variantCount) / colsPerRow));
             int gridH = rows * slotSize + Math.max(0, rows - 1) * slotGap;
             int actionBtnYOffset = 25 + gridH + 3;
-            int actionBtnH = 17;
+            int actionBtnH = 17 + 2 + 16;
             return Math.max(CARD_HEIGHT, actionBtnYOffset + actionBtnH + 4);
         }
         int colsPerRow = ZOOKEEPER_FOOD_COLS;
@@ -365,6 +371,7 @@ public class EmptyBarrelChestOverlay {
         WarehousePayloads.StaffRequestDto hoveredDto = null;
         int hoveredVariantIndex = -1;
         WarehousePayloads.StaffRequestDto hoveredCheckDto = null;
+        WarehousePayloads.StaffRequestDto hoveredBuyDto = null;
 
         graphics.enableScissor(panelX + 2, listY, panelX + panelW - 2, listY + listH);
 
@@ -595,6 +602,52 @@ public class EmptyBarrelChestOverlay {
             graphics.fill(cx + 3, cy + 4, cx + 5, cy + 6, checkColor);
             graphics.fill(cx + 4, cy + 2, cx + 6, cy + 4, checkColor);
             graphics.fill(cx + 5, cy + 0, cx + 7, cy + 2, checkColor);
+
+            // Row 2: Beli Bahan Langsung Menggunakan Emerald (Kasir Saja)
+            if ("CASHIER".equalsIgnoreCase(req.staffType())) {
+                int buyBtnX = infoX;
+                int buyBtnY = btnY + btnH + 2;
+                int buyBtnW = infoW;
+                int buyBtnH = 16;
+
+                String reqRole = (activeCategory != null && !activeCategory.isEmpty())
+                        ? activeCategory
+                        : (req.subtitle().toLowerCase().contains("burger") ? "BURGER" : "DRINK");
+                net.zootycoon.economy.ZooEconomyEngine.ProfitMarginInfo margin =
+                        net.zootycoon.economy.ZooEconomyEngine.getProfitMarginInfo(reqRole, req);
+
+                boolean canAfford = net.zootycoon.economy.TransactionHelper.hasEnoughEmeralds(mc.player, margin.rawCost());
+                boolean buyHovered = mouseX >= buyBtnX && mouseX <= buyBtnX + buyBtnW
+                        && mouseY >= buyBtnY && mouseY <= buyBtnY + buyBtnH
+                        && mouseY >= listY && mouseY <= listY + listH;
+
+                if (buyHovered) {
+                    hoveredBuyDto = req;
+                }
+
+                int buyBg = canAfford ? (buyHovered ? 0xFF1C452C : 0xFF12281B) : (buyHovered ? 0xFF2B1C1C : 0xFF1C1313);
+                int buyBorder = canAfford ? (buyHovered ? 0xFF58D68D : 0xFF2D6E46) : (buyHovered ? 0xFF7A4242 : 0xFF4D2B2B);
+                int buyTxtColor = canAfford ? (buyHovered ? 0xFFFFFFFF : 0xFFB4F0D0) : 0xFF8A7070;
+
+                graphics.fill(buyBtnX, buyBtnY, buyBtnX + buyBtnW, buyBtnY + buyBtnH, buyBg);
+                graphics.renderOutline(buyBtnX, buyBtnY, buyBtnW, buyBtnH, buyBorder);
+
+                String buyLabel = ZooTranslations.get("zootycoon.warehouse.btn.buy_raw_materials", "Beli Bahan: %d", margin.rawCost());
+                int lblBuyW = font.width(buyLabel);
+                int totalBuyW = lblBuyW + 2 + 11;
+                int buyContentX = buyBtnX + Math.max(2, (buyBtnW - totalBuyW) / 2);
+                int buyTextY = buyBtnY + (buyBtnH - 8) / 2;
+
+                graphics.drawString(font, buyLabel, buyContentX, buyTextY, buyTxtColor, false);
+
+                int emIconX = buyContentX + lblBuyW + 2;
+                int emIconY = buyBtnY + (buyBtnH - 12) / 2;
+                graphics.pose().pushPose();
+                graphics.pose().translate(emIconX, emIconY, 100.0f);
+                graphics.pose().scale(0.70f, 0.70f, 1.0f);
+                graphics.renderFakeItem(EMERALD_STACK, 0, 0);
+                graphics.pose().popPose();
+            }
         }
 
         graphics.disableScissor();
@@ -612,7 +665,24 @@ public class EmptyBarrelChestOverlay {
         }
 
         // 5. Tooltips
-        if (hoveredCheckDto != null) {
+        if (hoveredBuyDto != null) {
+            String role = (activeCategory != null && !activeCategory.isEmpty())
+                    ? activeCategory
+                    : (hoveredBuyDto.subtitle().toLowerCase().contains("burger") ? "BURGER" : "DRINK");
+            net.zootycoon.economy.ZooEconomyEngine.ProfitMarginInfo margin =
+                    net.zootycoon.economy.ZooEconomyEngine.getProfitMarginInfo(role, hoveredBuyDto);
+            boolean canAfford = net.zootycoon.economy.TransactionHelper.hasEnoughEmeralds(mc.player, margin.rawCost());
+
+            List<Component> tipLines = new ArrayList<>();
+            tipLines.add(Component.literal(ZooTranslations.get("zootycoon.warehouse.tooltip.buy_raw_materials", "Beli Semua Bahan Mentah")).withStyle(ChatFormatting.GOLD));
+            tipLines.add(Component.literal(ZooTranslations.get("zootycoon.warehouse.tooltip.cost_label", "Biaya: %d Emerald", margin.rawCost())).withStyle(canAfford ? ChatFormatting.WHITE : ChatFormatting.RED));
+            tipLines.add(Component.literal(ZooTranslations.get("zootycoon.warehouse.tooltip.total_sales_label", "Total Jual: +%d Emerald", margin.totalRevenue())).withStyle(ChatFormatting.GREEN));
+            tipLines.add(Component.literal(ZooTranslations.get("zootycoon.warehouse.tooltip.margin_label", "Keuntungan (margin): +%d Emerald (%d%%)", margin.netProfit(), margin.marginPercent())).withStyle(ChatFormatting.AQUA));
+            if (!canAfford) {
+                tipLines.add(Component.literal(ZooTranslations.get("zootycoon.warehouse.tooltip.not_enough_emeralds", "Saldo Emerald Tidak Cukup!")).withStyle(ChatFormatting.RED));
+            }
+            graphics.renderTooltip(font, tipLines, Optional.empty(), mouseX, mouseY);
+        } else if (hoveredCheckDto != null) {
             String checkTip;
             if (isCardReadyToFulfill(hoveredCheckDto)) {
                 if ("CASHIER".equalsIgnoreCase(hoveredCheckDto.staffType())) {
@@ -798,6 +868,32 @@ public class EmptyBarrelChestOverlay {
                     BlockPos posToSend = activeBarrelPos != null ? activeBarrelPos : BlockPos.ZERO;
                     ClientPlayNetworking.send(new WarehousePayloads.RequestBarrelRecipeNotePayload(posToSend, req.staffUuid()));
                     return true;
+                }
+
+                // Cashier Beli Bahan Button
+                if ("CASHIER".equalsIgnoreCase(req.staffType())) {
+                    int buyBtnX = infoX;
+                    int buyBtnY = btnY + btnH + 2;
+                    int buyBtnW = infoW;
+                    int buyBtnH = 16;
+
+                    if (mouseX >= buyBtnX && mouseX <= buyBtnX + buyBtnW && mouseY >= buyBtnY && mouseY <= buyBtnY + buyBtnH) {
+                        String reqRole = (activeCategory != null && !activeCategory.isEmpty())
+                                ? activeCategory
+                                : (req.subtitle().toLowerCase().contains("burger") ? "BURGER" : "DRINK");
+                        net.zootycoon.economy.ZooEconomyEngine.ProfitMarginInfo margin =
+                                net.zootycoon.economy.ZooEconomyEngine.getProfitMarginInfo(reqRole, req);
+
+                        if (net.zootycoon.economy.TransactionHelper.hasEnoughEmeralds(Minecraft.getInstance().player, margin.rawCost())) {
+                            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                            BlockPos posToSend = activeBarrelPos != null ? activeBarrelPos : BlockPos.ZERO;
+                            ClientPlayNetworking.send(new WarehousePayloads.BuyStaffRequestRawIngredientsPayload(posToSend, req.staffUuid()));
+                            activeRequests.removeIf(r -> r.staffUuid().equals(req.staffUuid()));
+                        } else {
+                            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.DISPENSER_FAIL, 1.2F));
+                        }
+                        return true;
+                    }
                 }
             }
         }

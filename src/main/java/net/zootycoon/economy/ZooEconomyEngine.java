@@ -15,11 +15,15 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.food.FoodProperties;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.zootycoon.ZooTycoonMod;
 import net.zootycoon.animal.ZooAnimalHungerManager;
 import net.zootycoon.block.ZooBlocks;
 import net.zootycoon.claim.ZooClaim;
 import net.zootycoon.claim.ZooClaimManager;
+import net.zootycoon.network.WarehousePayloads;
 import net.zootycoon.network.ZooNetworkPayloads;
 
 import java.util.Collection;
@@ -711,6 +715,127 @@ public final class ZooEconomyEngine {
         } catch (Throwable t) {
             return 20;
         }
+    }
+
+    /**
+     * Menghitung taksiran harga satuan bahan mentah untuk pembelian kilat di kasir.
+     */
+    public static int getRawIngredientUnitPrice(Item item) {
+        if (item == null || item == Items.AIR) return 3;
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
+        if (id == null) return 3;
+        String path = id.getPath().toLowerCase(Locale.ROOT);
+
+        // Daging & Seafood (nilai tinggi)
+        if (path.contains("beef") || path.contains("steak") || path.contains("mutton")
+                || path.contains("pork") || path.contains("bacon") || path.contains("chicken")
+                || path.contains("salmon") || path.contains("cod") || path.contains("fish")
+                || path.contains("rabbit") || path.contains("venison")) {
+            return 7;
+        }
+
+        // Produk susu & Keju
+        if (path.contains("milk") || path.contains("cheese") || path.contains("butter") || path.contains("cream")) {
+            return 5;
+        }
+
+        // Telur
+        if (path.contains("egg")) {
+            return 4;
+        }
+
+        // Sayuran & Buah-buahan segar
+        if (path.contains("tomato") || path.contains("onion") || path.contains("cabbage")
+                || path.contains("lettuce") || path.contains("bellpepper") || path.contains("pepper")
+                || path.contains("apple") || path.contains("orange") || path.contains("lemon")
+                || path.contains("lime") || path.contains("grape") || path.contains("berry")
+                || path.contains("berries") || path.contains("cherry") || path.contains("peach")
+                || path.contains("banana") || path.contains("mango") || path.contains("melon")
+                || path.contains("carrot") || path.contains("potato") || path.contains("beetroot")) {
+            return 4;
+        }
+
+        // Gandum, Beras, Gula, Madu, Teh, Kopi, Kakao
+        if (path.contains("wheat") || path.contains("rice") || path.contains("corn")
+                || path.contains("soy") || path.contains("sugar") || path.contains("honey")
+                || path.contains("tea") || path.contains("coffee") || path.contains("cocoa")) {
+            return 3;
+        }
+
+        // Es, Salju, Kertas, Mangkuk
+        if (path.contains("paper") || path.contains("bowl") || path.contains("ice") || path.contains("snow")) {
+            return 2;
+        }
+
+        return 3;
+    }
+
+    /**
+     * Menghitung biaya bahan mentah realistis untuk 1 varian menu pesanan kasir,
+     * dengan pembatas margin berkisar antara 56% - 68%.
+     */
+    public static int calculateMenuItemRawCost(String role, ItemStack menuItem, List<WarehousePayloads.RawIngredientItemDto> rawIngredients) {
+        if (menuItem == null || menuItem.isEmpty()) return 0;
+        int unitPrice = getFoodDrinkPrice(role, menuItem);
+        int totalUnits = Math.max(1, menuItem.getCount());
+        int totalSellingPrice = unitPrice * totalUnits;
+
+        int rawSum = 0;
+        if (rawIngredients != null && !rawIngredients.isEmpty()) {
+            for (WarehousePayloads.RawIngredientItemDto raw : rawIngredients) {
+                if (raw.stack() != null && !raw.stack().isEmpty()) {
+                    rawSum += getRawIngredientUnitPrice(raw.stack().getItem()) * raw.stack().getCount();
+                }
+            }
+        }
+
+        int minCost = (int) Math.round(totalSellingPrice * 0.32D);
+        int maxCost = (int) Math.round(totalSellingPrice * 0.44D);
+        int cost = rawSum > 0 ? Math.clamp(rawSum, Math.max(1, minCost), Math.max(1, maxCost)) : (int) Math.round(totalSellingPrice * 0.38D);
+        return Math.max(1, cost);
+    }
+
+    /**
+     * Menghitung total biaya bahan mentah untuk seluruh item dalam request kasir.
+     */
+    public static int calculateRequestRawCost(String role, WarehousePayloads.StaffRequestDto req) {
+        if (req == null || !"CASHIER".equalsIgnoreCase(req.staffType())) return 0;
+        int totalCost = 0;
+        if (req.menuItems() != null && !req.menuItems().isEmpty()) {
+            for (WarehousePayloads.MenuItemRequestDto menuDto : req.menuItems()) {
+                totalCost += calculateMenuItemRawCost(role, menuDto.targetItem(), menuDto.rawIngredients());
+            }
+        } else if (req.targetItems() != null) {
+            for (ItemStack st : req.targetItems()) {
+                totalCost += calculateMenuItemRawCost(role, st, List.of());
+            }
+        }
+        return Math.max(1, totalCost);
+    }
+
+    /**
+     * Menghitung total potensi penerimaan emerald jika seluruh stok menu kasir terjual.
+     */
+    public static int calculateRequestTotalRevenue(String role, WarehousePayloads.StaffRequestDto req) {
+        if (req == null || !"CASHIER".equalsIgnoreCase(req.staffType())) return 0;
+        int totalRevenue = 0;
+        if (req.targetItems() != null) {
+            for (ItemStack st : req.targetItems()) {
+                int unit = getFoodDrinkPrice(role, st);
+                totalRevenue += unit * Math.max(1, st.getCount());
+            }
+        }
+        return Math.max(1, totalRevenue);
+    }
+
+    public record ProfitMarginInfo(int totalRevenue, int rawCost, int netProfit, int marginPercent) {}
+
+    public static ProfitMarginInfo getProfitMarginInfo(String role, WarehousePayloads.StaffRequestDto req) {
+        int totalRevenue = calculateRequestTotalRevenue(role, req);
+        int rawCost = calculateRequestRawCost(role, req);
+        int netProfit = Math.max(0, totalRevenue - rawCost);
+        int marginPercent = totalRevenue > 0 ? (int) Math.round(((double) netProfit / (double) totalRevenue) * 100.0) : 0;
+        return new ProfitMarginInfo(totalRevenue, rawCost, netProfit, marginPercent);
     }
 
     /**

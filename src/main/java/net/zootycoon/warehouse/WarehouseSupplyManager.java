@@ -25,6 +25,8 @@ import net.zootycoon.animal.AnimalDietRegistry;
 import net.zootycoon.block.EmptyBarrelBlockEntity;
 import net.zootycoon.claim.ZooClaim;
 import net.zootycoon.claim.ZooClaimManager;
+import net.zootycoon.economy.TransactionHelper;
+import net.zootycoon.economy.ZooEconomyEngine;
 import net.zootycoon.entity.ZooCashierEntity;
 import net.zootycoon.entity.ZooZookeeperEntity;
 import net.zootycoon.item.ZooItems;
@@ -1238,6 +1240,111 @@ public class WarehouseSupplyManager {
                 }
             }
         }
+    }
+
+    public static int calculateStaffSupplyRequestRawCost(ServerLevel sLevel, StaffSupplyRequest req) {
+        if (req == null || !"CASHIER".equals(req.staffType)) return 0;
+        int totalCost = 0;
+        for (ItemStack targetSt : req.targetItems) {
+            int unitPrice = ZooEconomyEngine.getFoodDrinkPrice(req.category, targetSt);
+            int totalUnits = Math.max(1, targetSt.getCount());
+            int totalSellingPrice = unitPrice * totalUnits;
+            Map<Item, Integer> singleRaws = WarehouseRecipeResolver.resolveRawIngredientsForSingleItem(sLevel, req.category, targetSt.getItem());
+            int rawSum = 0;
+            for (Map.Entry<Item, Integer> entry : singleRaws.entrySet()) {
+                rawSum += ZooEconomyEngine.getRawIngredientUnitPrice(entry.getKey()) * (entry.getValue() * totalUnits);
+            }
+            int minCost = (int) Math.round(totalSellingPrice * 0.32D);
+            int maxCost = (int) Math.round(totalSellingPrice * 0.44D);
+            int cost = rawSum > 0 ? Math.clamp(rawSum, Math.max(1, minCost), Math.max(1, maxCost)) : (int) Math.round(totalSellingPrice * 0.38D);
+            totalCost += Math.max(1, cost);
+        }
+        return Math.max(1, totalCost);
+    }
+
+    public static void buyAndFulfillStaffRequest(ServerLevel sLevel, ServerPlayer player, BlockPos barrelPos, UUID staffUuid) {
+        if (sLevel == null || player == null || staffUuid == null) return;
+
+        EmptyBarrelBlockEntity barrel = null;
+        if (player.containerMenu instanceof ChestMenu chestMenu && chestMenu.getContainer() instanceof EmptyBarrelBlockEntity openBarrel) {
+            barrel = openBarrel;
+        } else if (barrelPos != null && sLevel.getBlockEntity(barrelPos) instanceof EmptyBarrelBlockEntity be) {
+            if (player.blockPosition().distSqr(barrelPos) <= 64.0D) {
+                barrel = be;
+            }
+        }
+
+        StaffSupplyRequest req = ACTIVE_REQUESTS.get(staffUuid);
+        if (req == null && barrel != null) {
+            refreshStaffRequests(sLevel, barrel, barrel.getCategory());
+            req = ACTIVE_REQUESTS.get(staffUuid);
+        }
+        if (req == null || !"CASHIER".equals(req.staffType)) return;
+
+        Entity ent = resolveEntityByUuid(sLevel, req.staffUuid);
+        if (ent == null && req.staffEntityId > 0) {
+            ent = sLevel.getEntity(req.staffEntityId);
+        }
+        if (ent == null && sLevel.getServer() != null) {
+            for (ServerLevel lvl : sLevel.getServer().getAllLevels()) {
+                ent = lvl.getEntity(req.staffUuid);
+                if (ent != null) break;
+            }
+        }
+        if (!(ent instanceof ZooCashierEntity cashier) || !cashier.isAlive()) return;
+
+        int totalCost = calculateStaffSupplyRequestRawCost(sLevel, req);
+        if (totalCost <= 0) return;
+
+        if (!TransactionHelper.hasEnoughEmeralds(player, totalCost)) {
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.economy", "zootycoon.claim.not_enough_emeralds", 3);
+            sLevel.playSound(null, player.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 0.9F, 1.0F);
+            return;
+        }
+
+        if (!TransactionHelper.consumeEmeralds(player, totalCost)) {
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.economy", "zootycoon.claim.not_enough_emeralds", 3);
+            return;
+        }
+
+        // Fulfill cashier stock directly
+        SimpleContainer stock = cashier.getStockInventory();
+        for (ItemStack menuStack : req.targetItems) {
+            ItemStack toInsert = menuStack.copy();
+            for (int i = 0; i < stock.getContainerSize() && !toInsert.isEmpty(); i++) {
+                ItemStack slotStack = stock.getItem(i);
+                if (slotStack.isEmpty()) {
+                    stock.setItem(i, toInsert.copy());
+                    toInsert.setCount(0);
+                } else if (ItemStack.isSameItemSameComponents(slotStack, toInsert)) {
+                    int space = slotStack.getMaxStackSize() - slotStack.getCount();
+                    if (space > 0) {
+                        int add = Math.min(space, toInsert.getCount());
+                        slotStack.grow(add);
+                        toInsert.shrink(add);
+                    }
+                }
+            }
+        }
+
+        ACTIVE_REQUESTS.remove(req.staffUuid);
+        cashier.updateStockStatus();
+
+        if (barrel != null) {
+            barrel.setChanged();
+            if (player.containerMenu instanceof ChestMenu) {
+                player.containerMenu.broadcastChanges();
+            }
+            barrel.syncToViewingPlayers(sLevel);
+        } else if (barrelPos != null && sLevel.getBlockEntity(barrelPos) instanceof EmptyBarrelBlockEntity be) {
+            be.syncToViewingPlayers(sLevel);
+        }
+
+        sLevel.playSound(null, player.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 0.9F, 1.2F);
+        sLevel.playSound(null, cashier.blockPosition(), SoundEvents.VILLAGER_WORK_BUTCHER, SoundSource.NEUTRAL, 0.8F, 1.1F);
+        sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, cashier.getX(), cashier.getY() + 1.2D, cashier.getZ(), 8, 0.25, 0.25, 0.25, 0.02);
+
+        ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.warehouse.bought_and_fulfilled", 1);
     }
 
     public static void giveRecipeNoteToPlayer(ServerLevel sLevel, ServerPlayer player, BlockPos barrelPos, UUID staffUuid) {
