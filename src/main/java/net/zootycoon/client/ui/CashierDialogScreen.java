@@ -361,14 +361,15 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
         } else if ("TICKET".equalsIgnoreCase(currentRole)) {
             // Tab Header Buttons: [Tab 1: Pengaturan Tiket] [Tab 2: Masukan Pengunjung]
             int tabY = startY + 38;
-            int tabW = 105;
+            int tabGap = 4;
+            int tabW = (rightW - tabGap) / 2;
             int tabH = 18;
             this.tabSettingsBtn = new ZooButton(rightX, tabY, tabW, tabH,
                     ZooTranslations.component("zootycoon.dialog.cashier.tab.ticket"), b -> {
                 this.activeTicketTab = 0;
                 updateTicketTabVisibility();
             });
-            this.tabFeedbackBtn = new ZooButton(rightX + tabW + 4, tabY, tabW, tabH,
+            this.tabFeedbackBtn = new ZooButton(rightX + tabW + tabGap, tabY, tabW, tabH,
                     ZooTranslations.component("zootycoon.dialog.cashier.tab.feedback"), b -> {
                 this.activeTicketTab = 1;
                 updateTicketTabVisibility();
@@ -376,9 +377,10 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
             addRenderableWidget(this.tabSettingsBtn);
             addRenderableWidget(this.tabFeedbackBtn);
 
-            // Sort button for Feedback Tab (aligned with tab row on the right)
-            int sortBtnW = 86;
-            this.sortFeedbackBtn = new ZooButton(rightX + rightW - sortBtnW, tabY, sortBtnW, tabH,
+            // Sort button for Feedback Tab (positioned at the bottom where toggle button sits)
+            int btnH = 20;
+            int sortY = startY + panelHeight - btnH - 10;
+            this.sortFeedbackBtn = new ZooButton(rightX, sortY, rightW, btnH,
                     ZooTranslations.component(sortByUrgency ? "zootycoon.dialog.cashier.feedback.sort_urgency" : "zootycoon.dialog.cashier.feedback.sort_time"), b -> {
                 this.sortByUrgency = !this.sortByUrgency;
                 this.sortFeedbackBtn.setMessage(ZooTranslations.component(sortByUrgency ? "zootycoon.dialog.cashier.feedback.sort_urgency" : "zootycoon.dialog.cashier.feedback.sort_time"));
@@ -420,7 +422,6 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
             }
 
             // Role is TICKET: toggle open/close zoo button replaces "Selesai" button
-            int btnH = 20;
             int closeY = startY + panelHeight - btnH - 10;
             this.toggleZooBtn = new ZooButton(rightX, closeY, rightW, btnH,
                     getToggleZooComponent(), b -> {
@@ -504,9 +505,10 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
         int rightX = startX + 114 + 14;
         int rightW = panelWidth - (rightX - startX) - 12;
 
-        // Render slate container for visitor feedback list starting below tab row
+        // Render slate container for visitor feedback list starting below tab row, ending above bottom button
         int topY = startY + 60;
-        int totalH = panelHeight - 70;
+        int btnH = 20;
+        int totalH = panelHeight - 70 - btnH - 6;
         graphics.fill(rightX - 2, topY, rightX + rightW + 2, topY + totalH, 0xFF14171F);
         graphics.renderOutline(rightX - 2, topY, rightW + 4, totalH, 0xFF2A3140);
 
@@ -820,7 +822,8 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
             int rightX = startX + 114 + 14;
             int rightW = panelWidth - (rightX - startX) - 12;
             int topY = startY + 60;
-            int totalH = panelHeight - 70;
+            int btnH = 20;
+            int totalH = panelHeight - 70 - btnH - 6;
             int listX = rightX + 2;
             int listY = topY + 4;
             int listW = rightW - 4;

@@ -122,6 +122,60 @@ public class EmptyBarrelChestOverlay {
         }
     }
 
+    public record SimpleItemPriceTooltipData(
+            String itemName,
+            int price,
+            boolean canAfford
+    ) implements TooltipComponent {}
+
+    public static class SimpleItemPriceClientTooltip implements ClientTooltipComponent {
+        private final String itemName;
+        private final int price;
+        private final boolean canAfford;
+        private static final ItemStack EMERALD_ICON = new ItemStack(net.minecraft.world.item.Items.EMERALD);
+
+        public SimpleItemPriceClientTooltip(SimpleItemPriceTooltipData data) {
+            this.itemName = data.itemName();
+            this.price = data.price();
+            this.canAfford = data.canAfford();
+        }
+
+        @Override
+        public int getHeight() {
+            return canAfford ? 26 : 38;
+        }
+
+        @Override
+        public int getWidth(Font font) {
+            int w1 = font.width(itemName);
+            int w2 = font.width("Harga: " + price) + 16;
+            int w3 = canAfford ? 0 : font.width("Saldo emerald tidak cukup");
+            return Math.max(Math.max(w1, w2), w3) + 4;
+        }
+
+        @Override
+        public void renderImage(Font font, int x, int y, GuiGraphics graphics) {
+            graphics.pose().pushPose();
+            graphics.pose().translate(0.0f, 0.0f, 400.0f);
+            graphics.drawString(font, itemName, x, y + 1, 0xFFFFFFFF, true);
+
+            String priceStr = "Harga: " + price;
+            graphics.drawString(font, priceStr, x, y + 13, 0xFF55FF55, true);
+            int pW = font.width(priceStr);
+
+            graphics.pose().pushPose();
+            graphics.pose().translate(x + pW + 3, y + 10, 400.0f);
+            graphics.pose().scale(0.75f, 0.75f, 1.0f);
+            graphics.renderFakeItem(EMERALD_ICON, 0, 0);
+            graphics.pose().popPose();
+
+            if (!canAfford) {
+                graphics.drawString(font, "Saldo emerald tidak cukup", x, y + 25, 0xFFE06C75, true);
+            }
+            graphics.pose().popPose();
+        }
+    }
+
     public record RawIngredientsTooltipData(
             String recipeName,
             int rawCost,
@@ -288,6 +342,9 @@ public class EmptyBarrelChestOverlay {
             }
             if (data instanceof FoodPurchaseTooltipData foodData) {
                 return new FoodPurchaseClientTooltip(foodData);
+            }
+            if (data instanceof SimpleItemPriceTooltipData priceData) {
+                return new SimpleItemPriceClientTooltip(priceData);
             }
             return null;
         });
@@ -806,20 +863,27 @@ public class EmptyBarrelChestOverlay {
                         mouseY
                 );
             } else {
-                List<Component> lines = new ArrayList<>();
-                lines.add(hoveredStack.getHoverName());
-                if (net.zootycoon.block.ZooCoolerBlock.getCoolingTicks(hoveredStack) > 0) {
-                    lines.add(Component.literal("Bisa gunakan semua varian es (Ice, Packed Ice, Blue Ice, Salju)").withStyle(ChatFormatting.AQUA));
-                } else if (net.zootycoon.block.ZooHeaterBlock.getFuelTicks(hoveredStack) > 0) {
-                    lines.add(Component.literal("Bisa gunakan Coal, Charcoal, atau Block of Coal").withStyle(ChatFormatting.GOLD));
-                } else if (net.zootycoon.animal.AnimalBathingManager.isWateringCan(hoveredStack) || hoveredStack.is(net.minecraft.world.item.Items.BRUSH)) {
-                    lines.add(Component.literal("Alat untuk memandikan dan membersihkan satwa").withStyle(ChatFormatting.GREEN));
-                } else if ("ANIMAL_CARE".equalsIgnoreCase(activeCategory)
-                        || (hoveredDto != null && hoveredDto.subtitle() != null && (hoveredDto.subtitle().toLowerCase().contains("pendingin")
-                        || hoveredDto.subtitle().toLowerCase().contains("pemanas")
-                        || hoveredDto.subtitle().toLowerCase().contains("mandi")))) {
-                    lines.add(Component.literal("Alat Perawatan Satwa").withStyle(ChatFormatting.GRAY));
-                    graphics.renderTooltip(font, lines, Optional.empty(), mouseX, mouseY);
+                String sub = hoveredDto != null && hoveredDto.subtitle() != null ? hoveredDto.subtitle().toLowerCase(java.util.Locale.ROOT) : "";
+                boolean isCare = sub.contains("pemanas") || sub.contains("pendingin") || sub.contains("alat mandi") || sub.contains("kotor") || sub.contains("kepanasan") || sub.contains("kedinginan") || "ANIMAL_CARE".equalsIgnoreCase(activeCategory);
+
+                if (isCare || net.zootycoon.block.ZooCoolerBlock.getCoolingTicks(hoveredStack) > 0
+                        || net.zootycoon.block.ZooHeaterBlock.getFuelTicks(hoveredStack) > 0
+                        || net.zootycoon.animal.AnimalBathingManager.isWateringCan(hoveredStack)
+                        || hoveredStack.is(net.minecraft.world.item.Items.BRUSH)) {
+                    int price = 16;
+                    if (net.zootycoon.animal.AnimalBathingManager.isWateringCan(hoveredStack)) price = 6;
+                    else if (hoveredStack.is(net.minecraft.world.item.Items.BRUSH)) price = 4;
+                    else if (net.zootycoon.block.ZooHeaterBlock.getFuelTicks(hoveredStack) > 0) price = 16;
+                    else if (net.zootycoon.block.ZooCoolerBlock.getCoolingTicks(hoveredStack) > 0) price = 16;
+
+                    boolean canAfford = net.zootycoon.economy.TransactionHelper.hasEnoughEmeralds(mc.player, price);
+                    graphics.renderTooltip(
+                            font,
+                            List.of(),
+                            Optional.of(new SimpleItemPriceTooltipData(hoveredStack.getHoverName().getString(), price, canAfford)),
+                            mouseX,
+                            mouseY
+                    );
                 } else {
                     int neededCount = hoveredDto != null ? Math.max(16, hoveredDto.requiredCount() - hoveredDto.currentCount()) : 64;
                     var quality = net.zootycoon.economy.ZooEconomyEngine.getFoodQualityInfo(hoveredStack);
@@ -841,10 +905,6 @@ public class EmptyBarrelChestOverlay {
                             mouseX,
                             mouseY
                     );
-                    lines = null;
-                }
-                if (lines != null) {
-                    graphics.renderTooltip(font, lines, Optional.empty(), mouseX, mouseY);
                 }
             }
         }

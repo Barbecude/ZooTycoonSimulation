@@ -62,32 +62,67 @@ public class StaffRecruitmentTab {
         int startX = (screen.width - totalWidth) / 2;
         int startY = 60;
 
-        int btnHeight = 24;
-        int btnY = startY + cardHeight - btnHeight - 12;
+        int btnHeight = 20;
+        int btnGap = 4;
+        int kelolaY = startY + cardHeight - (btnHeight * 2 + btnGap) - 10;
+        int rekrutY = kelolaY + btnHeight + btnGap;
+        int btnW = cardWidth - 20;
 
         // Card 1: Kelola Kuli Bangunan
-        screen.addWidgetPublic(new ZooButton(startX + 12, btnY, cardWidth - 24, btnHeight,
+        int c1X = startX + 10;
+        screen.addWidgetPublic(new ZooButton(c1X, kelolaY, btnW, btnHeight,
                 ZooTranslations.component("zootycoon.ui.staff.btn_manage_builder"), b -> {
             screen.setView(MainManagementScreen.ViewState.BUILDER_MANAGE);
         }).asPrimary());
 
+        int builderCost = net.zootycoon.economy.ZooEconomyEngine.getStaffHiringCost("builder");
+        screen.addWidgetPublic(new ZooButton(c1X, rekrutY, btnW, btnHeight,
+                Component.literal("Rekrut " + builderCost), b -> {
+            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
+            ClientPlayNetworking.send(new ZooNetworkPayloads.HireStaffPayload("builder"));
+        }).setItemIcon(VANILLA_EMERALD_ITEM).setIconAfter(true).asEmerald());
+
         // Card 2: Kelola Zookeeper
-        screen.addWidgetPublic(new ZooButton(startX + (cardWidth + cardGap) + 12, btnY, cardWidth - 24, btnHeight,
+        int c2X = startX + (cardWidth + cardGap) + 10;
+        screen.addWidgetPublic(new ZooButton(c2X, kelolaY, btnW, btnHeight,
                 ZooTranslations.component("zootycoon.ui.staff.btn_manage_zookeeper"), b -> {
             screen.setView(MainManagementScreen.ViewState.ZOOKEEPER_MANAGE);
         }).asPrimary());
 
+        int zkCost = net.zootycoon.economy.ZooEconomyEngine.getStaffHiringCost("zookeeper");
+        screen.addWidgetPublic(new ZooButton(c2X, rekrutY, btnW, btnHeight,
+                Component.literal("Rekrut " + zkCost), b -> {
+            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
+            ClientPlayNetworking.send(new ZooNetworkPayloads.HireStaffPayload("zookeeper"));
+        }).setItemIcon(VANILLA_EMERALD_ITEM).setIconAfter(true).asEmerald());
+
         // Card 3: Kelola Security
-        screen.addWidgetPublic(new ZooButton(startX + (cardWidth + cardGap) * 2 + 12, btnY, cardWidth - 24, btnHeight,
+        int c3X = startX + (cardWidth + cardGap) * 2 + 10;
+        screen.addWidgetPublic(new ZooButton(c3X, kelolaY, btnW, btnHeight,
                 ZooTranslations.component("zootycoon.ui.staff.btn_manage_security"), b -> {
             screen.setView(MainManagementScreen.ViewState.SECURITY_MANAGE);
         }).asPrimary());
 
+        int secCost = net.zootycoon.economy.ZooEconomyEngine.getStaffHiringCost("security");
+        screen.addWidgetPublic(new ZooButton(c3X, rekrutY, btnW, btnHeight,
+                Component.literal("Rekrut " + secCost), b -> {
+            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
+            ClientPlayNetworking.send(new ZooNetworkPayloads.HireStaffPayload("security"));
+        }).setItemIcon(VANILLA_EMERALD_ITEM).setIconAfter(true).asEmerald());
+
         // Card 4: Kelola Kasir Zoo
-        screen.addWidgetPublic(new ZooButton(startX + (cardWidth + cardGap) * 3 + 12, btnY, cardWidth - 24, btnHeight,
+        int c4X = startX + (cardWidth + cardGap) * 3 + 10;
+        screen.addWidgetPublic(new ZooButton(c4X, kelolaY, btnW, btnHeight,
                 ZooTranslations.component("zootycoon.ui.staff.btn_manage_cashier"), b -> {
             screen.setView(MainManagementScreen.ViewState.CASHIER_MANAGE);
         }).asPrimary());
+
+        int cashierCost = net.zootycoon.economy.ZooEconomyEngine.getStaffHiringCost("cashier");
+        screen.addWidgetPublic(new ZooButton(c4X, rekrutY, btnW, btnHeight,
+                Component.literal("Rekrut " + cashierCost), b -> {
+            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
+            ClientPlayNetworking.send(new ZooNetworkPayloads.HireStaffPayload("cashier"));
+        }).setItemIcon(VANILLA_EMERALD_ITEM).setIconAfter(true).asEmerald());
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
