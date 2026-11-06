@@ -42,7 +42,7 @@ public class ZooClaimManager {
     private final Map<UUID, ZooClaim> claims = new ConcurrentHashMap<>();
     private final Set<UUID> openZoos = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Map<UUID, Integer> ticketPrices = new ConcurrentHashMap<>();
-    private final Map<UUID, Set<String>> dismissedFeedbackIds = new ConcurrentHashMap<>();
+    private final Map<UUID, Map<String, Long>> dismissedFeedbackTimestamps = new ConcurrentHashMap<>();
     private MinecraftServer server;
 
     public ZooClaimManager() {
@@ -103,21 +103,6 @@ public class ZooClaimManager {
             if (tag.contains("zoo_logs_stats", Tag.TAG_COMPOUND)) {
                 net.zootycoon.log.ZooLogManager.loadFromNbt(tag.getCompound("zoo_logs_stats"));
             }
-            if (tag.contains("dismissed_feedbacks", Tag.TAG_COMPOUND)) {
-                CompoundTag fbTag = tag.getCompound("dismissed_feedbacks");
-                dismissedFeedbackIds.clear();
-                for (String key : fbTag.getAllKeys()) {
-                    try {
-                        UUID pUuid = UUID.fromString(key);
-                        ListTag listFb = fbTag.getList(key, Tag.TAG_STRING);
-                        Set<String> set = Collections.newSetFromMap(new ConcurrentHashMap<>());
-                        for (int k = 0; k < listFb.size(); k++) {
-                            set.add(listFb.getString(k));
-                        }
-                        dismissedFeedbackIds.put(pUuid, set);
-                    } catch (Exception ignored) {}
-                }
-            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -147,16 +132,6 @@ public class ZooClaimManager {
                 priceTag.putInt(entry.getKey().toString(), entry.getValue());
             }
             tag.put("ticket_prices", priceTag);
-
-            CompoundTag fbTag = new CompoundTag();
-            for (var entry : dismissedFeedbackIds.entrySet()) {
-                ListTag listFb = new ListTag();
-                for (String msg : entry.getValue()) {
-                    listFb.add(net.minecraft.nbt.StringTag.valueOf(msg));
-                }
-                fbTag.put(entry.getKey().toString(), listFb);
-            }
-            tag.put("dismissed_feedbacks", fbTag);
             tag.put("zoo_logs_stats", net.zootycoon.log.ZooLogManager.saveToNbt());
 
             NbtIo.writeCompressed(tag, path);
@@ -167,14 +142,46 @@ public class ZooClaimManager {
 
     public boolean isFeedbackDismissed(UUID playerUuid, String feedbackId) {
         if (playerUuid == null || feedbackId == null) return false;
-        Set<String> set = dismissedFeedbackIds.get(playerUuid);
-        return set != null && set.contains(feedbackId);
+        Map<String, Long> map = dismissedFeedbackTimestamps.get(playerUuid);
+        if (map == null) return false;
+        Long time = map.get(feedbackId);
+        if (time == null) return false;
+        if (System.currentTimeMillis() - time > 5 * 60 * 1000L) {
+            map.remove(feedbackId);
+            return false;
+        }
+        return true;
     }
 
     public void dismissFeedback(UUID playerUuid, String feedbackId) {
         if (playerUuid == null || feedbackId == null) return;
-        dismissedFeedbackIds.computeIfAbsent(playerUuid, k -> Collections.newSetFromMap(new ConcurrentHashMap<>())).add(feedbackId);
-        saveToFile();
+        dismissedFeedbackTimestamps.computeIfAbsent(playerUuid, k -> new ConcurrentHashMap<>()).put(feedbackId, System.currentTimeMillis());
+        var compMap = net.zootycoon.entity.ZooVisitorEntity.RECENT_OWNER_COMPLAINTS.get(playerUuid);
+        if (compMap != null) {
+            compMap.remove(feedbackId);
+        }
+    }
+
+    public UUID getOwnerAtOrNearest(BlockPos pos) {
+        Optional<ZooClaim> opt = getClaimAt(pos);
+        if (opt.isPresent() && opt.get().getOwnerUuid() != null) {
+            return opt.get().getOwnerUuid();
+        }
+        double bestDist = Double.MAX_VALUE;
+        UUID bestOwner = null;
+        for (ZooClaim c : claims.values()) {
+            if (c.getOwnerUuid() == null) continue;
+            var box = c.getBox();
+            double cx = (box.minX() + box.maxX()) * 0.5D;
+            double cy = (box.minY() + box.maxY()) * 0.5D;
+            double cz = (box.minZ() + box.maxZ()) * 0.5D;
+            double d = pos.distToCenterSqr(cx, cy, cz);
+            if (d < bestDist && d <= 10000.0D) {
+                bestDist = d;
+                bestOwner = c.getOwnerUuid();
+            }
+        }
+        return bestOwner;
     }
 
     public int getTicketPrice(UUID playerUuid) {

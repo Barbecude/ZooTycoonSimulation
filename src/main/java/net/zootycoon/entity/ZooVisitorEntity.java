@@ -428,12 +428,12 @@ public class ZooVisitorEntity extends PathfinderMob {
 
     public void triggerComplaint(VisitorComplaint complaint) {
         if (complaint == null || complaint == VisitorComplaint.NONE) return;
-        if (isHeadingToDestination()) return;
         this.currentComplaint = complaint;
         if (this.level() instanceof net.minecraft.server.level.ServerLevel sl) {
-            net.zootycoon.claim.ZooClaimManager.get(sl).getClaimAt(this.blockPosition()).ifPresent(c -> {
-                recordComplaint(c.getOwnerUuid(), complaint.name());
-            });
+            UUID ownerUuid = net.zootycoon.claim.ZooClaimManager.get(sl).getOwnerAtOrNearest(this.blockPosition());
+            if (ownerUuid != null) {
+                recordComplaint(ownerUuid, complaint.name());
+            }
         }
         if (complaint == VisitorComplaint.SICK_ANIMALS) {
             setMood(VisitorMood.CRYING);
@@ -970,10 +970,9 @@ public class ZooVisitorEntity extends PathfinderMob {
 
     private void checkVisitorDissatisfaction() {
         if (isTimeToLeave() || isLeaving() || this.watchingAnimalId != -1) return;
-        if (isHeadingToDestination()) return;
 
         // 1. Toilet urgency
-        if (needsToilet() && toiletTimer > 600 && this.currentComplaint == VisitorComplaint.NONE) {
+        if (needsToilet() && toiletTimer > 200 && this.currentComplaint == VisitorComplaint.NONE) {
             triggerComplaint(VisitorComplaint.TOILET);
             return;
         }
@@ -987,13 +986,13 @@ public class ZooVisitorEntity extends PathfinderMob {
                 || guidingPlayerUuid != null;
 
         if (!isProcessingFoodOrDrink && this.currentComplaint == VisitorComplaint.NONE) {
-            if (canDrink() && getThirst() >= 60 && stayTime > 1200 && drinkCount == 0) {
+            if (canDrink() && getThirst() >= 50 && stayTime > 400 && drinkCount == 0) {
                 if (!hasAvailableStall("DRINK")) {
                     triggerComplaint(VisitorComplaint.THIRSTY);
                     return;
                 }
             }
-            if (canEat() && getHunger() >= 60 && stayTime > 1200 && foodCount == 0) {
+            if (canEat() && getHunger() >= 50 && stayTime > 400 && foodCount == 0) {
                 if (!hasAvailableStall("BURGER")) {
                     triggerComplaint(VisitorComplaint.HUNGRY);
                     return;
@@ -1001,8 +1000,8 @@ public class ZooVisitorEntity extends PathfinderMob {
             }
         }
 
-        // 4. Seating check: walked for over 2 minutes without resting
-        if (stayTime > 2400 && !hasSatDown && this.currentComplaint == VisitorComplaint.NONE) {
+        // 4. Seating check: walked for over 40 seconds without resting
+        if (stayTime > 800 && !hasSatDown && this.currentComplaint == VisitorComplaint.NONE) {
             BlockPos nearestSeat = net.zootycoon.util.ZooSeatHelper.findNearestAvailableSeat(this.level(), this.blockPosition(), 48.0D);
             if (nearestSeat != null) {
                 // There is an available seat nearby! Do not complain, prioritize heading there to sit down
@@ -1015,10 +1014,10 @@ public class ZooVisitorEntity extends PathfinderMob {
         }
 
         // 5. Litter proximity check: trash nearby
-        if (this.currentComplaint == VisitorComplaint.NONE && this.tickCount % 80 == 0) {
+        if (this.currentComplaint == VisitorComplaint.NONE && this.tickCount % 40 == 0) {
             BlockPos myPos = this.blockPosition();
-            for (int dx = -3; dx <= 3; dx++) {
-                for (int dz = -3; dz <= 3; dz++) {
+            for (int dx = -4; dx <= 4; dx++) {
+                for (int dz = -4; dz <= 4; dz++) {
                     for (int dy = -1; dy <= 2; dy++) {
                         if (this.level().getBlockState(myPos.offset(dx, dy, dz)).is(net.zootycoon.block.ZooBlocks.TRASH)) {
                             triggerComplaint(VisitorComplaint.LITTER);
@@ -1027,7 +1026,7 @@ public class ZooVisitorEntity extends PathfinderMob {
                     }
                 }
             }
-        } else if (this.currentComplaint == VisitorComplaint.LITTER && this.tickCount % 80 == 0) {
+        } else if (this.currentComplaint == VisitorComplaint.LITTER && this.tickCount % 60 == 0) {
             boolean hasTrashNearby = false;
             BlockPos myPos = this.blockPosition();
             for (int dx = -6; dx <= 6 && !hasTrashNearby; dx++) {
@@ -1044,8 +1043,8 @@ public class ZooVisitorEntity extends PathfinderMob {
             }
         }
 
-        // 6. Haven't seen animals after significant stay
-        if (stayTime > 2000 && !hasWatchedAnimal && this.currentComplaint == VisitorComplaint.NONE) {
+        // 6. Haven't seen animals after stay
+        if (stayTime > 1000 && !hasWatchedAnimal && this.currentComplaint == VisitorComplaint.NONE) {
             triggerComplaint(VisitorComplaint.FEW_ANIMALS);
         }
     }

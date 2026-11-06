@@ -174,19 +174,19 @@ public class ZooLogManager {
     public static void recordSalaryPayment(UUID ownerUuid, int totalWage, int staffCount, boolean success) {
         if (ownerUuid == null) return;
         if (success) {
-            addLog(ownerUuid, "SALARY", "Pembayaran Gaji Pegawai",
-                    "Gaji harian berhasil dibayarkan sebesar " + totalWage + " Emerald untuk " + staffCount + " pegawai.",
+            addLog(ownerUuid, "SALARY", "Pembayaran Gaji Staff",
+                    "Gaji harian berhasil dibayarkan sebesar " + totalWage + " Emerald untuk " + staffCount + " staff.",
                     -totalWage, 1);
         } else {
-            addLog(ownerUuid, "SALARY", "Gaji Pegawai Belum Terbayar",
-                    "Saldo emerald tidak mencukupi untuk membayar gaji (" + totalWage + " Emerald). Seluruh pegawai mogok kerja!",
+            addLog(ownerUuid, "SALARY", "Gaji Staff Belum Terbayar",
+                    "Saldo emerald tidak mencukupi untuk membayar gaji (" + totalWage + " Emerald). Seluruh staff mogok kerja!",
                     0, 3);
         }
     }
 
     public static void recordStaffRequest(UUID ownerUuid, String staffType, String staffName, String detail) {
         if (ownerUuid == null) return;
-        String typeLabel = "ZOOKEEPER".equalsIgnoreCase(staffType) ? "Zookeeper" : ("CASHIER".equalsIgnoreCase(staffType) ? "Kasir" : "Pegawai");
+        String typeLabel = "ZOOKEEPER".equalsIgnoreCase(staffType) ? "Zookeeper" : ("CASHIER".equalsIgnoreCase(staffType) ? "Kasir" : "Staff");
         addLog(ownerUuid, "STAFF_REQUEST", "Permintaan Suplai " + typeLabel,
                 staffName + " memerlukan suplai: " + detail,
                 0, 2);

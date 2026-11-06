@@ -120,13 +120,13 @@
   "zootycoon.security.patrol_ordered": "Petugas Keamanan melanjutkan patroli pengawasan area kebun binatang.",
   "zootycoon.visitor.greeted": "Pengunjung senang disapa rating naik!",
   "zootycoon.staff.hired": "Berhasil merekrut (%s)!",
-  "zootycoon.staff.not_enough_emeralds": "Emerald tidak cukup untuk merekrut pegawai ini!",
+  "zootycoon.staff.not_enough_emeralds": "Emerald tidak cukup untuk merekrut staff ini!",
   "zootycoon.toilet.occupied": "Toilet lagi digunakan! Antrian: %s",
   "zootycoon.cashier.greet": "Kasir siap melayani tiket dan pengunjung!",
   "zootycoon.ui.title": "Manajemen Zoo Tycoon",
   "zootycoon.ui.card.claim": "Beli Tanah",
   "zootycoon.ui.card.buildings": "Bangunan & Terrain",
-  "zootycoon.ui.card.staff": "Rekrut Pegawai",
+  "zootycoon.ui.card.staff": "Kelola Staff",
   "zootycoon.ui.card.animals": "Kelola Kebun Binatang",
   "zootycoon.ui.btn.back": "Kembali",
   "zootycoon.ui.subview.catalog": "Katalog Bangunan",
@@ -194,7 +194,7 @@
   "zootycoon.staff.manage.builder_info": "Builders work automatically when construction starts.",
   "zootycoon.staff.manage.security_info": "Security patrols to keep the zoo safe.",
   "zootycoon.staff.manage.cashier_info": "Cashiers handle ticket and concession sales.",
-  "zootycoon.ui.subview.staff": "Rekrut & Kelola Pegawai",
+  "zootycoon.ui.subview.staff": "Rekrut & Kelola Staff",
   "zootycoon.ui.subview.animals": "Kelola Satwa Kebun Binatang",
   "zootycoon.ui.catalog.tab_enclosures": "Kandang",
   "zootycoon.ui.catalog.tab_essentials": "Fasilitas",
@@ -774,5 +774,7 @@
   "zootycoon.dialog.cashier.feedback.empty": "No visitor complaints yet.",
   "zootycoon.dialog.cashier.feedback.sort_urgency": "Sort: Urgency",
   "zootycoon.dialog.cashier.feedback.sort_time": "Sort: Time",
-  "zootycoon.dialog.cashier.feedback.dismiss": "Dismiss complaint"
+  "zootycoon.dialog.cashier.feedback.dismiss": "Dismiss complaint",
+  "zootycoon.warehouse.tooltip.raw_cost_prefix": "Raw Material Cost: ",
+  "zootycoon.warehouse.bought_to_barrel": "Items purchased and stored in barrel!"
 }

@@ -124,6 +124,7 @@ public class EmptyBarrelChestOverlay {
 
     public record RawIngredientsTooltipData(
             String recipeName,
+            int rawCost,
             int totalEmeraldReward,
             List<WarehousePayloads.RawIngredientItemDto> ingredients
     ) implements TooltipComponent {
@@ -131,14 +132,16 @@ public class EmptyBarrelChestOverlay {
 
     public static class RawIngredientsClientTooltip implements ClientTooltipComponent {
         private final String recipeName;
+        private final int rawCost;
         private final int totalEmeraldReward;
         private final List<WarehousePayloads.RawIngredientItemDto> ingredients;
         private static final int ROW_HEIGHT = 14;
-        private static final int HEADER_HEIGHT = 26;
+        private static final int HEADER_HEIGHT = 38;
         private static final ItemStack EMERALD_STACK = new ItemStack(net.minecraft.world.item.Items.EMERALD);
 
         public RawIngredientsClientTooltip(RawIngredientsTooltipData data) {
             this.recipeName = data.recipeName();
+            this.rawCost = data.rawCost();
             this.totalEmeraldReward = data.totalEmeraldReward();
             this.ingredients = data.ingredients();
         }
@@ -153,11 +156,14 @@ public class EmptyBarrelChestOverlay {
         public int getWidth(Font font) {
             int maxW = 0;
             if (recipeName != null && !recipeName.isEmpty()) {
+                String rawCostPrefix = ZooTranslations.get("zootycoon.warehouse.tooltip.raw_cost_prefix", "Harga Bahan Mentah: ");
                 String profitPrefix = ZooTranslations.get("zootycoon.warehouse.tooltip.profit_prefix", "Keuntungan: ");
+                String costStr = String.valueOf(rawCost);
                 String rewardStr = "+" + totalEmeraldReward;
                 int line1W = font.width(recipeName);
-                int line2W = font.width(profitPrefix) + font.width(rewardStr) + 2 + 13;
-                maxW = Math.max(maxW, Math.max(line1W, line2W));
+                int line2W = font.width(rawCostPrefix) + font.width(costStr) + 2 + 13;
+                int line3W = font.width(profitPrefix) + font.width(rewardStr) + 2 + 13;
+                maxW = Math.max(line1W, Math.max(line2W, line3W));
             }
             for (WarehousePayloads.RawIngredientItemDto raw : ingredients) {
                 String text = raw.stack().getCount() + "x " + raw.stack().getHoverName().getString();
@@ -176,20 +182,38 @@ public class EmptyBarrelChestOverlay {
                 graphics.pose().translate(0.0f, 0.0f, 400.0f);
                 graphics.drawString(font, recipeName, x, curY + 1, 0xFFFFFFFF, true);
 
-                // Line 2: "Keuntungan: " + "+totalEmeraldReward" + Emerald Item Icon
+                // Line 2: "Harga Bahan Mentah: " + rawCost + Emerald icon
                 int line2Y = curY + 13;
-                String profitPrefix = ZooTranslations.get("zootycoon.warehouse.tooltip.profit_prefix", "Keuntungan: ");
-                String rewardStr = "+" + totalEmeraldReward;
-                graphics.drawString(font, profitPrefix, x, line2Y, 0xFFE2E8F0, true);
-                int prefixW = font.width(profitPrefix);
-                graphics.drawString(font, rewardStr, x + prefixW, line2Y, 0xFF55FF55, true);
+                String rawCostPrefix = ZooTranslations.get("zootycoon.warehouse.tooltip.raw_cost_prefix", "Harga Bahan Mentah: ");
+                String costStr = String.valueOf(rawCost);
+                graphics.drawString(font, rawCostPrefix, x, line2Y, 0xFFECC94B, true);
+                int costPrefixW = font.width(rawCostPrefix);
+                graphics.drawString(font, costStr, x + costPrefixW, line2Y, 0xFFFFFFFF, true);
                 graphics.pose().popPose();
 
-                // Emerald Item Icon on Line 2
+                int costValW = font.width(costStr);
+                int costEmX = x + costPrefixW + costValW + 2;
+                graphics.pose().pushPose();
+                graphics.pose().translate(costEmX, line2Y - 2, 400.0f);
+                graphics.pose().scale(0.75f, 0.75f, 1.0f);
+                graphics.renderFakeItem(EMERALD_STACK, 0, 0);
+                graphics.pose().popPose();
+
+                // Line 3: "Keuntungan: " + "+totalEmeraldReward" + Emerald Item Icon
+                int line3Y = curY + 25;
+                String profitPrefix = ZooTranslations.get("zootycoon.warehouse.tooltip.profit_prefix", "Keuntungan: ");
+                String rewardStr = "+" + totalEmeraldReward;
+                graphics.pose().pushPose();
+                graphics.pose().translate(0.0f, 0.0f, 400.0f);
+                graphics.drawString(font, profitPrefix, x, line3Y, 0xFFE2E8F0, true);
+                int prefixW = font.width(profitPrefix);
+                graphics.drawString(font, rewardStr, x + prefixW, line3Y, 0xFF55FF55, true);
+                graphics.pose().popPose();
+
                 int rewardW = font.width(rewardStr);
                 int emX = x + prefixW + rewardW + 2;
                 graphics.pose().pushPose();
-                graphics.pose().translate(emX, line2Y - 2, 400.0f);
+                graphics.pose().translate(emX, line3Y - 2, 400.0f);
                 graphics.pose().scale(0.75f, 0.75f, 1.0f);
                 graphics.renderFakeItem(EMERALD_STACK, 0, 0);
                 graphics.pose().popPose();
@@ -362,7 +386,7 @@ public class EmptyBarrelChestOverlay {
             int rows = Math.max(1, (int) Math.ceil((double) Math.max(1, variantCount) / colsPerRow));
             int gridH = rows * slotSize + Math.max(0, rows - 1) * slotGap;
             int actionBtnYOffset = 25 + gridH + 3;
-            int actionBtnH = 17 + 2 + 16;
+            int actionBtnH = 17;
             return Math.max(CARD_HEIGHT, actionBtnYOffset + actionBtnH + 4);
         }
         int colsPerRow = 4;
@@ -372,7 +396,7 @@ public class EmptyBarrelChestOverlay {
         int foodRows = Math.max(1, (int) Math.ceil((double) displayedCount / colsPerRow));
         int foodGridH = foodRows * slotSize + Math.max(0, foodRows - 1) * slotGap;
         int actionBtnYOffset = 25 + foodGridH + 3;
-        int actionBtnH = 17 + 2 + 16;
+        int actionBtnH = 17;
         return Math.max(CARD_HEIGHT, actionBtnYOffset + actionBtnH + 4);
     }
 
@@ -619,11 +643,6 @@ public class EmptyBarrelChestOverlay {
                             chevronHovered ? 0xFFFFFFFF : 0xFF9FB0C7,
                             false
                     );
-
-                    if (chevronHovered) {
-                        String tip = isExpanded ? "Sembunyikan Pakan" : "Lihat Semua Pakan";
-                        graphics.renderTooltip(font, Component.literal(tip), mouseX, mouseY);
-                    }
                 }
 
                 int foodRows = Math.max(1, (int) Math.ceil((double) displayedCount / colsPerRow));
@@ -683,84 +702,6 @@ public class EmptyBarrelChestOverlay {
             graphics.fill(cx + 3, cy + 4, cx + 5, cy + 6, checkColor);
             graphics.fill(cx + 4, cy + 2, cx + 6, cy + 4, checkColor);
             graphics.fill(cx + 5, cy + 0, cx + 7, cy + 2, checkColor);
-
-            // Row 2: Beli Bahan / Pakan / Alat Langsung Menggunakan Emerald
-            int buyBtnX = infoX;
-            int buyBtnY = btnY + btnH + 2;
-            int buyBtnW = infoW;
-            int buyBtnH = 16;
-
-            int buyCost;
-            String buyLabel;
-            if ("CASHIER".equalsIgnoreCase(req.staffType())) {
-                String reqRole = (activeCategory != null && !activeCategory.isEmpty())
-                        ? activeCategory
-                        : (req.subtitle().toLowerCase().contains("burger") ? "BURGER" : "DRINK");
-                net.zootycoon.economy.ZooEconomyEngine.ProfitMarginInfo margin =
-                        net.zootycoon.economy.ZooEconomyEngine.getProfitMarginInfo(reqRole, req);
-                buyCost = margin.rawCost();
-                try {
-                    buyLabel = ZooTranslations.get("zootycoon.warehouse.btn.buy_raw_materials", buyCost);
-                } catch (Exception e) {
-                    buyLabel = "Beli Bahan: " + buyCost;
-                }
-                if (buyLabel.equals("zootycoon.warehouse.btn.buy_raw_materials") || buyLabel.contains("%d")) {
-                    buyLabel = "Beli Bahan: " + buyCost;
-                }
-            } else {
-                String sub = req.subtitle() != null ? req.subtitle().toLowerCase(java.util.Locale.ROOT) : "";
-                boolean isCare = sub.contains("pemanas") || sub.contains("pendingin") || sub.contains("alat mandi") || sub.contains("kotor") || sub.contains("kepanasan") || sub.contains("kedinginan");
-                if (isCare) {
-                    buyCost = net.zootycoon.economy.ZooEconomyEngine.calculateZookeeperSupplyCost(req);
-                    try {
-                        buyLabel = ZooTranslations.get("zootycoon.warehouse.btn.buy_tools", buyCost);
-                    } catch (Exception e) {
-                        buyLabel = "Beli Alat: " + buyCost;
-                    }
-                    if (buyLabel.equals("zootycoon.warehouse.btn.buy_tools") || buyLabel.contains("%d")) {
-                        buyLabel = "Beli Alat: " + buyCost;
-                    }
-                } else {
-                    buyCost = 0;
-                    buyLabel = ZooTranslations.get("zootycoon.warehouse.btn.choose_and_buy_food", "Beli Pakan...");
-                }
-            }
-
-            String checkSub = req.subtitle() != null ? req.subtitle().toLowerCase(java.util.Locale.ROOT) : "";
-            boolean isAnimalFood = !"CASHIER".equalsIgnoreCase(req.staffType())
-                    && !checkSub.contains("pemanas") && !checkSub.contains("pendingin") && !checkSub.contains("alat mandi")
-                    && !checkSub.contains("kotor") && !checkSub.contains("kepanasan") && !checkSub.contains("kedinginan");
-
-            boolean canAfford = isAnimalFood || net.zootycoon.economy.TransactionHelper.hasEnoughEmeralds(mc.player, buyCost);
-            boolean buyHovered = mouseX >= buyBtnX && mouseX <= buyBtnX + buyBtnW
-                    && mouseY >= buyBtnY && mouseY <= buyBtnY + buyBtnH
-                    && mouseY >= listY && mouseY <= listY + listH;
-
-            if (buyHovered && !isAnimalFood) {
-                hoveredBuyDto = req;
-            }
-
-            int buyBg = canAfford ? (buyHovered ? 0xFF1C452C : 0xFF12281B) : (buyHovered ? 0xFF2B1C1C : 0xFF1C1313);
-            int buyBorder = canAfford ? (buyHovered ? 0xFF58D68D : 0xFF2D6E46) : (buyHovered ? 0xFF7A4242 : 0xFF4D2B2B);
-            int buyTxtColor = canAfford ? (buyHovered ? 0xFFFFFFFF : 0xFFB4F0D0) : 0xFF8A7070;
-
-            graphics.fill(buyBtnX, buyBtnY, buyBtnX + buyBtnW, buyBtnY + buyBtnH, buyBg);
-            graphics.renderOutline(buyBtnX, buyBtnY, buyBtnW, buyBtnH, buyBorder);
-
-            int lblBuyW = font.width(buyLabel);
-            int totalBuyW = lblBuyW + 2 + 11;
-            int buyContentX = buyBtnX + Math.max(2, (buyBtnW - totalBuyW) / 2);
-            int buyTextY = buyBtnY + (buyBtnH - 8) / 2;
-
-            graphics.drawString(font, buyLabel, buyContentX, buyTextY, buyTxtColor, false);
-
-            int emIconX = buyContentX + lblBuyW + 2;
-            int emIconY = buyBtnY + (buyBtnH - 12) / 2;
-            graphics.pose().pushPose();
-            graphics.pose().translate(emIconX, emIconY, 100.0f);
-            graphics.pose().scale(0.70f, 0.70f, 1.0f);
-            graphics.renderFakeItem(EMERALD_STACK, 0, 0);
-            graphics.pose().popPose();
         }
 
         graphics.disableScissor();
@@ -847,10 +788,20 @@ public class EmptyBarrelChestOverlay {
                     raws = hoveredDto.menuItems().get(hoveredVariantIndex).rawIngredients();
                 }
 
+                int rawSum = 0;
+                for (var raw : raws) {
+                    rawSum += net.zootycoon.economy.ZooEconomyEngine.getRawIngredientUnitPrice(raw.stack().getItem()) * raw.stack().getCount();
+                }
+                int minCost = (int) Math.round(totalReward * 0.32D);
+                int maxCost = (int) Math.round(totalReward * 0.44D);
+                int rawCost = rawSum > 0 ? Math.clamp(rawSum, Math.max(1, minCost), Math.max(1, maxCost)) : (int) Math.round(totalReward * 0.38D);
+                rawCost = Math.max(1, rawCost);
+                int profit = Math.max(1, totalReward - rawCost);
+
                 graphics.renderTooltip(
                         font,
                         List.of(),
-                        Optional.of(new RawIngredientsTooltipData(menuName, totalReward, raws)),
+                        Optional.of(new RawIngredientsTooltipData(menuName, rawCost, profit, raws)),
                         mouseX,
                         mouseY
                 );
@@ -1150,6 +1101,20 @@ public class EmptyBarrelChestOverlay {
                     int rows = Math.max(1, (int) Math.ceil((double) Math.max(1, totalVariants) / colsPerRow));
                     int gridH = rows * slotSize + Math.max(0, rows - 1) * slotGap;
                     actionBtnY = slotY + gridH + 3;
+
+                    for (int v = 0; v < totalVariants; v++) {
+                        int col = v % colsPerRow;
+                        int row = v / colsPerRow;
+                        int curX = infoX + col * (slotSize + slotGap);
+                        int curY = slotY + row * (slotSize + slotGap);
+                        if (mouseX >= curX && mouseX <= curX + slotSize && mouseY >= curY && mouseY <= curY + slotSize) {
+                            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                            BlockPos posToSend = activeBarrelPos != null ? activeBarrelPos : BlockPos.ZERO;
+                            ItemStack clickedStack = req.targetItems().get(v);
+                            ClientPlayNetworking.send(new WarehousePayloads.BuyCardItemToBarrelPayload(posToSend, req.staffUuid(), clickedStack, clickedStack.getCount()));
+                            return true;
+                        }
+                    }
                 } else {
                     String sub = req.subtitle() != null ? req.subtitle().toLowerCase(java.util.Locale.ROOT) : "";
                     boolean isCareReq = sub.contains("pemanas") || sub.contains("pendingin") || sub.contains("alat mandi") || sub.contains("kotor") || sub.contains("kepanasan") || sub.contains("kedinginan");
@@ -1176,6 +1141,21 @@ public class EmptyBarrelChestOverlay {
                     int foodRows = Math.max(1, (int) Math.ceil((double) displayedCount / 4));
                     int foodGridH = foodRows * slotSize + Math.max(0, foodRows - 1) * slotGap;
                     actionBtnY = slotY + foodGridH + 3;
+
+                    for (int k = 0; k < displayedCount; k++) {
+                        int col = k % 4;
+                        int row = k / 4;
+                        int sx = infoX + col * (slotSize + slotGap);
+                        int sy = slotY + row * (slotSize + slotGap);
+                        if (mouseX >= sx && mouseX <= sx + slotSize && mouseY >= sy && mouseY <= sy + slotSize) {
+                            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                            BlockPos posToSend = activeBarrelPos != null ? activeBarrelPos : BlockPos.ZERO;
+                            ItemStack clickedStack = req.targetItems().get(k);
+                            int buyCount = isCareReq ? (clickedStack.getMaxStackSize() > 1 ? 16 : 1) : 16;
+                            ClientPlayNetworking.send(new WarehousePayloads.BuyCardItemToBarrelPayload(posToSend, req.staffUuid(), clickedStack, buyCount));
+                            return true;
+                        }
+                    }
                 }
 
                 int btnY = actionBtnY;
@@ -1209,54 +1189,6 @@ public class EmptyBarrelChestOverlay {
                     BlockPos posToSend = activeBarrelPos != null ? activeBarrelPos : BlockPos.ZERO;
                     ClientPlayNetworking.send(new WarehousePayloads.RequestBarrelRecipeNotePayload(posToSend, req.staffUuid()));
                     return true;
-                }
-
-                // Beli Bahan / Pakan / Alat Button (Cashier & Zookeeper)
-                int buyBtnX = infoX;
-                int buyBtnY = btnY + btnH + 2;
-                int buyBtnW = infoW;
-                int buyBtnH = 16;
-
-                if (mouseX >= buyBtnX && mouseX <= buyBtnX + buyBtnW && mouseY >= buyBtnY && mouseY <= buyBtnY + buyBtnH) {
-                    if ("CASHIER".equalsIgnoreCase(req.staffType())) {
-                        String reqRole = (activeCategory != null && !activeCategory.isEmpty())
-                                ? activeCategory
-                                : (req.subtitle().toLowerCase().contains("burger") ? "BURGER" : "DRINK");
-                        net.zootycoon.economy.ZooEconomyEngine.ProfitMarginInfo margin =
-                                net.zootycoon.economy.ZooEconomyEngine.getProfitMarginInfo(reqRole, req);
-                        int reqCost = margin.rawCost();
-
-                        if (net.zootycoon.economy.TransactionHelper.hasEnoughEmeralds(Minecraft.getInstance().player, reqCost)) {
-                            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                            BlockPos posToSend = activeBarrelPos != null ? activeBarrelPos : BlockPos.ZERO;
-                            ClientPlayNetworking.send(new WarehousePayloads.BuyStaffRequestRawIngredientsPayload(posToSend, req.staffUuid()));
-                            activeRequests.removeIf(r -> r.staffUuid().equals(req.staffUuid()));
-                        } else {
-                            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.DISPENSER_FAIL, 1.2F));
-                        }
-                        return true;
-                    } else {
-                        String sub = req.subtitle() != null ? req.subtitle().toLowerCase(java.util.Locale.ROOT) : "";
-                        boolean isCareReq = sub.contains("pemanas") || sub.contains("pendingin") || sub.contains("alat mandi") || sub.contains("kotor") || sub.contains("kepanasan") || sub.contains("kedinginan");
-
-                        if (!isCareReq) {
-                            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                            activeFoodSelectionReq = req;
-                            foodModalScrollOffset = 0;
-                            return true;
-                        }
-
-                        int reqCost = net.zootycoon.economy.ZooEconomyEngine.calculateZookeeperSupplyCost(req);
-                        if (net.zootycoon.economy.TransactionHelper.hasEnoughEmeralds(Minecraft.getInstance().player, reqCost)) {
-                            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                            BlockPos posToSend = activeBarrelPos != null ? activeBarrelPos : BlockPos.ZERO;
-                            ClientPlayNetworking.send(new WarehousePayloads.BuyStaffRequestRawIngredientsPayload(posToSend, req.staffUuid()));
-                            activeRequests.removeIf(r -> r.staffUuid().equals(req.staffUuid()));
-                        } else {
-                            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.DISPENSER_FAIL, 1.2F));
-                        }
-                        return true;
-                    }
                 }
             }
         }

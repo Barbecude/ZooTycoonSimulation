@@ -63,7 +63,7 @@ fungsi yg belum ada atau masih cacat (jangan eksekusi fitur ini sebelum secara e
 - tambahkan already builded biome di kategori "terrain" di menu bangunan yang dimana already builded biome adalah biome yg di ambil dari world generation asli dari mod apapun misal user pake world generation vanila atau moded world generation apapun seperti tectonic nah di kategori terrain itu sudah ada already builded biome yg otomatis di generate oleh mod ini dan yg di generate nya itu world generation dari mod world generation itu sendiri dengan size biome yg bisa dikustomisasi. 
 - Kunjungan Pengunjung Mengikuti Rating dan Kualitas
 Perbarui spawner pengunjung agar kapasitas maksimal dan frekuensi kedatangan berskala dinamis mengikuti rating kebun binatang dan jumlah fasilitas/satwa aktif.
-- Finansial dan Penetapan Harga (Tiket, Makanan, Gaji Pegawai)
+- Finansial dan Penetapan Harga (Tiket, Makanan, Gaji Staff)
 Sediakan pengaturan harga tiket dan makanan/minuman yang berdampak pada keputusan pengunjung, serta terapkan pemotongan gaji berkala (biaya operasional harian) untuk seluruh staf zoo.
 
 

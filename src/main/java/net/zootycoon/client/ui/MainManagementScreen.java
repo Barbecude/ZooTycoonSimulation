@@ -144,7 +144,7 @@ public class MainManagementScreen extends Screen {
                     card -> setView(ViewState.ENCLOSURES_CATALOG)
             ).withIcon(ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/buildings.png"), 48, 48, 48, 48));
 
-            // 3. Rekrut Pegawai Card
+            // 3. Rekrut Staff Card
             addRenderableWidget(new ZooGridCard(
                     col0X, row1Y, cardWidth, cardHeight,
                     ZooTranslations.get("zootycoon.ui.card.staff"),

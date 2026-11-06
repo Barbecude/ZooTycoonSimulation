@@ -1290,7 +1290,47 @@ public class WarehouseSupplyManager {
             refreshStaffRequests(sLevel, barrel, barrel.getCategory());
             req = ACTIVE_REQUESTS.get(staffUuid);
         }
-        if (req == null || !"CASHIER".equals(req.staffType)) return;
+        if (req == null) return;
+
+        if ("ZOOKEEPER".equals(req.staffType)) {
+            String sub = req.subtitle != null ? req.subtitle.toLowerCase(java.util.Locale.ROOT) : "";
+            int totalCost;
+            if (sub.contains("pemanas") || sub.contains("kedinginan") || sub.contains("pendingin") || sub.contains("kepanasan")) {
+                int count = req.requiredFoodCount > 0 ? req.requiredFoodCount : 16;
+                totalCost = Math.max(10, count * 2);
+            } else if (sub.contains("alat mandi") || sub.contains("kotor")) {
+                totalCost = 40;
+            } else {
+                totalCost = 30;
+            }
+            if (!TransactionHelper.hasEnoughEmeralds(player, totalCost)) {
+                ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.economy", "zootycoon.claim.not_enough_emeralds", 3);
+                sLevel.playSound(null, player.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 0.9F, 1.0F);
+                return;
+            }
+            if (!TransactionHelper.consumeEmeralds(player, totalCost)) {
+                ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.economy", "zootycoon.claim.not_enough_emeralds", 3);
+                return;
+            }
+
+            if (barrel != null) {
+                for (ItemStack target : req.targetItems) {
+                    insertIntoBarrel(barrel, player, target.copy());
+                }
+                barrel.setChanged();
+                if (player.containerMenu instanceof ChestMenu) {
+                    player.containerMenu.broadcastChanges();
+                }
+                barrel.syncToViewingPlayers(sLevel);
+            }
+
+            fulfillStaffRequestManually(sLevel, player, barrelPos, staffUuid);
+            sLevel.playSound(null, player.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 0.9F, 1.2F);
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.warehouse.bought_and_fulfilled", 1);
+            return;
+        }
+
+        if (!"CASHIER".equals(req.staffType)) return;
 
         Entity ent = resolveEntityByUuid(sLevel, req.staffUuid);
         if (ent == null && req.staffEntityId > 0) {
@@ -1441,6 +1481,129 @@ public class WarehouseSupplyManager {
         sLevel.playSound(null, barrel.getBlockPos(), SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8F, 1.1F);
         sLevel.playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.PLAYERS, 0.9F, 1.0F);
         ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.warehouse.bought_food_success", 1);
+    }
+
+    public static void buyCardItemToBarrel(ServerLevel sLevel, ServerPlayer player, BlockPos barrelPos, UUID staffUuid, ItemStack itemStack, int count) {
+        if (sLevel == null || player == null || staffUuid == null || itemStack == null || itemStack.isEmpty()) return;
+
+        EmptyBarrelBlockEntity barrel = null;
+        if (player.containerMenu instanceof ChestMenu chestMenu && chestMenu.getContainer() instanceof EmptyBarrelBlockEntity openBarrel) {
+            barrel = openBarrel;
+        } else if (barrelPos != null && sLevel.getBlockEntity(barrelPos) instanceof EmptyBarrelBlockEntity be) {
+            if (player.blockPosition().distSqr(barrelPos) <= 64.0D) {
+                barrel = be;
+            }
+        }
+        if (barrel == null) return;
+
+        StaffSupplyRequest req = ACTIVE_REQUESTS.get(staffUuid);
+        if (req == null) {
+            refreshStaffRequests(sLevel, barrel, barrel.getCategory());
+            req = ACTIVE_REQUESTS.get(staffUuid);
+        }
+        if (req == null) return;
+
+        if ("CASHIER".equals(req.staffType)) {
+            Map<Item, Integer> singleRaws = WarehouseRecipeResolver.resolveRawIngredientsForSingleItem(sLevel, req.category, itemStack.getItem());
+            int totalUnits = Math.max(1, count > 0 ? count : itemStack.getCount());
+            int unitPrice = ZooEconomyEngine.getFoodDrinkPrice(req.category, itemStack);
+            int totalSelling = unitPrice * totalUnits;
+
+            int rawSum = 0;
+            for (Map.Entry<Item, Integer> entry : singleRaws.entrySet()) {
+                rawSum += ZooEconomyEngine.getRawIngredientUnitPrice(entry.getKey()) * (entry.getValue() * totalUnits);
+            }
+            int minCost = (int) Math.round(totalSelling * 0.32D);
+            int maxCost = (int) Math.round(totalSelling * 0.44D);
+            int cost = rawSum > 0 ? Math.clamp(rawSum, Math.max(1, minCost), Math.max(1, maxCost)) : (int) Math.round(totalSelling * 0.38D);
+            cost = Math.max(1, cost);
+
+            if (!TransactionHelper.hasEnoughEmeralds(player, cost)) {
+                ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.economy", "zootycoon.claim.not_enough_emeralds", 3);
+                sLevel.playSound(null, player.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 0.9F, 1.0F);
+                return;
+            }
+            if (!TransactionHelper.consumeEmeralds(player, cost)) {
+                ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.economy", "zootycoon.claim.not_enough_emeralds", 3);
+                return;
+            }
+
+            for (Map.Entry<Item, Integer> entry : singleRaws.entrySet()) {
+                ItemStack rawStack = new ItemStack(entry.getKey(), entry.getValue() * totalUnits);
+                insertIntoBarrel(barrel, player, rawStack);
+            }
+
+            barrel.setChanged();
+            if (player.containerMenu instanceof ChestMenu) {
+                player.containerMenu.broadcastChanges();
+            }
+            barrel.syncToViewingPlayers(sLevel);
+            refreshStaffRequests(sLevel, barrel, barrel.getCategory());
+            sLevel.playSound(null, player.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 0.9F, 1.2F);
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.warehouse.bought_to_barrel", 1);
+            return;
+        }
+
+        String sub = req.subtitle != null ? req.subtitle.toLowerCase(java.util.Locale.ROOT) : "";
+        boolean isCare = sub.contains("pemanas") || sub.contains("pendingin") || sub.contains("alat mandi") || sub.contains("kotor") || sub.contains("kepanasan") || sub.contains("kedinginan");
+
+        if (isCare) {
+            int buyCount = count > 0 ? count : (itemStack.getMaxStackSize() > 1 ? 16 : 1);
+            int cost = 16;
+            if (net.zootycoon.animal.AnimalBathingManager.isWateringCan(itemStack)) cost = 6;
+            else if (itemStack.is(net.minecraft.world.item.Items.BRUSH)) cost = 4;
+            else if (net.zootycoon.block.ZooHeaterBlock.getFuelTicks(itemStack) > 0) cost = Math.max(1, buyCount);
+            else if (net.zootycoon.block.ZooCoolerBlock.getCoolingTicks(itemStack) > 0) cost = Math.max(1, buyCount);
+
+            if (!TransactionHelper.hasEnoughEmeralds(player, cost)) {
+                ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.economy", "zootycoon.claim.not_enough_emeralds", 3);
+                sLevel.playSound(null, player.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 0.9F, 1.0F);
+                return;
+            }
+            if (!TransactionHelper.consumeEmeralds(player, cost)) {
+                ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.economy", "zootycoon.claim.not_enough_emeralds", 3);
+                return;
+            }
+
+            ItemStack toInsert = itemStack.copyWithCount(buyCount);
+            insertIntoBarrel(barrel, player, toInsert);
+
+            barrel.setChanged();
+            if (player.containerMenu instanceof ChestMenu) {
+                player.containerMenu.broadcastChanges();
+            }
+            barrel.syncToViewingPlayers(sLevel);
+            refreshStaffRequests(sLevel, barrel, barrel.getCategory());
+            sLevel.playSound(null, player.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 0.9F, 1.2F);
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.warehouse.bought_to_barrel", 1);
+            return;
+        }
+
+        buyZookeeperFood(sLevel, player, barrelPos, staffUuid, itemStack, count > 0 ? count : 16);
+    }
+
+    private static void insertIntoBarrel(EmptyBarrelBlockEntity barrel, ServerPlayer player, ItemStack toInsert) {
+        for (int i = 0; i < barrel.getContainerSize() && !toInsert.isEmpty(); i++) {
+            ItemStack slotStack = barrel.getItem(i);
+            if (!slotStack.isEmpty() && ItemStack.isSameItemSameComponents(slotStack, toInsert)) {
+                int space = slotStack.getMaxStackSize() - slotStack.getCount();
+                int add = Math.min(space, toInsert.getCount());
+                if (add > 0) {
+                    slotStack.grow(add);
+                    toInsert.shrink(add);
+                }
+            }
+        }
+        for (int i = 0; i < barrel.getContainerSize() && !toInsert.isEmpty(); i++) {
+            ItemStack slotStack = barrel.getItem(i);
+            if (slotStack.isEmpty()) {
+                barrel.setItem(i, toInsert.copy());
+                toInsert.setCount(0);
+            }
+        }
+        if (!toInsert.isEmpty()) {
+            player.drop(toInsert, false);
+        }
     }
 
     public static void giveRecipeNoteToPlayer(ServerLevel sLevel, ServerPlayer player, BlockPos barrelPos, UUID staffUuid) {

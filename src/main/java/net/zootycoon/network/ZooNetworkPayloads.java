@@ -2105,9 +2105,13 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                 net.minecraft.world.entity.Entity ent = level.getEntity(payload.cashierEntityId());
                 if (ent instanceof net.zootycoon.entity.ZooCashierEntity cashier) {
                     UUID ownerUuid = cashier.getOwnerUuid();
-                    if (ownerUuid != null && ownerUuid.equals(player.getUUID())) {
-                        ZooClaimManager.get(level).dismissFeedback(ownerUuid, payload.feedbackId());
+                    if (ownerUuid == null) {
+                        ownerUuid = ZooClaimManager.get(level).getOwnerAtOrNearest(cashier.blockPosition());
                     }
+                    if (ownerUuid == null) {
+                        ownerUuid = player.getUUID();
+                    }
+                    ZooClaimManager.get(level).dismissFeedback(ownerUuid, payload.feedbackId());
                 }
             });
         });

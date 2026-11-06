@@ -26,6 +26,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -44,11 +45,7 @@ import net.zootycoon.claim.ZooClaimManager;
 import net.zootycoon.economy.ZooEconomyManager;
 import net.zootycoon.network.ZooNetworkPayloads;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
+import java.util.*;
 
 public class ZooCashierEntity extends PathfinderMob {
 
@@ -859,10 +856,11 @@ public class ZooCashierEntity extends PathfinderMob {
                         String msg = comp.getFeedback();
                         int urgency = 1;
                         if (comp == net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.SICK_ANIMALS) urgency = 3;
-                        else if (comp == net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.TOILET || comp == net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.THIRSTY || comp == net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.HUNGRY) urgency = 2;
+                        else if (comp == net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.TOILET || comp == net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.THIRSTY || comp == net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.HUNGRY || comp == net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.LITTER || comp == net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.OUT_OF_STOCK) urgency = 2;
                         feedbackDtos.add(new ZooNetworkPayloads.VisitorFeedbackItemDto(cName, msg, urgency));
                     } catch (Exception ignored) {}
                 }
+                addContextualFeedback(sLevel, ownerUuid, claimManager, feedbackDtos);
             }
         }
 
@@ -875,6 +873,78 @@ public class ZooCashierEntity extends PathfinderMob {
                 ticketPrice,
                 feedbackDtos
         ));
+    }
+
+    private void addContextualFeedback(ServerLevel sLevel, UUID ownerUuid, ZooClaimManager claimManager, List<ZooNetworkPayloads.VisitorFeedbackItemDto> feedbackDtos) {
+        Set<String> existingIds = new HashSet<>();
+        for (var fb : feedbackDtos) {
+            existingIds.add(fb.feedbackId());
+        }
+
+        boolean hasAnimalIssues = false;
+        int animalCount = 0;
+        List<net.zootycoon.claim.ZooClaim> playerClaims = claimManager.getClaimsForPlayer(ownerUuid);
+        for (var claim : playerClaims) {
+            var box = claim.getBox();
+            net.minecraft.world.phys.AABB aabb = new net.minecraft.world.phys.AABB(box.minX(), box.minY(), box.minZ(), box.maxX(), box.maxY(), box.maxZ());
+            List<LivingEntity> animals = sLevel.getEntitiesOfClass(LivingEntity.class, aabb, e -> !(e instanceof Player) && !(e instanceof ZooVisitorEntity) && !(e instanceof ZooCashierEntity) && !(e instanceof net.zootycoon.entity.ZooZookeeperEntity));
+            animalCount += animals.size();
+            for (LivingEntity anim : animals) {
+                if (anim.getHealth() < anim.getMaxHealth() * 0.7F) {
+                    hasAnimalIssues = true;
+                    break;
+                }
+            }
+        }
+
+        if (hasAnimalIssues && !existingIds.contains("SICK_ANIMALS") && !claimManager.isFeedbackDismissed(ownerUuid, "SICK_ANIMALS")) {
+            feedbackDtos.add(new ZooNetworkPayloads.VisitorFeedbackItemDto("SICK_ANIMALS", net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.SICK_ANIMALS.getFeedback(), 3));
+            existingIds.add("SICK_ANIMALS");
+        }
+
+        int ticketPrice = claimManager.getTicketPrice(ownerUuid);
+        if (ticketPrice > 10 && animalCount <= 2 && !existingIds.contains("TICKET_EXPENSIVE") && !claimManager.isFeedbackDismissed(ownerUuid, "TICKET_EXPENSIVE")) {
+            feedbackDtos.add(new ZooNetworkPayloads.VisitorFeedbackItemDto("TICKET_EXPENSIVE", net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.TICKET_EXPENSIVE.getFeedback(), 2));
+            existingIds.add("TICKET_EXPENSIVE");
+        }
+
+        if (animalCount <= 1 && !existingIds.contains("FEW_ANIMALS") && !claimManager.isFeedbackDismissed(ownerUuid, "FEW_ANIMALS")) {
+            feedbackDtos.add(new ZooNetworkPayloads.VisitorFeedbackItemDto("FEW_ANIMALS", net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.FEW_ANIMALS.getFeedback(), 1));
+            existingIds.add("FEW_ANIMALS");
+        }
+
+        boolean hasBurgerStand = false;
+        boolean hasDrinkStand = false;
+        for (var claim : playerClaims) {
+            var box = claim.getBox();
+            net.minecraft.world.phys.AABB aabb = new net.minecraft.world.phys.AABB(box.minX(), box.minY(), box.minZ(), box.maxX(), box.maxY(), box.maxZ());
+            List<ZooCashierEntity> cashiers = sLevel.getEntitiesOfClass(ZooCashierEntity.class, aabb);
+            for (ZooCashierEntity c : cashiers) {
+                if ("BURGER".equalsIgnoreCase(c.getCashierRole())) hasBurgerStand = true;
+                if ("DRINK".equalsIgnoreCase(c.getCashierRole())) hasDrinkStand = true;
+            }
+        }
+
+        if (!hasBurgerStand && !existingIds.contains("HUNGRY") && !claimManager.isFeedbackDismissed(ownerUuid, "HUNGRY")) {
+            feedbackDtos.add(new ZooNetworkPayloads.VisitorFeedbackItemDto("HUNGRY", net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.HUNGRY.getFeedback(), 2));
+            existingIds.add("HUNGRY");
+        }
+        if (!hasDrinkStand && !existingIds.contains("THIRSTY") && !claimManager.isFeedbackDismissed(ownerUuid, "THIRSTY")) {
+            feedbackDtos.add(new ZooNetworkPayloads.VisitorFeedbackItemDto("THIRSTY", net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.THIRSTY.getFeedback(), 2));
+            existingIds.add("THIRSTY");
+        }
+
+        if (feedbackDtos.isEmpty()) {
+            if (!claimManager.isFeedbackDismissed(ownerUuid, "PRAISE_EXPERIENCE")) {
+                feedbackDtos.add(new ZooNetworkPayloads.VisitorFeedbackItemDto("PRAISE_EXPERIENCE", "Kebun binatang ini sangat menyenangkan dan nyaman untuk dikunjungi bersama keluarga!", 1));
+            }
+            if (animalCount >= 2 && !claimManager.isFeedbackDismissed(ownerUuid, "PRAISE_ANIMALS")) {
+                feedbackDtos.add(new ZooNetworkPayloads.VisitorFeedbackItemDto("PRAISE_ANIMALS", "Koleksi satwa terlihat sehat dan aktif bergerak, senang sekali melihatnya!", 1));
+            }
+            if (ticketPrice <= 15 && !claimManager.isFeedbackDismissed(ownerUuid, "PRAISE_PRICE")) {
+                feedbackDtos.add(new ZooNetworkPayloads.VisitorFeedbackItemDto("PRAISE_PRICE", "Harga tiket masuk sangat ramah di kantong dan sebanding dengan fasilitasnya.", 1));
+            }
+        }
     }
 
     @Override
