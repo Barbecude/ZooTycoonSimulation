@@ -734,6 +734,8 @@
   "zootycoon.warehouse.btn.buy_raw_materials": "Beli Bahan: %d",
   "zootycoon.warehouse.bought_and_fulfilled_zookeeper": "Suplai berhasil dibeli dan diserahkan ke Zookeeper!",
   "zootycoon.warehouse.btn.buy_food": "Beli Pakan: %d",
+  "zootycoon.warehouse.btn.choose_and_buy_food": "Beli Pakan...",
+  "zootycoon.warehouse.bought_food_success": "Pakan berhasil dibeli dan dimasukkan ke barrel!",
   "zootycoon.warehouse.btn.buy_tools": "Beli Alat: %d",
   "zootycoon.warehouse.tooltip.cost_simple": "Biaya: %d Emerald",
   "zootycoon.warehouse.tooltip.margin_label": "Keuntungan (margin): +%d Emerald (%d%%)",

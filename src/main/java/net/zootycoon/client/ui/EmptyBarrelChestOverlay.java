@@ -44,6 +44,10 @@ public class EmptyBarrelChestOverlay {
     private static int maxScroll = 0;
     private static boolean isDraggingScrollbar = false;
 
+    private static WarehousePayloads.StaffRequestDto activeFoodSelectionReq = null;
+    private static int foodModalScrollOffset = 0;
+    private static int foodModalMaxScroll = 0;
+
     private static final Map<UUID, LivingEntity> dummyStaffCache = new HashMap<>();
 
     private static final int CHEST_WIDTH = 176;
@@ -51,6 +55,72 @@ public class EmptyBarrelChestOverlay {
     private static final int CARD_HEIGHT = 68;
     private static final int CARD_GAP = 5;
     private static final ItemStack EMERALD_STACK = new ItemStack(net.minecraft.world.item.Items.EMERALD);
+
+    public record FoodPurchaseTooltipData(
+            String itemName,
+            int totalCost,
+            int unitPrice,
+            String qualityLabel,
+            int qualityColor,
+            boolean canAfford
+    ) implements TooltipComponent {}
+
+    public static class FoodPurchaseClientTooltip implements ClientTooltipComponent {
+        private final String itemName;
+        private final int totalCost;
+        private final int unitPrice;
+        private final String qualityLabel;
+        private final int qualityColor;
+        private final boolean canAfford;
+
+        public FoodPurchaseClientTooltip(FoodPurchaseTooltipData data) {
+            this.itemName = data.itemName();
+            this.totalCost = data.totalCost();
+            this.unitPrice = data.unitPrice();
+            this.qualityLabel = data.qualityLabel();
+            this.qualityColor = data.qualityColor();
+            this.canAfford = data.canAfford();
+        }
+
+        @Override
+        public int getHeight() {
+            return canAfford ? 38 : 50;
+        }
+
+        @Override
+        public int getWidth(Font font) {
+            int w1 = font.width(itemName);
+            int w2 = font.width(String.valueOf(totalCost)) + 14;
+            int w3 = font.width(qualityLabel);
+            int w4 = canAfford ? 0 : font.width("Saldo emerald tidak cukup");
+            return Math.max(Math.max(w1, w2), Math.max(w3, w4)) + 4;
+        }
+
+        @Override
+        public void renderImage(Font font, int x, int y, GuiGraphics graphics) {
+            // Line 1: Item Name
+            graphics.drawString(font, itemName, x, y + 1, 0xFFFFFFFF, true);
+
+            // Line 2: [totalCost] [Emerald Icon]
+            String costStr = String.valueOf(totalCost);
+            graphics.drawString(font, costStr, x, y + 13, 0xFF55FF55, true);
+            int costW = font.width(costStr);
+
+            graphics.pose().pushPose();
+            graphics.pose().translate(x + costW + 3, y + 10, 400.0f);
+            graphics.pose().scale(0.75f, 0.75f, 1.0f);
+            graphics.renderFakeItem(EMERALD_STACK, 0, 0);
+            graphics.pose().popPose();
+
+            // Line 3: "Kualitas: [Tier]"
+            graphics.drawString(font, qualityLabel, x, y + 25, qualityColor, true);
+
+            // Line 4: Not enough emerald warning
+            if (!canAfford) {
+                graphics.drawString(font, "Saldo emerald tidak cukup", x, y + 37, 0xFFFF5555, true);
+            }
+        }
+    }
 
     public record RawIngredientsTooltipData(
             String recipeName,
@@ -164,6 +234,8 @@ public class EmptyBarrelChestOverlay {
         expandedFoodCards.clear();
         scrollOffset = 0.0f;
         isDraggingScrollbar = false;
+        activeFoodSelectionReq = null;
+        foodModalScrollOffset = 0;
     }
 
     public static void onSyncRequests(WarehousePayloads.SyncBarrelRequestsPayload payload) {
@@ -181,12 +253,17 @@ public class EmptyBarrelChestOverlay {
         scrollOffset = 0.0f;
         maxScroll = 0;
         isDraggingScrollbar = false;
+        activeFoodSelectionReq = null;
+        foodModalScrollOffset = 0;
     }
 
     public static void register() {
         TooltipComponentCallback.EVENT.register(data -> {
             if (data instanceof RawIngredientsTooltipData rawData) {
                 return new RawIngredientsClientTooltip(rawData);
+            }
+            if (data instanceof FoodPurchaseTooltipData foodData) {
+                return new FoodPurchaseClientTooltip(foodData);
             }
             return null;
         });
@@ -219,6 +296,8 @@ public class EmptyBarrelChestOverlay {
                         activeRequests.clear();
                         scrollOffset = 0.0f;
                         isDraggingScrollbar = false;
+                        activeFoodSelectionReq = null;
+                        foodModalScrollOffset = 0;
                     }
                 });
             }
@@ -286,14 +365,8 @@ public class EmptyBarrelChestOverlay {
             int actionBtnH = 17 + 2 + 16;
             return Math.max(CARD_HEIGHT, actionBtnYOffset + actionBtnH + 4);
         }
-        int colsPerRow = ZOOKEEPER_FOOD_COLS;
-        List<ItemStack> targets = req.targetItems();
-        boolean hasMultipleFoodRows = targets.size() > colsPerRow;
-        boolean isExpanded = hasMultipleFoodRows && expandedFoodCards.contains(req.staffUuid());
-        int displayedCount = (isExpanded || !hasMultipleFoodRows) ? targets.size() : colsPerRow;
-        int foodRows = Math.max(1, (int) Math.ceil((double) Math.max(1, displayedCount) / colsPerRow));
-        int foodGridH = foodRows * slotSize + Math.max(0, foodRows - 1) * slotGap;
-        int actionBtnYOffset = 25 + foodGridH + 3;
+        int colsPerRow = 4;
+        int actionBtnYOffset = 25 + slotSize + 3;
         int actionBtnH = 17 + 2 + 16;
         return Math.max(CARD_HEIGHT, actionBtnYOffset + actionBtnH + 4);
     }
@@ -489,17 +562,13 @@ public class EmptyBarrelChestOverlay {
                     }
                 }
             } else {
-                int colsPerRow = ZOOKEEPER_FOOD_COLS;
-                boolean hasMultipleFoodRows = targets.size() > colsPerRow;
-                boolean isExpanded = hasMultipleFoodRows && expandedFoodCards.contains(req.staffUuid());
-                int displayedCount = (isExpanded || !hasMultipleFoodRows) ? targets.size() : colsPerRow;
+                int colsPerRow = 4;
+                int displayedCount = Math.min(colsPerRow, targets.size());
 
                 for (int k = 0; k < displayedCount; k++) {
                     ItemStack st = targets.get(k);
-                    int col = k % colsPerRow;
-                    int row = k / colsPerRow;
-                    int sx = infoX + col * (slotSize + slotGap);
-                    int sy = slotY + row * (slotSize + slotGap);
+                    int sx = infoX + k * (slotSize + slotGap);
+                    int sy = slotY;
 
                     boolean slotHovered = mouseX >= sx && mouseX <= sx + slotSize
                             && mouseY >= sy && mouseY <= sy + slotSize
@@ -515,24 +584,24 @@ public class EmptyBarrelChestOverlay {
                     }
                 }
 
-                int foodRows = Math.max(1, (int) Math.ceil((double) Math.max(1, displayedCount) / colsPerRow));
-                int foodGridH = foodRows * slotSize + Math.max(0, foodRows - 1) * slotGap;
+                String sub = req.subtitle() != null ? req.subtitle().toLowerCase(java.util.Locale.ROOT) : "";
+                boolean isCare = sub.contains("pemanas") || sub.contains("pendingin") || sub.contains("alat mandi") || sub.contains("kotor") || sub.contains("kepanasan") || sub.contains("kedinginan");
 
-                if (hasMultipleFoodRows) {
-                    int lastIndexInFirstRow = colsPerRow - 1;
-                    int chevronX = infoX + lastIndexInFirstRow * (slotSize + slotGap) + slotSize + 3;
-                    int chevronY = slotY + 1;
-                    int chevronSize = 16;
+                // Dropdown chevron button right next to the 4th item (for animal food)
+                if (!isCare) {
+                    int chevronX = infoX + 4 * (slotSize + slotGap);
+                    int chevronY = slotY;
+                    int chevronSize = 18;
                     boolean chevronHovered = mouseX >= chevronX && mouseX <= chevronX + chevronSize
                             && mouseY >= chevronY && mouseY <= chevronY + chevronSize
                             && mouseY >= listY && mouseY <= listY + listH;
 
                     int chBg = chevronHovered ? 0xFF2A344A : 0xFF161B26;
-                    int chBorder = chevronHovered ? 0xFFFFFFFF : 0xFF354157;
+                    int chBorder = chevronHovered ? 0xFF58A6FF : 0xFF354157;
                     graphics.fill(chevronX, chevronY, chevronX + chevronSize, chevronY + chevronSize, chBg);
                     graphics.renderOutline(chevronX, chevronY, chevronSize, chevronSize, chBorder);
 
-                    String chevronText = isExpanded ? "▲" : "▼";
+                    String chevronText = "▼";
                     int chTextW = font.width(chevronText);
                     graphics.drawString(
                             font,
@@ -544,11 +613,11 @@ public class EmptyBarrelChestOverlay {
                     );
 
                     if (chevronHovered) {
-                        String tip = isExpanded ? "Sembunyikan Pakan" : "Lihat Semua Pakan";
-                        graphics.renderTooltip(font, Component.literal(tip), mouseX, mouseY);
+                        graphics.renderTooltip(font, Component.literal("Lihat Semua Pakan"), mouseX, mouseY);
                     }
                 }
-                actionBtnY = slotY + foodGridH + 3;
+
+                actionBtnY = slotY + slotSize + 3;
             }
 
             // Row 4 / 5: Ambil Resep / Ambil Catatan Button + Square Checklist Delivery Button
@@ -628,9 +697,10 @@ public class EmptyBarrelChestOverlay {
                     buyLabel = "Beli Bahan: " + buyCost;
                 }
             } else {
-                buyCost = net.zootycoon.economy.ZooEconomyEngine.calculateZookeeperSupplyCost(req);
                 String sub = req.subtitle() != null ? req.subtitle().toLowerCase(java.util.Locale.ROOT) : "";
-                if (sub.contains("pemanas") || sub.contains("pendingin") || sub.contains("alat mandi") || sub.contains("kotor") || sub.contains("kepanasan") || sub.contains("kedinginan")) {
+                boolean isCare = sub.contains("pemanas") || sub.contains("pendingin") || sub.contains("alat mandi") || sub.contains("kotor") || sub.contains("kepanasan") || sub.contains("kedinginan");
+                if (isCare) {
+                    buyCost = net.zootycoon.economy.ZooEconomyEngine.calculateZookeeperSupplyCost(req);
                     try {
                         buyLabel = ZooTranslations.get("zootycoon.warehouse.btn.buy_tools", buyCost);
                     } catch (Exception e) {
@@ -640,23 +710,22 @@ public class EmptyBarrelChestOverlay {
                         buyLabel = "Beli Alat: " + buyCost;
                     }
                 } else {
-                    try {
-                        buyLabel = ZooTranslations.get("zootycoon.warehouse.btn.buy_food", buyCost);
-                    } catch (Exception e) {
-                        buyLabel = "Beli Pakan: " + buyCost;
-                    }
-                    if (buyLabel.equals("zootycoon.warehouse.btn.buy_food") || buyLabel.contains("%d")) {
-                        buyLabel = "Beli Pakan: " + buyCost;
-                    }
+                    buyCost = 0;
+                    buyLabel = ZooTranslations.get("zootycoon.warehouse.btn.choose_and_buy_food", "Beli Pakan...");
                 }
             }
 
-            boolean canAfford = net.zootycoon.economy.TransactionHelper.hasEnoughEmeralds(mc.player, buyCost);
+            String checkSub = req.subtitle() != null ? req.subtitle().toLowerCase(java.util.Locale.ROOT) : "";
+            boolean isAnimalFood = !"CASHIER".equalsIgnoreCase(req.staffType())
+                    && !checkSub.contains("pemanas") && !checkSub.contains("pendingin") && !checkSub.contains("alat mandi")
+                    && !checkSub.contains("kotor") && !checkSub.contains("kepanasan") && !checkSub.contains("kedinginan");
+
+            boolean canAfford = isAnimalFood || net.zootycoon.economy.TransactionHelper.hasEnoughEmeralds(mc.player, buyCost);
             boolean buyHovered = mouseX >= buyBtnX && mouseX <= buyBtnX + buyBtnW
                     && mouseY >= buyBtnY && mouseY <= buyBtnY + buyBtnH
                     && mouseY >= listY && mouseY <= listY + listH;
 
-            if (buyHovered) {
+            if (buyHovered && !isAnimalFood) {
                 hoveredBuyDto = req;
             }
 
@@ -794,10 +863,208 @@ public class EmptyBarrelChestOverlay {
                 graphics.renderTooltip(font, lines, Optional.empty(), mouseX, mouseY);
             }
         }
+
+        // 6. Food Selection Popup Modal (renders on top of everything if active)
+        if (activeFoodSelectionReq != null) {
+            renderFoodSelectionModal(screen, graphics, mouseX, mouseY);
+        }
+    }
+
+    private static void renderFoodSelectionModal(ContainerScreen screen, GuiGraphics graphics, int mouseX, int mouseY) {
+        if (activeFoodSelectionReq == null) return;
+
+        Minecraft mc = Minecraft.getInstance();
+        Font font = mc.font;
+
+        graphics.pose().pushPose();
+        graphics.pose().translate(0.0f, 0.0f, 400.0f);
+
+        // 1. Dark Backdrop covering entire screen
+        graphics.fill(0, 0, screen.width, screen.height, 0x99000000);
+
+        // 2. Modal Dimensions & Slate Panel
+        int modalW = 230;
+        int modalH = 176;
+        int modalX = (screen.width - modalW) / 2;
+        int modalY = (screen.height - modalH) / 2;
+
+        graphics.fill(modalX, modalY, modalX + modalW, modalY + modalH, 0xF212151D);
+        graphics.renderOutline(modalX, modalY, modalW, modalH, 0xFF2A3140);
+
+        // 3. Header Bar
+        graphics.fill(modalX + 1, modalY + 1, modalX + modalW - 1, modalY + 25, 0xFF19202D);
+        graphics.fill(modalX + 1, modalY + 25, modalX + modalW - 1, modalY + 26, 0xFF252D3C);
+
+        String title = "Pilih Pakan: " + activeFoodSelectionReq.subtitle().replace("Satwa: ", "");
+        if (font.width(title) > modalW - 32) {
+            title = font.plainSubstrByWidth(title, modalW - 32 - font.width("..")) + "..";
+        }
+        graphics.drawString(font, title, modalX + 8, modalY + 5, 0xFFFFD700, false);
+
+        int neededCount = Math.max(16, activeFoodSelectionReq.requiredCount() - activeFoodSelectionReq.currentCount());
+        String sub = "Kebutuhan: " + neededCount + " item";
+        graphics.drawString(font, sub, modalX + 8, modalY + 15, 0xFFA0AAB8, false);
+
+        // Close button [X]
+        int closeBtnX = modalX + modalW - 19;
+        int closeBtnY = modalY + 5;
+        int closeBtnSize = 14;
+        boolean closeHovered = mouseX >= closeBtnX && mouseX <= closeBtnX + closeBtnSize && mouseY >= closeBtnY && mouseY <= closeBtnY + closeBtnSize;
+        graphics.fill(closeBtnX, closeBtnY, closeBtnX + closeBtnSize, closeBtnY + closeBtnSize, closeHovered ? 0xFF8B0000 : 0xFF252D3C);
+        graphics.renderOutline(closeBtnX, closeBtnY, closeBtnSize, closeBtnSize, closeHovered ? 0xFFFF5555 : 0xFF354157);
+        graphics.drawString(font, "✕", closeBtnX + 3, closeBtnY + 3, closeHovered ? 0xFFFFFFFF : 0xFF9FB0C7, false);
+
+        // 4. Food Grid Area
+        List<ItemStack> foods = activeFoodSelectionReq.targetItems();
+        if (foods == null) foods = List.of();
+
+        int gridCols = 6;
+        int slotSize = 18;
+        int slotGap = 4;
+        int gridTotalW = gridCols * slotSize + (gridCols - 1) * slotGap;
+        int gridStartX = modalX + (modalW - gridTotalW) / 2;
+        int gridStartY = modalY + 32;
+        int gridAreaH = modalH - 38;
+
+        int totalRows = Math.max(1, (int) Math.ceil((double) foods.size() / gridCols));
+        int totalContentH = totalRows * slotSize + (totalRows - 1) * slotGap;
+        foodModalMaxScroll = Math.max(0, totalContentH - gridAreaH);
+        foodModalScrollOffset = Math.clamp(foodModalScrollOffset, 0, foodModalMaxScroll);
+
+        ItemStack hoveredFood = null;
+
+        graphics.enableScissor(modalX + 4, gridStartY, modalX + modalW - 4, gridStartY + gridAreaH);
+
+        for (int i = 0; i < foods.size(); i++) {
+            ItemStack st = foods.get(i);
+            int col = i % gridCols;
+            int row = i / gridCols;
+            int sx = gridStartX + col * (slotSize + slotGap);
+            int sy = gridStartY + row * (slotSize + slotGap) - foodModalScrollOffset;
+
+            if (sy + slotSize < gridStartY || sy > gridStartY + gridAreaH) continue;
+
+            boolean slotHovered = mouseX >= sx && mouseX <= sx + slotSize && mouseY >= sy && mouseY <= sy + slotSize
+                    && mouseY >= gridStartY && mouseY <= gridStartY + gridAreaH;
+
+            graphics.fill(sx, sy, sx + slotSize, sy + slotSize, slotHovered ? 0xFF1E2433 : 0xFF161B26);
+            graphics.renderOutline(sx, sy, slotSize, slotSize, slotHovered ? 0xFF58A6FF : 0xFF334155);
+            graphics.renderFakeItem(st, sx + 1, sy + 1);
+
+            if (slotHovered) {
+                hoveredFood = st;
+            }
+        }
+
+        graphics.disableScissor();
+
+        // Scrollbar if needed
+        if (foodModalMaxScroll > 0) {
+            int trackX = modalX + modalW - 8;
+            int trackY = gridStartY;
+            int trackH = gridAreaH;
+            graphics.fill(trackX, trackY, trackX + 3, trackY + trackH, 0xFF12151D);
+            int thumbH = Math.max(16, (int) ((float) gridAreaH / totalContentH * trackH));
+            int thumbY = trackY + (int) (((float) foodModalScrollOffset / foodModalMaxScroll) * (trackH - thumbH));
+            graphics.fill(trackX, thumbY, trackX + 3, thumbY + thumbH, 0xFF475569);
+        }
+
+        // Tooltip rendering for hovered food
+        if (hoveredFood != null) {
+            var quality = net.zootycoon.economy.ZooEconomyEngine.getFoodQualityInfo(hoveredFood);
+            int totalCost = quality.unitPrice() * neededCount;
+            boolean canAfford = net.zootycoon.economy.TransactionHelper.hasEnoughEmeralds(mc.player, totalCost);
+            String qualityLabel = "Kualitas: " + quality.tierName();
+
+            graphics.renderTooltip(
+                    font,
+                    List.of(),
+                    Optional.of(new FoodPurchaseTooltipData(
+                            hoveredFood.getHoverName().getString(),
+                            totalCost,
+                            quality.unitPrice(),
+                            qualityLabel,
+                            quality.tierColor(),
+                            canAfford
+                    )),
+                    mouseX,
+                    mouseY
+            );
+        }
+
+        graphics.pose().popPose();
     }
 
     private static boolean handleMouseClicked(ContainerScreen screen, double mouseX, double mouseY, int button) {
         if (button != 0) return false;
+
+        if (activeFoodSelectionReq != null) {
+            int modalW = 230;
+            int modalH = 176;
+            int modalX = (screen.width - modalW) / 2;
+            int modalY = (screen.height - modalH) / 2;
+
+            // Close button [X]
+            int closeBtnX = modalX + modalW - 19;
+            int closeBtnY = modalY + 5;
+            int closeBtnSize = 14;
+            if (mouseX >= closeBtnX && mouseX <= closeBtnX + closeBtnSize && mouseY >= closeBtnY && mouseY <= closeBtnY + closeBtnSize) {
+                Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                activeFoodSelectionReq = null;
+                return true;
+            }
+
+            // Click outside modal closes it
+            if (mouseX < modalX || mouseX > modalX + modalW || mouseY < modalY || mouseY > modalY + modalH) {
+                activeFoodSelectionReq = null;
+                return true;
+            }
+
+            // Food slot clicks
+            List<ItemStack> foods = activeFoodSelectionReq.targetItems();
+            if (foods != null && !foods.isEmpty()) {
+                int gridCols = 6;
+                int slotSize = 18;
+                int slotGap = 4;
+                int gridTotalW = gridCols * slotSize + (gridCols - 1) * slotGap;
+                int gridStartX = modalX + (modalW - gridTotalW) / 2;
+                int gridStartY = modalY + 32;
+                int gridAreaH = modalH - 38;
+
+                if (mouseY >= gridStartY && mouseY <= gridStartY + gridAreaH) {
+                    for (int i = 0; i < foods.size(); i++) {
+                        int col = i % gridCols;
+                        int row = i / gridCols;
+                        int sx = gridStartX + col * (slotSize + slotGap);
+                        int sy = gridStartY + row * (slotSize + slotGap) - foodModalScrollOffset;
+
+                        if (mouseX >= sx && mouseX <= sx + slotSize && mouseY >= sy && mouseY <= sy + slotSize) {
+                            ItemStack chosen = foods.get(i);
+                            int neededCount = Math.max(16, activeFoodSelectionReq.requiredCount() - activeFoodSelectionReq.currentCount());
+                            var quality = net.zootycoon.economy.ZooEconomyEngine.getFoodQualityInfo(chosen);
+                            int totalCost = quality.unitPrice() * neededCount;
+
+                            if (net.zootycoon.economy.TransactionHelper.hasEnoughEmeralds(Minecraft.getInstance().player, totalCost)) {
+                                Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                                BlockPos posToSend = activeBarrelPos != null ? activeBarrelPos : BlockPos.ZERO;
+                                ClientPlayNetworking.send(new WarehousePayloads.BuyZookeeperFoodPayload(
+                                        posToSend,
+                                        activeFoodSelectionReq.staffUuid(),
+                                        chosen,
+                                        neededCount
+                                ));
+                                activeFoodSelectionReq = null;
+                            } else {
+                                Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.DISPENSER_FAIL, 1.2F));
+                            }
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
 
         int panelW = getPanelWidth(screen);
         int panelX = getPanelX(screen);
@@ -850,31 +1117,36 @@ public class EmptyBarrelChestOverlay {
                     int gridH = rows * slotSize + Math.max(0, rows - 1) * slotGap;
                     actionBtnY = slotY + gridH + 3;
                 } else {
-                    List<ItemStack> targets = req.targetItems();
-                    int colsPerRow = ZOOKEEPER_FOOD_COLS;
-                    boolean hasMultipleFoodRows = targets.size() > colsPerRow;
-                    boolean isExpanded = hasMultipleFoodRows && expandedFoodCards.contains(req.staffUuid());
-                    int displayedCount = (isExpanded || !hasMultipleFoodRows) ? targets.size() : colsPerRow;
-                    int foodRows = Math.max(1, (int) Math.ceil((double) Math.max(1, displayedCount) / colsPerRow));
-                    int foodGridH = foodRows * slotSize + Math.max(0, foodRows - 1) * slotGap;
+                    String sub = req.subtitle() != null ? req.subtitle().toLowerCase(java.util.Locale.ROOT) : "";
+                    boolean isCareReq = sub.contains("pemanas") || sub.contains("pendingin") || sub.contains("alat mandi") || sub.contains("kotor") || sub.contains("kepanasan") || sub.contains("kedinginan");
 
-                    if (hasMultipleFoodRows) {
-                        int lastIndexInFirstRow = colsPerRow - 1;
-                        int chevronX = infoX + lastIndexInFirstRow * (slotSize + slotGap) + slotSize + 3;
-                        int chevronY = slotY + 1;
-                        int chevronSize = 16;
+                    if (!isCareReq) {
+                        int chevronX = infoX + 4 * (slotSize + slotGap);
+                        int chevronY = slotY;
+                        int chevronSize = 18;
 
+                        // Click on dropdown chevron button [▼]
                         if (mouseX >= chevronX && mouseX <= chevronX + chevronSize && mouseY >= chevronY && mouseY <= chevronY + chevronSize) {
                             Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                            if (isExpanded) {
-                                expandedFoodCards.remove(req.staffUuid());
-                            } else {
-                                expandedFoodCards.add(req.staffUuid());
-                            }
+                            activeFoodSelectionReq = req;
+                            foodModalScrollOffset = 0;
                             return true;
                         }
+
+                        // Click on any of the food slots in row 1
+                        int displayedCount = Math.min(4, req.targetItems().size());
+                        for (int k = 0; k < displayedCount; k++) {
+                            int sx = infoX + k * (slotSize + slotGap);
+                            int sy = slotY;
+                            if (mouseX >= sx && mouseX <= sx + slotSize && mouseY >= sy && mouseY <= sy + slotSize) {
+                                Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                                activeFoodSelectionReq = req;
+                                foodModalScrollOffset = 0;
+                                return true;
+                            }
+                        }
                     }
-                    actionBtnY = slotY + foodGridH + 3;
+                    actionBtnY = slotY + slotSize + 3;
                 }
 
                 int btnY = actionBtnY;
@@ -917,27 +1189,45 @@ public class EmptyBarrelChestOverlay {
                 int buyBtnH = 16;
 
                 if (mouseX >= buyBtnX && mouseX <= buyBtnX + buyBtnW && mouseY >= buyBtnY && mouseY <= buyBtnY + buyBtnH) {
-                    int reqCost;
                     if ("CASHIER".equalsIgnoreCase(req.staffType())) {
                         String reqRole = (activeCategory != null && !activeCategory.isEmpty())
                                 ? activeCategory
                                 : (req.subtitle().toLowerCase().contains("burger") ? "BURGER" : "DRINK");
                         net.zootycoon.economy.ZooEconomyEngine.ProfitMarginInfo margin =
                                 net.zootycoon.economy.ZooEconomyEngine.getProfitMarginInfo(reqRole, req);
-                        reqCost = margin.rawCost();
-                    } else {
-                        reqCost = net.zootycoon.economy.ZooEconomyEngine.calculateZookeeperSupplyCost(req);
-                    }
+                        int reqCost = margin.rawCost();
 
-                    if (net.zootycoon.economy.TransactionHelper.hasEnoughEmeralds(Minecraft.getInstance().player, reqCost)) {
-                        Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                        BlockPos posToSend = activeBarrelPos != null ? activeBarrelPos : BlockPos.ZERO;
-                        ClientPlayNetworking.send(new WarehousePayloads.BuyStaffRequestRawIngredientsPayload(posToSend, req.staffUuid()));
-                        activeRequests.removeIf(r -> r.staffUuid().equals(req.staffUuid()));
+                        if (net.zootycoon.economy.TransactionHelper.hasEnoughEmeralds(Minecraft.getInstance().player, reqCost)) {
+                            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                            BlockPos posToSend = activeBarrelPos != null ? activeBarrelPos : BlockPos.ZERO;
+                            ClientPlayNetworking.send(new WarehousePayloads.BuyStaffRequestRawIngredientsPayload(posToSend, req.staffUuid()));
+                            activeRequests.removeIf(r -> r.staffUuid().equals(req.staffUuid()));
+                        } else {
+                            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.DISPENSER_FAIL, 1.2F));
+                        }
+                        return true;
                     } else {
-                        Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.DISPENSER_FAIL, 1.2F));
+                        String sub = req.subtitle() != null ? req.subtitle().toLowerCase(java.util.Locale.ROOT) : "";
+                        boolean isCareReq = sub.contains("pemanas") || sub.contains("pendingin") || sub.contains("alat mandi") || sub.contains("kotor") || sub.contains("kepanasan") || sub.contains("kedinginan");
+
+                        if (!isCareReq) {
+                            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                            activeFoodSelectionReq = req;
+                            foodModalScrollOffset = 0;
+                            return true;
+                        }
+
+                        int reqCost = net.zootycoon.economy.ZooEconomyEngine.calculateZookeeperSupplyCost(req);
+                        if (net.zootycoon.economy.TransactionHelper.hasEnoughEmeralds(Minecraft.getInstance().player, reqCost)) {
+                            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                            BlockPos posToSend = activeBarrelPos != null ? activeBarrelPos : BlockPos.ZERO;
+                            ClientPlayNetworking.send(new WarehousePayloads.BuyStaffRequestRawIngredientsPayload(posToSend, req.staffUuid()));
+                            activeRequests.removeIf(r -> r.staffUuid().equals(req.staffUuid()));
+                        } else {
+                            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.DISPENSER_FAIL, 1.2F));
+                        }
+                        return true;
                     }
-                    return true;
                 }
             }
         }
@@ -946,6 +1236,11 @@ public class EmptyBarrelChestOverlay {
     }
 
     private static boolean handleMouseScrolled(ContainerScreen screen, double mouseX, double mouseY, double verticalAmount) {
+        if (activeFoodSelectionReq != null) {
+            foodModalScrollOffset = Math.clamp(foodModalScrollOffset - (int) (verticalAmount * 18), 0, foodModalMaxScroll);
+            return true;
+        }
+
         int panelW = getPanelWidth(screen);
         int panelX = getPanelX(screen);
         int panelY = getPanelY(screen);

@@ -567,11 +567,9 @@ public class WarehouseSupplyManager {
 
         List<ItemStack> allFoods = AnimalDietRegistry.getFoodsForAnimal(animal);
         if (allFoods != null && !allFoods.isEmpty()) {
-            int addedVariants = 0;
             for (ItemStack foodSt : allFoods) {
-                if (foodSt != null && !foodSt.isEmpty() && addedVariants < 5) {
+                if (foodSt != null && !foodSt.isEmpty()) {
                     req.targetItems.add(new ItemStack(foodSt.getItem(), foodPerVariant));
-                    addedVariants++;
                 }
             }
         }
@@ -1358,6 +1356,91 @@ public class WarehouseSupplyManager {
         sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, cashier.getX(), cashier.getY() + 1.2D, cashier.getZ(), 8, 0.25, 0.25, 0.25, 0.02);
 
         ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.warehouse.bought_and_fulfilled", 1);
+    }
+
+    public static void buyZookeeperFood(ServerLevel sLevel, ServerPlayer player, BlockPos barrelPos, UUID staffUuid, ItemStack foodStack, int requestedCount) {
+        if (sLevel == null || player == null || staffUuid == null || foodStack == null || foodStack.isEmpty()) return;
+
+        EmptyBarrelBlockEntity barrel = null;
+        if (player.containerMenu instanceof ChestMenu chestMenu && chestMenu.getContainer() instanceof EmptyBarrelBlockEntity openBarrel) {
+            barrel = openBarrel;
+        } else if (barrelPos != null && sLevel.getBlockEntity(barrelPos) instanceof EmptyBarrelBlockEntity be) {
+            if (player.blockPosition().distSqr(barrelPos) <= 64.0D) {
+                barrel = be;
+            }
+        }
+        if (barrel == null) return;
+
+        StaffSupplyRequest req = ACTIVE_REQUESTS.get(staffUuid);
+        if (req == null) {
+            refreshStaffRequests(sLevel, barrel, barrel.getCategory());
+            req = ACTIVE_REQUESTS.get(staffUuid);
+        }
+        if (req == null) return;
+
+        int needed = req.requiredFoodCount > 0 ? req.requiredFoodCount : 64;
+        int countToBuy = requestedCount > 0 ? requestedCount : needed;
+
+        ZooEconomyEngine.FoodQualityInfo quality = ZooEconomyEngine.getFoodQualityInfo(foodStack);
+        int totalCost = quality.unitPrice() * countToBuy;
+
+        if (!TransactionHelper.hasEnoughEmeralds(player, totalCost)) {
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.economy", "zootycoon.claim.not_enough_emeralds", 3);
+            sLevel.playSound(null, player.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 0.9F, 1.0F);
+            return;
+        }
+
+        if (!TransactionHelper.consumeEmeralds(player, totalCost)) {
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.economy", "zootycoon.claim.not_enough_emeralds", 3);
+            return;
+        }
+
+        // Insert items into barrel
+        int remainingToInsert = countToBuy;
+        int maxStack = foodStack.getMaxStackSize();
+        while (remainingToInsert > 0) {
+            int batch = Math.min(remainingToInsert, maxStack);
+            ItemStack toAdd = new ItemStack(foodStack.getItem(), batch);
+
+            // First merge with existing matching stacks
+            for (int i = 0; i < barrel.getContainerSize() && !toAdd.isEmpty(); i++) {
+                ItemStack slotStack = barrel.getItem(i);
+                if (!slotStack.isEmpty() && ItemStack.isSameItemSameComponents(slotStack, toAdd)) {
+                    int space = slotStack.getMaxStackSize() - slotStack.getCount();
+                    int add = Math.min(space, toAdd.getCount());
+                    if (add > 0) {
+                        slotStack.grow(add);
+                        toAdd.shrink(add);
+                    }
+                }
+            }
+
+            // Next fill empty slots
+            for (int i = 0; i < barrel.getContainerSize() && !toAdd.isEmpty(); i++) {
+                ItemStack slotStack = barrel.getItem(i);
+                if (slotStack.isEmpty()) {
+                    barrel.setItem(i, toAdd.copy());
+                    toAdd.setCount(0);
+                }
+            }
+
+            // Drop any overflow
+            if (!toAdd.isEmpty()) {
+                player.drop(toAdd, false);
+            }
+            remainingToInsert -= batch;
+        }
+
+        barrel.setChanged();
+        if (player.containerMenu instanceof ChestMenu) {
+            player.containerMenu.broadcastChanges();
+        }
+        barrel.syncToViewingPlayers(sLevel);
+        refreshStaffRequests(sLevel, barrel, barrel.getCategory());
+
+        sLevel.playSound(null, barrel.getBlockPos(), SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8F, 1.1F);
+        sLevel.playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.PLAYERS, 0.9F, 1.0F);
+        ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.warehouse.bought_food_success", 1);
     }
 
     public static void giveRecipeNoteToPlayer(ServerLevel sLevel, ServerPlayer player, BlockPos barrelPos, UUID staffUuid) {

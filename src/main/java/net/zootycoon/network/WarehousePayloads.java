@@ -271,6 +271,31 @@ public class WarehousePayloads {
         }
     }
 
+    public record BuyZookeeperFoodPayload(BlockPos pos, UUID staffUuid, ItemStack foodStack, int count) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<BuyZookeeperFoodPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("buy_zookeeper_food"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, BuyZookeeperFoodPayload> CODEC =
+                CustomPacketPayload.codec(
+                        (payload, buf) -> {
+                            buf.writeBlockPos(payload.pos());
+                            buf.writeUUID(payload.staffUuid());
+                            ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, payload.foodStack());
+                            buf.writeVarInt(payload.count());
+                        },
+                        buf -> new BuyZookeeperFoodPayload(
+                                buf.readBlockPos(),
+                                buf.readUUID(),
+                                ItemStack.OPTIONAL_STREAM_CODEC.decode(buf),
+                                buf.readVarInt()
+                        )
+                );
+
+        @Override
+        public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
     public static void registerCommon() {
         if (registered) return;
         registered = true;
@@ -283,6 +308,7 @@ public class WarehousePayloads {
         PayloadTypeRegistry.playC2S().register(RequestBarrelRecipeNotePayload.TYPE, RequestBarrelRecipeNotePayload.CODEC);
         PayloadTypeRegistry.playC2S().register(FulfillStaffRequestPayload.TYPE, FulfillStaffRequestPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(BuyStaffRequestRawIngredientsPayload.TYPE, BuyStaffRequestRawIngredientsPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(BuyZookeeperFoodPayload.TYPE, BuyZookeeperFoodPayload.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(SelectBarrelCategoryPayload.TYPE, (payload, context) -> {
             ServerPlayer player = context.player();
@@ -323,6 +349,15 @@ public class WarehousePayloads {
             context.server().execute(() -> {
                 if (player.level() instanceof ServerLevel sLevel) {
                     WarehouseSupplyManager.buyAndFulfillStaffRequest(sLevel, player, payload.pos(), payload.staffUuid());
+                }
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(BuyZookeeperFoodPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                if (player.level() instanceof ServerLevel sLevel) {
+                    WarehouseSupplyManager.buyZookeeperFood(sLevel, player, payload.pos(), payload.staffUuid(), payload.foodStack(), payload.count());
                 }
             });
         });

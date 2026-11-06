@@ -838,6 +838,67 @@ public final class ZooEconomyEngine {
         return new ProfitMarginInfo(totalRevenue, rawCost, netProfit, marginPercent);
     }
 
+    public record FoodQualityInfo(
+            int tier,
+            String tierName,
+            int tierColor,
+            int unitPrice,
+            float baseSaturation,
+            float animalSaturation
+    ) {}
+
+    /**
+     * Mengambil nilai saturasi dasar makanan dari FoodProperties (Minecraft vanilla/mod),
+     * atau mapping hardcode untuk pakan satwa non-makanan player (gandum, jerami, biji, bambu).
+     */
+    public static float getFoodBaseSaturation(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return 1.0f;
+        FoodProperties food = stack.get(DataComponents.FOOD);
+        if (food != null) {
+            return food.saturation();
+        }
+        Item item = stack.getItem();
+        if (item == Items.HAY_BLOCK) return 10.0f;
+        if (item == Items.WHEAT) return 2.0f;
+        if (item == Items.BAMBOO) return 1.0f;
+        if (item == Items.SEAGRASS) return 1.5f;
+        if (item == Items.KELP) return 0.8f;
+        if (item == Items.CACTUS) return 1.8f;
+        if (item == Items.SUGAR) return 0.8f;
+        if (item == Items.WARPED_FUNGUS || item == Items.CRIMSON_FUNGUS) return 2.5f;
+        if (item == Items.DANDELION) return 1.0f;
+        if (item == Items.TORCHFLOWER_SEEDS || item == Items.PITCHER_POD) return 1.5f;
+        if (net.zootycoon.animal.AnimalDietRegistry.isSeedOrGrain(stack)) return 0.8f;
+        return 1.5f;
+    }
+
+    /**
+     * Menghitung kualitas pakan (4 tier) dan harga beli per unit berdasarkan saturasi.
+     * Pengurangan saturasi pakan satwa adalah 25% lebih cepat dibanding player biasa (x0.75).
+     *
+     * Tier 1: Biasa (animalSat < 1.2f) -> 1 Emerald
+     * Tier 2: Baik (animalSat 1.2f - 4.5f) -> 2 Emerald
+     * Tier 3: Sangat Baik (animalSat 4.5f - 8.0f) -> 3 Emerald
+     * Tier 4: Istimewa (animalSat >= 8.0f) -> 4 Emerald
+     */
+    public static FoodQualityInfo getFoodQualityInfo(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) {
+            return new FoodQualityInfo(1, "Biasa", 0xFFB0BEC5, 1, 1.0f, 0.75f);
+        }
+        float baseSat = getFoodBaseSaturation(stack);
+        float animalSat = baseSat * 0.75f;
+
+        if (animalSat >= 8.0f) {
+            return new FoodQualityInfo(4, "Istimewa", 0xFFFFD700, 4, baseSat, animalSat);
+        } else if (animalSat >= 4.5f) {
+            return new FoodQualityInfo(3, "Sangat Baik", 0xFF55FFFF, 3, baseSat, animalSat);
+        } else if (animalSat >= 1.2f) {
+            return new FoodQualityInfo(2, "Baik", 0xFF55FF55, 2, baseSat, animalSat);
+        } else {
+            return new FoodQualityInfo(1, "Biasa", 0xFFB0BEC5, 1, baseSat, animalSat);
+        }
+    }
+
     /**
      * Menghitung biaya emerald untuk pembelian suplai pakan atau alat perawatan Zookeeper.
      */
