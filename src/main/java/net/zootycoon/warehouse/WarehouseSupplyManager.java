@@ -1620,29 +1620,31 @@ public class WarehouseSupplyManager {
 
     private static void insertIntoCashierStock(SimpleContainer stock, ItemStack toInsert) {
         if (stock == null || toInsert == null || toInsert.isEmpty()) return;
-        int maxStack = toInsert.getMaxStackSize();
+        int maxStack = stock.getMaxStackSize(toInsert);
 
-        // 1. First merge with existing matching non-full slots
-        for (int i = 0; i < stock.getContainerSize() && !toInsert.isEmpty(); i++) {
+        // 1. First merge with existing matching slot (1 slot per menu item)
+        for (int i = 0; i < stock.getContainerSize(); i++) {
             ItemStack slotStack = stock.getItem(i);
             if (!slotStack.isEmpty() && ItemStack.isSameItemSameComponents(slotStack, toInsert)) {
-                int space = slotStack.getMaxStackSize() - slotStack.getCount();
+                int space = maxStack - slotStack.getCount();
                 if (space > 0) {
                     int add = Math.min(space, toInsert.getCount());
                     slotStack.grow(add);
                     toInsert.shrink(add);
                 }
+                return; // Satu slot khusus untuk 1 jenis menu, jangan pecah ke slot lain
             }
         }
 
-        // 2. Then fill empty slots up to maxStackSize per slot
-        for (int i = 0; i < stock.getContainerSize() && !toInsert.isEmpty(); i++) {
+        // 2. Otherwise place into the first empty slot
+        for (int i = 0; i < stock.getContainerSize(); i++) {
             ItemStack slotStack = stock.getItem(i);
             if (slotStack.isEmpty()) {
                 int add = Math.min(maxStack, toInsert.getCount());
                 ItemStack placed = toInsert.copyWithCount(add);
                 stock.setItem(i, placed);
                 toInsert.shrink(add);
+                return; // Satu slot khusus untuk 1 jenis menu, jangan pecah ke slot lain
             }
         }
     }

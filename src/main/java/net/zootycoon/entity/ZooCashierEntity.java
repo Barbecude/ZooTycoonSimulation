@@ -60,7 +60,17 @@ public class ZooCashierEntity extends PathfinderMob {
     private static final EntityDataAccessor<Integer> FACING_DIR =
             SynchedEntityData.defineId(ZooCashierEntity.class, EntityDataSerializers.INT);
 
-    private final SimpleContainer stockInventory = new SimpleContainer(STOCK_SLOTS);
+    private final SimpleContainer stockInventory = new SimpleContainer(STOCK_SLOTS) {
+        @Override
+        public int getMaxStackSize() {
+            return 64;
+        }
+
+        @Override
+        public int getMaxStackSize(ItemStack stack) {
+            return 64;
+        }
+    };
     private final List<UUID> customerQueue = new ArrayList<>();
     private int serveCooldown = 0;
     private int fomoCooldown = 0;
@@ -300,8 +310,31 @@ public class ZooCashierEntity extends PathfinderMob {
         return total;
     }
 
+    public void consolidateStock() {
+        int maxStack = this.stockInventory.getMaxStackSize();
+        for (int i = 0; i < STOCK_SLOTS; i++) {
+            ItemStack base = this.stockInventory.getItem(i);
+            if (base.isEmpty()) continue;
+            for (int j = i + 1; j < STOCK_SLOTS; j++) {
+                ItemStack other = this.stockInventory.getItem(j);
+                if (!other.isEmpty() && ItemStack.isSameItemSameComponents(base, other)) {
+                    int space = maxStack - base.getCount();
+                    if (space > 0) {
+                        int move = Math.min(space, other.getCount());
+                        base.grow(move);
+                        other.shrink(move);
+                        if (other.isEmpty()) {
+                            this.stockInventory.setItem(j, ItemStack.EMPTY);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     public void updateStockStatus() {
         if (this.level().isClientSide()) return;
+        consolidateStock();
         String role = getCashierRole();
         if ("TICKET".equalsIgnoreCase(role)) {
             this.entityData.set(OUT_OF_STOCK, false);
@@ -863,6 +896,8 @@ public class ZooCashierEntity extends PathfinderMob {
                 addContextualFeedback(sLevel, ownerUuid, claimManager, feedbackDtos);
             }
         }
+
+        updateStockStatus();
 
         ServerPlayNetworking.send(sp, new ZooNetworkPayloads.OpenCashierScreenPayload(
                 this.getId(),
