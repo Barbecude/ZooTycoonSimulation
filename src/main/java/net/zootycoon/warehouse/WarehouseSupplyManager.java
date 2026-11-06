@@ -1583,26 +1583,58 @@ public class WarehouseSupplyManager {
     }
 
     private static void insertIntoBarrel(EmptyBarrelBlockEntity barrel, ServerPlayer player, ItemStack toInsert) {
-        for (int i = 0; i < barrel.getContainerSize() && !toInsert.isEmpty(); i++) {
-            ItemStack slotStack = barrel.getItem(i);
-            if (!slotStack.isEmpty() && ItemStack.isSameItemSameComponents(slotStack, toInsert)) {
-                int space = slotStack.getMaxStackSize() - slotStack.getCount();
-                int add = Math.min(space, toInsert.getCount());
-                if (add > 0) {
-                    slotStack.grow(add);
-                    toInsert.shrink(add);
+        if (barrel == null || toInsert == null || toInsert.isEmpty()) return;
+        int remaining = toInsert.getCount();
+        int maxStack = toInsert.getMaxStackSize();
+
+        while (remaining > 0) {
+            int batchCount = Math.min(remaining, maxStack);
+            ItemStack batchStack = toInsert.copyWithCount(batchCount);
+
+            // 1. Try to merge with existing matching stacks in barrel
+            for (int i = 0; i < barrel.getContainerSize() && !batchStack.isEmpty(); i++) {
+                ItemStack slotStack = barrel.getItem(i);
+                if (!slotStack.isEmpty() && ItemStack.isSameItemSameComponents(slotStack, batchStack)) {
+                    int space = slotStack.getMaxStackSize() - slotStack.getCount();
+                    if (space > 0) {
+                        int add = Math.min(space, batchStack.getCount());
+                        slotStack.grow(add);
+                        batchStack.shrink(add);
+                    }
                 }
             }
-        }
-        for (int i = 0; i < barrel.getContainerSize() && !toInsert.isEmpty(); i++) {
-            ItemStack slotStack = barrel.getItem(i);
-            if (slotStack.isEmpty()) {
-                barrel.setItem(i, toInsert.copy());
-                toInsert.setCount(0);
+
+            // 2. Try to fill empty slots
+            for (int i = 0; i < barrel.getContainerSize() && !batchStack.isEmpty(); i++) {
+                ItemStack slotStack = barrel.getItem(i);
+                if (slotStack.isEmpty()) {
+                    int add = Math.min(batchStack.getMaxStackSize(), batchStack.getCount());
+                    barrel.setItem(i, batchStack.copyWithCount(add));
+                    batchStack.shrink(add);
+                }
             }
-        }
-        if (!toInsert.isEmpty()) {
-            player.drop(toInsert, false);
+
+            // 3. Drop any overflow from this batch to player
+            if (!batchStack.isEmpty()) {
+                if (player != null) {
+                    player.drop(batchStack.copy(), false);
+                }
+            }
+
+            int insertedOrDropped = batchCount - batchStack.getCount();
+            remaining -= batchCount;
+
+            // If barrel is full and slot did not take any items, drop the remainder to player
+            if (insertedOrDropped == 0) {
+                if (player != null) {
+                    while (remaining > 0) {
+                        int dropBatch = Math.min(remaining, maxStack);
+                        player.drop(toInsert.copyWithCount(dropBatch), false);
+                        remaining -= dropBatch;
+                    }
+                }
+                break;
+            }
         }
     }
 
