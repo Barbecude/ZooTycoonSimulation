@@ -366,7 +366,12 @@ public class EmptyBarrelChestOverlay {
             return Math.max(CARD_HEIGHT, actionBtnYOffset + actionBtnH + 4);
         }
         int colsPerRow = 4;
-        int actionBtnYOffset = 25 + slotSize + 3;
+        List<ItemStack> targets = req.targetItems();
+        boolean isExpanded = expandedFoodCards.contains(req.staffUuid()) && targets.size() > colsPerRow;
+        int displayedCount = isExpanded ? targets.size() : Math.min(colsPerRow, targets.size());
+        int foodRows = Math.max(1, (int) Math.ceil((double) displayedCount / colsPerRow));
+        int foodGridH = foodRows * slotSize + Math.max(0, foodRows - 1) * slotGap;
+        int actionBtnYOffset = 25 + foodGridH + 3;
         int actionBtnH = 17 + 2 + 16;
         return Math.max(CARD_HEIGHT, actionBtnYOffset + actionBtnH + 4);
     }
@@ -563,12 +568,15 @@ public class EmptyBarrelChestOverlay {
                 }
             } else {
                 int colsPerRow = 4;
-                int displayedCount = Math.min(colsPerRow, targets.size());
+                boolean isExpanded = expandedFoodCards.contains(req.staffUuid()) && targets.size() > colsPerRow;
+                int displayedCount = isExpanded ? targets.size() : Math.min(colsPerRow, targets.size());
 
                 for (int k = 0; k < displayedCount; k++) {
                     ItemStack st = targets.get(k);
-                    int sx = infoX + k * (slotSize + slotGap);
-                    int sy = slotY;
+                    int col = k % colsPerRow;
+                    int row = k / colsPerRow;
+                    int sx = infoX + col * (slotSize + slotGap);
+                    int sy = slotY + row * (slotSize + slotGap);
 
                     boolean slotHovered = mouseX >= sx && mouseX <= sx + slotSize
                             && mouseY >= sy && mouseY <= sy + slotSize
@@ -587,8 +595,8 @@ public class EmptyBarrelChestOverlay {
                 String sub = req.subtitle() != null ? req.subtitle().toLowerCase(java.util.Locale.ROOT) : "";
                 boolean isCare = sub.contains("pemanas") || sub.contains("pendingin") || sub.contains("alat mandi") || sub.contains("kotor") || sub.contains("kepanasan") || sub.contains("kedinginan");
 
-                // Dropdown chevron button right next to the 4th item (for animal food)
-                if (!isCare) {
+                // Dropdown chevron button right next to the 4th item (for animal food with > 4 items)
+                if (!isCare && targets.size() > colsPerRow) {
                     int chevronX = infoX + 4 * (slotSize + slotGap);
                     int chevronY = slotY;
                     int chevronSize = 18;
@@ -601,7 +609,7 @@ public class EmptyBarrelChestOverlay {
                     graphics.fill(chevronX, chevronY, chevronX + chevronSize, chevronY + chevronSize, chBg);
                     graphics.renderOutline(chevronX, chevronY, chevronSize, chevronSize, chBorder);
 
-                    String chevronText = "▼";
+                    String chevronText = isExpanded ? "▲" : "▼";
                     int chTextW = font.width(chevronText);
                     graphics.drawString(
                             font,
@@ -613,11 +621,14 @@ public class EmptyBarrelChestOverlay {
                     );
 
                     if (chevronHovered) {
-                        graphics.renderTooltip(font, Component.literal("Lihat Semua Pakan"), mouseX, mouseY);
+                        String tip = isExpanded ? "Sembunyikan Pakan" : "Lihat Semua Pakan";
+                        graphics.renderTooltip(font, Component.literal(tip), mouseX, mouseY);
                     }
                 }
 
-                actionBtnY = slotY + slotSize + 3;
+                int foodRows = Math.max(1, (int) Math.ceil((double) displayedCount / colsPerRow));
+                int foodGridH = foodRows * slotSize + Math.max(0, foodRows - 1) * slotGap;
+                actionBtnY = slotY + foodGridH + 3;
             }
 
             // Row 4 / 5: Ambil Resep / Ambil Catatan Button + Square Checklist Delivery Button
@@ -1120,33 +1131,28 @@ public class EmptyBarrelChestOverlay {
                     String sub = req.subtitle() != null ? req.subtitle().toLowerCase(java.util.Locale.ROOT) : "";
                     boolean isCareReq = sub.contains("pemanas") || sub.contains("pendingin") || sub.contains("alat mandi") || sub.contains("kotor") || sub.contains("kepanasan") || sub.contains("kedinginan");
 
-                    if (!isCareReq) {
+                    if (!isCareReq && req.targetItems().size() > 4) {
                         int chevronX = infoX + 4 * (slotSize + slotGap);
                         int chevronY = slotY;
                         int chevronSize = 18;
 
-                        // Click on dropdown chevron button [▼]
+                        // Click on dropdown chevron button [▼] / [▲] -> EXPAND / COLLAPSE GRID!
                         if (mouseX >= chevronX && mouseX <= chevronX + chevronSize && mouseY >= chevronY && mouseY <= chevronY + chevronSize) {
                             Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                            activeFoodSelectionReq = req;
-                            foodModalScrollOffset = 0;
+                            if (expandedFoodCards.contains(req.staffUuid())) {
+                                expandedFoodCards.remove(req.staffUuid());
+                            } else {
+                                expandedFoodCards.add(req.staffUuid());
+                            }
                             return true;
                         }
-
-                        // Click on any of the food slots in row 1
-                        int displayedCount = Math.min(4, req.targetItems().size());
-                        for (int k = 0; k < displayedCount; k++) {
-                            int sx = infoX + k * (slotSize + slotGap);
-                            int sy = slotY;
-                            if (mouseX >= sx && mouseX <= sx + slotSize && mouseY >= sy && mouseY <= sy + slotSize) {
-                                Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                                activeFoodSelectionReq = req;
-                                foodModalScrollOffset = 0;
-                                return true;
-                            }
-                        }
                     }
-                    actionBtnY = slotY + slotSize + 3;
+
+                    boolean isExpanded = expandedFoodCards.contains(req.staffUuid()) && req.targetItems().size() > 4;
+                    int displayedCount = isExpanded ? req.targetItems().size() : Math.min(4, req.targetItems().size());
+                    int foodRows = Math.max(1, (int) Math.ceil((double) displayedCount / 4));
+                    int foodGridH = foodRows * slotSize + Math.max(0, foodRows - 1) * slotGap;
+                    actionBtnY = slotY + foodGridH + 3;
                 }
 
                 int btnY = actionBtnY;
