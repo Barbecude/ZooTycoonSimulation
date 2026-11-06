@@ -68,12 +68,23 @@ public class ZooCommands {
                             .then(Commands.argument("jumlah", IntegerArgumentType.integer(1, 100))
                                     .executes(ctx -> spawnDebugVisitors(ctx.getSource(), ZooVisitorEntity.VisitorMood.SCARED, IntegerArgumentType.getInteger(ctx, "jumlah")))
                             )
+                    )
+                    // 6. /zootycoon start
+                    .then(Commands.literal("start")
+                            .executes(ctx -> executeZooStart(ctx.getSource()))
                     );
 
             dispatcher.register(root);
 
             // Shortcut / alias command: /satwa ...
             dispatcher.register(buildSatwaCommand("satwa"));
+
+            // /emerald [amount]
+            dispatcher.register(Commands.literal("emerald")
+                    .then(Commands.argument("amount", IntegerArgumentType.integer(0, 1000000000))
+                            .executes(ctx -> executeSetEmerald(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "amount")))
+                    )
+            );
         });
     }
 
@@ -313,8 +324,53 @@ public class ZooCommands {
         return count;
     }
 
+    private static int executeSetEmerald(CommandSourceStack source, int amount) {
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.literal("Perintah ini hanya dapat dijalankan oleh pemain."));
+            return 0;
+        }
+
+        // 1. Remove physical emeralds / blocks from inventory to match requested balance
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            var stack = player.getInventory().getItem(i);
+            if (stack.is(net.minecraft.world.item.Items.EMERALD) || stack.is(net.minecraft.world.item.Items.EMERALD_BLOCK)) {
+                player.getInventory().setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
+            }
+        }
+        player.getInventory().setChanged();
+        player.containerMenu.broadcastChanges();
+
+        // 2. Set virtual balance and sync immediately
+        net.zootycoon.economy.ZooEconomyManager.get(player.server).setBalance(player.getUUID(), amount, player);
+
+        source.sendSuccess(() -> Component.literal("Saldo emerald berhasil diatur menjadi " + amount + " emerald.")
+                .withStyle(ChatFormatting.GREEN), false);
+        return 1;
+    }
+
+    private static int executeZooStart(CommandSourceStack source) {
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.literal("Perintah ini hanya dapat dijalankan oleh pemain."));
+            return 0;
+        }
+
+        // 1. Reset rating benar-benar ke 0 (0.0 bintang, 0 review)
+        net.zootycoon.economy.ZooRatingManager.get(player.server).setStarRating(player.getUUID(), 0.0D, player);
+
+        // 2. Hapus semua staff milik pemain (entity di dunia & record database)
+        int removedStaff = net.zootycoon.economy.ZooStaffManager.get(player.server).removeAllStaffForPlayer(player);
+
+        source.sendSuccess(() -> Component.literal("Game Zoo Tycoon berhasil di-start ulang! Rating diatur ke 0.0 bintang dan " + removedStaff + " staf telah dihapus.")
+                .withStyle(ChatFormatting.GREEN), false);
+        return 1;
+    }
+
     private static int sendHelp(CommandSourceStack source) {
         source.sendSuccess(() -> Component.literal("Daftar Perintah Zoo Tycoon:").withStyle(ChatFormatting.GOLD), false);
+        source.sendSuccess(() -> Component.literal("/emerald <jumlah> - Atur saldo emerald pemain").withStyle(ChatFormatting.YELLOW), false);
+        source.sendSuccess(() -> Component.literal("/zootycoon start - Reset rating ke 0 bintang dan hapus semua staf").withStyle(ChatFormatting.YELLOW), false);
         source.sendSuccess(() -> Component.literal("/satwa lapar [0-100] - Atur tingkat lapar satwa target / semua satwa").withStyle(ChatFormatting.YELLOW), false);
         source.sendSuccess(() -> Component.literal("/satwa haus [0-100] - Atur tingkat haus satwa target / semua satwa").withStyle(ChatFormatting.YELLOW), false);
         source.sendSuccess(() -> Component.literal("/satwa bersih [0-100] - Atur kebersihan satwa target / semua satwa").withStyle(ChatFormatting.YELLOW), false);

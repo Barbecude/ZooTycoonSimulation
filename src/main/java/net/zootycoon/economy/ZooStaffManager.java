@@ -20,6 +20,8 @@ import net.zootycoon.network.ZooNetworkPayloads;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -445,6 +447,62 @@ public class ZooStaffManager {
             }
         }
         return 1;
+    }
+
+    public int removeAllStaffForPlayer(ServerPlayer player) {
+        if (player == null || server == null) return 0;
+        UUID playerUuid = player.getUUID();
+        int removedCount = 0;
+
+        for (ServerLevel lvl : server.getAllLevels()) {
+            List<net.minecraft.world.entity.Entity> toRemove = new ArrayList<>();
+            for (net.minecraft.world.entity.Entity ent : lvl.getAllEntities()) {
+                if (ent == null || !ent.isAlive()) continue;
+
+                if (ent instanceof net.zootycoon.entity.ZooBuilderEntity b) {
+                    if (playerUuid.equals(b.getOwnerUuid())) {
+                        toRemove.add(b);
+                    }
+                } else if (ent instanceof net.zootycoon.entity.ZooSecurityEntity sec) {
+                    if (playerUuid.equals(sec.getOwnerUuid())) {
+                        toRemove.add(sec);
+                    }
+                } else if (ent instanceof net.zootycoon.entity.ZooCashierEntity c) {
+                    if (playerUuid.equals(c.getOwnerUuid())) {
+                        toRemove.add(c);
+                    }
+                } else if (ent instanceof net.zootycoon.entity.ZooZookeeperEntity zk) {
+                    if (playerUuid.equals(zk.getOwnerUuid())) {
+                        toRemove.add(zk);
+                    }
+                }
+            }
+
+            for (net.minecraft.world.entity.Entity ent : toRemove) {
+                if (ent instanceof net.zootycoon.entity.ZooCashierEntity c) {
+                    net.minecraft.world.Containers.dropContents(lvl, c.blockPosition(), c.getStockInventory());
+                    c.discard();
+                } else if (ent instanceof net.zootycoon.entity.ZooZookeeperEntity zk) {
+                    zk.dismiss(lvl);
+                } else {
+                    ent.discard();
+                }
+                removedCount++;
+            }
+        }
+
+        StaffRecord rec = getRecord(playerUuid);
+        rec.builders = 0;
+        rec.zookeepers = 0;
+        rec.security = 0;
+        rec.cashiers = 0;
+        staffOnStrike.remove(playerUuid);
+
+        saveToFile();
+        syncToPlayer(player);
+        ZooNetworkPayloads.sendAnimalSync(player);
+
+        return removedCount;
     }
 
     public void syncToPlayer(ServerPlayer player) {

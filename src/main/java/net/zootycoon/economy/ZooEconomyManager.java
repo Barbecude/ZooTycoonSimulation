@@ -101,9 +101,18 @@ public class ZooEconomyManager {
     }
 
     public void setBalance(UUID playerUuid, int amount) {
+        setBalance(playerUuid, amount, null);
+    }
+
+    public void setBalance(UUID playerUuid, int amount, ServerPlayer player) {
         if (playerUuid == null) return;
-        balances.put(playerUuid, Math.max(0, amount));
+        int newBalance = Math.max(0, amount);
+        int oldBalance = getBalance(playerUuid);
+        balances.put(playerUuid, newBalance);
         saveToFile();
+        if (player != null) {
+            ServerPlayNetworking.send(player, new ZooNetworkPayloads.SyncEmeraldBalancePayload(newBalance, newBalance - oldBalance));
+        }
     }
 
     public void addBalance(UUID playerUuid, int amount, ServerPlayer player) {

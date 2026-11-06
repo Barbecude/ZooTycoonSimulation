@@ -25,7 +25,7 @@ public class ZooRatingManager {
     private final Map<UUID, Integer> reviewCounts = new ConcurrentHashMap<>();
 
     public static final int DEFAULT_RATING = 100;
-    public static final int MIN_RATING = 20;
+    public static final int MIN_RATING = 0;
     public static final int MAX_RATING = 100;
 
     public ZooRatingManager(MinecraftServer server) {
@@ -122,13 +122,13 @@ public class ZooRatingManager {
         int count = reviewCounts.getOrDefault(playerUuid, 0);
         if (count <= 0) {
             if (ratings.containsKey(playerUuid)) {
-                return Math.clamp(ratings.get(playerUuid) / 20.0D, 1.0D, 5.0D);
+                return Math.clamp(ratings.get(playerUuid) / 20.0D, 0.0D, 5.0D);
             }
             return 5.0D;
         }
         double sum = reviewStarsSum.getOrDefault(playerUuid, (double) count * 5.0D);
         double avg = sum / (double) count;
-        return Math.clamp(Math.round(avg * 10.0D) / 10.0D, 1.0D, 5.0D);
+        return Math.clamp(Math.round(avg * 10.0D) / 10.0D, 0.0D, 5.0D);
     }
 
     public int getReviewCount(UUID playerUuid) {
@@ -138,7 +138,7 @@ public class ZooRatingManager {
 
     public void addReview(UUID playerUuid, double stars, ServerPlayer player) {
         if (playerUuid == null) return;
-        double clampedStars = Math.clamp(stars, 1.0D, 5.0D);
+        double clampedStars = Math.clamp(stars, 0.0D, 5.0D);
         reviewStarsSum.merge(playerUuid, clampedStars, Double::sum);
         reviewCounts.merge(playerUuid, 1, Integer::sum);
 
@@ -150,7 +150,7 @@ public class ZooRatingManager {
 
     public void setStarRating(UUID playerUuid, double starRating, ServerPlayer player) {
         if (playerUuid == null) return;
-        double clamped = Math.clamp(starRating, 1.0D, 5.0D);
+        double clamped = Math.clamp(starRating, 0.0D, 5.0D);
         reviewCounts.put(playerUuid, 0);
         reviewStarsSum.put(playerUuid, 0.0D);
         ratings.put(playerUuid, (int) Math.round(clamped * 20.0D));
