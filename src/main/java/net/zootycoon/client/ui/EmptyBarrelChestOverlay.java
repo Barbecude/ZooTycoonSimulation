@@ -868,10 +868,33 @@ public class EmptyBarrelChestOverlay {
                         || hoveredDto.subtitle().toLowerCase().contains("pemanas")
                         || hoveredDto.subtitle().toLowerCase().contains("mandi")))) {
                     lines.add(Component.literal("Alat Perawatan Satwa").withStyle(ChatFormatting.GRAY));
+                    graphics.renderTooltip(font, lines, Optional.empty(), mouseX, mouseY);
                 } else {
-                    lines.add(Component.literal(ZooTranslations.get("zootycoon.warehouse.tooltip.zookeeper_food")).withStyle(ChatFormatting.GRAY));
+                    int neededCount = hoveredDto != null ? Math.max(16, hoveredDto.requiredCount() - hoveredDto.currentCount()) : 64;
+                    var quality = net.zootycoon.economy.ZooEconomyEngine.getFoodQualityInfo(hoveredStack);
+                    int totalCost = quality.unitPrice() * neededCount;
+                    boolean canAfford = net.zootycoon.economy.TransactionHelper.hasEnoughEmeralds(mc.player, totalCost);
+                    String qualityLabel = "Kualitas: " + quality.tierName();
+
+                    graphics.renderTooltip(
+                            font,
+                            List.of(),
+                            Optional.of(new FoodPurchaseTooltipData(
+                                    hoveredStack.getHoverName().getString(),
+                                    totalCost,
+                                    quality.unitPrice(),
+                                    qualityLabel,
+                                    quality.tierColor(),
+                                    canAfford
+                            )),
+                            mouseX,
+                            mouseY
+                    );
+                    lines = null;
                 }
-                graphics.renderTooltip(font, lines, Optional.empty(), mouseX, mouseY);
+                if (lines != null) {
+                    graphics.renderTooltip(font, lines, Optional.empty(), mouseX, mouseY);
+                }
             }
         }
 
