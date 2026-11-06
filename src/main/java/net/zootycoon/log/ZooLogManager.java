@@ -199,6 +199,28 @@ public class ZooLogManager {
                 0, urgency);
     }
 
+    public static void resetLogsAndStats(ServerLevel level, UUID ownerUuid) {
+        if (ownerUuid == null) return;
+        List<ZooNetworkPayloads.ZooLogEntryDto> list = OWNER_LOGS.get(ownerUuid);
+        if (list != null) {
+            list.clear();
+        }
+        OwnerDailyStats st = OWNER_STATS.get(ownerUuid);
+        if (st != null) {
+            String today = LocalDate.now(ZoneId.systemDefault()).toString();
+            st.dateKey = today;
+            st.totalVisitorsToday = 0;
+            st.ticketsSoldToday = 0;
+            st.ticketRevenueToday = 0;
+            st.freeVisitorsToday = 0;
+            st.childVisitorsToday = 0;
+            st.adultVisitorsToday = 0;
+        }
+        if (level != null) {
+            net.zootycoon.claim.ZooClaimManager.get(level).saveToFile();
+        }
+    }
+
     public static void sendSyncToPlayer(ServerPlayer player) {
         if (player == null || !(player.level() instanceof ServerLevel sLevel)) return;
         UUID ownerUuid = player.getUUID();

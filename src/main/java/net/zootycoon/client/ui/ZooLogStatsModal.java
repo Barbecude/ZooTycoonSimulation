@@ -20,7 +20,7 @@ import java.util.List;
 
 /**
  * Modal overlay on MainManagementScreen displaying:
- * - Top Tab Bar: [Aktivitas & Log] and [Statistik Pengunjung]
+ * - Top Tab Bar: [Aktivitas & Log] and [Statistik Pengunjung] + [Reset Data] button
  * - Tab 0: Chronological list of notifications (salary payments, ticket admissions, animal health warnings, staff requests)
  *          with precise real local machine date & time timestamps, clean color accents, and smooth scroll.
  * - Tab 1: Comprehensive visitor statistics and detailed analytics for today's visitors (tickets sold, free admissions,
@@ -40,6 +40,10 @@ public class ZooLogStatsModal {
     private double statsScrollOffset = 0;
     private int statsTotalContentH = 0;
 
+    // Reset confirmation state
+    private boolean confirmReset = false;
+    private long confirmResetTimer = 0L;
+
     public ZooLogStatsModal(MainManagementScreen screen) {
         this.screen = screen;
     }
@@ -47,11 +51,16 @@ public class ZooLogStatsModal {
     public void init() {
         this.logScrollOffset = 0;
         this.statsScrollOffset = 0;
+        this.confirmReset = false;
     }
 
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         int screenW = screen.width;
         int screenH = screen.height;
+
+        // Push pose with z-translation so the modal and all its contents render completely in front of all widgets
+        graphics.pose().pushPose();
+        graphics.pose().translate(0.0F, 0.0F, 500.0F);
 
         // Dark dim backdrop over main screen
         graphics.fill(0, 0, screenW, screenH, 0x88000000);
@@ -63,8 +72,8 @@ public class ZooLogStatsModal {
 
         Font font = screen.getFont();
 
-        // 1. Sleek Slate Dialog Panel (Essential Minimalist theme)
-        graphics.fill(modalX, modalY, modalX + modalW, modalY + modalH, 0xF212151D);
+        // 1. Sleek Slate Dialog Panel (Essential Minimalist theme - opaque 0xFF12151D)
+        graphics.fill(modalX, modalY, modalX + modalW, modalY + modalH, 0xFF12151D);
         graphics.fill(modalX, modalY, modalX + modalW, modalY + 1, 0xFF2A3140);
         graphics.fill(modalX, modalY + modalH - 1, modalX + modalW, modalY + modalH, 0xFF2A3140);
         graphics.fill(modalX, modalY, modalX + 1, modalY + modalH, 0xFF2A3140);
@@ -86,7 +95,7 @@ public class ZooLogStatsModal {
         // Header Divider
         graphics.fill(modalX + 10, modalY + headerH, modalX + modalW - 10, modalY + headerH + 1, 0xFF252D3C);
 
-        // 3. Sub Tabs: [Aktivitas & Log] [Statistik Pengunjung]
+        // 3. Sub Tabs & Reset Button
         int tabY = modalY + headerH + 6;
         int tabH = 18;
         int tabW = 120;
@@ -95,6 +104,24 @@ public class ZooLogStatsModal {
 
         renderSubTab(graphics, font, tab0X, tabY, tabW, tabH, "Aktivitas & Log", activeTab == 0, mouseX, mouseY);
         renderSubTab(graphics, font, tab1X, tabY, tabW, tabH, "Statistik Pengunjung", activeTab == 1, mouseX, mouseY);
+
+        // Reset Button at the right side of tab row
+        int resetBtnW = confirmReset ? 96 : 80;
+        int resetBtnX = modalX + modalW - resetBtnW - 14;
+        boolean resetHovered = mouseX >= resetBtnX && mouseX <= resetBtnX + resetBtnW && mouseY >= tabY && mouseY <= tabY + tabH;
+
+        if (confirmReset && System.currentTimeMillis() - confirmResetTimer > 4000L) {
+            confirmReset = false;
+        }
+
+        int resetBg = confirmReset ? 0xFF66181C : (resetHovered ? 0xFF2C191C : 0xFF1C1417);
+        int resetBorder = confirmReset ? 0xFFE06C75 : (resetHovered ? 0xFFC94F56 : 0xFF4A2528);
+        int resetTextCol = confirmReset ? 0xFFFFFFFF : (resetHovered ? 0xFFE06C75 : 0xFFA06065);
+        String resetLabel = confirmReset ? "Yakin Reset?" : "Reset Data";
+
+        graphics.fill(resetBtnX, tabY, resetBtnX + resetBtnW, tabY + tabH, resetBg);
+        graphics.renderOutline(resetBtnX, tabY, resetBtnW, tabH, resetBorder);
+        graphics.drawCenteredString(font, resetLabel, resetBtnX + resetBtnW / 2, tabY + 5, resetTextCol);
 
         // Content Area Container
         int contentX = modalX + 12;
@@ -110,6 +137,8 @@ public class ZooLogStatsModal {
         } else {
             renderStatsTab(graphics, font, contentX, contentY, contentW, contentH, mouseX, mouseY);
         }
+
+        graphics.pose().popPose();
     }
 
     private void renderSubTab(GuiGraphics graphics, Font font, int x, int y, int w, int h, String text, boolean selected, int mouseX, int mouseY) {
@@ -324,6 +353,24 @@ public class ZooLogStatsModal {
             return true;
         }
 
+        // Reset button click
+        int resetBtnW = confirmReset ? 96 : 80;
+        int resetBtnX = modalX + modalW - resetBtnW - 14;
+        if (mouseX >= resetBtnX && mouseX <= resetBtnX + resetBtnW && mouseY >= tabY && mouseY <= tabY + tabH) {
+            if (!confirmReset) {
+                confirmReset = true;
+                confirmResetTimer = System.currentTimeMillis();
+                Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
+            } else {
+                confirmReset = false;
+                Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.2F));
+                net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+                        new net.zootycoon.network.ZooNetworkPayloads.ResetZooLogStatsPayload()
+                );
+            }
+            return true;
+        }
+
         return mouseX >= modalX && mouseX <= modalX + modalW && mouseY >= modalY && mouseY <= modalY + modalH;
     }
 
@@ -356,4 +403,3 @@ public class ZooLogStatsModal {
         return false;
     }
 }
-

@@ -930,6 +930,17 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // 31b. Reset Zoo Log & Stats Payload (C2S)
+    public record ResetZooLogStatsPayload() implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<ResetZooLogStatsPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("reset_zoo_log_stats"));
+        public static final StreamCodec<FriendlyByteBuf, ResetZooLogStatsPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {},
+                buf -> new ResetZooLogStatsPayload()
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     // 32. Sync Zoo Log & Stats Payload (S2C)
     public record SyncZooLogStatsPayload(List<ZooLogEntryDto> logs, ZooStatsDto stats) implements CustomPacketPayload {
         public static final CustomPacketPayload.Type<SyncZooLogStatsPayload> TYPE =
@@ -1410,6 +1421,7 @@ public class ZooNetworkPayloads {
         PayloadTypeRegistry.playC2S().register(FeedAnimalFromGuiPayload.TYPE, FeedAnimalFromGuiPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestAnimalSyncPayload.TYPE, RequestAnimalSyncPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestZooLogStatsPayload.TYPE, RequestZooLogStatsPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(ResetZooLogStatsPayload.TYPE, ResetZooLogStatsPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SupplyZookeeperFoodPayload.TYPE, SupplyZookeeperFoodPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(GreetVisitorPayload.TYPE, GreetVisitorPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(GuideVisitorPayload.TYPE, GuideVisitorPayload.CODEC);
@@ -1913,6 +1925,16 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
             ServerPlayer player = context.player();
             context.server().execute(() -> {
                 net.zootycoon.log.ZooLogManager.sendSyncToPlayer(player);
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(ResetZooLogStatsPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                if (player.level() instanceof net.minecraft.server.level.ServerLevel sLevel) {
+                    net.zootycoon.log.ZooLogManager.resetLogsAndStats(sLevel, player.getUUID());
+                    net.zootycoon.log.ZooLogManager.sendSyncToPlayer(player);
+                }
             });
         });
 
