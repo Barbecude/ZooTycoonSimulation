@@ -370,11 +370,11 @@ public class ZooStaffManager {
         return 0;
     }
 
-    /** Returns 0 on success, 1 if not found, 2 if the zookeeper is currently working. */
+    /** Returns 0 on success, 1 if not found. Allows firing even if staff is assigned/working. */
     public int fireZookeeper(ServerPlayer player, UUID zookeeperUuid) {
         var zk = findOwnedZookeeper(player, zookeeperUuid);
         if (zk == null) return 1;
-        if (zk.hasActiveAssignedAnimal()) return 2;
+        zk.setAssignedAnimalUuid(null);
         if (zk.level() instanceof ServerLevel zl) {
             zk.dismiss(zl);
         } else {
@@ -419,7 +419,10 @@ public class ZooStaffManager {
             if (ent != null && ent.isAlive()) {
                 StaffRecord rec = getRecord(player.getUUID());
                 if ("builder".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooBuilderEntity b) {
-                    if (b.getSiteId() != null) return 2;
+                    if (b.getSiteId() != null) {
+                        net.zootycoon.construction.ConstructionManager.getSite(b.getSiteId()).ifPresent(s -> s.setBuilderUuid(null));
+                        b.setSiteId(null);
+                    }
                     b.discard();
                     rec.builders = Math.max(0, rec.builders - 1);
                     saveToFile();

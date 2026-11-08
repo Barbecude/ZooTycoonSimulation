@@ -146,7 +146,7 @@ public class ZookeeperManageTab {
                 canCall, false, mouseX, mouseY, top, bottom);
         drawButton(graphics, mc, fireX, by, FIRE_W,
                 ZooTranslations.get(confirming ? "zootycoon.ui.staff.manage.btn_confirm" : "zootycoon.ui.staff.manage.btn_fire"),
-                !busy, true, mouseX, mouseY, top, bottom);
+                true, true, mouseX, mouseY, top, bottom);
     }
 
     private void drawButton(GuiGraphics graphics, Minecraft mc, int x, int y, int w, String label,
@@ -192,9 +192,7 @@ public class ZookeeperManageTab {
                     return true;
                 }
                 if (mouseX >= fireX && mouseX <= fireX + FIRE_W) {
-                    if (zk.isAssigned()) {
-                        ZooHudOverlay.showToast("zootycoon.toast.title.warning", "zootycoon.staff.manage.busy", ZooHudOverlay.TOAST_WARNING);
-                    } else if (zk.uuid().equals(confirmFireUuid) && System.currentTimeMillis() < confirmFireUntil) {
+                    if (zk.uuid().equals(confirmFireUuid) && System.currentTimeMillis() < confirmFireUntil) {
                         confirmFireUuid = null;
                         ClientPlayNetworking.send(new ZooNetworkPayloads.ManageZookeeperPayload(zk.uuid(), 1));
                     } else {
