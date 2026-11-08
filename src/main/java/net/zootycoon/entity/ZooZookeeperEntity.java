@@ -1029,10 +1029,8 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
             if (isGrazing) {
                 // Grazing animals: Zookeeper replants vegetation in enclosure when carried
-                // HANYA tanam jika vegetasi alami di sekitar satwa memang kurang/sedikit
-                boolean hasEnoughNaturalFood = AnimalDietRegistry.hasNaturalFoodNearby(sLevel, assignedAnimal);
                 ItemStack carriedVegetation = this.peekMatchingVegetation(diet);
-                if (!carriedVegetation.isEmpty() && !hasEnoughNaturalFood) {
+                if (!carriedVegetation.isEmpty()) {
                     BlockPos plantPos = findValidPlantingSpotNearAnimal(sLevel, assignedAnimal, carriedVegetation.getItem());
                     if (plantPos != null) {
                         this.targetPlantingPos = plantPos;
@@ -2084,18 +2082,34 @@ public class ZooZookeeperEntity extends PathfinderMob {
                         if ((groundState.is(Blocks.GRASS_BLOCK) || groundState.is(Blocks.DIRT) || groundState.is(Blocks.SAND)) && aboveState.isAir()) {
                             isValidSpot = true;
                         }
-                    } else if (item == Items.ACACIA_SAPLING || item == Items.OAK_SAPLING || item == Items.CHERRY_SAPLING || item == Items.SPRUCE_SAPLING || item == Items.BIRCH_SAPLING || item == Items.JUNGLE_SAPLING || item == Items.DARK_OAK_SAPLING) {
-                        // Jangan tanam sapling jika tepat di atasnya atau di sekitarnya sudah ada blok daun (pohon masih utuh)
+                    } else if (item instanceof net.minecraft.world.item.BlockItem bi && bi.getBlock() instanceof net.minecraft.world.level.block.SaplingBlock
+                            || item == Items.ACACIA_SAPLING || item == Items.OAK_SAPLING || item == Items.CHERRY_SAPLING || item == Items.SPRUCE_SAPLING || item == Items.BIRCH_SAPLING || item == Items.JUNGLE_SAPLING || item == Items.DARK_OAK_SAPLING) {
+                        // Jangan tanam sapling jika tepat di atasnya sudah ada blok daun/batang pohon, atau terlalu dekat sapling lain
                         if ((groundState.is(Blocks.GRASS_BLOCK) || groundState.is(Blocks.DIRT)) && aboveState.isAir()) {
-                            boolean hasLeavesAbove = false;
+                            boolean blockedAbove = false;
                             for (int up = 1; up <= 6; up++) {
-                                if (sLevel.getBlockState(pos.above(up)).is(net.minecraft.tags.BlockTags.LEAVES)) {
-                                    hasLeavesAbove = true;
+                                BlockState upState = sLevel.getBlockState(pos.above(up));
+                                if (upState.is(net.minecraft.tags.BlockTags.LEAVES) || upState.is(net.minecraft.tags.BlockTags.LOGS)) {
+                                    blockedAbove = true;
                                     break;
                                 }
                             }
-                            if (!hasLeavesAbove) {
-                                isValidSpot = true;
+                            if (!blockedAbove) {
+                                boolean nearOtherSapling = false;
+                                for (int sx = -3; sx <= 3; sx++) {
+                                    for (int sz = -3; sz <= 3; sz++) {
+                                        if (sx == 0 && sz == 0) continue;
+                                        BlockState nearState = sLevel.getBlockState(pos.offset(sx, 1, sz));
+                                        if (nearState.getBlock() instanceof net.minecraft.world.level.block.SaplingBlock) {
+                                            nearOtherSapling = true;
+                                            break;
+                                        }
+                                    }
+                                    if (nearOtherSapling) break;
+                                }
+                                if (!nearOtherSapling) {
+                                    isValidSpot = true;
+                                }
                             }
                         }
                     } else {
@@ -2156,12 +2170,6 @@ public class ZooZookeeperEntity extends PathfinderMob {
         }
 
         if (targetPlantingPos == null) {
-            stopPlanting();
-            return;
-        }
-
-        // Jika vegetasi alami di sekitar satwa sudah mencukupi, stop menanam
-        if (AnimalDietRegistry.hasNaturalFoodNearby(sLevel, assignedAnimal)) {
             stopPlanting();
             return;
         }

@@ -634,10 +634,10 @@ public class ZooAnimalHungerManager {
                     }
                 }
                 if (bestBlock != null) {
-                    double maxEatDist = Math.max(2.8D, (mob.getBbWidth() * 0.5D) + 1.8D);
+                    double maxHorizDist = Math.max(3.5D, (mob.getBbWidth() * 0.5D) + 2.2D);
                     double horizDistSq = mob.distanceToSqr(bestBlock.getX() + 0.5, mob.getY(), bestBlock.getZ() + 0.5);
-                    double vertDist = Math.abs(mob.getY() - (bestBlock.getY() + 0.5));
-                    if (mob.blockPosition().closerThan(bestBlock, maxEatDist) || (horizDistSq <= maxEatDist * maxEatDist && vertDist <= 4.5D)) {
+                    boolean verticalReach = bestBlock.getY() >= mob.getY() - 1.5D && bestBlock.getY() <= mob.getY() + mob.getBbHeight() + 1.8D;
+                    if ((horizDistSq <= maxHorizDist * maxHorizDist && verticalReach) || mob.blockPosition().closerThan(bestBlock, maxHorizDist)) {
                         mob.getNavigation().stop();
                         mob.getLookControl().setLookAt(bestBlock.getX() + 0.5, bestBlock.getY() + 0.2, bestBlock.getZ() + 0.5);
                         var state = level.getBlockState(bestBlock);
@@ -647,7 +647,8 @@ public class ZooAnimalHungerManager {
                         level.sendParticles(ParticleTypes.HEART, mob.getX(), mob.getY() + mob.getBbHeight() * 0.7, mob.getZ(), 4, 0.3, 0.3, 0.3, 0.02);
                         return;
                     } else {
-                        mob.getNavigation().moveTo(bestBlock.getX() + 0.5, bestBlock.getY(), bestBlock.getZ() + 0.5, 1.15);
+                        int groundY = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, bestBlock.getX(), bestBlock.getZ());
+                        mob.getNavigation().moveTo(bestBlock.getX() + 0.5, groundY, bestBlock.getZ() + 0.5, 1.15);
                     }
                 }
             }

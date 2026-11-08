@@ -84,7 +84,13 @@ public class AnimalGrazeNaturalBlockGoal extends MoveToBlockGoal {
 
     @Override
     public double acceptedDistance() {
-        return Math.max(2.8D, (this.mob.getBbWidth() * 0.5D) + 1.8D);
+        return Math.max(3.5D, (this.mob.getBbWidth() * 0.5D) + 2.2D);
+    }
+
+    @Override
+    protected BlockPos getMoveToTarget() {
+        int groundY = this.mob.level().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, this.blockPos.getX(), this.blockPos.getZ());
+        return new BlockPos(this.blockPos.getX(), groundY, this.blockPos.getZ());
     }
 
     @Override
@@ -94,12 +100,12 @@ public class AnimalGrazeNaturalBlockGoal extends MoveToBlockGoal {
         double dx = (this.blockPos.getX() + 0.5D) - this.mob.getX();
         double dz = (this.blockPos.getZ() + 0.5D) - this.mob.getZ();
         double horizDistSq = dx * dx + dz * dz;
-        double vertDist = Math.abs((this.blockPos.getY() + 0.5D) - this.mob.getY());
-        double maxDist = this.acceptedDistance();
+        double maxHorizDist = this.acceptedDistance();
+        boolean verticalReach = this.blockPos.getY() >= this.mob.getY() - 1.5D
+                && this.blockPos.getY() <= this.mob.getY() + this.mob.getBbHeight() + 1.8D;
 
-        boolean reached = this.isReachedTarget()
-                || this.mob.blockPosition().closerThan(this.blockPos, maxDist)
-                || (horizDistSq <= maxDist * maxDist && vertDist <= 3.0D);
+        boolean reached = (horizDistSq <= maxHorizDist * maxHorizDist && verticalReach)
+                || this.mob.blockPosition().closerThan(this.blockPos, maxHorizDist);
 
         if (reached) {
             this.mob.getNavigation().stop();
