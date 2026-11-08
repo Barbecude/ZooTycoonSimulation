@@ -6,7 +6,7 @@
   "extra_blocks": [
     {
       "type": "acacia",
-      "min_count": 4,
+      "min_count": 1,
       "label": "Pohon Acacia"
     }
   ]

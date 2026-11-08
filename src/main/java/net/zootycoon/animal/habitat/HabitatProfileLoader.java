@@ -396,7 +396,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 2.5f,
                 List.of(
                         new HabitatProfile.BlockRequirement("water", 2, "Air"),
-                        new HabitatProfile.BlockRequirement("acacia", 2, "Pohon Acacia"),
+                        new HabitatProfile.BlockRequirement("acacia", 1, "Pohon Acacia"),
                         new HabitatProfile.BlockRequirement("grass", 4, "Blok Rumput"),
                         new HabitatProfile.BlockRequirement("mud", 1, "Blok Lumpur")
                 )

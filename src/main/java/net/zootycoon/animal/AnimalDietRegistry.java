@@ -356,7 +356,7 @@ public class AnimalDietRegistry {
         // 3. NATURALIST
         // ==========================================
         register("naturalist:elephant", FeedingType.TROUGH, "Herbivora Raksasa (Melon, Jerami & Sayur)", Items.MELON_SLICE, Items.HAY_BLOCK, Items.APPLE, Items.CARROT, Items.WHEAT);
-        registerGrazing("naturalist:giraffe", "Folivora", "Mencari Makan Sendiri (Daun Akasia)", Set.of(Blocks.ACACIA_LEAVES, Blocks.OAK_LEAVES), "Daun Akasia", Items.ACACIA_SAPLING, 4, Items.APPLE, Items.CARROT, Items.HAY_BLOCK, Items.WHEAT);
+        registerGrazing("naturalist:giraffe", "Folivora", "Mencari Makan Sendiri (Dedaunan Pohon)", Set.of(Blocks.ACACIA_LEAVES, Blocks.OAK_LEAVES, Blocks.BIRCH_LEAVES, Blocks.JUNGLE_LEAVES, Blocks.DARK_OAK_LEAVES), "Pohon / Dedaunan", Items.ACACIA_SAPLING, 1, Items.APPLE, Items.CARROT, Items.HAY_BLOCK, Items.WHEAT);
         registerGrazing("naturalist:zebra", "Herbivora", "Mencari Makan Sendiri (Rumput)", Set.of(Blocks.SHORT_GRASS, Blocks.TALL_GRASS, Blocks.FERN), "Rumput", Items.BONE_MEAL, 16, Items.WHEAT, Items.HAY_BLOCK, Items.CARROT, Items.APPLE);
         registerGrazing("naturalist:deer", "Herbivora", "Mencari Makan Sendiri (Rumput & Dedaunan)", Set.of(Blocks.SHORT_GRASS, Blocks.TALL_GRASS, Blocks.FERN, Blocks.OAK_LEAVES, Blocks.BIRCH_LEAVES), "Rumput / Dedaunan", Items.BONE_MEAL, 16, Items.WHEAT, Items.HAY_BLOCK, Items.APPLE, Items.CARROT, Items.SWEET_BERRIES);
         register("naturalist:rhino", FeedingType.TROUGH, "Herbivora (Gandum, Melon & Jerami)", Items.WHEAT, Items.MELON_SLICE, Items.HAY_BLOCK, Items.CARROT);
