@@ -1069,6 +1069,16 @@ public class ZooVisitorEntity extends PathfinderMob {
             boolean leavingNow = isTimeToLeave();
             if (leavingNow && this.isPassenger()) {
                 this.stopRiding();
+                this.setPose(net.minecraft.world.entity.Pose.STANDING);
+            }
+
+            // Jika sedang duduk dan merasa lapar, haus, atau kebelet toilet, langsung berdiri
+            if (this.isPassenger() && (needsToilet() || getMood() == VisitorMood.TOILET
+                    || (canEat() && getHunger() >= 35 && postPurchaseEatMode <= 0) || getMood() == VisitorMood.HUNGRY
+                    || (canDrink() && getThirst() >= 25 && postPurchaseEatMode <= 0) || getMood() == VisitorMood.THIRSTY)) {
+                this.stopRiding();
+                this.setPose(net.minecraft.world.entity.Pose.STANDING);
+                this.sitCooldown = 300;
             }
             if (this.entityData.get(IS_LEAVING) != leavingNow) {
                 this.entityData.set(IS_LEAVING, leavingNow);
@@ -3257,8 +3267,8 @@ public class ZooVisitorEntity extends PathfinderMob {
 
         @Override
         public boolean canContinueToUse() {
-            if (visitor.isTimeToLeave() || visitor.needsToilet()) return false;
-            if (visitor.postPurchaseEatMode <= 0 && (visitor.getHunger() >= 45 || visitor.getThirst() >= 40)) {
+            if (visitor.isTimeToLeave() || visitor.needsToilet() || visitor.getMood() == VisitorMood.TOILET) return false;
+            if (visitor.postPurchaseEatMode <= 0 && (visitor.getHunger() >= 35 || visitor.getThirst() >= 25 || visitor.getMood() == VisitorMood.HUNGRY || visitor.getMood() == VisitorMood.THIRSTY)) {
                 return false;
             }
             if (isSeated) {
