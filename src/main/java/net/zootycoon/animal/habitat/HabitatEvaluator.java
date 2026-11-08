@@ -300,6 +300,18 @@ public class HabitatEvaluator {
             unmet.add("Butuh Cooler Box");
         }
 
+        // 9. Check Grazing Vegetation Need
+        var diet = net.zootycoon.animal.AnimalDietRegistry.getDiet(animal);
+        if (diet != null && diet.feedingType == net.zootycoon.animal.AnimalDietRegistry.FeedingType.GRAZING) {
+            if (!net.zootycoon.animal.AnimalDietRegistry.hasNaturalFoodNearby(level, animal)) {
+                extraBlocksOk = false;
+                String missingLabel = net.zootycoon.animal.AnimalDietRegistry.getMissingBlockLabel(animal);
+                if (!unmet.contains("Butuh " + missingLabel)) {
+                    unmet.add("Butuh " + missingLabel);
+                }
+            }
+        }
+
         boolean isSuitable = biomeOk && tempOk && groundOk && waterOk && extraBlocksOk && predatorSafe;
         HabitatStatus status = isSuitable ? HabitatStatus.SUITABLE : HabitatStatus.UNSUITABLE;
 

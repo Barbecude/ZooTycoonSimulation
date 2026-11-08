@@ -1,5 +1,6 @@
 package net.zootycoon.animal;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -14,6 +15,9 @@ import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -172,8 +176,10 @@ public class AnimalDietRegistry {
     }
 
     public enum FeedingType {
+        GRAZING("Mencari Makan Sendiri"),
+        THROWN_MEAT("Lempar Pakan Daging"),
         TROUGH("Perlu Palung Makanan"),
-        THROWN_MEAT("Lempar Makanan");
+        SPECIAL_TROUGH("Perlu Palung Khusus");
 
         private final String label;
 
@@ -194,15 +200,29 @@ public class AnimalDietRegistry {
         public final boolean acceptsRawMeat;
         public final boolean acceptsRawFish;
         public final boolean isFallback;
+        public final Set<net.minecraft.world.level.block.Block> naturalFoodBlocks;
+        public final String missingBlockLabel;
+        public final Item reforestationItem;
+        public final int reforestationCount;
 
-        public AnimalDiet(FeedingType feedingType, String dietCategory, String description, boolean acceptsRawMeat, boolean acceptsRawFish, boolean isFallback, Item... foods) {
+        public AnimalDiet(FeedingType feedingType, String dietCategory, String description, boolean acceptsRawMeat, boolean acceptsRawFish, boolean isFallback,
+                          Set<net.minecraft.world.level.block.Block> naturalFoodBlocks, String missingBlockLabel, Item reforestationItem, int reforestationCount,
+                          Item... foods) {
             this.feedingType = feedingType;
             this.dietCategory = (dietCategory != null && !dietCategory.isEmpty()) ? dietCategory : deduceCategory(feedingType, description);
             this.description = description;
             this.acceptsRawMeat = acceptsRawMeat;
             this.acceptsRawFish = acceptsRawFish;
             this.isFallback = isFallback;
+            this.naturalFoodBlocks = naturalFoodBlocks != null ? naturalFoodBlocks : Collections.emptySet();
+            this.missingBlockLabel = (missingBlockLabel != null && !missingBlockLabel.isEmpty()) ? missingBlockLabel : "Vegetasi Alami";
+            this.reforestationItem = reforestationItem != null ? reforestationItem : Items.GRASS_BLOCK;
+            this.reforestationCount = reforestationCount > 0 ? reforestationCount : 16;
             this.acceptedFoods = Arrays.asList(foods);
+        }
+
+        public AnimalDiet(FeedingType feedingType, String dietCategory, String description, boolean acceptsRawMeat, boolean acceptsRawFish, boolean isFallback, Item... foods) {
+            this(feedingType, dietCategory, description, acceptsRawMeat, acceptsRawFish, isFallback, Collections.emptySet(), "", Items.GRASS_BLOCK, 16, foods);
         }
 
         public AnimalDiet(FeedingType feedingType, String description, boolean acceptsRawMeat, boolean acceptsRawFish, boolean isFallback, Item... foods) {
@@ -272,7 +292,7 @@ public class AnimalDietRegistry {
         // ==========================================
         register("minecraft:cow", FeedingType.TROUGH, "Herbivora (Gandum & Sayuran)", Items.WHEAT, Items.HAY_BLOCK);
         register("minecraft:mooshroom", FeedingType.TROUGH, "Herbivora (Gandum & Jamur)", Items.WHEAT, Items.RED_MUSHROOM, Items.BROWN_MUSHROOM);
-        register("minecraft:sheep", FeedingType.TROUGH, "Herbivora (Gandum & Rumput)", Items.WHEAT, Items.HAY_BLOCK);
+        registerGrazing("minecraft:sheep", "Herbivora", "Mencari Makan Sendiri (Rumput)", Set.of(Blocks.SHORT_GRASS, Blocks.TALL_GRASS, Blocks.GRASS_BLOCK), "Rumput", Items.GRASS_BLOCK, 16, Items.WHEAT, Items.HAY_BLOCK);
         register("minecraft:pig", FeedingType.TROUGH, "Omnivora (Wortel, Kentang & Sayur)", Items.CARROT, Items.POTATO, Items.BEETROOT, Items.APPLE);
         register("minecraft:chicken", FeedingType.TROUGH, "Granivora (Biji-bijian)", Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS, Items.TORCHFLOWER_SEEDS, Items.PITCHER_POD);
         register("minecraft:horse", FeedingType.TROUGH, "Herbivora (Apel, Wortel & Gandum)", Items.APPLE, Items.GOLDEN_APPLE, Items.WHEAT, Items.HAY_BLOCK, Items.CARROT, Items.SUGAR);
@@ -282,9 +302,9 @@ public class AnimalDietRegistry {
         register("minecraft:trader_llama", FeedingType.TROUGH, "Herbivora (Jerami & Gandum)", Items.HAY_BLOCK, Items.WHEAT);
         register("minecraft:goat", FeedingType.TROUGH, "Herbivora (Gandum & Sayuran)", Items.WHEAT, Items.CARROT);
         register("minecraft:rabbit", FeedingType.TROUGH, "Herbivora (Wortel, Kubis & Dandelion)", Items.CARROT, Items.GOLDEN_CARROT, Items.DANDELION);
-        register("minecraft:panda", FeedingType.TROUGH, "Folivora (Bambu & Kue)", Items.BAMBOO, Items.CAKE);
+        registerGrazing("minecraft:panda", "Folivora", "Mencari Makan Sendiri (Bambu)", Set.of(Blocks.BAMBOO, Blocks.BAMBOO_SAPLING), "Bambu", Items.BAMBOO, 16, Items.BAMBOO, Items.CAKE);
         register("minecraft:sniffer", FeedingType.TROUGH, "Herbivora (Benih Purba)", Items.TORCHFLOWER_SEEDS, Items.PITCHER_POD);
-        register("minecraft:camel", FeedingType.TROUGH, "Herbivora (Kaktus, Jerami & Gandum)", Items.CACTUS, Items.HAY_BLOCK, Items.WHEAT);
+        registerGrazing("minecraft:camel", "Herbivora", "Mencari Makan Sendiri (Kaktus)", Set.of(Blocks.CACTUS, Blocks.DEAD_BUSH), "Kaktus", Items.CACTUS, 8, Items.CACTUS, Items.HAY_BLOCK, Items.WHEAT);
         register("minecraft:strider", FeedingType.TROUGH, "Pemakan Jamur Nether", Items.WARPED_FUNGUS);
         register("minecraft:turtle", FeedingType.TROUGH, "Herbivora Laut (Lamun)", Items.SEAGRASS);
         register("minecraft:frog", FeedingType.TROUGH, "Insektivora (Slime & Serangga)", Items.SLIME_BALL);
@@ -305,7 +325,7 @@ public class AnimalDietRegistry {
         register("alexsmobs:gorilla", FeedingType.TROUGH, "Frugivora (Pisang & Buah)", Items.MELON_SLICE, Items.APPLE, Items.SWEET_BERRIES);
         register("alexsmobs:capuchin_monkey", FeedingType.TROUGH, "Frugivora (Pisang, Buah & Telur)", Items.MELON_SLICE, Items.APPLE, Items.SWEET_BERRIES, Items.EGG);
         register("alexsmobs:elephant", FeedingType.TROUGH, "Herbivora Besar (Melon, Jerami & Sayur)", Items.MELON_SLICE, Items.HAY_BLOCK, Items.APPLE, Items.CARROT);
-        register("alexsmobs:kangaroo", FeedingType.TROUGH, "Herbivora (Gandum, Jerami, Wortel & Rumput)", Items.WHEAT, Items.HAY_BLOCK, Items.CARROT, Items.APPLE);
+        registerGrazing("alexsmobs:kangaroo", "Herbivora", "Mencari Makan Sendiri (Rumput)", Set.of(Blocks.SHORT_GRASS, Blocks.TALL_GRASS, Blocks.GRASS_BLOCK), "Rumput", Items.GRASS_BLOCK, 16, Items.WHEAT, Items.HAY_BLOCK, Items.CARROT, Items.APPLE);
         register("alexsmobs:moose", FeedingType.TROUGH, "Herbivora (Gandum, Daun & Apel)", Items.WHEAT, Items.OAK_LEAVES, Items.APPLE, Items.DANDELION);
         register("alexsmobs:gazelle", FeedingType.TROUGH, "Herbivora (Gandum & Rumput)", Items.WHEAT, Items.HAY_BLOCK);
         register("alexsmobs:bison", FeedingType.TROUGH, "Herbivora (Gandum & Jerami)", Items.WHEAT, Items.HAY_BLOCK);
@@ -336,9 +356,9 @@ public class AnimalDietRegistry {
         // 3. NATURALIST
         // ==========================================
         register("naturalist:elephant", FeedingType.TROUGH, "Herbivora Raksasa (Melon, Jerami & Sayur)", Items.MELON_SLICE, Items.HAY_BLOCK, Items.APPLE, Items.CARROT, Items.WHEAT);
-        register("naturalist:giraffe", FeedingType.TROUGH, "Folivora (Daun, Jerami, Apel & Sayur)", Items.ACACIA_LEAVES, Items.OAK_LEAVES, Items.APPLE, Items.CARROT, Items.HAY_BLOCK, Items.WHEAT);
-        register("naturalist:zebra", FeedingType.TROUGH, "Herbivora (Gandum, Jerami & Wortel)", Items.WHEAT, Items.HAY_BLOCK, Items.CARROT, Items.APPLE);
-        register("naturalist:deer", FeedingType.TROUGH, "Herbivora (Gandum, Jerami, Apel & Beri)", Items.WHEAT, Items.HAY_BLOCK, Items.APPLE, Items.CARROT, Items.SWEET_BERRIES);
+        registerGrazing("naturalist:giraffe", "Folivora", "Mencari Makan Sendiri (Daun Akasia)", Set.of(Blocks.ACACIA_LEAVES, Blocks.OAK_LEAVES), "Daun Akasia", Items.ACACIA_SAPLING, 4, Items.ACACIA_LEAVES, Items.OAK_LEAVES, Items.APPLE, Items.CARROT, Items.HAY_BLOCK, Items.WHEAT);
+        registerGrazing("naturalist:zebra", "Herbivora", "Mencari Makan Sendiri (Rumput)", Set.of(Blocks.SHORT_GRASS, Blocks.TALL_GRASS, Blocks.GRASS_BLOCK), "Rumput", Items.GRASS_BLOCK, 16, Items.WHEAT, Items.HAY_BLOCK, Items.CARROT, Items.APPLE);
+        registerGrazing("naturalist:deer", "Herbivora", "Mencari Makan Sendiri (Rumput & Dedaunan)", Set.of(Blocks.SHORT_GRASS, Blocks.TALL_GRASS, Blocks.GRASS_BLOCK, Blocks.OAK_LEAVES, Blocks.BIRCH_LEAVES), "Rumput / Dedaunan", Items.OAK_SAPLING, 4, Items.WHEAT, Items.HAY_BLOCK, Items.APPLE, Items.CARROT, Items.SWEET_BERRIES);
         register("naturalist:rhino", FeedingType.TROUGH, "Herbivora (Gandum, Melon & Jerami)", Items.WHEAT, Items.MELON_SLICE, Items.HAY_BLOCK, Items.CARROT);
         register("naturalist:hippo", FeedingType.TROUGH, "Herbivora Air (Melon, Labu & Gandum)", Items.MELON_SLICE, Items.PUMPKIN, Items.WHEAT, Items.APPLE);
         register("naturalist:duck", FeedingType.TROUGH, "Granivora (Biji-bijian & Roti)", Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS, Items.TORCHFLOWER_SEEDS, Items.BREAD, Items.WHEAT);
@@ -347,7 +367,7 @@ public class AnimalDietRegistry {
         register("naturalist:bluejay", FeedingType.TROUGH, "Granivora (Biji-bijian & Beri)", Items.WHEAT_SEEDS, Items.SWEET_BERRIES);
         register("naturalist:finch", FeedingType.TROUGH, "Granivora (Biji-bijian)", Items.WHEAT_SEEDS, Items.MELON_SEEDS);
         register("naturalist:sparrow", FeedingType.TROUGH, "Granivora (Biji-bijian)", Items.WHEAT_SEEDS, Items.MELON_SEEDS);
-        register("naturalist:tortoise", FeedingType.TROUGH, "Herbivora (Sayuran, Wortel, Apel & Bunga)", Items.CARROT, Items.DANDELION, Items.MELON_SLICE, Items.APPLE, Items.SWEET_BERRIES, Items.BEETROOT, Items.WHEAT);
+        registerGrazing("naturalist:tortoise", "Herbivora", "Mencari Makan Sendiri (Rumput & Bunga)", Set.of(Blocks.SHORT_GRASS, Blocks.TALL_GRASS, Blocks.GRASS_BLOCK, Blocks.DANDELION, Blocks.POPPY), "Rumput & Bunga", Items.DANDELION, 8, Items.CARROT, Items.DANDELION, Items.MELON_SLICE, Items.APPLE, Items.SWEET_BERRIES, Items.BEETROOT, Items.WHEAT);
         register("naturalist:butterfly", FeedingType.TROUGH, "Nektar (Bunga)", Items.DANDELION, Items.POPPY, Items.BLUE_ORCHID);
         register("naturalist:snail", FeedingType.TROUGH, "Herbivora Kecil (Jamur & Sayur)", Items.RED_MUSHROOM, Items.BROWN_MUSHROOM, Items.CARROT);
 
@@ -368,15 +388,16 @@ public class AnimalDietRegistry {
         register("naturalist:lizard", FeedingType.TROUGH, "Insektivora & Buah Kecil", Items.SPIDER_EYE, Items.SWEET_BERRIES, Items.MELON_SLICE);
         register("naturalist:catfish", FeedingType.THROWN_MEAT, "Pemakan Ikan Kecil & Serangga", false, true, Items.COD, Items.TROPICAL_FISH, Items.SEAGRASS);
         register("naturalist:bass", FeedingType.THROWN_MEAT, "Pemakan Ikan Kecil", false, true, Items.COD, Items.SEAGRASS);
+
         // ==========================================
         // 4. WILDER NATURE & ADDITIONAL ALEX'S MOBS / NATURALIST
         // ==========================================
         register("wildernature:cassowary", FeedingType.TROUGH, "Omnivora", "Omnivora (Melon, Apel, Biji & Serangga)", Items.MELON_SLICE, Items.APPLE, Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS, Items.WHEAT, Items.SPIDER_EYE);
-        register("wildernature:mini_sheep", FeedingType.TROUGH, "Herbivora", "Herbivora (Gandum & Rumput Segar)", Items.WHEAT, Items.HAY_BLOCK);
+        registerGrazing("wildernature:mini_sheep", "Herbivora", "Mencari Makan Sendiri (Rumput)", Set.of(Blocks.SHORT_GRASS, Blocks.TALL_GRASS, Blocks.GRASS_BLOCK), "Rumput", Items.GRASS_BLOCK, 16, Items.WHEAT, Items.HAY_BLOCK);
         register("naturalist:ostrich", FeedingType.TROUGH, "Granivora", "Granivora (Biji-bijian, Rumput, Apel & Wortel)", Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS, Items.TORCHFLOWER_SEEDS, Items.CARROT, Items.WHEAT, Items.HAY_BLOCK, Items.APPLE);
-        register("naturalist:capybara", FeedingType.TROUGH, "Herbivora", "Herbivora (Apel, Wortel, Rumput & Melon)", Items.APPLE, Items.CARROT, Items.MELON_SLICE, Items.WHEAT);
-        register("alexsmobs:giant_anteater", FeedingType.TROUGH, "Insektivora", "Insektivora (Serangga & Telur)", Items.SPIDER_EYE, Items.SLIME_BALL, Items.EGG);
-        register("alexsmobs:anteater", FeedingType.TROUGH, "Insektivora", "Insektivora (Serangga & Telur)", Items.SPIDER_EYE, Items.SLIME_BALL, Items.EGG);
+        registerGrazing("naturalist:capybara", "Herbivora", "Mencari Makan Sendiri (Rumput & Lily Pad)", Set.of(Blocks.SHORT_GRASS, Blocks.TALL_GRASS, Blocks.GRASS_BLOCK, Blocks.LILY_PAD), "Rumput / Lily Pad", Items.GRASS_BLOCK, 16, Items.APPLE, Items.CARROT, Items.MELON_SLICE, Items.WHEAT);
+        register("alexsmobs:giant_anteater", FeedingType.SPECIAL_TROUGH, "Insektivora", "Insektivora (Serangga & Telur)", Items.SPIDER_EYE, Items.SLIME_BALL, Items.EGG);
+        register("alexsmobs:anteater", FeedingType.SPECIAL_TROUGH, "Insektivora", "Insektivora (Serangga & Telur)", Items.SPIDER_EYE, Items.SLIME_BALL, Items.EGG);
         register("naturalist:komodo_dragon", FeedingType.THROWN_MEAT, "Karnivora", "Karnivora (Daging Segar & Bangkai)", true, false, Items.BEEF, Items.MUTTON, Items.ROTTEN_FLESH, Items.PORKCHOP, Items.CHICKEN);
         register("alexsmobs:cachalot_whale", FeedingType.THROWN_MEAT, "Karnivora", "Karnivora Laut (Kantong Tinta, Ikan & Daging)", true, true, Items.INK_SAC, Items.GLOW_INK_SAC, Items.COD, Items.SALMON, Items.BEEF);
         register("naturalist:great_white_shark", FeedingType.THROWN_MEAT, "Karnivora", "Karnivora Laut (Daging & Ikan)", true, true, Items.BEEF, Items.COD, Items.SALMON);
@@ -385,15 +406,15 @@ public class AnimalDietRegistry {
         register("naturalist:penguin", FeedingType.TROUGH, "Piscivora", "Piscivora (Ikan Segar)", false, true, Items.COD, Items.SALMON);
         register("ecologics:penguin", FeedingType.TROUGH, "Piscivora", "Piscivora (Ikan Segar)", false, true, Items.COD, Items.SALMON);
         register("alexsmobs:giant_squid", FeedingType.THROWN_MEAT, "Karnivora", "Karnivora Laut (Ikan & Daging)", true, true, Items.COD, Items.SALMON, Items.BEEF);
-        register("alexsmobs:mantis_shrimp", FeedingType.TROUGH, "Karnivora", "Karnivora Laut (Krustasea & Ikan Kecil)", false, true, Items.COD, Items.SALMON, Items.TROPICAL_FISH);
+        register("alexsmobs:mantis_shrimp", FeedingType.SPECIAL_TROUGH, "Karnivora", "Karnivora Laut (Krustasea & Ikan Kecil)", false, true, Items.COD, Items.SALMON, Items.TROPICAL_FISH);
         register("naturalist:mammoth", FeedingType.TROUGH, "Herbivora", "Herbivora Purba (Jerami, Gandum & Daun Spruce)", Items.HAY_BLOCK, Items.WHEAT, Items.SPRUCE_LEAVES, Items.APPLE);
         register("alexsmobs:mammoth", FeedingType.TROUGH, "Herbivora", "Herbivora Purba (Jerami, Gandum & Daun Spruce)", Items.HAY_BLOCK, Items.WHEAT, Items.SPRUCE_LEAVES, Items.APPLE);
         register("alexsmobs:froststalker", FeedingType.THROWN_MEAT, "Karnivora", "Karnivora Kutub (Daging Segar)", true, false, Items.MUTTON, Items.BEEF, Items.PORKCHOP);
-        register("alexsmobs:guster", FeedingType.TROUGH, "Pemakan Mineral", "Pemakan Mineral (Pasir & Tulang)", Items.SAND, Items.BONE);
-        register("alexsmobs:bunfungus", FeedingType.TROUGH, "Pemakan Jamur", "Pemakan Jamur (Jamur Merah & Cokelat)", Items.RED_MUSHROOM, Items.BROWN_MUSHROOM);
-        register("alexsmobs:mungus", FeedingType.TROUGH, "Pemakan Jamur", "Pemakan Jamur (Jamur Cokelat, Crimson & Warped)", Items.BROWN_MUSHROOM, Items.CRIMSON_FUNGUS, Items.WARPED_FUNGUS);
-        register("alexsmobs:rocky_roller", FeedingType.TROUGH, "Pemakan Mineral", "Pemakan Mineral (Kerikil, Batu Bara & Rumput Kering)", Items.GRAVEL, Items.COAL, Items.WHEAT);
-        register("alexsmobs:flutter", FeedingType.TROUGH, "Nektarivora", "Nektarivora (Daun Ceri, Spora & Azalea)", Items.CHERRY_LEAVES, Items.SPORE_BLOSSOM, Items.AZALEA, Items.FLOWERING_AZALEA);
+        register("alexsmobs:guster", FeedingType.SPECIAL_TROUGH, "Pemakan Mineral", "Pemakan Mineral (Pasir & Tulang)", Items.SAND, Items.BONE);
+        registerGrazing("alexsmobs:bunfungus", "Pemakan Jamur", "Mencari Makan Sendiri (Jamur)", Set.of(Blocks.RED_MUSHROOM, Blocks.BROWN_MUSHROOM), "Jamur Merah / Cokelat", Items.RED_MUSHROOM, 8, Items.RED_MUSHROOM, Items.BROWN_MUSHROOM);
+        registerGrazing("alexsmobs:mungus", "Pemakan Jamur", "Mencari Makan Sendiri (Jamur & Fungi)", Set.of(Blocks.BROWN_MUSHROOM, Blocks.CRIMSON_FUNGUS, Blocks.WARPED_FUNGUS), "Jamur / Fungi", Items.BROWN_MUSHROOM, 8, Items.BROWN_MUSHROOM, Items.CRIMSON_FUNGUS, Items.WARPED_FUNGUS);
+        register("alexsmobs:rocky_roller", FeedingType.SPECIAL_TROUGH, "Pemakan Mineral", "Pemakan Mineral (Kerikil, Batu Bara & Rumput Kering)", Items.GRAVEL, Items.COAL, Items.WHEAT);
+        registerGrazing("alexsmobs:flutter", "Nektarivora", "Mencari Makan Sendiri (Daun Ceri & Azalea)", Set.of(Blocks.CHERRY_LEAVES, Blocks.AZALEA_LEAVES, Blocks.FLOWERING_AZALEA_LEAVES, Blocks.AZALEA, Blocks.FLOWERING_AZALEA), "Daun Ceri / Azalea", Items.CHERRY_SAPLING, 4, Items.CHERRY_LEAVES, Items.SPORE_BLOSSOM, Items.AZALEA, Items.FLOWERING_AZALEA);
     }
 
     public static void register(String entityTypeId, FeedingType feedingType, String description, Item... foods) {
@@ -410,6 +431,63 @@ public class AnimalDietRegistry {
 
     public static void register(String entityTypeId, FeedingType feedingType, String dietCategory, String description, boolean acceptsRawMeat, boolean acceptsRawFish, Item... foods) {
         DIET_REGISTRY.put(entityTypeId.toLowerCase(Locale.ROOT), new AnimalDiet(feedingType, dietCategory, description, acceptsRawMeat, acceptsRawFish, false, foods));
+    }
+
+    public static void registerGrazing(String entityTypeId, String dietCategory, String description,
+                                       Set<Block> naturalFoodBlocks, String missingBlockLabel, Item reforestationItem, int reforestationCount,
+                                       Item... foods) {
+        DIET_REGISTRY.put(entityTypeId.toLowerCase(Locale.ROOT),
+                new AnimalDiet(FeedingType.GRAZING, dietCategory, description, false, false, false,
+                        naturalFoodBlocks, missingBlockLabel, reforestationItem, reforestationCount, foods));
+    }
+
+    public static Set<Block> getNaturalFoodBlocks(LivingEntity entity) {
+        if (entity == null) return Collections.emptySet();
+        AnimalDiet diet = getDiet(entity);
+        return diet != null ? diet.naturalFoodBlocks : Collections.emptySet();
+    }
+
+    public static String getMissingBlockLabel(LivingEntity entity) {
+        if (entity == null) return "Vegetasi Alami";
+        AnimalDiet diet = getDiet(entity);
+        return diet != null ? diet.missingBlockLabel : "Vegetasi Alami";
+    }
+
+    public static Item getReforestationItem(LivingEntity entity) {
+        if (entity == null) return Items.GRASS_BLOCK;
+        AnimalDiet diet = getDiet(entity);
+        return diet != null ? diet.reforestationItem : Items.GRASS_BLOCK;
+    }
+
+    public static int getReforestationCount(LivingEntity entity) {
+        if (entity == null) return 16;
+        AnimalDiet diet = getDiet(entity);
+        return diet != null ? diet.reforestationCount : 16;
+    }
+
+    public static boolean hasNaturalFoodNearby(Level level, LivingEntity entity) {
+        if (level == null || entity == null) return true;
+        AnimalDiet diet = getDiet(entity);
+        if (diet == null || diet.feedingType != FeedingType.GRAZING || diet.naturalFoodBlocks.isEmpty()) {
+            return true;
+        }
+        BlockPos center = entity.blockPosition();
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        int radius = 16;
+        int minDy = -4;
+        int maxDy = 6;
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                if (dx * dx + dz * dz > radius * radius) continue;
+                for (int dy = minDy; dy <= maxDy; dy++) {
+                    pos.set(center.getX() + dx, center.getY() + dy, center.getZ() + dz);
+                    if (diet.naturalFoodBlocks.contains(level.getBlockState(pos).getBlock())) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     public static final int COLOR_DIET_CATEGORY = 0xFFBD6DFF; // Soft Lavender Purple

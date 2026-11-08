@@ -117,8 +117,11 @@ public class ZooVisitorManager {
                     ZooVisitorEntity.class, zooArea, Entity::isAlive
             );
 
+            double starRating = net.zootycoon.economy.ZooRatingManager.get(level.getServer()).getStarRating(player.getUUID());
+            int expectedPrice = net.zootycoon.economy.ZooEconomyEngine.getExpectedTicketPrice(starRating);
+
             int ticketPrice = claimManager.getTicketPrice(player.getUUID());
-            int interval = net.zootycoon.economy.ZooEconomyEngine.getVisitorSpawnIntervalTicks(ticketPrice, level.getRandom());
+            int interval = net.zootycoon.economy.ZooEconomyEngine.getVisitorSpawnIntervalTicks(ticketPrice, starRating, level.getRandom());
 
             // Filter Ticket Booth cashiers that are ready to receive new arrivals:
             // 1. Queue is not backed up (queue < MAX_TICKET_QUEUE_SIZE)
@@ -135,9 +138,6 @@ public class ZooVisitorManager {
 
             ZooCashierEntity ticketCashier = readyCashiers.get(0);
 
-            double starRating = net.zootycoon.economy.ZooRatingManager.get(level.getServer()).getStarRating(player.getUUID());
-            int expectedPrice = net.zootycoon.economy.ZooEconomyEngine.getExpectedTicketPrice(starRating);
-
             // 1. Pengunjung yang merasa kemahalan tidak akan spawn sama sekali agar performa baik
             double zooQuality = net.zootycoon.economy.ZooEconomyEngine.calculateZooQuality(level, player.getUUID());
             net.zootycoon.economy.ZooEconomyEngine.TicketDecision decision =
@@ -153,8 +153,18 @@ public class ZooVisitorManager {
                 continue;
             }
 
-            // Calculate visitor capacity based on zoo cashiers, ticket price, and star rating
-            int maxCapacity = net.zootycoon.economy.ZooEconomyEngine.calculateMaxVisitorCapacity(allCashiers.size(), starRating, ticketPrice);
+            // Count registered active animals and facilities in this zoo
+            int animalCount = 0;
+            List<net.minecraft.world.entity.LivingEntity> allLivings = level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, zooArea, Entity::isAlive);
+            for (var le : allLivings) {
+                if (net.zootycoon.animal.ZooAnimalHungerManager.isTagged(le) && net.zootycoon.animal.ZooAnimalHungerManager.isOwnedBy(le, player.getUUID())) {
+                    animalCount++;
+                }
+            }
+            int facilityCount = allCashiers.size();
+
+            // Calculate visitor capacity based on zoo cashiers, ticket price, star rating, animals, and facilities (up to 250+)
+            int maxCapacity = net.zootycoon.economy.ZooEconomyEngine.calculateMaxVisitorCapacity(allCashiers.size(), starRating, ticketPrice, animalCount, facilityCount);
 
             if (currentVisitors.size() >= maxCapacity) {
                 ticketCashier.setLastVisitorSpawnTick(currentTick);

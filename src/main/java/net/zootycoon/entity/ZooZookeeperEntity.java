@@ -1018,9 +1018,40 @@ public class ZooZookeeperEntity extends PathfinderMob {
         // ========================================================
         if (assignedAnimal != null) {
             var diet = AnimalDietRegistry.getDiet(assignedAnimal);
+            boolean isGrazing = (diet != null && diet.feedingType == AnimalDietRegistry.FeedingType.GRAZING);
             boolean isThrownMeat = (diet != null && diet.feedingType == AnimalDietRegistry.FeedingType.THROWN_MEAT);
 
-            if (isThrownMeat) {
+            if (isGrazing) {
+                // Grazing animals: Zookeeper replants vegetation in enclosure when carried
+                ItemStack carriedVegetation = this.peekMatchingVegetation(diet);
+                if (!carriedVegetation.isEmpty()) {
+                    boolean needsMoreVegetation = !AnimalDietRegistry.hasNaturalFoodNearby(sLevel, assignedAnimal);
+                    if (needsMoreVegetation || this.getRandom().nextFloat() < 0.25f) {
+                        BlockPos plantPos = findValidPlantingSpotNearAnimal(sLevel, assignedAnimal, carriedVegetation.getItem());
+                        if (plantPos != null) {
+                            currentDutyState = "PLANTING_VEGETATION";
+                            this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(carriedVegetation.getItem()));
+                            double distSq = this.distanceToSqr(plantPos.getX() + 0.5, plantPos.getY(), plantPos.getZ() + 0.5);
+                            if (distSq > 2.5 * 2.5) {
+                                this.getNavigation().moveTo(plantPos.getX() + 0.5, plantPos.getY(), plantPos.getZ() + 0.5, 1.2);
+                                return;
+                            } else {
+                                this.getNavigation().stop();
+                                this.getLookControl().setLookAt(plantPos.getX() + 0.5, plantPos.getY() + 0.5, plantPos.getZ() + 0.5);
+                                this.swing(InteractionHand.MAIN_HAND);
+                                ItemStack taken = this.takeMatchingVegetation(carriedVegetation.getItem(), 1);
+                                if (!taken.isEmpty()) {
+                                    plantVegetationBlock(sLevel, plantPos, taken.getItem());
+                                    sLevel.playSound(null, plantPos, SoundEvents.GRASS_PLACE, SoundSource.BLOCKS, 0.8F, 1.0F);
+                                    sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, plantPos.getX() + 0.5, plantPos.getY() + 0.8, plantPos.getZ() + 0.5, 6, 0.2, 0.2, 0.2, 0.02);
+                                    actionCooldown = 40;
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if (isThrownMeat) {
                 // Carnivores / Thrown food: Zookeeper throws food directly to the animal or its hungry offspring
                 LivingEntity hungryTarget = null;
                 int minHunger = 75;
@@ -1346,16 +1377,21 @@ public class ZooZookeeperEntity extends PathfinderMob {
                     ChatFormatting hungerColor = hunger <= 25 ? ChatFormatting.RED : (hunger <= 60 ? ChatFormatting.YELLOW : ChatFormatting.GREEN);
                     String hungerColoredStr = hungerColor + String.valueOf(hunger) + "%" + ChatFormatting.RESET;
                     var diet = AnimalDietRegistry.getDiet(animal);
+                    boolean isGrazingDiet = (diet != null && diet.feedingType == AnimalDietRegistry.FeedingType.GRAZING);
                     boolean isThrownDiet = (diet != null && diet.feedingType == AnimalDietRegistry.FeedingType.THROWN_MEAT);
 
                     if (this.getFoodStock() <= 0) {
-                        dialogText = isThrownDiet
+                        dialogText = isGrazingDiet
+                                ? "Satwa ini mencari makan sendiri di kandang. Pastikan vegetasi alami (" + (diet != null ? diet.missingBlockLabel : "Rumput") + ") tersedia!"
+                                : (isThrownDiet
                                 ? ZooTranslations.get("zootycoon.dialog.zookeeper.empty_stock_throw", dialogAnimalName, hungerColoredStr)
-                                : ZooTranslations.get("zootycoon.dialog.zookeeper.empty_stock", dialogAnimalName, hungerColoredStr);
+                                : ZooTranslations.get("zootycoon.dialog.zookeeper.empty_stock", dialogAnimalName, hungerColoredStr));
                     } else {
-                        dialogText = isThrownDiet
+                        dialogText = isGrazingDiet
+                                ? "Saya sedang merawat & menanam vegetasi untuk " + dialogAnimalName + "! Stok bibit: " + this.getFoodStock() + "x."
+                                : (isThrownDiet
                                 ? ZooTranslations.get("zootycoon.dialog.zookeeper.speech_with_animal_throw", dialogAnimalName, hungerColoredStr, String.valueOf(this.getFoodStock()))
-                                : ZooTranslations.get("zootycoon.dialog.zookeeper.speech_with_animal", dialogAnimalName, hungerColoredStr, String.valueOf(this.getFoodStock()));
+                                : ZooTranslations.get("zootycoon.dialog.zookeeper.speech_with_animal", dialogAnimalName, hungerColoredStr, String.valueOf(this.getFoodStock())));
                     }
                 }
             }
@@ -1971,6 +2007,107 @@ public class ZooZookeeperEntity extends PathfinderMob {
             }
         }
         return ItemStack.EMPTY;
+    }
+
+    public ItemStack peekMatchingVegetation(net.zootycoon.animal.AnimalDietRegistry.AnimalDiet diet) {
+        if (diet == null) return ItemStack.EMPTY;
+        for (int i = 0; i < FOOD_SLOTS; i++) {
+            ItemStack stack = this.foodInventory.getItem(i);
+            if (!stack.isEmpty() && (stack.is(diet.reforestationItem) || isMatchingVegetationItem(stack, diet))) {
+                return stack;
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
+    private boolean isMatchingVegetationItem(ItemStack stack, net.zootycoon.animal.AnimalDietRegistry.AnimalDiet diet) {
+        if (stack.is(diet.reforestationItem)) return true;
+        if (stack.getItem() instanceof net.minecraft.world.item.BlockItem bi) {
+            return diet.naturalFoodBlocks.contains(bi.getBlock());
+        }
+        return false;
+    }
+
+    public ItemStack takeMatchingVegetation(Item item, int maxCount) {
+        if (maxCount <= 0 || item == null) return ItemStack.EMPTY;
+        for (int i = 0; i < FOOD_SLOTS; i++) {
+            ItemStack stack = this.foodInventory.getItem(i);
+            if (!stack.isEmpty() && stack.is(item)) {
+                int toTake = Math.min(stack.getCount(), maxCount);
+                ItemStack taken = stack.split(toTake);
+                if (stack.isEmpty()) {
+                    this.foodInventory.setItem(i, ItemStack.EMPTY);
+                }
+                updateFoodStockFromInventory();
+                return taken;
+            }
+        }
+        return takeFirstFood(maxCount);
+    }
+
+    private BlockPos findValidPlantingSpotNearAnimal(ServerLevel sLevel, LivingEntity animal, Item item) {
+        BlockPos center = animal.blockPosition();
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        int radius = 8;
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                if (dx * dx + dz * dz > radius * radius) continue;
+                for (int dy = -2; dy <= 2; dy++) {
+                    pos.set(center.getX() + dx, center.getY() + dy, center.getZ() + dz);
+                    var groundState = sLevel.getBlockState(pos);
+                    var aboveState = sLevel.getBlockState(pos.above());
+
+                    if (item == Items.GRASS_BLOCK) {
+                        if ((groundState.is(Blocks.DIRT) || groundState.is(Blocks.COARSE_DIRT)) && aboveState.isAir()) {
+                            return pos.immutable();
+                        }
+                    } else if (item == Items.CACTUS) {
+                        if ((groundState.is(Blocks.SAND) || groundState.is(Blocks.RED_SAND)) && aboveState.isAir()) {
+                            BlockPos ab = pos.above();
+                            if (sLevel.getBlockState(ab.north()).isAir() && sLevel.getBlockState(ab.south()).isAir()
+                                    && sLevel.getBlockState(ab.east()).isAir() && sLevel.getBlockState(ab.west()).isAir()) {
+                                return pos.immutable();
+                            }
+                        }
+                    } else if (item == Items.BAMBOO) {
+                        if ((groundState.is(Blocks.GRASS_BLOCK) || groundState.is(Blocks.DIRT) || groundState.is(Blocks.SAND)) && aboveState.isAir()) {
+                            return pos.immutable();
+                        }
+                    } else {
+                        if ((groundState.is(Blocks.GRASS_BLOCK) || groundState.is(Blocks.DIRT)) && aboveState.isAir()) {
+                            return pos.immutable();
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private void plantVegetationBlock(ServerLevel sLevel, BlockPos pos, Item item) {
+        if (item == Items.GRASS_BLOCK) {
+            sLevel.setBlockAndUpdate(pos, Blocks.GRASS_BLOCK.defaultBlockState());
+        } else if (item == Items.BAMBOO) {
+            sLevel.setBlockAndUpdate(pos.above(), Blocks.BAMBOO.defaultBlockState());
+        } else if (item == Items.CACTUS) {
+            sLevel.setBlockAndUpdate(pos.above(), Blocks.CACTUS.defaultBlockState());
+        } else if (item == Items.ACACIA_SAPLING) {
+            sLevel.setBlockAndUpdate(pos.above(), Blocks.ACACIA_SAPLING.defaultBlockState());
+        } else if (item == Items.OAK_SAPLING) {
+            sLevel.setBlockAndUpdate(pos.above(), Blocks.OAK_SAPLING.defaultBlockState());
+        } else if (item == Items.CHERRY_SAPLING) {
+            sLevel.setBlockAndUpdate(pos.above(), Blocks.CHERRY_SAPLING.defaultBlockState());
+        } else if (item == Items.DANDELION) {
+            sLevel.setBlockAndUpdate(pos.above(), Blocks.DANDELION.defaultBlockState());
+        } else if (item == Items.POPPY) {
+            sLevel.setBlockAndUpdate(pos.above(), Blocks.POPPY.defaultBlockState());
+        } else if (item == Items.RED_MUSHROOM) {
+            sLevel.setBlockAndUpdate(pos.above(), Blocks.RED_MUSHROOM.defaultBlockState());
+        } else if (item == Items.BROWN_MUSHROOM) {
+            sLevel.setBlockAndUpdate(pos.above(), Blocks.BROWN_MUSHROOM.defaultBlockState());
+        } else if (item instanceof net.minecraft.world.item.BlockItem bi) {
+            sLevel.setBlockAndUpdate(pos.above(), bi.getBlock().defaultBlockState());
+        }
     }
 
     public int getFoodStock() {

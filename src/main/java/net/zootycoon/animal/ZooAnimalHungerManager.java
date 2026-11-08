@@ -350,6 +350,7 @@ public class ZooAnimalHungerManager {
                 net.zootycoon.animal.ai.AnimalDrinkWaterGoal.attach(pathfinderMob);
                 net.zootycoon.animal.ai.AnimalEatDroppedFoodGoal.attach(pathfinderMob);
                 net.zootycoon.animal.ai.AnimalEatFromTroughGoal.attach(pathfinderMob);
+                net.zootycoon.animal.ai.AnimalGrazeNaturalBlockGoal.attach(pathfinderMob);
             }
             if (animal instanceof Mob mob) {
                 handleUniversalAnimalNeeds(level, mob);
@@ -611,7 +612,48 @@ public class ZooAnimalHungerManager {
 
         // 2. Hunger pathing: Feeding trough (when hunger <= 90) OR dropped food items in vicinity
         AnimalDietRegistry.FeedingType feedingType = AnimalDietRegistry.getFeedingType(mob);
-        if (feedingType == AnimalDietRegistry.FeedingType.TROUGH && hunger <= 90) {
+        if (feedingType == AnimalDietRegistry.FeedingType.GRAZING && hunger <= 90) {
+            Set<net.minecraft.world.level.block.Block> blocks = AnimalDietRegistry.getNaturalFoodBlocks(mob);
+            if (!blocks.isEmpty()) {
+                BlockPos mobPos = mob.blockPosition();
+                BlockPos.MutableBlockPos mPos = new BlockPos.MutableBlockPos();
+                BlockPos bestBlock = null;
+                double bestDist = Double.MAX_VALUE;
+                for (int dx = -12; dx <= 12; dx++) {
+                    for (int dz = -12; dz <= 12; dz++) {
+                        for (int dy = -3; dy <= 4; dy++) {
+                            mPos.set(mobPos.getX() + dx, mobPos.getY() + dy, mobPos.getZ() + dz);
+                            if (blocks.contains(level.getBlockState(mPos).getBlock())) {
+                                double d = mob.distanceToSqr(mPos.getX() + 0.5, mPos.getY() + 0.5, mPos.getZ() + 0.5);
+                                if (d < bestDist) {
+                                    bestDist = d;
+                                    bestBlock = mPos.immutable();
+                                }
+                            }
+                        }
+                    }
+                }
+                if (bestBlock != null) {
+                    double maxEatDist = Math.max(2.4D, (mob.getBbWidth() * 0.5D) + 1.2D);
+                    if (mob.blockPosition().closerThan(bestBlock, maxEatDist)) {
+                        mob.getNavigation().stop();
+                        mob.getLookControl().setLookAt(bestBlock.getX() + 0.5, bestBlock.getY() + 0.2, bestBlock.getZ() + 0.5);
+                        var state = level.getBlockState(bestBlock);
+                        level.playSound(null, bestBlock, SoundEvents.GRASS_BREAK, SoundSource.BLOCKS, 0.8F, 1.0F);
+                        if (state.is(Blocks.GRASS_BLOCK)) {
+                            level.setBlockAndUpdate(bestBlock, Blocks.DIRT.defaultBlockState());
+                        } else {
+                            level.destroyBlock(bestBlock, false);
+                        }
+                        setHunger(mob, MAX_HUNGER);
+                        level.sendParticles(ParticleTypes.HEART, mob.getX(), mob.getY() + mob.getBbHeight() * 0.7, mob.getZ(), 4, 0.3, 0.3, 0.3, 0.02);
+                        return;
+                    } else {
+                        mob.getNavigation().moveTo(bestBlock.getX() + 0.5, bestBlock.getY(), bestBlock.getZ() + 0.5, 1.15);
+                    }
+                }
+            }
+        } else if ((feedingType == AnimalDietRegistry.FeedingType.TROUGH || feedingType == AnimalDietRegistry.FeedingType.SPECIAL_TROUGH) && hunger <= 90) {
             BlockPos closestFoodTrough = null;
             ZooFeedingTroughBlockEntity targetFoodTrough = null;
             double closestFoodDist = Double.MAX_VALUE;
@@ -716,6 +758,7 @@ public class ZooAnimalHungerManager {
                 net.zootycoon.animal.ai.AnimalDrinkWaterGoal.attach(pMob);
                 net.zootycoon.animal.ai.AnimalEatDroppedFoodGoal.attach(pMob);
                 net.zootycoon.animal.ai.AnimalEatFromTroughGoal.attach(pMob);
+                net.zootycoon.animal.ai.AnimalGrazeNaturalBlockGoal.attach(pMob);
             }
             if (!HUNGER_MAP.containsKey(entity.getUUID())) {
                 setHunger(entity, MAX_HUNGER);

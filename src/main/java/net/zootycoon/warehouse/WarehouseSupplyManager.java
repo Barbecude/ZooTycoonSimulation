@@ -241,6 +241,16 @@ public class WarehouseSupplyManager {
                         }
                     }
                     currentCount = Math.min(requiredCount, Math.max(count, fuelTicks / FUEL_TICKS_PER_ITEM));
+                } else if (isVegetationRequest(req)) {
+                    requiredCount = req.careRemaining;
+                    int count = 0;
+                    for (int i = 0; i < barrel.getContainerSize(); i++) {
+                        ItemStack st = barrel.getItem(i);
+                        if (!st.isEmpty() && isTargetItem(req, st)) {
+                            count += st.getCount();
+                        }
+                    }
+                    currentCount = Math.min(requiredCount, count);
                 } else {
                     requiredCount = 2;
                     boolean hasCan = false;
@@ -272,9 +282,9 @@ public class WarehouseSupplyManager {
                 }
             } else {
                 boolean full = canBarrelFulfill(sLevel, barrel, req);
-                // The checklist can deliver food, fuel or coolant partially; bathing tools still need both
+                // The checklist can deliver food, fuel, coolant or vegetation partially; bathing tools still need both
                 boolean bathingTools = EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(req.category)
-                        && !isHeatingRequest(req) && !isCoolingRequest(req);
+                        && !isHeatingRequest(req) && !isCoolingRequest(req) && !isVegetationRequest(req);
                 allReady = bathingTools ? full : currentCount > 0;
                 if (full && req.readySinceGameTime < 0L) {
                     req.readySinceGameTime = sLevel.getGameTime();
@@ -345,13 +355,18 @@ public class WarehouseSupplyManager {
                         it.remove();
                     }
                 } else if (EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(req.category)) {
-                    if (req.partiallyDelivered && (isHeatingRequest(req) || isCoolingRequest(req))) {
-                        // Keep until the remaining fuel or coolant is delivered
+                    if (req.partiallyDelivered && (isHeatingRequest(req) || isCoolingRequest(req) || isVegetationRequest(req))) {
+                        // Keep until the remaining fuel, coolant or vegetation is delivered
                     } else if (isHeatingRequest(req) && keeper.hasCoal()) {
                         it.remove();
                     } else if (isCoolingRequest(req) && keeper.hasIce()) {
                         it.remove();
-                    } else if (!isHeatingRequest(req) && !isCoolingRequest(req) && keeper.hasBathingTools()) {
+                    } else if (isVegetationRequest(req)) {
+                        LivingEntity targetAnimal = resolveAnimal(sLevel, req.animalUuid);
+                        if (targetAnimal != null && net.zootycoon.animal.AnimalDietRegistry.hasNaturalFoodNearby(sLevel, targetAnimal)) {
+                            it.remove();
+                        }
+                    } else if (!isHeatingRequest(req) && !isCoolingRequest(req) && !isVegetationRequest(req) && keeper.hasBathingTools()) {
                         it.remove();
                     }
                 }
@@ -485,7 +500,7 @@ public class WarehouseSupplyManager {
             }
             message = "Cashier meminta " + itemsSummary;
         } else if (EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(req.category)) {
-            String careItem = isHeatingRequest(req) ? "Pemanas" : (isCoolingRequest(req) ? "Pendingin" : "Alat Mandi");
+            String careItem = isHeatingRequest(req) ? "Pemanas" : (isCoolingRequest(req) ? "Pendingin" : (isVegetationRequest(req) ? "Vegetasi" : "Alat Mandi"));
             message = "Zookeeper Meminta " + careItem + " untuk " + (req.animalName != null ? req.animalName : "Satwa");
         } else {
             StringBuilder foodSummary = new StringBuilder();
@@ -565,11 +580,18 @@ public class WarehouseSupplyManager {
         int totalFoodNeeded = Math.min(256, Math.max(64, familySize * 64));
         req.requiredFoodCount = totalFoodNeeded;
 
-        List<ItemStack> allFoods = AnimalDietRegistry.getFoodsForAnimal(animal);
-        if (allFoods != null && !allFoods.isEmpty()) {
-            for (ItemStack foodSt : allFoods) {
-                if (foodSt != null && !foodSt.isEmpty()) {
-                    req.targetItems.add(new ItemStack(foodSt.getItem(), foodPerVariant));
+        var diet = AnimalDietRegistry.getDiet(animal);
+        if (diet != null && diet.feedingType == AnimalDietRegistry.FeedingType.GRAZING) {
+            req.requiredFoodCount = diet.reforestationCount;
+            req.subtitle = "Satwa: " + animalName + " (" + diet.missingBlockLabel + ")";
+            req.targetItems.add(new ItemStack(diet.reforestationItem, diet.reforestationCount));
+        } else {
+            List<ItemStack> allFoods = AnimalDietRegistry.getFoodsForAnimal(animal);
+            if (allFoods != null && !allFoods.isEmpty()) {
+                for (ItemStack foodSt : allFoods) {
+                    if (foodSt != null && !foodSt.isEmpty()) {
+                        req.targetItems.add(new ItemStack(foodSt.getItem(), foodPerVariant));
+                    }
                 }
             }
         }
@@ -656,9 +678,34 @@ public class WarehouseSupplyManager {
                 req.requiredRawIngredients.put(Items.BRUSH, 1);
                 return req;
             }
+
+            var mDiet = net.zootycoon.animal.AnimalDietRegistry.getDiet(m);
+            if (mDiet != null && mDiet.feedingType == net.zootycoon.animal.AnimalDietRegistry.FeedingType.GRAZING) {
+                if (!net.zootycoon.animal.AnimalDietRegistry.hasNaturalFoodNearby(sLevel, m)) {
+                    StaffSupplyRequest req = new StaffSupplyRequest(
+                            keeper.getUUID(),
+                            keeper.getId(),
+                            EmptyBarrelBlockEntity.CAT_ANIMAL_CARE,
+                            "ZOOKEEPER",
+                            keeperName,
+                            "Kebutuhan: Vegetasi (" + mName + " Butuh " + mDiet.missingBlockLabel + ")"
+                    );
+                    req.animalUuid = m.getUUID();
+                    req.animalName = mName;
+                    req.careRemaining = mDiet.reforestationCount;
+                    req.targetItems.add(new ItemStack(mDiet.reforestationItem, mDiet.reforestationCount));
+                    req.requiredRawIngredients.put(mDiet.reforestationItem, mDiet.reforestationCount);
+                    return req;
+                }
+            }
         }
 
         return null;
+    }
+
+    public static boolean isVegetationRequest(StaffSupplyRequest req) {
+        if (req == null) return false;
+        return (req.subtitle != null && req.subtitle.contains("Vegetasi"));
     }
 
     public static boolean isCoolingRequest(StaffSupplyRequest req) {
@@ -672,6 +719,16 @@ public class WarehouseSupplyManager {
         return (req.subtitle != null && req.subtitle.contains("Pemanas"))
                 || (req.subtitle != null && req.subtitle.contains("Bahan Bakar"))
                 || req.requiredRawIngredients.containsKey(Items.COAL);
+    }
+
+    public static boolean isTargetItem(StaffSupplyRequest req, ItemStack stack) {
+        if (req == null || stack == null || stack.isEmpty()) return false;
+        for (ItemStack target : req.targetItems) {
+            if (target.is(stack.getItem())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static boolean canBarrelFulfill(ServerLevel sLevel, EmptyBarrelBlockEntity barrel, StaffSupplyRequest req) {
@@ -717,6 +774,15 @@ public class WarehouseSupplyManager {
                     }
                 }
                 return count >= req.careRemaining || coolingTicks >= req.careRemaining * COOLING_TICKS_PER_ITEM;
+            } else if (isVegetationRequest(req)) {
+                int count = 0;
+                for (int i = 0; i < barrel.getContainerSize(); i++) {
+                    ItemStack st = barrel.getItem(i);
+                    if (!st.isEmpty() && isTargetItem(req, st)) {
+                        count += st.getCount();
+                    }
+                }
+                return count >= req.careRemaining;
             } else {
                 boolean hasCan = false;
                 boolean hasBrush = false;
@@ -947,6 +1013,37 @@ public class WarehouseSupplyManager {
                         req.careRemaining = remainingTicks <= 0 ? 0 : Math.max(0, remainingCount);
                         sLevel.playSound(null, barrel.getBlockPos(), SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8F, 1.1F);
                         sLevel.playSound(null, keeper.blockPosition(), SoundEvents.GLASS_PLACE, SoundSource.NEUTRAL, 0.8F, 1.1F);
+                        sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, keeper.getX(), keeper.getY() + 1.2D, keeper.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
+                        return true;
+                    }
+                    return false;
+                } else if (isVegetationRequest(req)) {
+                    int remainingCount = req.careRemaining;
+                    int totalGiven = 0;
+                    for (int i = 0; i < barrel.getContainerSize() && remainingCount > 0; i++) {
+                        ItemStack st = barrel.getItem(i);
+                        if (!st.isEmpty() && isTargetItem(req, st)) {
+                            int toTake = Math.min(st.getCount(), remainingCount);
+                            ItemStack split = st.split(toTake);
+                            ItemStack leftover = keeper.getFoodInventory().addItem(split);
+                            int added = toTake - leftover.getCount();
+                            if (!leftover.isEmpty()) {
+                                st.grow(leftover.getCount());
+                            }
+                            if (st.isEmpty()) {
+                                barrel.setItem(i, ItemStack.EMPTY);
+                            }
+                            totalGiven += added;
+                            remainingCount -= added;
+                            if (!leftover.isEmpty()) break;
+                        }
+                    }
+                    barrel.setChanged();
+                    if (totalGiven > 0) {
+                        req.careRemaining = Math.max(0, remainingCount);
+                        keeper.updateFoodStockFromInventory();
+                        sLevel.playSound(null, barrel.getBlockPos(), SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8F, 1.1F);
+                        sLevel.playSound(null, keeper.blockPosition(), SoundEvents.GRASS_PLACE, SoundSource.NEUTRAL, 0.8F, 1.1F);
                         sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, keeper.getX(), keeper.getY() + 1.2D, keeper.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
                         return true;
                     }
@@ -1708,6 +1805,10 @@ public class WarehouseSupplyManager {
                 title = "Pemanas " + targetDesc + " (Min. 16)";
                 sectionTitle = "Bahan Bakar / Pemanas";
                 neededCount = 16;
+            } else if (isVegetationRequest(req)) {
+                title = "Vegetasi " + targetDesc + " (Min. " + req.careRemaining + ")";
+                sectionTitle = "Bibit & Vegetasi";
+                neededCount = req.careRemaining;
             } else {
                 title = "Alat Mandi " + targetDesc;
                 sectionTitle = "Peralatan Kebersihan";
@@ -1767,6 +1868,8 @@ public class WarehouseSupplyManager {
             customItemName = Component.literal("Catatan Pendingin: " + (req.animalName != null ? req.animalName : req.staffName));
         } else if (isHeatingRequest(req)) {
             customItemName = Component.literal("Catatan Pemanas: " + (req.animalName != null ? req.animalName : req.staffName));
+        } else if (isVegetationRequest(req)) {
+            customItemName = Component.literal("Catatan Vegetasi: " + (req.animalName != null ? req.animalName : req.staffName));
         } else if (EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(req.category)) {
             customItemName = Component.translatable("zootycoon.warehouse.note.care_name", req.animalName != null ? req.animalName : req.staffName);
         } else {

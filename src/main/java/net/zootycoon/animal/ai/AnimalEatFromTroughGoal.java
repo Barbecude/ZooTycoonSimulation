@@ -41,7 +41,8 @@ public class AnimalEatFromTroughGoal extends MoveToBlockGoal {
         if (!ZooAnimalHungerManager.isTagged(this.mob)) return false;
 
         // Only for trough-feeding animals
-        if (AnimalDietRegistry.getFeedingType(this.mob) != AnimalDietRegistry.FeedingType.TROUGH) {
+        AnimalDietRegistry.FeedingType fType = AnimalDietRegistry.getFeedingType(this.mob);
+        if (fType != AnimalDietRegistry.FeedingType.TROUGH && fType != AnimalDietRegistry.FeedingType.SPECIAL_TROUGH) {
             return false;
         }
 

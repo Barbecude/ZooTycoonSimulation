@@ -443,30 +443,37 @@ public final class ZooEconomyEngine {
 
     /**
      * Menghitung kapasitas maksimal pengunjung di area kebun binatang.
+     * Berskala bertahap tinggi hingga 250+ pengunjung berdasarkan jumlah kasir, satwa aktif, fasilitas, dan rating.
      */
     public static int calculateMaxVisitorCapacity(int cashierCount, double starRating, int ticketPrice) {
+        return calculateMaxVisitorCapacity(cashierCount, starRating, ticketPrice, 0, 0);
+    }
+
+    public static int calculateMaxVisitorCapacity(int cashierCount, double starRating, int ticketPrice, int animalCount, int facilityCount) {
         try {
-            int base = BASE_VISITOR_CAPACITY + (Math.max(0, cashierCount) * CASHIER_CAPACITY_BONUS);
+            int base = 25 + (Math.max(0, cashierCount) * CASHIER_CAPACITY_BONUS)
+                    + (Math.max(0, animalCount) * 4)
+                    + (Math.max(0, facilityCount) * 2);
             int expected = getExpectedTicketPrice(starRating);
 
             int capacity;
             if (ticketPrice <= 0) {
                 // Free admission: bonus kapasitas masif
-                capacity = base + FREE_TICKET_EXTRA_CAPACITY + (int) Math.round(starRating * FREE_TICKET_STAR_MULTIPLIER);
+                capacity = base + FREE_TICKET_EXTRA_CAPACITY + (int) Math.round(starRating * 12.0D);
             } else if (ticketPrice <= expected) {
                 // Harga wajar atau murah
-                capacity = base + (int) Math.round(starRating * NORMAL_TICKET_STAR_MULTIPLIER);
+                capacity = base + (int) Math.round(starRating * 8.0D);
             } else {
                 // Kemahalan
                 // Zoo bintang tinggi (>= 4.5) tetap mempertahankan kapasitas stabil meski harga tinggi
                 if (starRating >= HIGH_RATING_PRICE_TOLERANCE_THRESHOLD) {
-                    capacity = base + (int) Math.round(starRating * NORMAL_TICKET_STAR_MULTIPLIER);
+                    capacity = base + (int) Math.round(starRating * 8.0D);
                 } else {
                     int diff = ticketPrice - expected;
-                    capacity = Math.max(MIN_OVERPRICED_CAPACITY, base + (int) Math.round(starRating * 1.5D) - (int) Math.round(diff * OVERPRICED_CAPACITY_PENALTY_PER_EMERALD));
+                    capacity = Math.max(MIN_OVERPRICED_CAPACITY, base + (int) Math.round(starRating * 2.0D) - (int) Math.round(diff * OVERPRICED_CAPACITY_PENALTY_PER_EMERALD));
                 }
             }
-            return Math.min(150, Math.max(MIN_OVERPRICED_CAPACITY, capacity));
+            return Math.min(300, Math.max(MIN_OVERPRICED_CAPACITY, capacity));
         } catch (Throwable t) {
             return 25;
         }
@@ -509,12 +516,29 @@ public final class ZooEconomyEngine {
      * Memberikan jeda yang wajar agar tidak terjadi antrean menumpuk secara instan, terutama saat tiket gratis.
      */
     public static int getVisitorSpawnIntervalTicks(int ticketPrice, net.minecraft.util.RandomSource random) {
+        return getVisitorSpawnIntervalTicks(ticketPrice, 5.0D, random);
+    }
+
+    public static int getVisitorSpawnIntervalTicks(int ticketPrice, double starRating, net.minecraft.util.RandomSource random) {
         try {
-            int base = ticketPrice <= 0 ? VISITOR_SPAWN_INTERVAL_FREE_TICKS : VISITOR_SPAWN_INTERVAL_TICKS;
-            int jitter = random != null ? random.nextInt(41) - 20 : 0;
-            return Math.max(120, base + jitter);
+            int base;
+            if (ticketPrice <= 0) {
+                base = VISITOR_SPAWN_INTERVAL_FREE_TICKS;
+            } else {
+                if (starRating >= 4.5D) {
+                    base = 80;
+                } else if (starRating >= 3.5D) {
+                    base = 110;
+                } else if (starRating >= 2.5D) {
+                    base = 140;
+                } else {
+                    base = 180;
+                }
+            }
+            int jitter = random != null ? random.nextInt(31) - 15 : 0;
+            return Math.max(60, base + jitter);
         } catch (Throwable t) {
-            return 160;
+            return 120;
         }
     }
 
