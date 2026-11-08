@@ -606,13 +606,7 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
     @Override
     protected void renderDialogContent(GuiGraphics graphics, int contentX, int contentY, int contentW, int contentH, int mouseX, int mouseY, float delta) {
         if ("TICKET".equalsIgnoreCase(currentRole)) {
-            if (activeTicketTab == 0) {
-                int bubbleH = getSpeechBubbleHeight();
-                int buttonsY = startY + 60 + bubbleH + 8;
-                int labelY = buttonsY + 24;
-                String tierLabel = net.zootycoon.economy.ZooEconomyEngine.getTicketPriceTierLabel(this.ticketPrice);
-                graphics.drawString(this.font, Component.literal("Kategori: " + tierLabel), contentX, labelY, 0xFFBBBBBB, false);
-            } else {
+            if (activeTicketTab != 0) {
                 renderFeedbackTab(graphics, contentX, contentY, contentW, contentH, mouseX, mouseY, delta);
             }
             return;
