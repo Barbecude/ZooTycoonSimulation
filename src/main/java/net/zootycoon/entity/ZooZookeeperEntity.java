@@ -2005,7 +2005,7 @@ public class ZooZookeeperEntity extends PathfinderMob {
         if (diet == null) return ItemStack.EMPTY;
         for (int i = 0; i < FOOD_SLOTS; i++) {
             ItemStack stack = this.foodInventory.getItem(i);
-            if (!stack.isEmpty() && (stack.is(diet.reforestationItem) || isMatchingVegetationItem(stack, diet))) {
+            if (!stack.isEmpty() && isMatchingVegetationItem(stack, diet)) {
                 return stack;
             }
         }
@@ -2013,11 +2013,29 @@ public class ZooZookeeperEntity extends PathfinderMob {
     }
 
     private boolean isMatchingVegetationItem(ItemStack stack, net.zootycoon.animal.AnimalDietRegistry.AnimalDiet diet) {
-        if (stack.is(diet.reforestationItem)) return true;
-        if (diet.reforestationItem == Items.BONE_MEAL && stack.is(Items.BONE_MEAL)) return true;
-        if (stack.getItem() instanceof net.minecraft.world.item.BlockItem bi) {
-            return diet.naturalFoodBlocks.contains(bi.getBlock());
+        if (stack.isEmpty() || diet == null) return false;
+        // DILARANG MENANAM DAUN DI LANTAI! Daun hanya ada di pohon yang tumbuh dari sapling.
+        if (stack.is(net.minecraft.tags.ItemTags.LEAVES)
+                || (stack.getItem() instanceof net.minecraft.world.item.BlockItem bi && bi.getBlock() instanceof net.minecraft.world.level.block.LeavesBlock)) {
+            return false;
         }
+
+        // Reforestation item spesifik (misal: ACACIA_SAPLING, BONE_MEAL, BAMBOO, CACTUS, dsb)
+        if (diet.reforestationItem != null && stack.is(diet.reforestationItem)) {
+            return true;
+        }
+        if (diet.reforestationItem == Items.BONE_MEAL && stack.is(Items.BONE_MEAL)) {
+            return true;
+        }
+
+        // Sapling pohon (hanya jika satwa butuh sapling/pohon)
+        boolean isTreeAnimal = diet.reforestationItem != null && (diet.reforestationItem.getDefaultInstance().is(net.minecraft.tags.ItemTags.SAPLINGS)
+                || (diet.reforestationItem instanceof net.minecraft.world.item.BlockItem rbi && rbi.getBlock() instanceof net.minecraft.world.level.block.SaplingBlock));
+        if (isTreeAnimal && (stack.is(net.minecraft.tags.ItemTags.SAPLINGS)
+                || (stack.getItem() instanceof net.minecraft.world.item.BlockItem bi && bi.getBlock() instanceof net.minecraft.world.level.block.SaplingBlock))) {
+            return true;
+        }
+
         return false;
     }
 
@@ -2045,6 +2063,11 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
     private BlockPos findValidPlantingSpotNearAnimal(ServerLevel sLevel, LivingEntity animal, Item item) {
         if (sLevel == null || animal == null || item == null) return null;
+        // DILARANG MENANAM BLOK DAUN DI LANTAI! Daun hanya ada di pohon yang tumbuh dari sapling.
+        if (item.getDefaultInstance().is(net.minecraft.tags.ItemTags.LEAVES)
+                || (item instanceof net.minecraft.world.item.BlockItem bi && bi.getBlock() instanceof net.minecraft.world.level.block.LeavesBlock)) {
+            return null;
+        }
         BlockPos center = animal.blockPosition();
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
         int radius = 10;
@@ -2112,7 +2135,7 @@ public class ZooZookeeperEntity extends PathfinderMob {
                                 }
                             }
                         }
-                    } else {
+                    } else if (item == Items.DANDELION || item == Items.POPPY || item == Items.RED_MUSHROOM || item == Items.BROWN_MUSHROOM) {
                         if ((groundState.is(Blocks.GRASS_BLOCK) || groundState.is(Blocks.DIRT)) && aboveState.isAir()) {
                             isValidSpot = true;
                         }
@@ -2243,6 +2266,12 @@ public class ZooZookeeperEntity extends PathfinderMob {
     }
 
     private void plantVegetationBlock(ServerLevel sLevel, BlockPos pos, Item item) {
+        // DILARANG MENANAM BLOK DAUN DI LANTAI!
+        if (item.getDefaultInstance().is(net.minecraft.tags.ItemTags.LEAVES)
+                || (item instanceof net.minecraft.world.item.BlockItem bi && bi.getBlock() instanceof net.minecraft.world.level.block.LeavesBlock)) {
+            return;
+        }
+
         if (item == Items.BONE_MEAL) {
             BlockState state = sLevel.getBlockState(pos);
             if (state.getBlock() instanceof net.minecraft.world.level.block.BonemealableBlock bonemealable) {
@@ -2268,6 +2297,14 @@ public class ZooZookeeperEntity extends PathfinderMob {
             sLevel.setBlockAndUpdate(pos.above(), Blocks.OAK_SAPLING.defaultBlockState());
         } else if (item == Items.CHERRY_SAPLING) {
             sLevel.setBlockAndUpdate(pos.above(), Blocks.CHERRY_SAPLING.defaultBlockState());
+        } else if (item == Items.SPRUCE_SAPLING) {
+            sLevel.setBlockAndUpdate(pos.above(), Blocks.SPRUCE_SAPLING.defaultBlockState());
+        } else if (item == Items.BIRCH_SAPLING) {
+            sLevel.setBlockAndUpdate(pos.above(), Blocks.BIRCH_SAPLING.defaultBlockState());
+        } else if (item == Items.JUNGLE_SAPLING) {
+            sLevel.setBlockAndUpdate(pos.above(), Blocks.JUNGLE_SAPLING.defaultBlockState());
+        } else if (item == Items.DARK_OAK_SAPLING) {
+            sLevel.setBlockAndUpdate(pos.above(), Blocks.DARK_OAK_SAPLING.defaultBlockState());
         } else if (item == Items.DANDELION) {
             sLevel.setBlockAndUpdate(pos.above(), Blocks.DANDELION.defaultBlockState());
         } else if (item == Items.POPPY) {
@@ -2277,7 +2314,9 @@ public class ZooZookeeperEntity extends PathfinderMob {
         } else if (item == Items.BROWN_MUSHROOM) {
             sLevel.setBlockAndUpdate(pos.above(), Blocks.BROWN_MUSHROOM.defaultBlockState());
         } else if (item instanceof net.minecraft.world.item.BlockItem bi) {
-            sLevel.setBlockAndUpdate(pos.above(), bi.getBlock().defaultBlockState());
+            if (!(bi.getBlock() instanceof net.minecraft.world.level.block.LeavesBlock)) {
+                sLevel.setBlockAndUpdate(pos.above(), bi.getBlock().defaultBlockState());
+            }
         }
     }
 
