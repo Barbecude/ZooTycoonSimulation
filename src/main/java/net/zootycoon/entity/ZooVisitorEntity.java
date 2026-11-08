@@ -3229,6 +3229,8 @@ public class ZooVisitorEntity extends PathfinderMob {
             if (visitor.isTimeToLeave() || visitor.isPassenger()) return false;
             if (visitor.needsToilet()) return false;
             if (visitor.hasTrash()) return false;
+            // Pengunjung baru datang wajib melihat satwa terlebih dahulu sebelum boleh duduk bersantai
+            if (!visitor.hasWatchedAnimal()) return false;
 
             if (visitor.postPurchaseEatMode == EAT_MODE_SEAT) {
                 // Priority activation: eating on seat
