@@ -2022,10 +2022,16 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
     private boolean isMatchingVegetationItem(ItemStack stack, net.zootycoon.animal.AnimalDietRegistry.AnimalDiet diet) {
         if (stack.is(diet.reforestationItem)) return true;
+        if (diet.reforestationItem == Items.BONE_MEAL && stack.is(Items.BONE_MEAL)) return true;
         if (stack.getItem() instanceof net.minecraft.world.item.BlockItem bi) {
             return diet.naturalFoodBlocks.contains(bi.getBlock());
         }
         return false;
+    }
+
+    public boolean hasVegetationSupplies(net.zootycoon.animal.AnimalDietRegistry.AnimalDiet diet) {
+        if (diet == null) return false;
+        return !peekMatchingVegetation(diet).isEmpty();
     }
 
     public ItemStack takeMatchingVegetation(Item item, int maxCount) {
@@ -2057,8 +2063,8 @@ public class ZooZookeeperEntity extends PathfinderMob {
                     var groundState = sLevel.getBlockState(pos);
                     var aboveState = sLevel.getBlockState(pos.above());
 
-                    if (item == Items.GRASS_BLOCK) {
-                        if ((groundState.is(Blocks.DIRT) || groundState.is(Blocks.COARSE_DIRT)) && aboveState.isAir()) {
+                    if (item == Items.BONE_MEAL || item == Items.GRASS_BLOCK) {
+                        if (groundState.is(Blocks.GRASS_BLOCK) && aboveState.isAir()) {
                             return pos.immutable();
                         }
                     } else if (item == Items.CACTUS) {
@@ -2085,7 +2091,10 @@ public class ZooZookeeperEntity extends PathfinderMob {
     }
 
     private void plantVegetationBlock(ServerLevel sLevel, BlockPos pos, Item item) {
-        if (item == Items.GRASS_BLOCK) {
+        if (item == Items.BONE_MEAL) {
+            sLevel.levelEvent(1505, pos, 0);
+            sLevel.setBlockAndUpdate(pos.above(), Blocks.SHORT_GRASS.defaultBlockState());
+        } else if (item == Items.GRASS_BLOCK) {
             sLevel.setBlockAndUpdate(pos, Blocks.GRASS_BLOCK.defaultBlockState());
         } else if (item == Items.BAMBOO) {
             sLevel.setBlockAndUpdate(pos.above(), Blocks.BAMBOO.defaultBlockState());

@@ -310,6 +310,12 @@ public class ZooCashierEntity extends PathfinderMob {
         return total;
     }
 
+    public static boolean canMergeStock(ItemStack a, ItemStack b) {
+        if (a == null || b == null || a.isEmpty() || b.isEmpty()) return false;
+        if (a.getItem() != b.getItem()) return false;
+        return ItemStack.isSameItemSameComponents(a, b) || a.getItem() == b.getItem();
+    }
+
     public void consolidateStock() {
         int maxStack = this.stockInventory.getMaxStackSize();
         for (int i = 0; i < STOCK_SLOTS; i++) {
@@ -317,7 +323,7 @@ public class ZooCashierEntity extends PathfinderMob {
             if (base.isEmpty()) continue;
             for (int j = i + 1; j < STOCK_SLOTS; j++) {
                 ItemStack other = this.stockInventory.getItem(j);
-                if (!other.isEmpty() && ItemStack.isSameItemSameComponents(base, other)) {
+                if (!other.isEmpty() && canMergeStock(base, other)) {
                     int space = maxStack - base.getCount();
                     if (space > 0) {
                         int move = Math.min(space, other.getCount());

@@ -2169,48 +2169,54 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                     }
 
                     int maxToMove = payload.singleItem() ? 1 : pStack.getCount();
-                    int movedTotal = 0;
                     int targetSlot = payload.cashierSlot();
-                    int slotCap = pStack.getMaxStackSize();
+                    int slotCap = stockInv.getMaxStackSize();
 
-                    // 1. If a specific cashierSlot (0..4) was targeted, try inserting there first
-                    if (targetSlot >= 0 && targetSlot < net.zootycoon.entity.ZooCashierEntity.STOCK_SLOTS) {
-                        ItemStack existing = stockInv.getItem(targetSlot);
-                        if (existing.isEmpty()) {
-                            int cap = Math.min(maxToMove, slotCap);
-                            stockInv.setItem(targetSlot, pStack.split(cap));
-                            movedTotal += cap;
-                        } else if (canMergeStock(existing, pStack) && existing.getCount() < slotCap) {
-                            int space = slotCap - existing.getCount();
-                            int add = Math.min(maxToMove, space);
+                    // Check if this menu item already exists in ANY slot of the cashier
+                    int existingSlot = -1;
+                    for (int i = 0; i < net.zootycoon.entity.ZooCashierEntity.STOCK_SLOTS; i++) {
+                        ItemStack st = stockInv.getItem(i);
+                        if (!st.isEmpty() && net.zootycoon.entity.ZooCashierEntity.canMergeStock(st, pStack)) {
+                            existingSlot = i;
+                            break;
+                        }
+                    }
+
+                    int movedTotal = 0;
+
+                    if (existingSlot != -1) {
+                        // 1. Menu item is ALREADY assigned to existingSlot.
+                        // Strictly merge into this slot ONLY (up to 64). Never split into other slots!
+                        ItemStack existing = stockInv.getItem(existingSlot);
+                        int space = slotCap - existing.getCount();
+                        if (space > 0) {
+                            int add = Math.min(maxToMove, Math.min(space, pStack.getCount()));
                             existing.grow(add);
                             pStack.shrink(add);
                             movedTotal += add;
                         }
-                    }
-
-                    // 2. If auto-slot (-1) or still remaining items from a stack transfer, merge into existing stacks then empty slots
-                    int remaining = maxToMove - movedTotal;
-                    if (remaining > 0 && !pStack.isEmpty()) {
-                        for (int i = 0; i < net.zootycoon.entity.ZooCashierEntity.STOCK_SLOTS && remaining > 0 && !pStack.isEmpty(); i++) {
-                            ItemStack existing = stockInv.getItem(i);
-                            if (!existing.isEmpty() && canMergeStock(existing, pStack) && existing.getCount() < slotCap) {
-                                int space = slotCap - existing.getCount();
-                                int add = Math.min(remaining, Math.min(space, pStack.getCount()));
-                                existing.grow(add);
-                                pStack.shrink(add);
-                                remaining -= add;
-                                movedTotal += add;
+                    } else {
+                        // 2. Menu item is NEW (not yet in any cashier slot).
+                        // Assign it to 1 slot: either targetSlot if valid and empty, or the first empty slot.
+                        int destinationSlot = -1;
+                        if (targetSlot >= 0 && targetSlot < net.zootycoon.entity.ZooCashierEntity.STOCK_SLOTS) {
+                            if (stockInv.getItem(targetSlot).isEmpty()) {
+                                destinationSlot = targetSlot;
                             }
                         }
-                        for (int i = 0; i < net.zootycoon.entity.ZooCashierEntity.STOCK_SLOTS && remaining > 0 && !pStack.isEmpty(); i++) {
-                            ItemStack existing = stockInv.getItem(i);
-                            if (existing.isEmpty()) {
-                                int add = Math.min(remaining, Math.min(slotCap, pStack.getCount()));
-                                stockInv.setItem(i, pStack.split(add));
-                                remaining -= add;
-                                movedTotal += add;
+                        if (destinationSlot == -1) {
+                            for (int i = 0; i < net.zootycoon.entity.ZooCashierEntity.STOCK_SLOTS; i++) {
+                                if (stockInv.getItem(i).isEmpty()) {
+                                    destinationSlot = i;
+                                    break;
+                                }
                             }
+                        }
+
+                        if (destinationSlot != -1) {
+                            int add = Math.min(maxToMove, Math.min(slotCap, pStack.getCount()));
+                            stockInv.setItem(destinationSlot, pStack.split(add));
+                            movedTotal += add;
                         }
                     }
 

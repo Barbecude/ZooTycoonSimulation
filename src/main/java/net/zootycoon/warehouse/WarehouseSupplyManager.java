@@ -363,7 +363,8 @@ public class WarehouseSupplyManager {
                         it.remove();
                     } else if (isVegetationRequest(req)) {
                         LivingEntity targetAnimal = resolveAnimal(sLevel, req.animalUuid);
-                        if (targetAnimal != null && net.zootycoon.animal.AnimalDietRegistry.hasNaturalFoodNearby(sLevel, targetAnimal)) {
+                        var targetDiet = targetAnimal != null ? net.zootycoon.animal.AnimalDietRegistry.getDiet(targetAnimal) : null;
+                        if (keeper.hasVegetationSupplies(targetDiet) || (targetAnimal != null && net.zootycoon.animal.AnimalDietRegistry.hasNaturalFoodNearby(sLevel, targetAnimal))) {
                             it.remove();
                         }
                     } else if (!isHeatingRequest(req) && !isCoolingRequest(req) && !isVegetationRequest(req) && keeper.hasBathingTools()) {
@@ -681,14 +682,14 @@ public class WarehouseSupplyManager {
 
             var mDiet = net.zootycoon.animal.AnimalDietRegistry.getDiet(m);
             if (mDiet != null && mDiet.feedingType == net.zootycoon.animal.AnimalDietRegistry.FeedingType.GRAZING) {
-                if (!net.zootycoon.animal.AnimalDietRegistry.hasNaturalFoodNearby(sLevel, m)) {
+                if (!keeper.hasVegetationSupplies(mDiet) && !net.zootycoon.animal.AnimalDietRegistry.hasNaturalFoodNearby(sLevel, m)) {
                     StaffSupplyRequest req = new StaffSupplyRequest(
                             keeper.getUUID(),
                             keeper.getId(),
                             EmptyBarrelBlockEntity.CAT_ANIMAL_CARE,
                             "ZOOKEEPER",
                             keeperName,
-                            "Kebutuhan: Vegetasi (" + mName + " Butuh " + mDiet.missingBlockLabel + ")"
+                            "Kebutuhan: Vegetasi (" + mDiet.reforestationCount + "x " + mDiet.reforestationItem.getName(new ItemStack(mDiet.reforestationItem)).getString() + " untuk " + mName + ")"
                     );
                     req.animalUuid = m.getUUID();
                     req.animalName = mName;
@@ -905,7 +906,10 @@ public class WarehouseSupplyManager {
             return req.targetItems.isEmpty();
         }
         if (EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(req.category)) {
-            return (!isHeatingRequest(req) && !isCoolingRequest(req)) || req.careRemaining <= 0;
+            if (isHeatingRequest(req) || isCoolingRequest(req) || isVegetationRequest(req)) {
+                return req.careRemaining <= 0;
+            }
+            return true;
         }
         return req.requiredFoodCount <= 0;
     }
@@ -1622,13 +1626,14 @@ public class WarehouseSupplyManager {
         }
 
         String sub = req.subtitle != null ? req.subtitle.toLowerCase(java.util.Locale.ROOT) : "";
-        boolean isCare = sub.contains("pemanas") || sub.contains("pendingin") || sub.contains("alat mandi") || sub.contains("kotor") || sub.contains("kepanasan") || sub.contains("kedinginan");
+        boolean isCare = sub.contains("pemanas") || sub.contains("pendingin") || sub.contains("alat mandi") || sub.contains("kotor") || sub.contains("kepanasan") || sub.contains("kedinginan") || sub.contains("vegetasi");
 
         if (isCare) {
             int buyCount = count > 0 ? count : (itemStack.getMaxStackSize() > 1 ? 16 : 1);
             int cost = 16;
             if (net.zootycoon.animal.AnimalBathingManager.isWateringCan(itemStack)) cost = 6;
             else if (itemStack.is(net.minecraft.world.item.Items.BRUSH)) cost = 4;
+            else if (itemStack.is(net.minecraft.world.item.Items.BONE_MEAL)) cost = 4;
             else if (net.zootycoon.block.ZooHeaterBlock.getFuelTicks(itemStack) > 0) cost = Math.max(1, buyCount);
             else if (net.zootycoon.block.ZooCoolerBlock.getCoolingTicks(itemStack) > 0) cost = Math.max(1, buyCount);
 
@@ -1722,7 +1727,7 @@ public class WarehouseSupplyManager {
         // 1. First merge with existing matching slot (1 slot per menu item)
         for (int i = 0; i < stock.getContainerSize(); i++) {
             ItemStack slotStack = stock.getItem(i);
-            if (!slotStack.isEmpty() && ItemStack.isSameItemSameComponents(slotStack, toInsert)) {
+            if (!slotStack.isEmpty() && (ItemStack.isSameItemSameComponents(slotStack, toInsert) || net.zootycoon.entity.ZooCashierEntity.canMergeStock(slotStack, toInsert))) {
                 int space = maxStack - slotStack.getCount();
                 if (space > 0) {
                     int add = Math.min(space, toInsert.getCount());

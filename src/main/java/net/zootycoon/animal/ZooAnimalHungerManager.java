@@ -640,11 +640,7 @@ public class ZooAnimalHungerManager {
                         mob.getLookControl().setLookAt(bestBlock.getX() + 0.5, bestBlock.getY() + 0.2, bestBlock.getZ() + 0.5);
                         var state = level.getBlockState(bestBlock);
                         level.playSound(null, bestBlock, SoundEvents.GRASS_BREAK, SoundSource.BLOCKS, 0.8F, 1.0F);
-                        if (state.is(Blocks.GRASS_BLOCK)) {
-                            level.setBlockAndUpdate(bestBlock, Blocks.DIRT.defaultBlockState());
-                        } else {
-                            level.destroyBlock(bestBlock, false);
-                        }
+                        level.destroyBlock(bestBlock, false);
                         setHunger(mob, MAX_HUNGER);
                         level.sendParticles(ParticleTypes.HEART, mob.getX(), mob.getY() + mob.getBbHeight() * 0.7, mob.getZ(), 4, 0.3, 0.3, 0.3, 0.02);
                         return;

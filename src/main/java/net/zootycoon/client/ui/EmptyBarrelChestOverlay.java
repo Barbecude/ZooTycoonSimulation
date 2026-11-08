@@ -1177,7 +1177,7 @@ public class EmptyBarrelChestOverlay {
                     }
                 } else {
                     String sub = req.subtitle() != null ? req.subtitle().toLowerCase(java.util.Locale.ROOT) : "";
-                    boolean isCareReq = sub.contains("pemanas") || sub.contains("pendingin") || sub.contains("alat mandi") || sub.contains("kotor") || sub.contains("kepanasan") || sub.contains("kedinginan");
+                    boolean isCareReq = sub.contains("pemanas") || sub.contains("pendingin") || sub.contains("alat mandi") || sub.contains("kotor") || sub.contains("kepanasan") || sub.contains("kedinginan") || sub.contains("vegetasi");
 
                     if (!isCareReq && req.targetItems().size() > 4) {
                         int chevronX = infoX + 4 * (slotSize + slotGap);

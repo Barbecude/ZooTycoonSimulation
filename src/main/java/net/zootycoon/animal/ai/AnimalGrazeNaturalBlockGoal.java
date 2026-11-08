@@ -125,11 +125,7 @@ public class AnimalGrazeNaturalBlockGoal extends MoveToBlockGoal {
                                 this.blockPos.getX() + 0.5, this.blockPos.getY() + 0.5, this.blockPos.getZ() + 0.5,
                                 12, 0.2, 0.2, 0.2, 0.05);
 
-                        if (state.is(Blocks.GRASS_BLOCK)) {
-                            sl.setBlockAndUpdate(this.blockPos, Blocks.DIRT.defaultBlockState());
-                        } else {
-                            sl.destroyBlock(this.blockPos, false);
-                        }
+                        sl.destroyBlock(this.blockPos, false);
 
                         ZooAnimalHungerManager.setHunger(this.mob, ZooAnimalHungerManager.MAX_HUNGER);
                         sl.sendParticles(ParticleTypes.HEART,
