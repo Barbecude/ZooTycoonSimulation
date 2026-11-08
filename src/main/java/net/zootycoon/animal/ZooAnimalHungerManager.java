@@ -457,34 +457,29 @@ public class ZooAnimalHungerManager {
             }
         }
 
-        // 2. Haus (Thirst <= 0 -> Slowness II + Weakness + dry-out damage)
+        // 2. Haus (Thirst <= 0 -> Weakness + dry-out damage)
         if (currentThirst <= 0) {
-            animal.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 1, false, true, true));
             animal.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80, 0, false, false, true));
             if (level.getGameTime() % 60 == 0 && animal.getHealth() > 1.0f) {
                 animal.hurt(animal.damageSources().dryOut(), 1.0f);
             }
-        } else if (currentThirst <= 15) {
-            animal.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 0, false, false, true));
         }
 
-        // 3. Lapar (Hunger <= 0 -> Hunger II + Weakness II + Slowness)
+        // 3. Lapar (Hunger <= 0 -> Hunger II + Weakness II)
         if (currentHunger <= 0) {
             animal.addEffect(new MobEffectInstance(MobEffects.HUNGER, 80, 1, false, true, true));
             animal.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80, 1, false, true, true));
-            animal.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 0, false, false, true));
         } else if (currentHunger <= 15) {
             animal.addEffect(new MobEffectInstance(MobEffects.HUNGER, 80, 0, false, false, true));
             animal.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80, 0, false, false, true));
         }
 
-        // 4. Suhu / Iklim (Temperature discomfort -> Slowness/Freezing or Weakness/Heat)
+        // 4. Suhu / Iklim (Temperature discomfort -> Freezing or Weakness/Heat)
         var habitatProfile = net.zootycoon.animal.habitat.HabitatProfileLoader.getProfile(animal);
         if (habitatProfile != null) {
             float effectiveTemp = net.zootycoon.animal.ZooClimate.getEffectiveTemperature(level, animal.blockPosition());
             if (effectiveTemp < habitatProfile.minTemperature()) {
-                // Too Cold: Slowness + Freezing Ticks
-                animal.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 1, false, true, true));
+                // Too Cold: Freezing Ticks
                 animal.setTicksFrozen(Math.min(animal.getTicksRequiredToFreeze() + 60, animal.getTicksFrozen() + 30));
                 if (effectiveTemp < habitatProfile.minTemperature() - 0.35f && level.getGameTime() % 80 == 0) {
                     animal.hurt(animal.damageSources().freeze(), 1.0f);
@@ -498,6 +493,11 @@ public class ZooAnimalHungerManager {
                     level.sendParticles(ParticleTypes.FLAME, animal.getX(), animal.getY() + animal.getBbHeight() * 0.5, animal.getZ(), 3, 0.1, 0.1, 0.1, 0.01);
                 }
             }
+        }
+
+        // Pastikan efek slowness tidak pernah aktif pada satwa zoo akibat kondisi negatif
+        if (animal.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) {
+            animal.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
         }
     }
 
