@@ -355,7 +355,7 @@ public class WarehouseSupplyManager {
                     var diet = targetAnimal != null ? net.zootycoon.animal.AnimalDietRegistry.getDiet(targetAnimal) : null;
                     boolean isGrazing = (diet != null && diet.feedingType == net.zootycoon.animal.AnimalDietRegistry.FeedingType.GRAZING);
                     if (isGrazing) {
-                        if (!req.partiallyDelivered && (keeper.hasVegetationSupplies(diet) || (targetAnimal != null && net.zootycoon.animal.AnimalDietRegistry.hasNaturalFoodNearby(sLevel, targetAnimal)))) {
+                        if (!req.partiallyDelivered && keeper.hasVegetationSupplies(diet)) {
                             it.remove();
                         }
                     } else if (!req.partiallyDelivered && keeper.getFoodStock() > ZOOKEEPER_LOW_STOCK_THRESHOLD) {
@@ -408,8 +408,7 @@ public class WarehouseSupplyManager {
                                 boolean isGrazing = (diet != null && diet.feedingType == AnimalDietRegistry.FeedingType.GRAZING);
                                 if (isGrazing) {
                                     boolean hasSupplies = keeper.hasVegetationSupplies(diet);
-                                    boolean hasFoodNearby = AnimalDietRegistry.hasNaturalFoodNearby(sLevel, animal);
-                                    if (!hasSupplies && !hasFoodNearby) {
+                                    if (!hasSupplies) {
                                         StaffSupplyRequest existing = ACTIVE_REQUESTS.get(keeper.getUUID());
                                         if (existing == null || !animalId.equals(existing.animalUuid) || existing.targetItems.isEmpty() || !existing.targetItems.get(0).is(diet.reforestationItem)) {
                                             StaffSupplyRequest created = createZookeeperRequest(sLevel, keeper, animal);

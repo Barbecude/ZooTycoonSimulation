@@ -465,29 +465,34 @@ public class AnimalDietRegistry {
         return diet != null ? diet.reforestationCount : 16;
     }
 
-    public static boolean hasNaturalFoodNearby(Level level, LivingEntity entity) {
-        if (level == null || entity == null) return true;
+    public static int countNaturalFoodNearby(Level level, LivingEntity entity) {
+        if (level == null || entity == null) return 0;
         AnimalDiet diet = getDiet(entity);
         if (diet == null || diet.feedingType != FeedingType.GRAZING || diet.naturalFoodBlocks.isEmpty()) {
-            return true;
+            return 0;
         }
         BlockPos center = entity.blockPosition();
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-        int radius = 16;
-        int minDy = -4;
-        int maxDy = 6;
+        int radius = 12;
+        int minDy = -3;
+        int maxDy = 4;
+        int count = 0;
         for (int dx = -radius; dx <= radius; dx++) {
             for (int dz = -radius; dz <= radius; dz++) {
                 if (dx * dx + dz * dz > radius * radius) continue;
                 for (int dy = minDy; dy <= maxDy; dy++) {
                     pos.set(center.getX() + dx, center.getY() + dy, center.getZ() + dz);
                     if (diet.naturalFoodBlocks.contains(level.getBlockState(pos).getBlock())) {
-                        return true;
+                        count++;
                     }
                 }
             }
         }
-        return false;
+        return count;
+    }
+
+    public static boolean hasNaturalFoodNearby(Level level, LivingEntity entity) {
+        return countNaturalFoodNearby(level, entity) >= 8;
     }
 
     public static final int COLOR_DIET_CATEGORY = 0xFFBD6DFF; // Soft Lavender Purple
