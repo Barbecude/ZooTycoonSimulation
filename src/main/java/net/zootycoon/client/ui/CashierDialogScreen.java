@@ -194,7 +194,8 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
             int rightX = startX + 114 + 14;
             int rightW = panelWidth - (rightX - startX) - 12;
             int topY = startY + 60;
-            int totalH = panelHeight - 70;
+            int btnH = 20;
+            int totalH = panelHeight - 70 - btnH - 6;
             int listY = topY + 4;
             int listH = totalH - 8;
             if (mouseX >= rightX && mouseX <= rightX + rightW && mouseY >= listY && mouseY <= listY + listH) {
