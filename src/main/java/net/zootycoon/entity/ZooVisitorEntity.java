@@ -1100,10 +1100,10 @@ public class ZooVisitorEntity extends PathfinderMob {
                 }
             }
 
-            // Every 15 seconds (300 ticks): chance to want a souvenir plushie if not wearing one
-            if (this.tickCount % 300 == 0 && !leavingNow && this.getTags().contains("ticket_purchased")) {
+            // Chance to want a souvenir plushie if not wearing one (check every 4 seconds)
+            if (this.tickCount % 80 == 0 && !leavingNow && this.getTags().contains("ticket_purchased")) {
                 if (this.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).isEmpty() && !wantsSouvenir) {
-                    if (this.random.nextFloat() < 0.22F) {
+                    if (this.random.nextFloat() < 0.35F) {
                         this.wantsSouvenir = true;
                     }
                 } else if (!this.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).isEmpty()) {
@@ -3354,12 +3354,15 @@ public class ZooVisitorEntity extends PathfinderMob {
         public boolean canUse() {
             if (visitor.isTimeToLeave() || visitor.isConsuming() || visitor.postPurchaseEatMode > 0
                     || visitor.needsToilet() || !visitor.getTags().contains("ticket_purchased")
-                    || !visitor.hasWatchedAnimal()
                     || visitor.guidingPlayerUuid != null) {
                 return false;
             }
             if (!visitor.wantsSouvenir() || !visitor.getItemBySlot(EquipmentSlot.HEAD).isEmpty()) {
                 return false;
+            }
+
+            if (visitor.level() instanceof net.minecraft.server.level.ServerLevel sl && visitor.tickCount % 40 == 0) {
+                net.zootycoon.block.ZooGachaMachineBlock.syncKnownMachines(sl, visitor.blockPosition(), 48);
             }
 
             BlockPos bestPos = null;

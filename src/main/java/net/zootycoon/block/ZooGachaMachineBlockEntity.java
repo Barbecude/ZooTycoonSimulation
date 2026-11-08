@@ -32,6 +32,18 @@ public class ZooGachaMachineBlockEntity extends BlockEntity implements Clearable
         super(ZooBlocks.GACHA_MACHINE_BLOCK_ENTITY, pos, blockState);
     }
 
+    @Override
+    public void clearRemoved() {
+        super.clearRemoved();
+        ZooGachaMachineBlock.KNOWN_MACHINES.add(this.worldPosition.immutable());
+    }
+
+    @Override
+    public void setRemoved() {
+        ZooGachaMachineBlock.KNOWN_MACHINES.remove(this.worldPosition);
+        super.setRemoved();
+    }
+
     public UUID getOwnerUuid() {
         return ownerUuid;
     }

@@ -63,6 +63,24 @@ public class ZooGachaMachineBlock extends BaseEntityBlock {
         KNOWN_MACHINES.clear();
     }
 
+    public static void syncKnownMachines(ServerLevel level, BlockPos center, int radius) {
+        int minCx = (center.getX() - radius) >> 4;
+        int maxCx = (center.getX() + radius) >> 4;
+        int minCz = (center.getZ() - radius) >> 4;
+        int maxCz = (center.getZ() + radius) >> 4;
+        for (int cx = minCx; cx <= maxCx; cx++) {
+            for (int cz = minCz; cz <= maxCz; cz++) {
+                net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunkSource().getChunkNow(cx, cz);
+                if (chunk == null) continue;
+                for (BlockEntity be : new java.util.ArrayList<>(chunk.getBlockEntities().values())) {
+                    if (be instanceof ZooGachaMachineBlockEntity && !be.isRemoved()) {
+                        KNOWN_MACHINES.add(be.getBlockPos().immutable());
+                    }
+                }
+            }
+        }
+    }
+
     public ZooGachaMachineBlock() {
         this(BlockBehaviour.Properties.of()
                 .strength(2.5f, 3.0f)
