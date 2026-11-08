@@ -459,18 +459,18 @@ public final class ZooEconomyEngine {
             int capacity;
             if (ticketPrice <= 0) {
                 // Free admission: bonus kapasitas masif
-                capacity = base + FREE_TICKET_EXTRA_CAPACITY + (int) Math.round(starRating * 12.0D);
+                capacity = base + FREE_TICKET_EXTRA_CAPACITY + (int) Math.round(starRating * 16.0D);
             } else if (ticketPrice <= expected) {
-                // Harga wajar atau murah
-                capacity = base + (int) Math.round(starRating * 8.0D);
+                // Harga wajar atau murah: skala kapasitas proporsional dengan rating
+                capacity = base + (int) Math.round(starRating * 14.0D);
             } else {
                 // Kemahalan
                 // Zoo bintang tinggi (>= 4.5) tetap mempertahankan kapasitas stabil meski harga tinggi
                 if (starRating >= HIGH_RATING_PRICE_TOLERANCE_THRESHOLD) {
-                    capacity = base + (int) Math.round(starRating * 8.0D);
+                    capacity = base + (int) Math.round(starRating * 14.0D);
                 } else {
                     int diff = ticketPrice - expected;
-                    capacity = Math.max(MIN_OVERPRICED_CAPACITY, base + (int) Math.round(starRating * 2.0D) - (int) Math.round(diff * OVERPRICED_CAPACITY_PENALTY_PER_EMERALD));
+                    capacity = Math.max(MIN_OVERPRICED_CAPACITY, base + (int) Math.round(starRating * 3.0D) - (int) Math.round(diff * OVERPRICED_CAPACITY_PENALTY_PER_EMERALD));
                 }
             }
             return Math.min(300, Math.max(MIN_OVERPRICED_CAPACITY, capacity));
@@ -523,22 +523,22 @@ public final class ZooEconomyEngine {
         try {
             int base;
             if (ticketPrice <= 0) {
-                base = VISITOR_SPAWN_INTERVAL_FREE_TICKS;
+                base = starRating >= 4.0D ? 70 : (starRating >= 2.0D ? 100 : VISITOR_SPAWN_INTERVAL_FREE_TICKS);
             } else {
                 if (starRating >= 4.5D) {
-                    base = 80;
+                    base = 50; // ~2.5 detik sekali kedatangan jika rating mendekati sempurna
                 } else if (starRating >= 3.5D) {
-                    base = 110;
+                    base = 80; // ~4 detik sekali kedatangan
                 } else if (starRating >= 2.5D) {
-                    base = 140;
+                    base = 120; // ~6 detik sekali kedatangan
                 } else {
-                    base = 180;
+                    base = 160; // ~8 detik sekali kedatangan
                 }
             }
-            int jitter = random != null ? random.nextInt(31) - 15 : 0;
-            return Math.max(60, base + jitter);
+            int jitter = random != null ? random.nextInt(21) - 10 : 0;
+            return Math.max(40, base + jitter);
         } catch (Throwable t) {
-            return 120;
+            return 100;
         }
     }
 

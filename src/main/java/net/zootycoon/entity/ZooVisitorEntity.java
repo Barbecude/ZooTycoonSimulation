@@ -1705,14 +1705,14 @@ public class ZooVisitorEntity extends PathfinderMob {
         this.guidedPlayerUuid = null;
         this.guideTimeout = 0;
         if (player instanceof ServerPlayer sPlayer && sLevel.getServer() != null) {
-            int newRating = net.zootycoon.economy.ZooRatingManager.get(sLevel.getServer()).addRating(player.getUUID(), 2, sPlayer);
             String toastKey = switch (facilityType) {
                 case "TOILET" -> "zootycoon.toast.rating.guide_toilet_success";
                 case "BURGER" -> "zootycoon.toast.rating.guide_burger_success";
                 case "DRINK" -> "zootycoon.toast.rating.guide_drink_success";
                 default -> "zootycoon.toast.rating.guide_success";
             };
-            net.zootycoon.network.ZooNetworkPayloads.sendToast(sPlayer, "zootycoon.toast.title.rating_up", toastKey, 1, newRating);
+            int curRating = net.zootycoon.economy.ZooRatingManager.get(sLevel.getServer()).getRating(player.getUUID());
+            net.zootycoon.network.ZooNetworkPayloads.sendToast(sPlayer, "zootycoon.toast.title.rating_up", toastKey, 1, curRating);
             sLevel.playSound(null, this.blockPosition(), SoundEvents.PLAYER_LEVELUP, net.minecraft.sounds.SoundSource.NEUTRAL, 0.8F, 1.2F);
             sLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, this.getX(), this.getY() + 1.2D, this.getZ(), 8, 0.3, 0.3, 0.3, 0.05);
             sLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.HEART, this.getX(), this.getY() + 1.4D, this.getZ(), 4, 0.25, 0.25, 0.25, 0.02);
@@ -1725,7 +1725,6 @@ public class ZooVisitorEntity extends PathfinderMob {
         UUID ownerUuid = claim.getOwnerUuid();
         ServerPlayer sPlayer = sLevel.getServer().getPlayerList().getPlayer(ownerUuid);
         if (sPlayer != null) {
-            net.zootycoon.economy.ZooRatingManager.get(sLevel.getServer()).addRating(ownerUuid, amount, sPlayer);
             sLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, this.getX(), this.getY() + 1.2D, this.getZ(), 4, 0.25, 0.25, 0.25, 0.02);
             if (sLevel.random.nextFloat() < 0.25F) {
                 sLevel.playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, net.minecraft.sounds.SoundSource.NEUTRAL, 0.6F, 1.4F);
@@ -2679,8 +2678,8 @@ public class ZooVisitorEntity extends PathfinderMob {
 
             if (!visitor.hasLeftReview && visitor.getTags().contains("ticket_purchased")) {
                 visitor.hasLeftReview = true;
-                // 15% chance for ticketed visitors to leave a Google Maps review upon departure
-                if (visitor.getRandom().nextFloat() < 0.15F && visitor.level() instanceof net.minecraft.server.level.ServerLevel sl && sl.getServer() != null) {
+                // 35% chance for ticketed visitors to leave a review upon departure
+                if (visitor.getRandom().nextFloat() < 0.35F && visitor.level() instanceof net.minecraft.server.level.ServerLevel sl && sl.getServer() != null) {
                     net.zootycoon.claim.ZooClaim claim = visitor.findActiveZooClaim();
                     UUID ownerUuid = (claim != null) ? claim.getOwnerUuid() : null;
                     if (ownerUuid != null) {
@@ -3458,7 +3457,6 @@ public class ZooVisitorEntity extends PathfinderMob {
                                     var eco = net.zootycoon.economy.ZooEconomyManager.get(sl.getServer());
                                     ServerPlayer owner = sl.getServer().getPlayerList().getPlayer(ownerUuid);
                                     eco.addBalance(ownerUuid, 4, owner);
-                                    net.zootycoon.economy.ZooRatingManager.get(sl.getServer()).addRating(ownerUuid, 1, owner);
                                 }
 
                                 sl.playSound(null, targetMachinePos, net.zootycoon.sound.ZooSounds.KACHING, net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 1.0F);

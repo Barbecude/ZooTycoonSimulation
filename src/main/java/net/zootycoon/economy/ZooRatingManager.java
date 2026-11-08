@@ -151,8 +151,15 @@ public class ZooRatingManager {
     public void setStarRating(UUID playerUuid, double starRating, ServerPlayer player) {
         if (playerUuid == null) return;
         double clamped = Math.clamp(starRating, 0.0D, 5.0D);
-        reviewCounts.put(playerUuid, 0);
-        reviewStarsSum.put(playerUuid, 0.0D);
+        if (clamped <= 0.0D) {
+            // Ketika rating diatur ke 0, berikan baseline 10 ulasan bintang 0
+            // agar pemain harus bekerja keras memuaskan pengunjung untuk menaikkan rating rata-rata
+            reviewCounts.put(playerUuid, 10);
+            reviewStarsSum.put(playerUuid, 0.0D);
+        } else {
+            reviewCounts.put(playerUuid, 5);
+            reviewStarsSum.put(playerUuid, clamped * 5.0D);
+        }
         ratings.put(playerUuid, (int) Math.round(clamped * 20.0D));
         saveToFile();
         syncToPlayer(player);
