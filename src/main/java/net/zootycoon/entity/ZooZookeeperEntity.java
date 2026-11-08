@@ -1040,7 +1040,10 @@ public class ZooZookeeperEntity extends PathfinderMob {
                         return;
                     }
                 }
-            } else if (isThrownMeat) {
+                // If keeper has food items (such as apples, wheat, carrots) or animal needs trough food, proceed to trough duty below!
+            }
+
+            if (isThrownMeat) {
                 // Carnivores / Thrown food: Zookeeper throws food directly to the animal or its hungry offspring
                 LivingEntity hungryTarget = null;
                 int minHunger = 75;
