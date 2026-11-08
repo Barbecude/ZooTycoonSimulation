@@ -351,7 +351,14 @@ public class WarehouseSupplyManager {
                 if (!keeper.hasActiveAssignedAnimal()) {
                     it.remove();
                 } else if (EmptyBarrelBlockEntity.CAT_ANIMAL_FOOD.equalsIgnoreCase(req.category)) {
-                    if (!req.partiallyDelivered && keeper.getFoodStock() > ZOOKEEPER_LOW_STOCK_THRESHOLD) {
+                    LivingEntity targetAnimal = resolveAnimal(sLevel, req.animalUuid);
+                    var diet = targetAnimal != null ? net.zootycoon.animal.AnimalDietRegistry.getDiet(targetAnimal) : null;
+                    boolean isGrazing = (diet != null && diet.feedingType == net.zootycoon.animal.AnimalDietRegistry.FeedingType.GRAZING);
+                    if (isGrazing) {
+                        if (!req.partiallyDelivered && (keeper.hasVegetationSupplies(diet) || (targetAnimal != null && net.zootycoon.animal.AnimalDietRegistry.hasNaturalFoodNearby(sLevel, targetAnimal)))) {
+                            it.remove();
+                        }
+                    } else if (!req.partiallyDelivered && keeper.getFoodStock() > ZOOKEEPER_LOW_STOCK_THRESHOLD) {
                         it.remove();
                     }
                 } else if (EmptyBarrelBlockEntity.CAT_ANIMAL_CARE.equalsIgnoreCase(req.category)) {
@@ -361,13 +368,7 @@ public class WarehouseSupplyManager {
                         it.remove();
                     } else if (isCoolingRequest(req) && keeper.hasIce()) {
                         it.remove();
-                    } else if (isVegetationRequest(req)) {
-                        LivingEntity targetAnimal = resolveAnimal(sLevel, req.animalUuid);
-                        var targetDiet = targetAnimal != null ? net.zootycoon.animal.AnimalDietRegistry.getDiet(targetAnimal) : null;
-                        if (keeper.hasVegetationSupplies(targetDiet) || (targetAnimal != null && net.zootycoon.animal.AnimalDietRegistry.hasNaturalFoodNearby(sLevel, targetAnimal))) {
-                            it.remove();
-                        }
-                    } else if (!isHeatingRequest(req) && !isCoolingRequest(req) && !isVegetationRequest(req) && keeper.hasBathingTools()) {
+                    } else if (!isHeatingRequest(req) && !isCoolingRequest(req) && keeper.hasBathingTools()) {
                         it.remove();
                     }
                 }
@@ -402,18 +403,38 @@ public class WarehouseSupplyManager {
                             if (partial != null && partial.partiallyDelivered && animalId.equals(partial.animalUuid)
                                     && EmptyBarrelBlockEntity.CAT_ANIMAL_FOOD.equalsIgnoreCase(partial.category)) {
                                 // A partially delivered request stays as is until it is complete
-                            } else if (keeper.getFoodStock() <= ZOOKEEPER_LOW_STOCK_THRESHOLD) {
-                                List<ItemStack> expectedFoods = AnimalDietRegistry.getFoodsForAnimal(animal);
-                                StaffSupplyRequest existing = ACTIVE_REQUESTS.get(keeper.getUUID());
-                                if (existing == null || !animalId.equals(existing.animalUuid) || existing.targetItems.size() != expectedFoods.size()) {
-                                    StaffSupplyRequest created = createZookeeperRequest(sLevel, keeper, animal);
-                                    ACTIVE_REQUESTS.put(keeper.getUUID(), created);
-                                    notifyNewStaffRequest(sLevel, barrel, created);
-                                }
                             } else {
-                                StaffSupplyRequest existing = ACTIVE_REQUESTS.get(keeper.getUUID());
-                                if (existing != null && EmptyBarrelBlockEntity.CAT_ANIMAL_FOOD.equalsIgnoreCase(existing.category)) {
-                                    ACTIVE_REQUESTS.remove(keeper.getUUID());
+                                var diet = AnimalDietRegistry.getDiet(animal);
+                                boolean isGrazing = (diet != null && diet.feedingType == AnimalDietRegistry.FeedingType.GRAZING);
+                                if (isGrazing) {
+                                    boolean hasSupplies = keeper.hasVegetationSupplies(diet);
+                                    boolean hasFoodNearby = AnimalDietRegistry.hasNaturalFoodNearby(sLevel, animal);
+                                    if (!hasSupplies && !hasFoodNearby) {
+                                        StaffSupplyRequest existing = ACTIVE_REQUESTS.get(keeper.getUUID());
+                                        if (existing == null || !animalId.equals(existing.animalUuid) || existing.targetItems.isEmpty() || !existing.targetItems.get(0).is(diet.reforestationItem)) {
+                                            StaffSupplyRequest created = createZookeeperRequest(sLevel, keeper, animal);
+                                            ACTIVE_REQUESTS.put(keeper.getUUID(), created);
+                                            notifyNewStaffRequest(sLevel, barrel, created);
+                                        }
+                                    } else {
+                                        StaffSupplyRequest existing = ACTIVE_REQUESTS.get(keeper.getUUID());
+                                        if (existing != null && EmptyBarrelBlockEntity.CAT_ANIMAL_FOOD.equalsIgnoreCase(existing.category)) {
+                                            ACTIVE_REQUESTS.remove(keeper.getUUID());
+                                        }
+                                    }
+                                } else if (keeper.getFoodStock() <= ZOOKEEPER_LOW_STOCK_THRESHOLD) {
+                                    List<ItemStack> expectedFoods = AnimalDietRegistry.getFoodsForAnimal(animal);
+                                    StaffSupplyRequest existing = ACTIVE_REQUESTS.get(keeper.getUUID());
+                                    if (existing == null || !animalId.equals(existing.animalUuid) || existing.targetItems.size() != expectedFoods.size()) {
+                                        StaffSupplyRequest created = createZookeeperRequest(sLevel, keeper, animal);
+                                        ACTIVE_REQUESTS.put(keeper.getUUID(), created);
+                                        notifyNewStaffRequest(sLevel, barrel, created);
+                                    }
+                                } else {
+                                    StaffSupplyRequest existing = ACTIVE_REQUESTS.get(keeper.getUUID());
+                                    if (existing != null && EmptyBarrelBlockEntity.CAT_ANIMAL_FOOD.equalsIgnoreCase(existing.category)) {
+                                        ACTIVE_REQUESTS.remove(keeper.getUUID());
+                                    }
                                 }
                             }
                         }
@@ -678,26 +699,6 @@ public class WarehouseSupplyManager {
                 req.requiredRawIngredients.put(ZooItems.COPPER_WATERING_CAN, 1);
                 req.requiredRawIngredients.put(Items.BRUSH, 1);
                 return req;
-            }
-
-            var mDiet = net.zootycoon.animal.AnimalDietRegistry.getDiet(m);
-            if (mDiet != null && mDiet.feedingType == net.zootycoon.animal.AnimalDietRegistry.FeedingType.GRAZING) {
-                if (!keeper.hasVegetationSupplies(mDiet) && !net.zootycoon.animal.AnimalDietRegistry.hasNaturalFoodNearby(sLevel, m)) {
-                    StaffSupplyRequest req = new StaffSupplyRequest(
-                            keeper.getUUID(),
-                            keeper.getId(),
-                            EmptyBarrelBlockEntity.CAT_ANIMAL_CARE,
-                            "ZOOKEEPER",
-                            keeperName,
-                            "Kebutuhan: Vegetasi (" + mDiet.reforestationCount + "x " + mDiet.reforestationItem.getName(new ItemStack(mDiet.reforestationItem)).getString() + " untuk " + mName + ")"
-                    );
-                    req.animalUuid = m.getUUID();
-                    req.animalName = mName;
-                    req.careRemaining = mDiet.reforestationCount;
-                    req.targetItems.add(new ItemStack(mDiet.reforestationItem, mDiet.reforestationCount));
-                    req.requiredRawIngredients.put(mDiet.reforestationItem, mDiet.reforestationCount);
-                    return req;
-                }
             }
         }
 

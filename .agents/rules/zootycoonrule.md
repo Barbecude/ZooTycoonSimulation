@@ -60,14 +60,6 @@ fungsi yang belum fix atau belum ada atau masih cacat (Dilarang mengerjakan semu
 
 fungsi yg belum ada atau masih cacat (jangan eksekusi fitur ini sebelum secara eksplisit diminta)
 
-- Sistem Rating Zoo Bangun formula perhitungan rating total 5 star dinamis berdasarkan rata-rata kesehatan satwa, kebersihan kandang, kelengkapan fasilitas, dan kepuasan pengunjung, serta tampilkan indikator rating di UI/HUD.
-bisa dikustomisasi. 
-- Kunjungan Pengunjung Mengikuti Rating dan Kualitas
-Perbarui spawner pengunjung agar kapasitas maksimal dan frekuensi kedatangan berskala dinamis mengikuti rating kebun binatang dan jumlah fasilitas/satwa aktif.
-- Finansial dan Penetapan Harga (Tiket, Makanan, Gaji Staff)
-Sediakan pengaturan harga tiket dan makanan/minuman yang berdampak pada keputusan pengunjung, serta terapkan pemotongan gaji berkala (biaya operasional harian) untuk seluruh staf zoo.
-- perhitungan suhu dari biome, musim dan waktu terhadap semua satwa yg ada di daftar satwa
-- apakah setiap satwa wajib perlu palung makanan atau tidak karena ada satwa yg perlu palung makanan di hologram nya padahal sebenernya tidak dan bisa cari makan sendiri
 - kendaraan yang bisa di naiki untuk menangkap hewan dan simpan di belakang kendaraan atau bagasi
 - mob bag logic
 - fitur "already builded biome" di kategori "terrain" di menu bangunan yang dimana already builded biome adalah biome yg di ambil dari world generation asli dari mod apapun misal user pake world generation vanila atau moded world generation apapun seperti tectonic nah di kategori terrain itu sudah ada already builded biome yg otomatis di generate oleh mod ini dan yg di generate nya itu world generation dari mod world generation itu sendiri dengan size biome yg 

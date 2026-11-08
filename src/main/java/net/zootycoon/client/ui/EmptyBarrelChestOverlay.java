@@ -583,12 +583,21 @@ public class EmptyBarrelChestOverlay {
             graphics.drawString(font, staffName, infoX, cardY + 4, 0xFFF8FAFC, false);
 
             // Row 2: Subtitle / Progress
-            String subText = req.subtitle();
+            String subText;
             if ("ZOOKEEPER".equalsIgnoreCase(req.staffType())) {
-                subText = req.subtitle() + " (" + req.currentCount() + "/" + req.requiredCount() + ")";
-            }
-            if (font.width(subText) > infoW) {
-                subText = font.plainSubstrByWidth(subText, infoW - font.width("..")) + "..";
+                String countInfo = " (" + req.currentCount() + "/" + req.requiredCount() + ")";
+                int countW = font.width(countInfo);
+                int maxSubW = Math.max(10, infoW - countW);
+                String base = req.subtitle() != null ? req.subtitle() : "";
+                if (font.width(base) > maxSubW) {
+                    base = font.plainSubstrByWidth(base, Math.max(0, maxSubW - font.width(".."))) + "..";
+                }
+                subText = base + countInfo;
+            } else {
+                subText = req.subtitle() != null ? req.subtitle() : "";
+                if (font.width(subText) > infoW) {
+                    subText = font.plainSubstrByWidth(subText, infoW - font.width("..")) + "..";
+                }
             }
             graphics.drawString(font, subText, infoX, cardY + 14, 0xFF94A3B8, false);
 
@@ -666,10 +675,27 @@ public class EmptyBarrelChestOverlay {
                     graphics.fill(sx, sy, sx + slotSize, sy + slotSize, slotHovered ? 0xFF1E2433 : 0xFF12151D);
                     graphics.renderOutline(sx, sy, slotSize, slotSize, slotHovered ? 0xFF58A6FF : 0xFF334155);
                     graphics.renderFakeItem(st, sx + 1, sy + 1);
+                    if (st.getCount() > 1) {
+                        graphics.renderItemDecorations(font, st, sx + 1, sy + 1, String.valueOf(st.getCount()));
+                    }
 
                     if (slotHovered) {
                         hoveredStack = st;
                         hoveredDto = req;
+                    }
+                }
+
+                if (targets.size() == 1) {
+                    ItemStack singleSt = targets.get(0);
+                    int labelX = infoX + slotSize + 6;
+                    int labelY = slotY + 5;
+                    int maxLabelW = infoW - (slotSize + 8);
+                    if (maxLabelW > 20) {
+                        String itemLabel = singleSt.getCount() + "x " + singleSt.getHoverName().getString();
+                        if (font.width(itemLabel) > maxLabelW) {
+                            itemLabel = font.plainSubstrByWidth(itemLabel, Math.max(0, maxLabelW - font.width(".."))) + "..";
+                        }
+                        graphics.drawString(font, itemLabel, labelX, labelY, 0xFFE2E8F0, false);
                     }
                 }
 

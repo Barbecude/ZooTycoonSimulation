@@ -148,6 +148,8 @@ public class ZooZookeeperEntity extends PathfinderMob {
     private String currentDutyState = "IDLE"; // "REFILL", "NEED_FOOD", "SWEEPING", "BATHING", "IDLE"
     private int actionCooldown = 0;
     private int bathingStepTicks = 0;
+    private BlockPos targetPlantingPos = null;
+    private int plantingStuckTicks = 0;
 
     private static final int FOOD_SLOTS = 8;
     private final SimpleContainer foodInventory = new SimpleContainer(FOOD_SLOTS);
@@ -726,9 +728,13 @@ public class ZooZookeeperEntity extends PathfinderMob {
             lastNavZ = this.getZ();
         }
 
-        // Run active bathing duty every tick, or routine duties every 20 ticks
+        // Run active bathing or planting duty every tick, or routine duties every 20 ticks
         if ("BATHING".equals(this.currentDutyState)) {
             tickBathingDuty(sLevel);
+        } else if ("PLANTING_VEGETATION".equals(this.currentDutyState)) {
+            if (actionCooldown <= 0) {
+                tickPlantingDuty(sLevel);
+            }
         } else if (this.tickCount % 20 == 0 && actionCooldown <= 0) {
             handleStaffDuties(sLevel);
         }
@@ -1025,30 +1031,13 @@ public class ZooZookeeperEntity extends PathfinderMob {
                 // Grazing animals: Zookeeper replants vegetation in enclosure when carried
                 ItemStack carriedVegetation = this.peekMatchingVegetation(diet);
                 if (!carriedVegetation.isEmpty()) {
-                    boolean needsMoreVegetation = !AnimalDietRegistry.hasNaturalFoodNearby(sLevel, assignedAnimal);
-                    if (needsMoreVegetation || this.getRandom().nextFloat() < 0.25f) {
-                        BlockPos plantPos = findValidPlantingSpotNearAnimal(sLevel, assignedAnimal, carriedVegetation.getItem());
-                        if (plantPos != null) {
-                            currentDutyState = "PLANTING_VEGETATION";
-                            this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(carriedVegetation.getItem()));
-                            double distSq = this.distanceToSqr(plantPos.getX() + 0.5, plantPos.getY(), plantPos.getZ() + 0.5);
-                            if (distSq > 2.5 * 2.5) {
-                                this.getNavigation().moveTo(plantPos.getX() + 0.5, plantPos.getY(), plantPos.getZ() + 0.5, 1.2);
-                                return;
-                            } else {
-                                this.getNavigation().stop();
-                                this.getLookControl().setLookAt(plantPos.getX() + 0.5, plantPos.getY() + 0.5, plantPos.getZ() + 0.5);
-                                this.swing(InteractionHand.MAIN_HAND);
-                                ItemStack taken = this.takeMatchingVegetation(carriedVegetation.getItem(), 1);
-                                if (!taken.isEmpty()) {
-                                    plantVegetationBlock(sLevel, plantPos, taken.getItem());
-                                    sLevel.playSound(null, plantPos, SoundEvents.GRASS_PLACE, SoundSource.BLOCKS, 0.8F, 1.0F);
-                                    sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, plantPos.getX() + 0.5, plantPos.getY() + 0.8, plantPos.getZ() + 0.5, 6, 0.2, 0.2, 0.2, 0.02);
-                                    actionCooldown = 40;
-                                    return;
-                                }
-                            }
-                        }
+                    BlockPos plantPos = findValidPlantingSpotNearAnimal(sLevel, assignedAnimal, carriedVegetation.getItem());
+                    if (plantPos != null) {
+                        this.targetPlantingPos = plantPos;
+                        this.plantingStuckTicks = 0;
+                        this.currentDutyState = "PLANTING_VEGETATION";
+                        tickPlantingDuty(sLevel);
+                        return;
                     }
                 }
             } else if (isThrownMeat) {
@@ -2052,48 +2041,188 @@ public class ZooZookeeperEntity extends PathfinderMob {
     }
 
     private BlockPos findValidPlantingSpotNearAnimal(ServerLevel sLevel, LivingEntity animal, Item item) {
+        if (sLevel == null || animal == null || item == null) return null;
         BlockPos center = animal.blockPosition();
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-        int radius = 8;
+        int radius = 10;
+        BlockPos bestPos = null;
+        double bestDistSq = Double.MAX_VALUE;
+
         for (int dx = -radius; dx <= radius; dx++) {
             for (int dz = -radius; dz <= radius; dz++) {
                 if (dx * dx + dz * dz > radius * radius) continue;
-                for (int dy = -2; dy <= 2; dy++) {
+                for (int dy = -3; dy <= 3; dy++) {
                     pos.set(center.getX() + dx, center.getY() + dy, center.getZ() + dz);
                     var groundState = sLevel.getBlockState(pos);
                     var aboveState = sLevel.getBlockState(pos.above());
 
-                    if (item == Items.BONE_MEAL || item == Items.GRASS_BLOCK) {
-                        if (groundState.is(Blocks.GRASS_BLOCK) && aboveState.isAir()) {
-                            return pos.immutable();
+                    boolean isValidSpot = false;
+                    if (item == Items.BONE_MEAL) {
+                        if (groundState.is(Blocks.GRASS_BLOCK) && (aboveState.isAir() || aboveState.canBeReplaced())) {
+                            if (!aboveState.is(Blocks.SHORT_GRASS) && !aboveState.is(Blocks.TALL_GRASS) && !aboveState.is(Blocks.FERN)) {
+                                isValidSpot = true;
+                            }
+                        }
+                    } else if (item == Items.GRASS_BLOCK) {
+                        if ((groundState.is(Blocks.DIRT) || groundState.is(Blocks.COARSE_DIRT)) && (aboveState.isAir() || aboveState.canBeReplaced())) {
+                            isValidSpot = true;
                         }
                     } else if (item == Items.CACTUS) {
                         if ((groundState.is(Blocks.SAND) || groundState.is(Blocks.RED_SAND)) && aboveState.isAir()) {
                             BlockPos ab = pos.above();
                             if (sLevel.getBlockState(ab.north()).isAir() && sLevel.getBlockState(ab.south()).isAir()
                                     && sLevel.getBlockState(ab.east()).isAir() && sLevel.getBlockState(ab.west()).isAir()) {
-                                return pos.immutable();
+                                isValidSpot = true;
                             }
                         }
                     } else if (item == Items.BAMBOO) {
                         if ((groundState.is(Blocks.GRASS_BLOCK) || groundState.is(Blocks.DIRT) || groundState.is(Blocks.SAND)) && aboveState.isAir()) {
-                            return pos.immutable();
+                            isValidSpot = true;
                         }
                     } else {
                         if ((groundState.is(Blocks.GRASS_BLOCK) || groundState.is(Blocks.DIRT)) && aboveState.isAir()) {
-                            return pos.immutable();
+                            isValidSpot = true;
+                        }
+                    }
+
+                    if (isValidSpot) {
+                        double d = this.distanceToSqr(pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5);
+                        if (d < bestDistSq) {
+                            bestDistSq = d;
+                            bestPos = pos.immutable();
                         }
                     }
                 }
             }
         }
+        return bestPos;
+    }
+
+    public LivingEntity getAssignedAnimalEntity(ServerLevel sLevel) {
+        if (this.assignedAnimalUuid == null || sLevel == null) return null;
+        Entity ent = sLevel.getEntity(this.assignedAnimalUuid);
+        if (ent == null && sLevel.getServer() != null) {
+            for (ServerLevel sl : sLevel.getServer().getAllLevels()) {
+                ent = sl.getEntity(this.assignedAnimalUuid);
+                if (ent != null) break;
+            }
+        }
+        if (ent instanceof LivingEntity living && living.isAlive()) {
+            return living;
+        }
         return null;
+    }
+
+    private void tickPlantingDuty(ServerLevel sLevel) {
+        LivingEntity assignedAnimal = getAssignedAnimalEntity(sLevel);
+        if (assignedAnimal == null || !assignedAnimal.isAlive()) {
+            stopPlanting();
+            return;
+        }
+
+        var diet = AnimalDietRegistry.getDiet(assignedAnimal);
+        if (diet == null || diet.feedingType != AnimalDietRegistry.FeedingType.GRAZING) {
+            stopPlanting();
+            return;
+        }
+
+        ItemStack carried = peekMatchingVegetation(diet);
+        if (carried.isEmpty()) {
+            stopPlanting();
+            return;
+        }
+
+        if (targetPlantingPos == null) {
+            targetPlantingPos = findValidPlantingSpotNearAnimal(sLevel, assignedAnimal, carried.getItem());
+        }
+
+        if (targetPlantingPos == null) {
+            stopPlanting();
+            return;
+        }
+
+        // Verify target spot is still valid
+        BlockState ground = sLevel.getBlockState(targetPlantingPos);
+        BlockState above = sLevel.getBlockState(targetPlantingPos.above());
+        boolean stillValid = false;
+        if (carried.is(Items.BONE_MEAL)) {
+            stillValid = ground.is(Blocks.GRASS_BLOCK) && (above.isAir() || above.canBeReplaced())
+                    && !above.is(Blocks.SHORT_GRASS) && !above.is(Blocks.TALL_GRASS);
+        } else if (carried.getItem() instanceof net.minecraft.world.item.BlockItem) {
+            stillValid = (above.isAir() || above.canBeReplaced());
+        }
+
+        if (!stillValid) {
+            targetPlantingPos = findValidPlantingSpotNearAnimal(sLevel, assignedAnimal, carried.getItem());
+            if (targetPlantingPos == null) {
+                stopPlanting();
+                return;
+            }
+        }
+
+        if (!this.getMainHandItem().is(carried.getItem())) {
+            this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(carried.getItem()));
+        }
+
+        double tx = targetPlantingPos.getX() + 0.5;
+        double ty = targetPlantingPos.getY() + 1.0;
+        double tz = targetPlantingPos.getZ() + 0.5;
+        double distSq = this.distanceToSqr(tx, ty, tz);
+
+        this.getLookControl().setLookAt(tx, ty, tz, 30.0F, 30.0F);
+
+        if (distSq > 2.8 * 2.8) {
+            plantingStuckTicks++;
+            if (plantingStuckTicks > 80) {
+                plantingStuckTicks = 0;
+                targetPlantingPos = null;
+                return;
+            }
+            this.getNavigation().moveTo(tx, ty, tz, 1.25);
+            return;
+        }
+
+        plantingStuckTicks = 0;
+        this.getNavigation().stop();
+        this.swing(InteractionHand.MAIN_HAND);
+
+        ItemStack taken = this.takeMatchingVegetation(carried.getItem(), 1);
+        if (!taken.isEmpty()) {
+            plantVegetationBlock(sLevel, targetPlantingPos, taken.getItem());
+            sLevel.playSound(null, targetPlantingPos, SoundEvents.BONE_MEAL_USE, SoundSource.BLOCKS, 1.0F, 1.0F);
+            sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, tx, ty + 0.2, tz, 8, 0.3, 0.3, 0.3, 0.02);
+            actionCooldown = 30;
+        }
+
+        targetPlantingPos = null;
+        if (peekMatchingVegetation(diet).isEmpty()) {
+            stopPlanting();
+        }
+    }
+
+    private void stopPlanting() {
+        this.currentDutyState = "IDLE";
+        this.targetPlantingPos = null;
+        this.plantingStuckTicks = 0;
+        if (this.getMainHandItem().is(Items.BONE_MEAL) || this.getMainHandItem().getItem() instanceof net.minecraft.world.item.BlockItem) {
+            this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+        }
     }
 
     private void plantVegetationBlock(ServerLevel sLevel, BlockPos pos, Item item) {
         if (item == Items.BONE_MEAL) {
+            BlockState state = sLevel.getBlockState(pos);
+            if (state.getBlock() instanceof net.minecraft.world.level.block.BonemealableBlock bonemealable) {
+                if (bonemealable.isValidBonemealTarget(sLevel, pos, state)) {
+                    bonemealable.performBonemeal(sLevel, sLevel.random, pos, state);
+                }
+            }
+            BlockPos above = pos.above();
+            BlockState aboveState = sLevel.getBlockState(above);
+            if (aboveState.isAir() || aboveState.canBeReplaced()) {
+                sLevel.setBlockAndUpdate(above, Blocks.SHORT_GRASS.defaultBlockState());
+            }
             sLevel.levelEvent(1505, pos, 0);
-            sLevel.setBlockAndUpdate(pos.above(), Blocks.SHORT_GRASS.defaultBlockState());
         } else if (item == Items.GRASS_BLOCK) {
             sLevel.setBlockAndUpdate(pos, Blocks.GRASS_BLOCK.defaultBlockState());
         } else if (item == Items.BAMBOO) {
