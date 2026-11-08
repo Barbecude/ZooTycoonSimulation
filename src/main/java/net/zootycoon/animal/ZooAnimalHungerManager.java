@@ -619,9 +619,9 @@ public class ZooAnimalHungerManager {
                 BlockPos.MutableBlockPos mPos = new BlockPos.MutableBlockPos();
                 BlockPos bestBlock = null;
                 double bestDist = Double.MAX_VALUE;
-                for (int dx = -12; dx <= 12; dx++) {
-                    for (int dz = -12; dz <= 12; dz++) {
-                        for (int dy = -3; dy <= 4; dy++) {
+                for (int dx = -14; dx <= 14; dx++) {
+                    for (int dz = -14; dz <= 14; dz++) {
+                        for (int dy = -4; dy <= 6; dy++) {
                             mPos.set(mobPos.getX() + dx, mobPos.getY() + dy, mobPos.getZ() + dz);
                             if (blocks.contains(level.getBlockState(mPos).getBlock())) {
                                 double d = mob.distanceToSqr(mPos.getX() + 0.5, mPos.getY() + 0.5, mPos.getZ() + 0.5);
@@ -634,8 +634,10 @@ public class ZooAnimalHungerManager {
                     }
                 }
                 if (bestBlock != null) {
-                    double maxEatDist = Math.max(2.4D, (mob.getBbWidth() * 0.5D) + 1.2D);
-                    if (mob.blockPosition().closerThan(bestBlock, maxEatDist)) {
+                    double maxEatDist = Math.max(2.8D, (mob.getBbWidth() * 0.5D) + 1.8D);
+                    double horizDistSq = mob.distanceToSqr(bestBlock.getX() + 0.5, mob.getY(), bestBlock.getZ() + 0.5);
+                    double vertDist = Math.abs(mob.getY() - (bestBlock.getY() + 0.5));
+                    if (mob.blockPosition().closerThan(bestBlock, maxEatDist) || (horizDistSq <= maxEatDist * maxEatDist && vertDist <= 4.5D)) {
                         mob.getNavigation().stop();
                         mob.getLookControl().setLookAt(bestBlock.getX() + 0.5, bestBlock.getY() + 0.2, bestBlock.getZ() + 0.5);
                         var state = level.getBlockState(bestBlock);

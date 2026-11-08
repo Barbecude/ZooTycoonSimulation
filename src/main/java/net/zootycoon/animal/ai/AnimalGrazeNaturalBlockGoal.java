@@ -31,7 +31,7 @@ public class AnimalGrazeNaturalBlockGoal extends MoveToBlockGoal {
     private int cooldownTicks = 0;
 
     public AnimalGrazeNaturalBlockGoal(PathfinderMob mob, double speedModifier) {
-        super(mob, speedModifier, 16, 6);
+        super(mob, speedModifier, 16, 7);
         this.mob = mob;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
     }
@@ -84,7 +84,7 @@ public class AnimalGrazeNaturalBlockGoal extends MoveToBlockGoal {
 
     @Override
     public double acceptedDistance() {
-        return Math.max(2.4D, (this.mob.getBbWidth() * 0.5D) + 1.2D);
+        return Math.max(2.8D, (this.mob.getBbWidth() * 0.5D) + 1.8D);
     }
 
     @Override

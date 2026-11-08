@@ -1029,8 +1029,10 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
             if (isGrazing) {
                 // Grazing animals: Zookeeper replants vegetation in enclosure when carried
+                // HANYA tanam jika vegetasi alami di sekitar satwa memang kurang/sedikit
+                boolean hasEnoughNaturalFood = AnimalDietRegistry.hasNaturalFoodNearby(sLevel, assignedAnimal);
                 ItemStack carriedVegetation = this.peekMatchingVegetation(diet);
-                if (!carriedVegetation.isEmpty()) {
+                if (!carriedVegetation.isEmpty() && !hasEnoughNaturalFood) {
                     BlockPos plantPos = findValidPlantingSpotNearAnimal(sLevel, assignedAnimal, carriedVegetation.getItem());
                     if (plantPos != null) {
                         this.targetPlantingPos = plantPos;
@@ -2082,6 +2084,20 @@ public class ZooZookeeperEntity extends PathfinderMob {
                         if ((groundState.is(Blocks.GRASS_BLOCK) || groundState.is(Blocks.DIRT) || groundState.is(Blocks.SAND)) && aboveState.isAir()) {
                             isValidSpot = true;
                         }
+                    } else if (item == Items.ACACIA_SAPLING || item == Items.OAK_SAPLING || item == Items.CHERRY_SAPLING || item == Items.SPRUCE_SAPLING || item == Items.BIRCH_SAPLING || item == Items.JUNGLE_SAPLING || item == Items.DARK_OAK_SAPLING) {
+                        // Jangan tanam sapling jika tepat di atasnya atau di sekitarnya sudah ada blok daun (pohon masih utuh)
+                        if ((groundState.is(Blocks.GRASS_BLOCK) || groundState.is(Blocks.DIRT)) && aboveState.isAir()) {
+                            boolean hasLeavesAbove = false;
+                            for (int up = 1; up <= 6; up++) {
+                                if (sLevel.getBlockState(pos.above(up)).is(net.minecraft.tags.BlockTags.LEAVES)) {
+                                    hasLeavesAbove = true;
+                                    break;
+                                }
+                            }
+                            if (!hasLeavesAbove) {
+                                isValidSpot = true;
+                            }
+                        }
                     } else {
                         if ((groundState.is(Blocks.GRASS_BLOCK) || groundState.is(Blocks.DIRT)) && aboveState.isAir()) {
                             isValidSpot = true;
@@ -2140,6 +2156,12 @@ public class ZooZookeeperEntity extends PathfinderMob {
         }
 
         if (targetPlantingPos == null) {
+            stopPlanting();
+            return;
+        }
+
+        // Jika vegetasi alami di sekitar satwa sudah mencukupi, stop menanam
+        if (AnimalDietRegistry.hasNaturalFoodNearby(sLevel, assignedAnimal)) {
             stopPlanting();
             return;
         }

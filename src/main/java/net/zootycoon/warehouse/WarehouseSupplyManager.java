@@ -357,9 +357,11 @@ public class WarehouseSupplyManager {
                     boolean isGrazing = (diet != null && diet.feedingType == net.zootycoon.animal.AnimalDietRegistry.FeedingType.GRAZING);
                     if (isGrazing) {
                         if (!req.partiallyDelivered) {
-                            if (req.isGrazingVegetationRequest && keeper.hasVegetationSupplies(diet)) {
+                            boolean hasFood = keeper.getFoodStock() > ZOOKEEPER_LOW_STOCK_THRESHOLD;
+                            boolean hasEnoughNaturalFood = targetAnimal != null && net.zootycoon.animal.AnimalDietRegistry.hasNaturalFoodNearby(sLevel, targetAnimal);
+                            if (hasFood) {
                                 it.remove();
-                            } else if (!req.isGrazingVegetationRequest && keeper.getFoodStock() > ZOOKEEPER_LOW_STOCK_THRESHOLD) {
+                            } else if (req.isGrazingVegetationRequest && (keeper.hasVegetationSupplies(diet) || hasEnoughNaturalFood)) {
                                 it.remove();
                             }
                         }
@@ -414,32 +416,31 @@ public class WarehouseSupplyManager {
                                 if (isGrazing) {
                                     boolean hasSupplies = keeper.hasVegetationSupplies(diet);
                                     boolean hasFoodStock = keeper.getFoodStock() > ZOOKEEPER_LOW_STOCK_THRESHOLD;
+                                    boolean hasEnoughNaturalFood = AnimalDietRegistry.hasNaturalFoodNearby(sLevel, animal);
                                     List<ItemStack> otherFoods = AnimalDietRegistry.getFoodsForAnimal(animal);
                                     boolean canEatOtherFoods = otherFoods != null && !otherFoods.isEmpty();
 
                                     StaffSupplyRequest existing = ACTIVE_REQUESTS.get(keeper.getUUID());
                                     if (existing != null && EmptyBarrelBlockEntity.CAT_ANIMAL_FOOD.equalsIgnoreCase(existing.category)) {
-                                        // If existing request is already satisfied by keeper, remove it
-                                        if ((existing.isGrazingVegetationRequest && hasSupplies) || (!existing.isGrazingVegetationRequest && hasFoodStock)) {
+                                        // If keeper has food or vegetation is already sufficient, remove existing request
+                                        if (hasFoodStock || (existing.isGrazingVegetationRequest && (hasSupplies || hasEnoughNaturalFood))) {
                                             ACTIVE_REQUESTS.remove(keeper.getUUID());
                                         }
-                                    } else {
-                                        // Keeper needs supplies: if both are empty, random request or based on need
-                                        boolean needsVegetation = !hasSupplies;
-                                        boolean needsFood = canEatOtherFoods && !hasFoodStock;
-
-                                        if (needsVegetation || needsFood) {
-                                            boolean requestVegetation;
-                                            if (needsVegetation && needsFood) {
-                                                requestVegetation = RANDOM.nextBoolean();
-                                            } else {
-                                                requestVegetation = needsVegetation;
-                                            }
-
-                                            StaffSupplyRequest created = createZookeeperRequest(sLevel, keeper, animal, requestVegetation);
-                                            ACTIVE_REQUESTS.put(keeper.getUUID(), created);
-                                            notifyNewStaffRequest(sLevel, barrel, created);
+                                    } else if (!hasFoodStock) {
+                                        // Only request when zookeeper has NO food items left
+                                        // If natural food (e.g. leaves/grass) is already abundant, request edible items (apples, wheat, etc.)
+                                        boolean requestVegetation;
+                                        if (hasEnoughNaturalFood || hasSupplies) {
+                                            requestVegetation = false;
+                                        } else if (!canEatOtherFoods) {
+                                            requestVegetation = true;
+                                        } else {
+                                            requestVegetation = RANDOM.nextBoolean();
                                         }
+
+                                        StaffSupplyRequest created = createZookeeperRequest(sLevel, keeper, animal, requestVegetation);
+                                        ACTIVE_REQUESTS.put(keeper.getUUID(), created);
+                                        notifyNewStaffRequest(sLevel, barrel, created);
                                     }
                                 } else if (keeper.getFoodStock() <= ZOOKEEPER_LOW_STOCK_THRESHOLD) {
                                     List<ItemStack> expectedFoods = AnimalDietRegistry.getFoodsForAnimal(animal);
