@@ -15,6 +15,7 @@ public class StudioControlScreen extends Screen {
     private EditBox nameField;
     private ZooButton encBtn;
     private ZooButton essBtn;
+    private ZooButton terBtn;
 
     public StudioControlScreen(String initialCategory) {
         super(ZooTranslations.component("zootycoon.ui.studio.title"));
@@ -31,29 +32,47 @@ public class StudioControlScreen extends Screen {
         int startX = (this.width - panelWidth) / 2;
         int startY = (this.height - panelHeight) / 2;
 
-        String defaultName = ZooTranslations.get(selectedCategory.equals("enclosures") ? "zootycoon.ui.studio.default_enclosure" : "zootycoon.ui.studio.default_facility");
+        String defaultName = switch (selectedCategory) {
+            case "enclosures" -> ZooTranslations.get("zootycoon.ui.studio.default_enclosure");
+            case "terrain" -> ZooTranslations.get("zootycoon.ui.studio.default_terrain");
+            default -> ZooTranslations.get("zootycoon.ui.studio.default_facility");
+        };
+
         this.nameField = new EditBox(this.font, startX + 20, startY + 55, panelWidth - 40, 20, ZooTranslations.component("zootycoon.ui.studio.name_label"));
         this.nameField.setValue(defaultName);
         this.addRenderableWidget(this.nameField);
 
         int catY = startY + 100;
-        int btnW = (panelWidth - 50) / 2;
+        int gap = 6;
+        int btnW = (panelWidth - 40 - (gap * 2)) / 3;
 
         this.encBtn = new ZooButton(startX + 20, catY, btnW, 22, ZooTranslations.component("zootycoon.ui.studio.btn_enclosures"), b -> {
             this.selectedCategory = "enclosures";
             this.encBtn.setSelected(true);
             this.essBtn.setSelected(false);
+            this.terBtn.setSelected(false);
         }).asEmerald();
         this.encBtn.setSelected(selectedCategory.equals("enclosures"));
         this.addRenderableWidget(this.encBtn);
 
-        this.essBtn = new ZooButton(startX + 20 + btnW + 10, catY, btnW, 22, ZooTranslations.component("zootycoon.ui.studio.btn_essentials"), b -> {
+        this.essBtn = new ZooButton(startX + 20 + btnW + gap, catY, btnW, 22, ZooTranslations.component("zootycoon.ui.studio.btn_essentials"), b -> {
             this.selectedCategory = "essentials";
             this.encBtn.setSelected(false);
             this.essBtn.setSelected(true);
+            this.terBtn.setSelected(false);
         }).asGold();
         this.essBtn.setSelected(selectedCategory.equals("essentials"));
         this.addRenderableWidget(this.essBtn);
+
+        int btnW3 = (panelWidth - 40) - (btnW * 2 + gap * 2);
+        this.terBtn = new ZooButton(startX + 20 + (btnW + gap) * 2, catY, btnW3, 22, ZooTranslations.component("zootycoon.ui.studio.btn_terrain"), b -> {
+            this.selectedCategory = "terrain";
+            this.encBtn.setSelected(false);
+            this.essBtn.setSelected(false);
+            this.terBtn.setSelected(true);
+        }).asPrimary();
+        this.terBtn.setSelected(selectedCategory.equals("terrain"));
+        this.addRenderableWidget(this.terBtn);
 
         int actionY = startY + panelHeight - 45;
 

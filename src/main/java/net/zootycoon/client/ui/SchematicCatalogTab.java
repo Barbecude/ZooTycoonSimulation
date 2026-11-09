@@ -30,6 +30,8 @@ public class SchematicCatalogTab {
     private List<ZooSchematic> schematics;
     private ZooSchematic selectedSchematic = null;
     private List<Map.Entry<Item, Integer>> cachedMaterials = Collections.emptyList();
+    private int scrollOffset = 0;
+    private int maxScroll = 0;
 
     public SchematicCatalogTab(MainManagementScreen parent, String category) {
         this.parent = parent;
@@ -89,28 +91,43 @@ public class SchematicCatalogTab {
         int listWidth = 190;
         int listX = 20;
 
-        int catBtnW = (listWidth - 4) / 2;
+        int catGap = 3;
+        int catBtnW = (listWidth - (catGap * 2)) / 3;
         int catY = 48;
 
         ZooButton kandangBtn = new ZooButton(listX, catY, catBtnW, 20, ZooTranslations.component("zootycoon.ui.catalog.tab_enclosures"), b -> {
             if (!"enclosures".equals(this.category)) {
                 this.category = "enclosures";
                 this.selectedSchematic = null;
+                this.scrollOffset = 0;
                 screen.setView(screen.getCurrentView());
             }
         });
         kandangBtn.setSelected("enclosures".equals(this.category));
         screen.addWidgetPublic(kandangBtn);
 
-        ZooButton fasilitasBtn = new ZooButton(listX + catBtnW + 4, catY, catBtnW, 20, ZooTranslations.component("zootycoon.ui.catalog.tab_essentials"), b -> {
+        ZooButton fasilitasBtn = new ZooButton(listX + catBtnW + catGap, catY, catBtnW, 20, ZooTranslations.component("zootycoon.ui.catalog.tab_essentials"), b -> {
             if (!"essentials".equals(this.category)) {
                 this.category = "essentials";
                 this.selectedSchematic = null;
+                this.scrollOffset = 0;
                 screen.setView(screen.getCurrentView());
             }
         });
         fasilitasBtn.setSelected("essentials".equals(this.category));
         screen.addWidgetPublic(fasilitasBtn);
+
+        int catBtnW3 = listWidth - (catBtnW * 2 + catGap * 2);
+        ZooButton terrainBtn = new ZooButton(listX + (catBtnW + catGap) * 2, catY, catBtnW3, 20, ZooTranslations.component("zootycoon.ui.catalog.tab_terrain"), b -> {
+            if (!"terrain".equals(this.category)) {
+                this.category = "terrain";
+                this.selectedSchematic = null;
+                this.scrollOffset = 0;
+                screen.setView(screen.getCurrentView());
+            }
+        });
+        terrainBtn.setSelected("terrain".equals(this.category));
+        screen.addWidgetPublic(terrainBtn);
 
         int startY = catY + 24;
 
@@ -119,14 +136,24 @@ public class SchematicCatalogTab {
             screen.onClose();
         }).setCustomIcon(ZooTycoonMod.id("textures/gui/icons/add_enclosure.png")).asPrimary());
 
-        int itemY = startY + 28;
-        for (ZooSchematic schem : schematics) {
-            String label = (schem == selectedSchematic ? "> " : "  ") + schem.getName();
-            screen.addWidgetPublic(new ZooButton(listX, itemY, listWidth, 22, Component.literal(label), b -> {
-                updateSelected(schem);
-                screen.setView(screen.getCurrentView());
-            }).setLeftAligned(true).setSelected(schem == selectedSchematic));
-            itemY += 26;
+        int itemAreaY = startY + 28;
+        int itemAreaH = screen.height - itemAreaY - 25;
+        int totalItemsH = schematics.size() * 26;
+        this.maxScroll = Math.max(0, totalItemsH - itemAreaH);
+        this.scrollOffset = Math.clamp(this.scrollOffset, 0, this.maxScroll);
+
+        int itemBtnW = maxScroll > 0 ? listWidth - 6 : listWidth;
+
+        for (int i = 0; i < schematics.size(); i++) {
+            ZooSchematic schem = schematics.get(i);
+            int itemY = itemAreaY + i * 26 - scrollOffset;
+            if (itemY >= itemAreaY - 2 && itemY + 22 <= itemAreaY + itemAreaH + 4) {
+                String label = (schem == selectedSchematic ? "> " : "  ") + schem.getName();
+                screen.addWidgetPublic(new ZooButton(listX, itemY, itemBtnW, 22, Component.literal(label), b -> {
+                    updateSelected(schem);
+                    screen.setView(screen.getCurrentView());
+                }).setLeftAligned(true).setSelected(schem == selectedSchematic));
+            }
         }
 
         if (selectedSchematic != null) {
@@ -134,9 +161,20 @@ public class SchematicCatalogTab {
             int detailWidth = parent.width - detailX - 25;
             int actionBtnY = screen.height - 42;
 
-            int btnWidth1 = (int) (detailWidth * 0.44);
-            int btnWidth2 = (int) (detailWidth * 0.34);
-            int btnWidth3 = detailWidth - btnWidth1 - btnWidth2 - 8;
+            boolean isWorldgen = "worldgen".equalsIgnoreCase(selectedSchematic.getSubcategory());
+            int btnWidth1;
+            int btnWidth2;
+            int btnWidth3;
+
+            if (isWorldgen) {
+                btnWidth1 = (int) (detailWidth * 0.58);
+                btnWidth2 = detailWidth - btnWidth1 - 4;
+                btnWidth3 = 0;
+            } else {
+                btnWidth1 = (int) (detailWidth * 0.44);
+                btnWidth2 = (int) (detailWidth * 0.34);
+                btnWidth3 = detailWidth - btnWidth1 - btnWidth2 - 8;
+            }
 
             screen.addWidgetPublic(new ZooButton(detailX, actionBtnY, btnWidth1, 24, ZooTranslations.component("zootycoon.ui.catalog.btn_place"), b -> {
                 PlacementPreviewRenderer.setActiveSchematic(selectedSchematic);
@@ -172,11 +210,13 @@ public class SchematicCatalogTab {
                 screen.onClose();
             }).setCustomIcon(ZooTycoonMod.id("textures/gui/icons/pencil.png")).asGold());
 
-            screen.addWidgetPublic(new ZooButton(detailX + btnWidth1 + btnWidth2 + 8, actionBtnY, btnWidth3, 24, ZooTranslations.component("zootycoon.ui.catalog.btn_delete"), b -> {
-                ZooSchematicRegistry.deleteCustomSchematic(selectedSchematic.getId());
-                this.selectedSchematic = null;
-                screen.setView(screen.getCurrentView());
-            }).setCustomIcon(ZooTycoonMod.id("textures/gui/icons/trash_can.png")).asDanger());
+            if (!isWorldgen) {
+                screen.addWidgetPublic(new ZooButton(detailX + btnWidth1 + btnWidth2 + 8, actionBtnY, btnWidth3, 24, ZooTranslations.component("zootycoon.ui.catalog.btn_delete"), b -> {
+                    ZooSchematicRegistry.deleteCustomSchematic(selectedSchematic.getId());
+                    this.selectedSchematic = null;
+                    screen.setView(screen.getCurrentView());
+                }).setCustomIcon(ZooTycoonMod.id("textures/gui/icons/trash_can.png")).asDanger());
+            }
         }
     }
 
@@ -203,6 +243,17 @@ public class SchematicCatalogTab {
         graphics.fill(detailX + detailWidth - 1, panelStartY, detailX + detailWidth, panelStartY + detailHeight, 0xFF242A38);
 
         int startY = panelStartY;
+
+        // Scrollbar track & thumb for schematic list
+        if (maxScroll > 0) {
+            int itemAreaY = panelStartY + 52;
+            int itemAreaH = parent.height - itemAreaY - 25;
+            int trackX = listX + listWidth - 3;
+            graphics.fill(trackX, itemAreaY, trackX + 3, itemAreaY + itemAreaH, 0x40FFFFFF);
+            int thumbH = Math.max(16, (int) ((float) itemAreaH * itemAreaH / (float) (itemAreaH + maxScroll)));
+            int thumbY = itemAreaY + (int) ((itemAreaH - thumbH) * ((float) scrollOffset / (float) maxScroll));
+            graphics.fill(trackX, thumbY, trackX + 3, thumbY + thumbH, 0xFF00E5FF);
+        }
 
         if (selectedSchematic != null) {
             graphics.drawString(mc.font, Component.literal(selectedSchematic.getName()), detailX + 15, startY + 15, 0xFFFFFFFF, true);
@@ -258,6 +309,22 @@ public class SchematicCatalogTab {
             graphics.fill(detailX + 15, startY + 36, detailX + detailWidth - 15, startY + 37, 0xFF242A38);
             graphics.drawWordWrap(mc.font, ZooTranslations.component("zootycoon.ui.catalog.empty_help"), detailX + 15, startY + 48, detailWidth - 30, 0xFFCCCCCC);
         }
+    }
+
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        int listWidth = 190;
+        int listX = 20;
+        if (mouseX >= listX - 5 && mouseX <= listX + listWidth + 5) {
+            if (this.maxScroll > 0) {
+                int newScroll = Math.clamp(this.scrollOffset - (int) (verticalAmount * 26), 0, this.maxScroll);
+                if (newScroll != this.scrollOffset) {
+                    this.scrollOffset = newScroll;
+                    parent.setView(parent.getCurrentView());
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {

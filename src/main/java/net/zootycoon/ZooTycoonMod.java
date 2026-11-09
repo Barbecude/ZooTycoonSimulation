@@ -115,6 +115,7 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.animal.habitat.HabitatEvaluator.reset();
             net.zootycoon.block.entity.ZooThermalBlockEntity.reset();
             net.zootycoon.construction.ConstructionManager.loadFromFile(server);
+            net.zootycoon.biome.ZooTerrainBiomeGenerator.generateForWorld(server.overworld());
         });
 
         // 5b-2. Initialize Mob Bag (karung khusus hewan kecil)
@@ -337,16 +338,22 @@ public class ZooTycoonMod implements ModInitializer {
             return net.minecraft.world.InteractionResult.PASS;
         });
 
-        // Knife on Leaves -> Green Tea Leaves drop event (20% chance on any leaves)
+        // Knife on Leaves / Azalea -> Green Tea Leaves drop event
         net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents.AFTER.register((level, player, pos, state, blockEntity) -> {
             net.zootycoon.util.ZooSeatHelper.unregisterSeat(pos);
             if (level.isClientSide() || player == null || player.isCreative()) {
                 return;
             }
-            if (state.is(net.minecraft.tags.BlockTags.LEAVES)) {
+            boolean isAzalea = state.is(net.minecraft.world.level.block.Blocks.AZALEA)
+                    || state.is(net.minecraft.world.level.block.Blocks.FLOWERING_AZALEA)
+                    || state.is(net.minecraft.world.level.block.Blocks.AZALEA_LEAVES)
+                    || state.is(net.minecraft.world.level.block.Blocks.FLOWERING_AZALEA_LEAVES);
+
+            if (isAzalea || state.is(net.minecraft.tags.BlockTags.LEAVES)) {
                 ItemStack held = player.getMainHandItem();
                 if (isKnife(held)) {
-                    if (level.random.nextFloat() < 0.20F) {
+                    float chance = isAzalea ? 0.60F : 0.20F;
+                    if (level.random.nextFloat() < chance) {
                         net.minecraft.world.level.block.Block.popResource(level, pos, new ItemStack(ZooItems.GREEN_TEA_LEAVES));
                     }
                 }

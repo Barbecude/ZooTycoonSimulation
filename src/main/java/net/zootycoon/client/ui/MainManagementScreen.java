@@ -290,6 +290,9 @@ public class MainManagementScreen extends Screen {
         if (isLogStatsOpen) {
             if (logStatsModal.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) return true;
         }
+        if (currentView == ViewState.ENCLOSURES_CATALOG) {
+            if (enclosuresTab.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) return true;
+        }
         if (currentView == ViewState.ZOOKEEPER_MANAGE) {
             if (zookeeperManageTab.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) return true;
         }

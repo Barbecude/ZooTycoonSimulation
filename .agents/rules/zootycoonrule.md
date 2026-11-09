@@ -57,6 +57,7 @@ fungsi yang belum fix atau belum ada atau masih cacat (Dilarang mengerjakan semu
 18. magnifying glass logic
 19. Gudang. empty barrel ui gui button and logic
 20. cashier logic
+21. Vehicle logic and assets
 
 fungsi yg belum ada atau masih cacat (jangan eksekusi fitur ini sebelum secara eksplisit diminta)
 

@@ -23,3 +23,4 @@ animal list docx :: REAL :: Daftar_Satwa_Kebun_Binatang.docx :: curated zoo anim
 negative debuff on critical stats :: ABSENT :: src/main/java/net/zootycoon/animal/ZooAnimalHungerManager.java :: roadmap line 36; negative effect on 0 stats not yet implemented
 water auto pathing :: ABSENT :: src/main/java/net/zootycoon/animal/ZooAnimalHungerManager.java :: roadmap line 39; auto pathing to water not yet implemented
 central warehouse supply :: REGION :: src/main/java/net/zootycoon/warehouse :: empty barrel warehouse, recipe resolver, staff supply requests
+terrain biome generator :: REGION :: src/main/java/net/zootycoon/biome/ZooTerrainBiomeGenerator.java :: worldgen already builded biomes centered plateau

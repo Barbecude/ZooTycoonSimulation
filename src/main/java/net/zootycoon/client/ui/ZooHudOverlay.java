@@ -384,7 +384,7 @@ public class ZooHudOverlay {
         graphics.fill(x, y + 1, x + 1, y + height, 0xFF2A2E37);
         graphics.fill(x + width - 1, y, x + width, y + height, 0xFF2A2E37);
 
-        String catName = "enclosures".equalsIgnoreCase(ZooTycoonClient.studioCategory) ? "Kandang Satwa" : "Fasilitas Pengunjung";
+        String catName = "enclosures".equalsIgnoreCase(ZooTycoonClient.studioCategory) ? "Kandang Satwa" : ("terrain".equalsIgnoreCase(ZooTycoonClient.studioCategory) ? "Terrain" : "Fasilitas Pengunjung");
         graphics.drawString(font, ZooTranslations.component("zootycoon.hud.studio.title"), x + 8, y + 8, 0xFF00E5FF, true);
         graphics.drawString(font, ZooTranslations.component("zootycoon.hud.studio.category", catName), x + 8, y + 20, 0xFFFFFFFF, true);
         graphics.drawString(font, ZooTranslations.component("zootycoon.hud.studio.plot_info"), x + 8, y + 32, 0xFFAAAAAA, true);

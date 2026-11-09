@@ -28,6 +28,7 @@ feeding trough block :: REGION :: src/main/java/net/zootycoon/block/ZooFeedingTr
 feeding trough entity :: REGION :: src/main/java/net/zootycoon/block/ZooFeedingTroughBlockEntity.java :: trough inventory, water, food storage
 hologram docs :: REGION :: docs/hologram :: rules and progress for hologram system
 network payloads :: REGION :: src/main/java/net/zootycoon/network :: packets for dialogs, trough sync, zookeeper
+terrain biome generator :: REGION :: src/main/java/net/zootycoon/biome/ZooTerrainBiomeGenerator.java :: worldgen already builded biomes centered plateau
 zookeeper entity :: REGION :: src/main/java/net/zootycoon/entity/ZooZookeeperEntity.java :: keeper logic, follow animal, claim stroll, refilling
 
 ## Rules — how this repo works
@@ -48,5 +49,5 @@ animal list docx :: REAL :: Daftar_Satwa_Kebun_Binatang.docx :: curated zoo anim
 zootycoon rules file :: REAL :: .agents/rules/zootycoonrule.md :: central instructions and active roadmap
 
 ---
-entries: 24 journalled
+entries: 25 journalled
 cap: 40 per bucket
