@@ -1,6 +1,7 @@
 package net.zootycoon.entity;
 
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -8,6 +9,7 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
@@ -36,6 +38,7 @@ import net.zootycoon.animal.ZooAnimalHungerManager;
 import net.zootycoon.item.ZooItems;
 import net.zootycoon.mixin.LivingEntityAccessor;
 import net.zootycoon.network.ZooNetworkPayloads;
+import net.zootycoon.sound.ZooSounds;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -57,6 +60,9 @@ public class ZooVehicleEntity extends Entity {
     );
     private static final EntityDataAccessor<Float> DATA_SPEED = SynchedEntityData.defineId(
             ZooVehicleEntity.class, EntityDataSerializers.FLOAT
+    );
+    private static final EntityDataAccessor<Boolean> DATA_BRAKING = SynchedEntityData.defineId(
+            ZooVehicleEntity.class, EntityDataSerializers.BOOLEAN
     );
 
     public record WheelSpec(int cmd, float scale, Vec3 offset, boolean steered) {}
@@ -372,6 +378,14 @@ public class ZooVehicleEntity extends Entity {
     private float currentSpeed = 0.0f;
     private float localSteerAngle = 0.0f;
     private float localWheelSpin = 0.0f;
+    private boolean localBraking = false;
+    private boolean hadDriver = false;
+    private boolean wasBraking = false;
+    private int engineSoundTimer = 0;
+    private int brakeSoundTimer = 0;
+    private int crashSoundCooldown = 0;
+    private float prevTickSpeed = 0.0f;
+    private int lastGearStep = 0;
     private int lerpSteps = 0;
     private double lerpX;
     private double lerpY;
@@ -396,6 +410,7 @@ public class ZooVehicleEntity extends Entity {
         builder.define(DATA_STEER_ANGLE, 0.0f);
         builder.define(DATA_WHEEL_SPIN, 0.0f);
         builder.define(DATA_SPEED, 0.0f);
+        builder.define(DATA_BRAKING, false);
     }
 
     public String getVehicleType() {
@@ -526,6 +541,11 @@ public class ZooVehicleEntity extends Entity {
                 }
 
                 // Update forward / reverse speed
+                boolean reverseBraking = (forwardInput > 0.05f && this.currentSpeed < -0.04f)
+                        || (forwardInput < -0.05f && this.currentSpeed > 0.04f);
+                boolean driftBraking = Math.abs(this.currentSpeed) > 0.34f && Math.abs(this.localSteerAngle) > 22.0f;
+                this.localBraking = (braking && Math.abs(this.currentSpeed) > 0.025f) || reverseBraking || driftBraking;
+
                 if (braking) {
                     this.currentSpeed *= 0.60f;
                     if (Math.abs(this.currentSpeed) < 0.01f) {
@@ -564,6 +584,7 @@ public class ZooVehicleEntity extends Entity {
                     }
                 }
             } else {
+                this.localBraking = false;
                 this.localSteerAngle *= 0.75f;
                 this.currentSpeed *= 0.80f;
                 if (Math.abs(this.currentSpeed) < 0.005f) {
@@ -592,6 +613,8 @@ public class ZooVehicleEntity extends Entity {
         if (!this.level().isClientSide()) {
             if (driver != null) {
                 float sInput = driver.xxa;
+                float fInput = driver.zza;
+                boolean sJump = ((LivingEntityAccessor) driver).isJumping();
                 float sAngle = this.entityData.get(DATA_STEER_ANGLE);
                 if (sInput > 0.05f) {
                     sAngle = Mth.clamp(sAngle + 4.5f, -32.0f, 32.0f);
@@ -609,19 +632,234 @@ public class ZooVehicleEntity extends Entity {
                 this.entityData.set(DATA_SPEED, signedMove);
                 float spin = (this.entityData.get(DATA_WHEEL_SPIN) + signedMove * 95.0f) % 360.0f;
                 this.entityData.set(DATA_WHEEL_SPIN, spin);
+
+                boolean revBrake = (fInput > 0.05f && signedMove < -0.04f) || (fInput < -0.05f && signedMove > 0.04f);
+                boolean driftBrake = Math.abs(signedMove) > 0.34f && Math.abs(sAngle) > 22.0f;
+                this.entityData.set(DATA_BRAKING, (sJump && Math.abs(signedMove) > 0.025f) || revBrake || driftBrake);
             } else {
                 this.entityData.set(DATA_STEER_ANGLE, this.localSteerAngle);
                 this.entityData.set(DATA_SPEED, this.currentSpeed);
                 this.entityData.set(DATA_WHEEL_SPIN, this.localWheelSpin);
+                this.entityData.set(DATA_BRAKING, false);
             }
 
             if (this.tickCount % 4 == 0) {
                 tickTrunkAnimalBoarding(spec);
             }
-        } else if (!this.isControlledByLocalInstance()) {
-            this.localSteerAngle = this.entityData.get(DATA_STEER_ANGLE);
-            this.localWheelSpin = this.entityData.get(DATA_WHEEL_SPIN);
+        } else {
+            if (!this.isControlledByLocalInstance()) {
+                this.localSteerAngle = this.entityData.get(DATA_STEER_ANGLE);
+                this.localWheelSpin = this.entityData.get(DATA_WHEEL_SPIN);
+                this.localBraking = this.entityData.get(DATA_BRAKING);
+            }
+            tickClientEffects(spec, driver);
         }
+    }
+
+    private static boolean isHeavyTruck(String typeId) {
+        return "tt-66052".equals(typeId)
+                || "zil-130".equals(typeId)
+                || "hammer_monster".equals(typeId)
+                || "armored_truck_4x4_black".equals(typeId)
+                || "armored_truck_4x4_gray-red".equals(typeId);
+    }
+
+    private static SoundEvent getEngineSoundEvent(String typeId) {
+        if (typeId != null && typeId.startsWith("zaz-")) {
+            return ZooSounds.VEH_ZAZ_ENGINE;
+        }
+        if (isHeavyTruck(typeId)) {
+            return ZooSounds.VEH_ENGINE_1;
+        }
+        return ZooSounds.VEH_ENGINE_0;
+    }
+
+    private static Vec3 getExhaustLocalOffset(VehicleSpec spec) {
+        double minZ = -1.5;
+        double minY = 0.0;
+        for (WheelSpec wheel : spec.wheels()) {
+            if (wheel.offset().z < minZ) {
+                minZ = wheel.offset().z;
+            }
+            if (wheel.offset().y < minY) {
+                minY = wheel.offset().y;
+            }
+        }
+        return new Vec3(-0.55, minY + spec.groundClearanceY() + 0.12, minZ - 0.55);
+    }
+
+    private void tickClientEffects(VehicleSpec spec, Player driver) {
+        String typeId = getVehicleType();
+        boolean heavyTruck = isHeavyTruck(typeId);
+        float speed = this.isControlledByLocalInstance() ? this.currentSpeed : this.entityData.get(DATA_SPEED);
+        float absSpeed = Math.abs(speed);
+        boolean activeBraking = this.isControlledByLocalInstance() ? this.localBraking : this.entityData.get(DATA_BRAKING);
+
+        if (this.crashSoundCooldown > 0) {
+            this.crashSoundCooldown--;
+        }
+
+        // 1. Ignition start / stop sounds & startup exhaust puff
+        boolean hasDriverNow = driver != null;
+        if (hasDriverNow && !this.hadDriver) {
+            this.level().playLocalSound(
+                    this.getX(), this.getY() + 0.6, this.getZ(),
+                    ZooSounds.VEH_KEY_INSERT, SoundSource.AMBIENT, 0.7f, 1.0f, false
+            );
+            SoundEvent startSound = (typeId != null && typeId.startsWith("zaz-"))
+                    ? ZooSounds.VEH_ZAZ_IGNITION_START
+                    : ZooSounds.VEH_IGNITION_START;
+            this.level().playLocalSound(
+                    this.getX(), this.getY() + 0.6, this.getZ(),
+                    startSound, SoundSource.AMBIENT, 0.85f, 1.0f, false
+            );
+
+            Vec3 exhaustPos = this.position().add(rotateLocalOffset(getExhaustLocalOffset(spec), this.getYRot()));
+            double rad = Math.toRadians(this.getYRot());
+            double backX = Math.sin(rad) * 0.04;
+            double backZ = -Math.cos(rad) * 0.04;
+            for (int i = 0; i < 3; i++) {
+                this.level().addParticle(
+                        ParticleTypes.SMOKE,
+                        exhaustPos.x + (this.random.nextDouble() - 0.5) * 0.1,
+                        exhaustPos.y + (this.random.nextDouble() - 0.5) * 0.08,
+                        exhaustPos.z + (this.random.nextDouble() - 0.5) * 0.1,
+                        backX, 0.02, backZ
+                );
+            }
+            this.engineSoundTimer = 6;
+        } else if (!hasDriverNow && this.hadDriver) {
+            this.level().playLocalSound(
+                    this.getX(), this.getY() + 0.6, this.getZ(),
+                    ZooSounds.VEH_KEY_REMOVE, SoundSource.AMBIENT, 0.7f, 1.0f, false
+            );
+            this.level().playLocalSound(
+                    this.getX(), this.getY() + 0.6, this.getZ(),
+                    heavyTruck ? ZooSounds.VEH_TRUCK_HANDBRAKE_ON : ZooSounds.VEH_HANDBRAKE_ON,
+                    SoundSource.AMBIENT, 0.65f, 1.0f, false
+            );
+        }
+        this.hadDriver = hasDriverNow;
+
+        // 2. Engine loop sound, gear shift sound & subtle exhaust smoke while engine is running
+        if (hasDriverNow) {
+            float throttle = Math.abs(driver.zza);
+            float maxSpd = Math.max(0.25f, spec.maxForwardSpeed());
+            float speedRatio = Mth.clamp(absSpeed / maxSpd, 0.0f, 1.0f);
+
+            int gearStep = speed < -0.02f ? -1 : (absSpeed < 0.02f ? 0 : (speedRatio < 0.40f ? 1 : (speedRatio < 0.75f ? 2 : 3)));
+            if (gearStep != this.lastGearStep && gearStep != 0) {
+                this.level().playLocalSound(
+                        this.getX(), this.getY() + 0.5, this.getZ(),
+                        ZooSounds.VEH_GEAR_FINISH, SoundSource.AMBIENT, 0.35f, 0.95f + this.random.nextFloat() * 0.1f, false
+                );
+            }
+            this.lastGearStep = gearStep;
+
+            if (this.engineSoundTimer > 0) {
+                this.engineSoundTimer--;
+            }
+            if (this.engineSoundTimer <= 0) {
+                float pitch = 0.56f + speedRatio * 0.78f + (throttle > 0.05f ? 0.08f : 0.0f);
+                float volume = 0.32f + speedRatio * 0.38f;
+                this.level().playLocalSound(
+                        this.getX(), this.getY() + 0.6, this.getZ(),
+                        getEngineSoundEvent(typeId), SoundSource.AMBIENT, volume, pitch, false
+                );
+                this.engineSoundTimer = (absSpeed > 0.05f || throttle > 0.05f) ? 2 : 3;
+            }
+
+            // Tire rolling sound at moderate/high speed
+            if (absSpeed > 0.16f && !activeBraking && this.tickCount % 5 == 0) {
+                float tirePitch = 0.75f + speedRatio * 0.45f;
+                this.level().playLocalSound(
+                        this.getX(), this.getY() + 0.15, this.getZ(),
+                        ZooSounds.VEH_TIRES_ROUGH, SoundSource.AMBIENT, 0.22f + speedRatio * 0.18f, tirePitch, false
+                );
+            }
+
+            // Subtle exhaust smoke ("sedikit asap knalpot")
+            int exhaustInterval = (absSpeed > 0.02f || throttle > 0.05f) ? 3 : 7;
+            if (this.tickCount % exhaustInterval == 0) {
+                Vec3 exhaustPos = this.position().add(rotateLocalOffset(getExhaustLocalOffset(spec), this.getYRot()));
+                double rad = Math.toRadians(this.getYRot());
+                double backSpeed = 0.025 + speedRatio * 0.035;
+                double backX = Math.sin(rad) * backSpeed + (this.random.nextDouble() - 0.5) * 0.01;
+                double backZ = -Math.cos(rad) * backSpeed + (this.random.nextDouble() - 0.5) * 0.01;
+                this.level().addParticle(
+                        ParticleTypes.SMOKE,
+                        exhaustPos.x,
+                        exhaustPos.y,
+                        exhaustPos.z,
+                        backX, 0.012 + this.random.nextDouble() * 0.008, backZ
+                );
+            }
+        }
+
+        // 3. Brake sound & tire smoke ("asap ketika rem")
+        if (activeBraking && absSpeed > 0.025f) {
+            if (!this.wasBraking) {
+                this.level().playLocalSound(
+                        this.getX(), this.getY() + 0.4, this.getZ(),
+                        heavyTruck ? ZooSounds.VEH_TRUCK_HANDBRAKE_ON : ZooSounds.VEH_HANDBRAKE_ON,
+                        SoundSource.AMBIENT, 0.55f, 1.0f, false
+                );
+            }
+            if (this.brakeSoundTimer > 0) {
+                this.brakeSoundTimer--;
+            }
+            if (this.brakeSoundTimer <= 0) {
+                float skidPitch = 0.90f + this.random.nextFloat() * 0.25f;
+                float skidVol = Mth.clamp(0.35f + absSpeed * 0.85f, 0.35f, 0.78f);
+                this.level().playLocalSound(
+                        this.getX(), this.getY() + 0.15, this.getZ(),
+                        ZooSounds.VEH_TIRES_HARD, SoundSource.AMBIENT, skidVol, skidPitch, false
+                );
+                this.brakeSoundTimer = 3;
+            }
+
+            double rad = Math.toRadians(this.getYRot());
+            double driftBackX = Math.sin(rad) * 0.02;
+            double driftBackZ = -Math.cos(rad) * 0.02;
+
+            for (WheelSpec wheel : spec.wheels()) {
+                Vec3 wheelWorld = this.position().add(rotateLocalOffset(
+                        new Vec3(wheel.offset().x, 0.0, wheel.offset().z),
+                        this.getYRot()
+                ));
+                double wx = wheelWorld.x + (this.random.nextDouble() - 0.5) * 0.22;
+                double wy = this.getY() + 0.10;
+                double wz = wheelWorld.z + (this.random.nextDouble() - 0.5) * 0.22;
+
+                if (this.tickCount % 2 == 0 || !wheel.steered()) {
+                    this.level().addParticle(
+                            ParticleTypes.CAMPFIRE_COSY_SMOKE,
+                            wx, wy, wz,
+                            driftBackX + (this.random.nextDouble() - 0.5) * 0.015,
+                            0.018 + this.random.nextDouble() * 0.012,
+                            driftBackZ + (this.random.nextDouble() - 0.5) * 0.015
+                    );
+                }
+                this.level().addParticle(
+                        ParticleTypes.CLOUD,
+                        wx, wy + 0.04, wz,
+                        driftBackX + (this.random.nextDouble() - 0.5) * 0.02,
+                        0.015,
+                        driftBackZ + (this.random.nextDouble() - 0.5) * 0.02
+                );
+            }
+        }
+        this.wasBraking = activeBraking;
+
+        // 4. Crash sound on hard horizontal collision
+        if (this.horizontalCollision && Math.abs(this.prevTickSpeed) > 0.18f && this.crashSoundCooldown == 0) {
+            this.level().playLocalSound(
+                    this.getX(), this.getY() + 0.5, this.getZ(),
+                    ZooSounds.VEH_CRASH, SoundSource.AMBIENT, 0.80f, 0.90f + this.random.nextFloat() * 0.2f, false
+            );
+            this.crashSoundCooldown = 15;
+        }
+        this.prevTickSpeed = speed;
     }
 
     private void tickTrunkAnimalBoarding(VehicleSpec spec) {
