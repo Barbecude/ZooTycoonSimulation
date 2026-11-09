@@ -787,5 +787,8 @@
   "zootycoon.dialog.staff.strike_status": "Status: Mogok Kerja",
   "zootycoon.dialog.staff.strike_hint": "Lunasi gaji harian staf agar mereka kembali bekerja.",
   "zootycoon.dialog.staff.btn.pay_salary": "Bayar Gaji",
-  "zootycoon.dialog.staff.btn.close": "Tutup"
+  "zootycoon.dialog.staff.btn.close": "Tutup",
+  "zootycoon.mob_bag.captured": "%s dimasukkan ke dalam Mob Bag.",
+  "zootycoon.mob_bag.released": "%s dikeluarkan dari Mob Bag.",
+  "zootycoon.mob_bag.too_large": "Hewan ini terlalu besar untuk Mob Bag! Mob Bag hanya bisa membawa hewan kecil."
 }

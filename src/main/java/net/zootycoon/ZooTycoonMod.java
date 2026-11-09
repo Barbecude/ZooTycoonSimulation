@@ -117,6 +117,9 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.construction.ConstructionManager.loadFromFile(server);
         });
 
+        // 5b-2. Initialize Mob Bag (karung khusus hewan kecil)
+        net.zootycoon.item.MobBagHandler.initServerEvents();
+
         // 5c. Spyglass/Field Guide right-click animal registration, watering/brushing & direct player feeding
         net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
             if (!world.isClientSide() && player instanceof net.minecraft.server.level.ServerPlayer sp && entity instanceof net.minecraft.world.entity.LivingEntity living) {

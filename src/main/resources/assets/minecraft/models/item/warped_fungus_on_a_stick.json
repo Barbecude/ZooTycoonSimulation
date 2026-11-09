@@ -1,0 +1,23 @@
+{
+  "parent": "item/handheld",
+  "textures": {
+    "layer0": "item/warped_fungus_on_a_stick"
+  },
+    "overrides": [
+    {"predicate": {"custom_model_data":102201}, "model": "item/iron_trowel"},
+    {"predicate": {"custom_model_data":102202}, "model": "item/iron_chisel"},
+    {"predicate": {"custom_model_data":102203}, "model": "item/diamond_trowel"},
+    {"predicate": {"custom_model_data":102204}, "model": "item/diamond_chisel"},
+    {"predicate": {"custom_model_data":102206}, "model": "item/void_bucket"},
+    {"predicate": {"custom_model_data":102207}, "model": "item/mob_bag_empty"},
+    {"predicate": {"custom_model_data":102208}, "model": "item/mob_bag_full"},
+    {"predicate": {"custom_model_data":102209}, "model": "item/grass_starter"},
+    {"predicate": {"custom_model_data":1022091}, "model": "item/experience_flask_0"},
+    {"predicate": {"custom_model_data":1022092}, "model": "item/experience_flask_1"},
+    {"predicate": {"custom_model_data":1022093}, "model": "item/experience_flask_2"},
+    {"predicate": {"custom_model_data":1022094}, "model": "item/experience_flask_3"},
+    {"predicate": {"custom_model_data":1022095}, "model": "item/tape_measure_in"},
+    {"predicate": {"custom_model_data":1022096}, "model": "item/tape_measure_out"},
+    {"predicate": {"custom_model_data":1022097}, "model": "item/wrench"}
+    ]
+}

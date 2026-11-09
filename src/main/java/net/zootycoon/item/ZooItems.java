@@ -286,7 +286,7 @@ public class ZooItems {
         voidBundle.set(DataComponents.FOOD, new FoodProperties(0, 0.0f, true, 2147483648.0f, Optional.empty(), List.of()));
         list.add(voidBundle);
         // 11. Mob Bag
-        list.add(makeJbtTool(Items.WARPED_FUNGUS_ON_A_STICK, "jbt:bag", "Mob Bag", 102207, 0, "jbt_bag"));
+        list.add(makeJbtTool(Items.WARPED_FUNGUS_ON_A_STICK, "jbt:bag", "Mob Bag", 102207, 0, "zoo_mob_bag"));
         // 12. Experience Flask
         list.add(makeJbtTool(Items.WARPED_FUNGUS_ON_A_STICK, "jbt:flask", "Experience Flask", 1022091, 0, "jbt_flask"));
         // 13. Rope Ladder
