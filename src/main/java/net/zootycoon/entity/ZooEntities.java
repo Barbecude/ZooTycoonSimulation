@@ -114,6 +114,21 @@ public class ZooEntities {
                     .build("zootycoon:toilet_seat")
     );
 
+    public static final ResourceKey<EntityType<?>> VEHICLE_KEY = ResourceKey.create(
+            Registries.ENTITY_TYPE,
+            ZooTycoonMod.id("vehicle")
+    );
+
+    public static final EntityType<ZooVehicleEntity> VEHICLE = Registry.register(
+            BuiltInRegistries.ENTITY_TYPE,
+            ZooTycoonMod.id("vehicle"),
+            EntityType.Builder.of(ZooVehicleEntity::new, MobCategory.MISC)
+                    .sized(2.2f, 1.6f)
+                    .clientTrackingRange(10)
+                    .updateInterval(2)
+                    .build("zootycoon:vehicle")
+    );
+
     public static void register() {
         FabricDefaultAttributeRegistry.register(BUILDER, ZooBuilderEntity.createAttributes());
         FabricDefaultAttributeRegistry.register(ZOOKEEPER, ZooZookeeperEntity.createAttributes());

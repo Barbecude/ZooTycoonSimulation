@@ -780,5 +780,7 @@
   "zootycoon.dialog.cashier.feedback.sort_time": "Urut: Waktu",
   "zootycoon.dialog.cashier.feedback.dismiss": "Hapus keluhan",
   "zootycoon.warehouse.tooltip.raw_cost_prefix": "Harga Bahan Mentah: ",
-  "zootycoon.warehouse.bought_to_barrel": "Item berhasil dibeli dan dimasukkan ke dalam barrel!"
+  "zootycoon.warehouse.bought_to_barrel": "Item berhasil dibeli dan dimasukkan ke dalam barrel!",
+  "zootycoon.vehicle.animal_loaded": "%s naik ke bagasi kendaraan.",
+  "zootycoon.vehicle.animal_unloaded": "Satwa diturunkan dari bagasi kendaraan."
 }

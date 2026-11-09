@@ -579,10 +579,14 @@ public class ZooTycoonClient implements ClientModInitializer {
                 net.zootycoon.client.render.ZooCashierRenderer::new
         );
 
-        // 3g. Register Entity Renderer for Toilet Seat
+        // 3g. Register Entity Renderer for Toilet Seat & Zoo Vehicle
         EntityRendererRegistry.register(
                 net.zootycoon.entity.ZooEntities.TOILET_SEAT,
                 net.zootycoon.client.render.ToiletSeatRenderer::new
+        );
+        EntityRendererRegistry.register(
+                net.zootycoon.entity.ZooEntities.VEHICLE,
+                net.zootycoon.client.render.ZooVehicleRenderer::new
         );
 
         // 3h. Register transparent cutout and translucent render layers for blocks (Trash, Feeding Trough, Trash Can, Gacha Machine, Heater, Cooler Box)

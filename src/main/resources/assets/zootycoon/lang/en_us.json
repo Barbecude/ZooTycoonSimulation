@@ -776,5 +776,7 @@
   "zootycoon.dialog.cashier.feedback.sort_time": "Sort: Time",
   "zootycoon.dialog.cashier.feedback.dismiss": "Dismiss complaint",
   "zootycoon.warehouse.tooltip.raw_cost_prefix": "Raw Material Cost: ",
-  "zootycoon.warehouse.bought_to_barrel": "Items purchased and stored in barrel!"
+  "zootycoon.warehouse.bought_to_barrel": "Items purchased and stored in barrel!",
+  "zootycoon.vehicle.animal_loaded": "%s climbed into the vehicle trunk.",
+  "zootycoon.vehicle.animal_unloaded": "Animal unloaded from the vehicle trunk."
 }
