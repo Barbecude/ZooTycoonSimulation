@@ -3,7 +3,9 @@ package net.zootycoon.biome;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
+import com.mojang.datafixers.util.Pair;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -18,6 +20,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.zootycoon.ZooTycoonMod;
 import net.zootycoon.schematic.ZooSchematic;
 import net.zootycoon.schematic.ZooSchematicRegistry;
@@ -455,20 +458,23 @@ public class ZooTerrainBiomeGenerator {
 
         Path baseDir = ZooSchematicRegistry.getCustomSchematicsDir();
 
-        // 1. Ensure core presets are up-to-date with world generator author
+        // 1. Sample real world generation for all core presets
         for (BiomePreset preset : PRESETS) {
-            Path nbtPath = baseDir.resolve(preset.idKey() + ".nbt");
-            Path jsonPath = baseDir.resolve(preset.idKey() + ".json");
-            if (!Files.exists(nbtPath) || !Files.exists(jsonPath) || isTectonic) {
-                try {
-                    generateAndSavePreset(preset, author, desc);
-                } catch (Exception e) {
-                    ZooTycoonMod.LOGGER.error("Failed to generate terrain schematic for: " + preset.idKey(), e);
+            boolean sampled = sampleAndGenerateFromWorld(overworld, preset, author, desc);
+            if (!sampled) {
+                Path nbtPath = baseDir.resolve(preset.idKey() + ".nbt");
+                Path jsonPath = baseDir.resolve(preset.idKey() + ".json");
+                if (!Files.exists(nbtPath) || !Files.exists(jsonPath)) {
+                    try {
+                        generateAndSavePreset(preset, author, desc);
+                    } catch (Exception e) {
+                        ZooTycoonMod.LOGGER.error("Fallback generation failed for: " + preset.idKey(), e);
+                    }
                 }
             }
         }
 
-        // 2. Discover any modded biomes in overworld generator
+        // 2. Discover and sample any modded biomes in overworld generator
         try {
             var biomeSource = overworld.getChunkSource().getGenerator().getBiomeSource();
             Set<Holder<Biome>> possible = biomeSource.possibleBiomes();
@@ -478,11 +484,21 @@ public class ZooTerrainBiomeGenerator {
                     if (!"minecraft".equals(loc.getNamespace())) {
                         String modId = loc.getNamespace();
                         String safeName = "terrain_" + modId + "_" + loc.getPath();
-                        Path modNbt = baseDir.resolve(safeName + ".nbt");
-                        Path modJson = baseDir.resolve(safeName + ".json");
-                        if (!Files.exists(modNbt) || !Files.exists(modJson)) {
-                            generateModdedBiome(safeName, key, loc, modId + " WorldGen", desc);
-                        }
+                        String rawName = loc.getPath().replace('_', ' ');
+                        String capName = Character.toUpperCase(rawName.charAt(0)) + rawName.substring(1) + " Biome";
+
+                        BiomePreset modPreset = new BiomePreset(
+                                safeName,
+                                key,
+                                "zootycoon.terrain.biome." + safeName,
+                                capName,
+                                4,
+                                Blocks.GRASS_BLOCK.defaultBlockState(),
+                                Blocks.DIRT.defaultBlockState(),
+                                Blocks.STONE.defaultBlockState(),
+                                null
+                        );
+                        sampleAndGenerateFromWorld(overworld, modPreset, modId + " WorldGen", desc);
                     }
                 });
             }
@@ -491,6 +507,161 @@ public class ZooTerrainBiomeGenerator {
         }
 
         ZooSchematicRegistry.loadCustomSchematics();
+    }
+
+    /**
+     * Slices authentic 32x32 terrain directly from the world generation chunks.
+     * Finds the local plateau/peak in that biome, centers it, and tapers the borders flush to base level.
+     */
+    public static boolean sampleAndGenerateFromWorld(ServerLevel level, BiomePreset preset, String author, String desc) {
+        try {
+            // 1. Locate where this biome naturally occurs in the active world
+            Pair<BlockPos, Holder<Biome>> found = level.findClosestBiome3d(
+                    h -> h.is(preset.biomeKey()),
+                    BlockPos.ZERO,
+                    12800,
+                    32,
+                    64
+            );
+
+            if (found == null) {
+                return false;
+            }
+
+            BlockPos sampleCenter = found.getFirst();
+
+            // 2. Load and generate chunks covering the sample area
+            int chunkRadius = 2;
+            int centerChunkX = sampleCenter.getX() >> 4;
+            int centerChunkZ = sampleCenter.getZ() >> 4;
+            for (int cx = centerChunkX - chunkRadius; cx <= centerChunkX + chunkRadius; cx++) {
+                for (int cz = centerChunkZ - chunkRadius; cz <= centerChunkZ + chunkRadius; cz++) {
+                    level.getChunk(cx, cz);
+                }
+            }
+
+            // 3. Scan a 48x48 window to find the local peak/plateau summit in this biome
+            int bestX = sampleCenter.getX();
+            int bestZ = sampleCenter.getZ();
+            int highestY = Integer.MIN_VALUE;
+
+            for (int sx = -24; sx <= 24; sx += 2) {
+                for (int sz = -24; sz <= 24; sz += 2) {
+                    int wx = sampleCenter.getX() + sx;
+                    int wz = sampleCenter.getZ() + sz;
+                    int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, wx, wz);
+                    if (y > highestY && level.getBiome(new BlockPos(wx, y, wz)).is(preset.biomeKey())) {
+                        highestY = y;
+                        bestX = wx;
+                        bestZ = wz;
+                    }
+                }
+            }
+
+            // 4. Center our 32x32 slice on (bestX, bestZ) so plateau is firmly in the CENTER
+            int startX = bestX - (SIZE_X / 2);
+            int startZ = bestZ - (SIZE_Z / 2);
+
+            // 5. Determine lowest surface height along the outer border
+            int minBorderY = Integer.MAX_VALUE;
+            for (int i = 0; i < SIZE_X; i++) {
+                minBorderY = Math.min(minBorderY, level.getHeight(Heightmap.Types.WORLD_SURFACE, startX + i, startZ));
+                minBorderY = Math.min(minBorderY, level.getHeight(Heightmap.Types.WORLD_SURFACE, startX + i, startZ + SIZE_Z - 1));
+                minBorderY = Math.min(minBorderY, level.getHeight(Heightmap.Types.WORLD_SURFACE, startX, startZ + i));
+                minBorderY = Math.min(minBorderY, level.getHeight(Heightmap.Types.WORLD_SURFACE, startX + SIZE_X - 1, startZ + i));
+            }
+
+            BlockState[][][] grid = new BlockState[SIZE_X][SIZE_Y][SIZE_Z];
+
+            float cx = (SIZE_X - 1) / 2.0f;
+            float cz = (SIZE_Z - 1) / 2.0f;
+            float maxR = SIZE_X / 2.0f;
+
+            for (int rx = 0; rx < SIZE_X; rx++) {
+                for (int rz = 0; rz < SIZE_Z; rz++) {
+                    int wx = startX + rx;
+                    int wz = startZ + rz;
+
+                    int worldY = level.getHeight(Heightmap.Types.WORLD_SURFACE, wx, wz);
+                    int deltaY = Math.max(0, worldY - minBorderY);
+
+                    float dx = (rx - cx) / maxR;
+                    float dz = (rz - cz) / maxR;
+                    float dist = (float) Math.sqrt(dx * dx + dz * dz);
+                    int borderDist = Math.min(Math.min(rx, SIZE_X - 1 - rx), Math.min(rz, SIZE_Z - 1 - rz));
+
+                    // Center (dist <= 0.40): 100% authentic world generation height
+                    // Border (dist >= 0.85 or borderDist <= 2): smoothly levels to BASE_Y
+                    float falloff;
+                    if (borderDist <= 2 || dist >= 0.85f) {
+                        falloff = 0.0f;
+                    } else if (dist <= 0.40f) {
+                        falloff = 1.0f;
+                    } else {
+                        float t = (0.85f - dist) / (0.85f - 0.40f);
+                        falloff = t * t * (3.0f - 2.0f * t);
+                    }
+
+                    int surfaceElev = Math.round(deltaY * falloff);
+                    int targetSurfaceY = BASE_Y + surfaceElev;
+
+                    // Copy authentic ground block from the world
+                    BlockPos worldGroundPos = new BlockPos(wx, worldY - 1, wz);
+                    BlockState surfaceBlock = level.getBlockState(worldGroundPos);
+                    if (surfaceBlock.isAir()) {
+                        surfaceBlock = preset.surfaceBlock();
+                    }
+
+                    // Copy subsurface blocks from world (up to 4 blocks deep)
+                    for (int dy = 1; dy <= 4; dy++) {
+                        int placeY = targetSurfaceY - dy;
+                        if (placeY >= 0 && placeY < SIZE_Y) {
+                            BlockState subState = level.getBlockState(worldGroundPos.below(dy));
+                            if (subState.isAir()) subState = preset.subsurfaceBlock();
+                            grid[rx][placeY][rz] = subState;
+                        }
+                    }
+
+                    // Foundation rock underneath
+                    for (int y = 0; y <= Math.max(0, targetSurfaceY - 5); y++) {
+                        grid[rx][y][rz] = preset.foundationBlock();
+                    }
+
+                    // Surface block
+                    if (targetSurfaceY >= 0 && targetSurfaceY < SIZE_Y) {
+                        grid[rx][targetSurfaceY][rz] = surfaceBlock;
+                    }
+
+                    // Copy authentic above-ground features (trees, flowers, grass, snow) from world
+                    int maxFeatureH = Math.min(18, SIZE_Y - targetSurfaceY - 1);
+                    for (int dy = 0; dy < maxFeatureH; dy++) {
+                        BlockPos featPos = new BlockPos(wx, worldY + dy, wz);
+                        BlockState featState = level.getBlockState(featPos);
+                        if (!featState.isAir()) {
+                            if (featState.hasProperty(BlockStateProperties.PERSISTENT)) {
+                                featState = featState.setValue(BlockStateProperties.PERSISTENT, true);
+                            }
+                            int placeY = targetSurfaceY + 1 + dy;
+                            if (placeY < SIZE_Y) {
+                                grid[rx][placeY][rz] = featState;
+                            }
+                        }
+                    }
+                }
+            }
+
+            String displayName = ZooTranslations.get(preset.translationKey());
+            if (displayName == null || displayName.isEmpty() || displayName.equals(preset.translationKey())) {
+                displayName = preset.fallbackName();
+            }
+
+            saveSchematic(preset.idKey(), displayName, preset.biomeKey().location(), grid, author, desc);
+            ZooTycoonMod.LOGGER.info("Sampled authentic worldgen terrain for: {} from {}", preset.idKey(), sampleCenter);
+            return true;
+        } catch (Exception e) {
+            ZooTycoonMod.LOGGER.warn("Failed to sample worldgen for " + preset.idKey() + ": " + e.getMessage());
+            return false;
+        }
     }
 
     private static void generateAndSavePreset(BiomePreset preset, String author, String description) throws Exception {
