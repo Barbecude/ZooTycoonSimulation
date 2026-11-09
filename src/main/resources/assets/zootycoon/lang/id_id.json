@@ -782,5 +782,10 @@
   "zootycoon.warehouse.tooltip.raw_cost_prefix": "Harga Bahan Mentah: ",
   "zootycoon.warehouse.bought_to_barrel": "Item berhasil dibeli dan dimasukkan ke dalam barrel!",
   "zootycoon.vehicle.animal_loaded": "%s naik ke bagasi kendaraan.",
-  "zootycoon.vehicle.animal_unloaded": "Satwa diturunkan dari bagasi kendaraan."
+  "zootycoon.vehicle.animal_unloaded": "Satwa diturunkan dari bagasi kendaraan.",
+  "zootycoon.dialog.staff.on_strike": "Saya tidak bisa bekerja hari ini gaji saya belum dibayar",
+  "zootycoon.dialog.staff.strike_status": "Status: Mogok Kerja",
+  "zootycoon.dialog.staff.strike_hint": "Lunasi gaji harian staf agar mereka kembali bekerja.",
+  "zootycoon.dialog.staff.btn.pay_salary": "Bayar Gaji",
+  "zootycoon.dialog.staff.btn.close": "Tutup"
 }

@@ -178,11 +178,38 @@ public class ZooBuilderEntity extends PathfinderMob {
         this.setNeedsSomething(true);
     }
 
+    public boolean isOnStrike() {
+        if (!(this.level() instanceof ServerLevel sLevel)) return false;
+        UUID checkOwner = this.payerUuid;
+        if (checkOwner == null) {
+            ConstructionSite site = resolveSite();
+            if (site != null) {
+                checkOwner = site.getOwnerUuid();
+            }
+        }
+        if (checkOwner == null) {
+            var claimOpt = net.zootycoon.claim.ZooClaimManager.get(sLevel).getClaimAt(this.blockPosition());
+            if (claimOpt.isPresent()) {
+                checkOwner = claimOpt.get().getOwnerUuid();
+                this.payerUuid = checkOwner;
+            }
+        }
+        return checkOwner != null && net.zootycoon.economy.ZooStaffManager.get(sLevel).areStaffOnStrike(checkOwner);
+    }
+
     @Override
     public void tick() {
         super.tick();
 
         if (this.level().isClientSide()) {
+            return;
+        }
+
+        if (isOnStrike()) {
+            this.getNavigation().stop();
+            if (this.tickCount % 60 == 0 && this.level() instanceof ServerLevel sLevel) {
+                sLevel.sendParticles(ParticleTypes.ANGRY_VILLAGER, this.getX(), this.getY() + 1.2D, this.getZ(), 1, 0.1, 0.1, 0.1, 0.0);
+            }
             return;
         }
 
@@ -393,6 +420,18 @@ public class ZooBuilderEntity extends PathfinderMob {
         }
 
         ServerPlayer serverPlayer = (ServerPlayer) player;
+
+        if (isOnStrike()) {
+            String bName = this.getCustomName() != null ? this.getCustomName().getString() : ZooTranslations.get("zootycoon.dialog.builder.default_name");
+            this.level().playSound(null, this.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 1.0f, 1.0f);
+            ServerPlayNetworking.send(serverPlayer, new ZooNetworkPayloads.OpenStaffStrikeScreenPayload(
+                    this.getId(),
+                    this.getUUID(),
+                    bName,
+                    "zootycoon.dialog.builder.role"
+            ));
+            return InteractionResult.SUCCESS;
+        }
 
         // 1. Post-construction wage collection
         if (this.awaitingPayment) {

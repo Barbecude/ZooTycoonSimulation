@@ -133,7 +133,7 @@ public class ConstructionManager {
                 return InteractionResult.PASS;
             }
 
-            if (entity instanceof net.zootycoon.entity.ZooBuilderEntity b && b.isAwaitingPayment()) {
+            if (entity instanceof net.zootycoon.entity.ZooBuilderEntity b && (b.isAwaitingPayment() || b.isOnStrike())) {
                 return InteractionResult.PASS;
             }
 
@@ -353,6 +353,13 @@ public class ConstructionManager {
                         builder.updateNeedsIndicator();
                     }
                 }
+            }
+
+            if (site.getOwnerUuid() != null && net.zootycoon.economy.ZooStaffManager.get(level).areStaffOnStrike(site.getOwnerUuid())) {
+                if (builder != null) {
+                    builder.getNavigation().stop();
+                }
+                continue;
             }
 
             // ==========================================

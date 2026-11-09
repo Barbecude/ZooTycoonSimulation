@@ -778,5 +778,10 @@
   "zootycoon.warehouse.tooltip.raw_cost_prefix": "Raw Material Cost: ",
   "zootycoon.warehouse.bought_to_barrel": "Items purchased and stored in barrel!",
   "zootycoon.vehicle.animal_loaded": "%s climbed into the vehicle trunk.",
-  "zootycoon.vehicle.animal_unloaded": "Animal unloaded from the vehicle trunk."
+  "zootycoon.vehicle.animal_unloaded": "Animal unloaded from the vehicle trunk.",
+  "zootycoon.dialog.staff.on_strike": "Saya tidak bisa bekerja hari ini gaji saya belum dibayar",
+  "zootycoon.dialog.staff.strike_status": "Status: On Strike",
+  "zootycoon.dialog.staff.strike_hint": "Pay the daily staff wages so they return to work.",
+  "zootycoon.dialog.staff.btn.pay_salary": "Pay Salary",
+  "zootycoon.dialog.staff.btn.close": "Close"
 }

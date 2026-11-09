@@ -161,6 +161,18 @@ public class ZooSecurityEntity extends PathfinderMob {
         }
     }
 
+    public boolean isOnStrike() {
+        if (!(this.level() instanceof net.minecraft.server.level.ServerLevel sLevel)) return false;
+        if (this.ownerUuid == null) {
+            net.zootycoon.claim.ZooClaimManager claimManager = net.zootycoon.claim.ZooClaimManager.get(sLevel);
+            net.zootycoon.claim.ZooClaim nearest = findClosestClaim(claimManager);
+            if (nearest != null) {
+                this.ownerUuid = nearest.getOwnerUuid();
+            }
+        }
+        return this.ownerUuid != null && net.zootycoon.economy.ZooStaffManager.get(sLevel).areStaffOnStrike(this.ownerUuid);
+    }
+
     @Override
     public void tick() {
         super.tick();
@@ -177,7 +189,7 @@ public class ZooSecurityEntity extends PathfinderMob {
                 }
             }
 
-            if (this.ownerUuid != null && net.zootycoon.economy.ZooStaffManager.get(sLevel).areStaffOnStrike(this.ownerUuid)) {
+            if (isOnStrike()) {
                 if (this.tickCount % 60 == 0) {
                     sLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.ANGRY_VILLAGER, this.getX(), this.getY() + 1.2D, this.getZ(), 1, 0.1, 0.1, 0.1, 0.0);
                 }
@@ -223,6 +235,16 @@ public class ZooSecurityEntity extends PathfinderMob {
     @Override
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         if (!level().isClientSide() && hand == InteractionHand.MAIN_HAND && player instanceof ServerPlayer sPlayer) {
+            if (isOnStrike()) {
+                this.playSound(SoundEvents.VILLAGER_NO, 1.0F, 1.0F);
+                net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(sPlayer, new net.zootycoon.network.ZooNetworkPayloads.OpenStaffStrikeScreenPayload(
+                        this.getId(),
+                        this.getUUID(),
+                        getSecurityName(),
+                        "zootycoon.dialog.security.role"
+                ));
+                return InteractionResult.SUCCESS;
+            }
             String name = getSecurityName();
             boolean isAlert = getTarget() != null;
             String targetName = isAlert ? getTarget().getName().getString() : "";

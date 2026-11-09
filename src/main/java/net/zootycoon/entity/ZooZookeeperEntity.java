@@ -574,13 +574,25 @@ public class ZooZookeeperEntity extends PathfinderMob {
         return closest;
     }
 
+    public boolean isOnStrike() {
+        if (!(this.level() instanceof ServerLevel sLevel)) return false;
+        if (this.ownerUuid == null) {
+            net.zootycoon.claim.ZooClaim nearest = findClosestClaim(ZooClaimManager.get(sLevel));
+            if (nearest != null) {
+                this.ownerUuid = nearest.getOwnerUuid();
+            }
+        }
+        return this.ownerUuid != null && net.zootycoon.economy.ZooStaffManager.get(sLevel).areStaffOnStrike(this.ownerUuid);
+    }
+
     @Override
     public void tick() {
         super.tick();
         if (this.level().isClientSide()) return;
         ServerLevel sLevel = (ServerLevel) this.level();
 
-        if (this.ownerUuid != null && net.zootycoon.economy.ZooStaffManager.get(sLevel).areStaffOnStrike(this.ownerUuid)) {
+        if (isOnStrike()) {
+            this.getNavigation().stop();
             if (this.tickCount % 60 == 0) {
                 sLevel.sendParticles(ParticleTypes.ANGRY_VILLAGER, this.getX(), this.getY() + 1.2D, this.getZ(), 1, 0.1, 0.1, 0.1, 0.0);
             }
@@ -1276,6 +1288,17 @@ public class ZooZookeeperEntity extends PathfinderMob {
     }
 
     public void openDialogScreen(ServerPlayer player, String dialogOverride) {
+        if (isOnStrike()) {
+            this.level().playSound(null, this.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 1.0f, 1.0f);
+            ServerPlayNetworking.send(player, new ZooNetworkPayloads.OpenStaffStrikeScreenPayload(
+                    this.getId(),
+                    this.getUUID(),
+                    this.getName().getString(),
+                    "zootycoon.dialog.zookeeper.role"
+            ));
+            return;
+        }
+
         LivingEntity animal = null;
         if (assignedAnimalUuid != null && this.level() instanceof ServerLevel sLevel) {
             Entity ent = sLevel.getEntity(assignedAnimalUuid);

@@ -1387,6 +1387,38 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // 31. Open Staff Strike Dialog Screen (S2C)
+    public record OpenStaffStrikeScreenPayload(int entityId, UUID staffUuid, String staffName, String roleKey) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<OpenStaffStrikeScreenPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("open_staff_strike_screen"));
+        public static final StreamCodec<FriendlyByteBuf, OpenStaffStrikeScreenPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeInt(payload.entityId);
+                    buf.writeUUID(payload.staffUuid);
+                    buf.writeUtf(payload.staffName);
+                    buf.writeUtf(payload.roleKey);
+                },
+                buf -> new OpenStaffStrikeScreenPayload(
+                        buf.readInt(),
+                        buf.readUUID(),
+                        buf.readUtf(),
+                        buf.readUtf()
+                )
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 32. Pay Strike Salary (C2S)
+    public record PayStrikeSalaryPayload(int entityId) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<PayStrikeSalaryPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("pay_strike_salary"));
+        public static final StreamCodec<FriendlyByteBuf, PayStrikeSalaryPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> buf.writeInt(payload.entityId),
+                buf -> new PayStrikeSalaryPayload(buf.readInt())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     public static void sendToast(ServerPlayer player, String titleKey, String msgKey, int toastType, Object... args) {
         if (player == null) return;
         List<String> strArgs = new ArrayList<>();
@@ -1442,6 +1474,7 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
         PayloadTypeRegistry.playC2S().register(ResolveVisitorComplaintPayload.TYPE, ResolveVisitorComplaintPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SupplyZookeeperFuelPayload.TYPE, SupplyZookeeperFuelPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ManageStaffGenericPayload.TYPE, ManageStaffGenericPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(PayStrikeSalaryPayload.TYPE, PayStrikeSalaryPayload.CODEC);
 
         PayloadTypeRegistry.playS2C().register(SyncClaimsPayload.TYPE, SyncClaimsPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncStudioStatePayload.TYPE, SyncStudioStatePayload.CODEC);
@@ -1454,6 +1487,7 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
         PayloadTypeRegistry.playS2C().register(OpenSecurityScreenPayload.TYPE, OpenSecurityScreenPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenVisitorScreenPayload.TYPE, OpenVisitorScreenPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenCashierScreenPayload.TYPE, OpenCashierScreenPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(OpenStaffStrikeScreenPayload.TYPE, OpenStaffStrikeScreenPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenFeedingTroughScreenPayload.TYPE, OpenFeedingTroughScreenPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenGachaMachineScreenPayload.TYPE, OpenGachaMachineScreenPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncAnimalsPayload.TYPE, SyncAnimalsPayload.CODEC);
@@ -2553,6 +2587,28 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                         }
                     }
                 }
+            });
+        });
+
+        // Handler: Pay Strike Salary
+        ServerPlayNetworking.registerGlobalReceiver(PayStrikeSalaryPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                ServerLevel sLevel = player.serverLevel();
+                UUID targetOwner = player.getUUID();
+                if (payload.entityId() >= 0) {
+                    net.minecraft.world.entity.Entity ent = sLevel.getEntity(payload.entityId());
+                    if (ent instanceof net.zootycoon.entity.ZooZookeeperEntity zk && zk.getOwnerUuid() != null) {
+                        targetOwner = zk.getOwnerUuid();
+                    } else if (ent instanceof net.zootycoon.entity.ZooSecurityEntity sec && sec.getOwnerUuid() != null) {
+                        targetOwner = sec.getOwnerUuid();
+                    } else if (ent instanceof net.zootycoon.entity.ZooCashierEntity cash && cash.getOwnerUuid() != null) {
+                        targetOwner = cash.getOwnerUuid();
+                    } else if (ent instanceof net.zootycoon.entity.ZooBuilderEntity b && b.getOwnerUuid() != null) {
+                        targetOwner = b.getOwnerUuid();
+                    }
+                }
+                net.zootycoon.economy.ZooStaffManager.get(sLevel).tryPayStrikeSalary(player, targetOwner);
             });
         });
     }

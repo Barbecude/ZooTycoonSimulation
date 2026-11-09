@@ -412,6 +412,17 @@ public class ZooTycoonClient implements ClientModInitializer {
             });
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.OpenStaffStrikeScreenPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                Minecraft.getInstance().setScreen(new net.zootycoon.client.ui.StaffStrikeDialogScreen(
+                        payload.entityId(),
+                        payload.staffUuid(),
+                        payload.staffName(),
+                        payload.roleKey()
+                ));
+            });
+        });
+
         ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.OpenFeedingTroughScreenPayload.TYPE, (payload, context) -> {
             context.client().execute(() -> {
                 Minecraft.getInstance().setScreen(new net.zootycoon.client.ui.FeedingTroughDialogScreen(

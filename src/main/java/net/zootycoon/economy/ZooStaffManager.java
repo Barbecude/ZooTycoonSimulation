@@ -245,6 +245,38 @@ public class ZooStaffManager {
         }
     }
 
+    public boolean tryPayStrikeSalary(ServerPlayer player, UUID targetOwnerUuid) {
+        if (player == null) return false;
+        UUID ownerId = targetOwnerUuid != null ? targetOwnerUuid : player.getUUID();
+        if (!areStaffOnStrike(ownerId) && !areStaffOnStrike(player.getUUID())) {
+            return true;
+        }
+        int totalWage = calculateDailyWage(ownerId);
+        if (totalWage <= 0) {
+            totalWage = calculateDailyWage(player.getUUID());
+        }
+        if (totalWage <= 0 || player.isCreative()) {
+            setStaffOnStrike(ownerId, false);
+            setStaffOnStrike(player.getUUID(), false);
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.toast.salary.resolved", 1);
+            player.level().playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0f, 1.0f);
+            return true;
+        }
+        if (TransactionHelper.hasEnoughEmeralds(player, totalWage) && TransactionHelper.consumeEmeralds(player, totalWage)) {
+            setStaffOnStrike(ownerId, false);
+            setStaffOnStrike(player.getUUID(), false);
+            int staffCount = getTotalStaffCount(ownerId);
+            net.zootycoon.log.ZooLogManager.recordSalaryPayment(ownerId, totalWage, staffCount, true);
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.toast.salary.resolved", 1);
+            player.level().playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0f, 1.0f);
+            return true;
+        } else {
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.warning", "zootycoon.toast.salary.unpaid", 2);
+            player.level().playSound(null, player.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 1.0f, 1.0f);
+            return false;
+        }
+    }
+
     public StaffRecord getRecord(UUID playerUuid) {
         return staffMap.computeIfAbsent(playerUuid, u -> new StaffRecord());
     }

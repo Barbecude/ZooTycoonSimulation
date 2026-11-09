@@ -505,13 +505,15 @@ public class ZooCashierEntity extends PathfinderMob {
 
     public boolean isOnStrike() {
         if (this.level() instanceof ServerLevel sLevel) {
-            ZooClaimManager claimManager = ZooClaimManager.get(sLevel);
-            var targetClaim = claimManager.getClaimAt(this.blockPosition());
-            UUID ownerUuid = (targetClaim.isPresent() && targetClaim.get().getOwnerUuid() != null)
-                    ? targetClaim.get().getOwnerUuid()
-                    : null;
-            if (ownerUuid != null) {
-                return net.zootycoon.economy.ZooStaffManager.get(sLevel).areStaffOnStrike(ownerUuid);
+            if (this.ownerUuid == null) {
+                ZooClaimManager claimManager = ZooClaimManager.get(sLevel);
+                var targetClaim = claimManager.getClaimAt(this.blockPosition());
+                if (targetClaim.isPresent() && targetClaim.get().getOwnerUuid() != null) {
+                    this.ownerUuid = targetClaim.get().getOwnerUuid();
+                }
+            }
+            if (this.ownerUuid != null) {
+                return net.zootycoon.economy.ZooStaffManager.get(sLevel).areStaffOnStrike(this.ownerUuid);
             }
         }
         return false;
@@ -875,6 +877,16 @@ public class ZooCashierEntity extends PathfinderMob {
     }
 
     public void sendScreenToPlayer(ServerPlayer sp) {
+        if (isOnStrike()) {
+            this.level().playSound(null, this.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 1.0F, 1.0F);
+            ServerPlayNetworking.send(sp, new ZooNetworkPayloads.OpenStaffStrikeScreenPayload(
+                    this.getId(),
+                    this.getUUID(),
+                    this.getName().getString(),
+                    "zootycoon.dialog.cashier.role"
+            ));
+            return;
+        }
         boolean open = false;
         int ticketPrice = net.zootycoon.economy.ZooEconomyEngine.DEFAULT_TICKET_PRICE;
         List<ZooNetworkPayloads.VisitorFeedbackItemDto> feedbackDtos = new ArrayList<>();

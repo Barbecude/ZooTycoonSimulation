@@ -1,0 +1,377 @@
+﻿DAFTAR KOLEKSI SATWA DAN PANDUAN EKOSISTEM KEBUN BINATANG
+MOD UTAMA: NATURALIST (PRIORITAS UTAMA), ALEX'S MOBS (PELENGKAP), DAN WILDER NATURE
+Spesifikasi: English Animal Names, Minecraft Biomes ID / English Names, Metode & Jenis Pakan, Konsep Kandang Bersama (Multi-Spesies Enclosure), dan Desain Lingkungan Blok.
+
+
+BAGIAN 1: REKOMENDASI SATWA KOLEKSI UTAMA (ZOO VIBES)
+Satwa pameran utama dengan identitas mod tunggal terpilih untuk menjaga keutuhan ekosistem predator-prey dan variasi atraksi kebun binatang. Seluruh nama satresmi (English Animal Names). Prinsip Hirarki: Mengutamakan satwa dari mod Naturalist; satwa Naturalist (Alex's Mobs Fallback) hanya digunakan sebagai pelengkap jika tidak ada di Naturalist. resmi (English Animal Names).
+
+
+No
+	Animal Name
+	Mod Source
+	Biomes (Minecraft Official IDs)
+	Feeding Method & Diet
+	1
+	Elephant (need more information)
+	Naturalist
+	minecraft:savanna, minecraft:savanna_plateau, minecraft:windswept_savanna
+	Herbivore (Feeding Trough: Hay Block, Wheat, Melon)
+	2
+	Giraffe
+	Naturalist
+	minecraft:savanna, minecraft:savanna_plateau
+	Herbivore (Feeding Trough Tinggi: Acacia Leaves, Apple, Wheat)
+	3
+	Lion
+	Naturalist
+	minecraft:savanna, minecraft:windswept_savanna
+	Carnivore (Direct / Throw Food: Raw Beef, Raw Porkchop)
+	4
+	Tiger
+	Naturalist
+	minecraft:jungle, minecraft:sparse_jungle, minecraft:bamboo_jungle
+	Carnivore (Direct / Throw Food: Raw Beef, Raw Mutton)
+	5
+	Hippo
+	Naturalist
+	minecraft:river, minecraft:swamp, minecraft:mangrove_swamp, minecraft:savanna
+	Herbivore (Feeding Trough Tepi Kolam: Melon, Wheat, Grass)
+	6
+	Zebra
+	Naturalist
+	minecraft:savanna, minecraft:plains
+	Herbivore (Feeding Trough: Wheat, Hay Block, Carrot)
+	7
+	Deer
+	Naturalist
+	minecraft:forest, minecraft:birch_forest, minecraft:dark_forest, minecraft:taiga
+	Herbivore (Feeding Trough: Apple, Carrot, Wheat, Oak Leaves)
+	8
+	Cassowary
+	Wilder Nature
+	minecraft:jungle, minecraft:sparse_jungle
+	Omnivore (Feeding Trough: Melon, Apple, Seeds, Insects)
+	9
+	Ostrich
+	Naturalist
+	minecraft:savanna, minecraft:desert
+	Granivore / Herbivore (Feeding Trough: Seeds, Grass, Carrot)
+	10
+	Kangaroo
+	Naturalist (Alex's Mobs Fallback)
+	minecraft:savanna, minecraft:badlands, minecraft:plains
+	Herbivore (Feeding Trough / Hand: Wheat, Grass, Carrot, Apple)
+	11
+	Raccoon
+	Naturalist (Alex's Mobs Fallback)
+	minecraft:forest, minecraft:birch_forest, minecraft:dark_forest
+	Omnivore (Feeding Trough: Berries, Bread, Egg, Meat)
+	12
+	Bear (Grizzly Bear)
+	Naturalist (Alex's Mobs Fallback)
+	minecraft:old_growth_pine_taiga, minecraft:taiga, minecraft:windswept_forest
+	Omnivore (Direct / Throw Food: Raw Salmon, Honey, Berries)
+	13
+	Snow Leopard
+	Naturalist (Alex's Mobs Fallback)
+	minecraft:snowy_slopes, minecraft:jagged_peaks, minecraft:frozen_peaks
+	Carnivore (Direct / Throw Food: Raw Mutton, Raw Rabbit)
+	14
+	Gorilla (need more information)
+	Naturalist (Alex's Mobs Fallback)
+	minecraft:jungle, minecraft:bamboo_jungle
+	Herbivore / Frugivore (Feeding Trough: Melon, Apple, Bamboo, Fruit)
+	15
+	Capuchin Monkey
+	Naturalist (Alex's Mobs Fallback)
+	minecraft:jungle, minecraft:sparse_jungle
+	Frugivore (Feeding Trough / Hand: Banana, Melon, Apple, Egg)
+	16
+	Capybara
+	Naturalist
+	minecraft:swamp, minecraft:mangrove_swamp, minecraft:river
+	Herbivore (Feeding Trough / Hand: Apple, Carrot, Grass, Melon)
+	17
+	Giant Anteater
+	Naturalist (Alex's Mobs Fallback)
+	minecraft:savanna, minecraft:sparse_jungle
+	Insectivore (Feeding Trough Khusus: Insects, Termites, Ant Eggs)
+	18
+	Alligator
+	Naturalist
+	minecraft:swamp, minecraft:mangrove_swamp
+	Carnivore (Direct / Throw Food: Raw Beef, Raw Chicken, Raw Salmon)
+	19
+	Komodo Dragon
+	Naturalist
+	minecraft:savanna, minecraft:badlands, minecraft:desert
+	Carnivore (Direct / Throw Food: Raw Beef, Raw Mutton, Rotten Flesh)
+	20
+	Giant Tortoise
+	Naturalist
+	minecraft:savanna, minecraft:plains, minecraft:meadow
+	Herbivore (Feeding Trough: Carrot, Dandelion, Leaves)
+	21
+	Anaconda
+	Naturalist (Alex's Mobs Fallback)
+	minecraft:jungle, minecraft:swamp, minecraft:river
+	Carnivore (Direct / Throw Food: Raw Beef, Raw Porkchop)
+	22
+	Bald Eagle
+	Naturalist (Alex's Mobs Fallback)
+	minecraft:old_growth_pine_taiga, minecraft:snowy_taiga, minecraft:windswept_forest
+	Carnivore / Piscivore (Feeding Trough Tinggi: Raw Salmon, Rabbit)
+	23
+	Vulture
+	Naturalist
+	minecraft:desert, minecraft:badlands
+	Carnivore (Feeding Trough Tebing: Rotten Flesh, Raw Meat)
+	24
+	Mini Sheep
+	Wilder Nature
+	minecraft:plains, minecraft:meadow
+	Herbivore (Feeding Trough / Hand: Wheat, Fresh Grass)
+	25
+	Orca (Expensive mob)
+	Naturalist (Alex's Mobs Fallback)
+	minecraft:deep_cold_ocean, minecraft:deep_frozen_ocean
+	Carnivore (Direct / Throw Food: Raw Salmon, Raw Cod, Raw Meat)
+	26
+	Cachalot Whale (Expensive mob)
+	Naturalist (Alex's Mobs Fallback)
+	minecraft:deep_ocean, minecraft:deep_lukewarm_ocean
+	Carnivore (Direct / Throw Food: Ink Sac, Raw Fish, Meat)
+	27
+	Great White Shark (Expensive mob)
+	Naturalist
+	minecraft:ocean, minecraft:deep_ocean
+	Carnivore (Direct / Throw Food: Raw Beef, Raw Fish)
+	28
+	Penguin
+	Naturalist / Ecologics
+	minecraft:snowy_beach, minecraft:frozen_ocean, minecraft:stony_shore
+	Piscivore (Feeding Trough / Pond: Raw Cod, Raw Salmon)
+	29
+	Giant Squid (Unique mob)
+	Naturalist (Alex's Mobs Fallback)
+	minecraft:deep_ocean, minecraft:deep_cold_ocean
+	Carnivore (Direct / Throw Food: Fresh Fish, Raw Meat)
+	30
+	Mantis Shrimp (Unique mob)
+	Naturalist (Alex's Mobs Fallback)
+	minecraft:warm_ocean, minecraft:lukewarm_ocean
+	Carnivore (Feeding Trough: Crab, Clam, Small Fish)
+	31
+	Mammoth (Expensive mob)
+	Naturalist
+	minecraft:snowy_plains, minecraft:ice_spikes, minecraft:grove
+	Herbivore (Feeding Trough: Hay Block, Wheat, Spruce Leaves)
+	32
+	Froststalker (Unique mob)
+	Naturalist (Alex's Mobs Fallback)
+	minecraft:ice_spikes, minecraft:frozen_peaks, minecraft:snowy_plains
+	Carnivore (Throw Food: Raw Mutton, Raw Beef)
+	33
+	Panda
+	Vanilla Minecraft
+	minecraft:bamboo_jungle, minecraft:sparse_jungle
+	Herbivore (Feeding Trough: Bamboo, Cake)
+	34
+	Polar Bear
+	Vanilla Minecraft
+	minecraft:snowy_plains, minecraft:ice_spikes, minecraft:frozen_ocean
+	Carnivore (Direct / Throw Food: Raw Salmon, Raw Cod)
+	35
+	Camel
+	Vanilla Minecraft
+	minecraft:desert
+	Herbivore (Feeding Trough: Cactus)
+	
+
+BAGIAN 2: SATWA FIKSI UNIK & RAMAH (PAVILIUN KHUSUS)
+Satwa fiksi terpilih dari Naturalist (Alex's Mobs Fallback) yang ramah, unik, dan cocok untuk pameran paviliun tanpa merusak kebun binatang.
+
+
+No
+	Animal Name
+	Mod Source
+	Biomes (Minecraft Official IDs)
+	Feeding Method & Diet
+	36
+	Guster
+	Naturalist (Alex's Mobs Fallback)
+	minecraft:desert, minecraft:badlands
+	Sand & Bone (Special Feeding Trough: Sand, Bone)
+	37
+	Bunfungus
+	Naturalist (Alex's Mobs Fallback)
+	minecraft:mushroom_fields
+	Fungi Herbivore (Feeding Trough / Hand: Red Mushroom, Brown Mushroom)
+	38
+	Mungus
+	Naturalist (Alex's Mobs Fallback)
+	minecraft:mushroom_fields, minecraft:warped_forest
+	Fungi Spore (Feeding Trough: Brown Mushroom, Crimson Fungus, Warped Fungus)
+	39
+	Rocky Roller
+	Naturalist (Alex's Mobs Fallback)
+	minecraft:badlands, minecraft:eroded_badlands, minecraft:desert
+	Mineral & Grass (Feeding Trough: Gravel, Coal, Dry Grass)
+	40
+	Flutter
+	Naturalist (Alex's Mobs Fallback)
+	minecraft:lush_caves, minecraft:cherry_grove
+	Flower Nectar (Feeding Trough: Cherry Leaves, Spore Blossom, Azalea)
+	
+
+BAGIAN 3: PANDUAN KANDANG BERSAMA & DESAIN LINGKUNGAN BLOK (MULTI-SPESIES ENCLOSURE)
+Bagian ini memetakan satwa-satwa yang kompatibel untuk tinggal bersama dalam satu kandang terpadu guna menghemat area pembangunan kebun binatang, serta menentukan kebutuhan blok lingkungan spesifiknya.
+
+
+No Zona
+	Minecraft Biomes (Official IDs)
+	Co-inhabiting Animals (English Names)
+	Enclosure Type
+	Environment Block Requirements
+	Interaction & Enrichment Notes
+	1
+	minecraft:savanna, minecraft:savanna_plateau, minecraft:windswept_savanna, minecraft:plains
+	Elephant, Giraffe, Zebra, Ostrich
+	Shared (Multi-Species)
+	Grass Block, Acacia Wood, Acacia Leaves, Coarse Dirt, Tall Grass, Mud, Water Puddle
+	Open grassland safari. All savanna herbivores live peacefully together.
+	2
+	minecraft:savanna, minecraft:jungle, minecraft:snowy_slopes, minecraft:jagged_peaks
+	Lion, Tiger, Snow Leopard
+	Adjacent (Glass Partitions / Cliffs)
+	Smooth Stone, Sandstone, Terracotta, Bamboo, Jungle Wood, Moss Block, Snow Block, Powder Snow, Deep Water Pool
+	Apex predators displayed side-by-side with thick reinforced glass and high stone moats.
+	3
+	minecraft:swamp, minecraft:mangrove_swamp, minecraft:river, minecraft:jungle
+	Hippo, Alligator, Anaconda
+	Adjacent (Natural Barriers / Water)
+	Mud, Muddy Mangrove Roots, Water Source (depth min 3 blocks), Lily Pad, Jungle Log, Duckweed
+	Semi-aquatic wetland environment with natural riverbanks and barrier partitions.
+	4
+	minecraft:forest, minecraft:taiga, minecraft:old_growth_pine_taiga, minecraft:dark_forest
+	Deer, Bear (Grizzly Bear), Raccoon
+	Partitioned (Open Forest & Bear Cliff)
+	Podzol, Grass Block, Oak Leaves, Fallen Leaves, Spruce Wood, Rocky Waterfall, Honeycomb Block, Sweet Berry Bush
+	Pristine boreal forest with waterfalls and live salmon pool for bears.
+	5
+	minecraft:jungle, minecraft:bamboo_jungle, minecraft:sparse_jungle
+	Gorilla, Capuchin Monkey
+	Shared / Multi-Level
+	Jungle Leaves, Vines, Chains, Stripped Jungle Log (climbing poles), Ropes, Bamboo, Mud
+	Ground space for Gorillas and elevated rope canopy network for Capuchin Monkeys.
+	6
+	minecraft:swamp, minecraft:river, minecraft:plains, minecraft:meadow
+	Capybara, Giant Tortoise
+	Shared (Petting / Walk-in)
+	Water Source (warm wading pool), Mud, Lily Pad, Grass Block, Dandelion, Poppy, Smooth Stone
+	Extremely docile and visitor-friendly. Visitors can walk into the sunbathing enclosure.
+	7
+	minecraft:savanna, minecraft:badlands, minecraft:sparse_jungle
+	Kangaroo, Giant Anteater
+	Adjacent / Cohabiting
+	Red Sand, Grass Block, Acacia Leaves, Terracotta, Termite Mound, Hollow Logs, Water Trough
+	Iconic arid Australian scrubland with artificial termite mounds and hollow logs.
+	8
+	minecraft:jungle, minecraft:savanna, minecraft:badlands, minecraft:desert
+	Cassowary, Komodo Dragon
+	Partitioned (Reinforced Glass)
+	Jungle Leaves, Moss Block, Podzol, Vines, Dense Bamboo, Red Sand, Smooth Sandstone, Bone Block
+	Prehistoric aggressive birds and venomous monitor lizards with strict safety barriers.
+	9
+	minecraft:desert
+	Camel
+	Standalone (Visitor Ride & Oasis)
+	Sand, Smooth Sandstone, Dead Bush, Chiseled Sandstone, Canopy Tents
+	Sandy oasis with shade structures, ideal for visitor camel rides and interactions.
+	10
+	minecraft:bamboo_jungle, minecraft:sparse_jungle
+	Panda
+	Standalone (Dedicated Bamboo Garden)
+	Bamboo, Jungle Wood, Podzol, Moss Block, Shallow Water Pool, Climbing Structures
+	Dedicated panda sanctuary with dense bamboo groves and timber play structures.
+	11
+	minecraft:snowy_beach, minecraft:frozen_ocean, minecraft:stony_shore
+	Penguin
+	Standalone (Clean Ice Basin)
+	Packed Ice, Blue Ice, Snow Block, Smooth Stone, Deep Clean Swimming Basin, Timber Basking Decks
+	Rocky ice shoreline with swimming parade viewing windows and sliding slopes.
+	12
+	minecraft:snowy_plains, minecraft:ice_spikes, minecraft:frozen_peaks, minecraft:grove
+	Polar Bear, Mammoth, Froststalker
+	Partitioned (Ice Cliffs & Glazed Walls)
+	Packed Ice, Blue Ice, Snow Block, Powder Snow, Spruce Log, Glacial Boulders, Dripstone
+	Everlasting frost dome. Mammoth and Polar Bear displayed alongside predatory Froststalker raptors.
+	13
+	minecraft:deep_ocean, minecraft:deep_cold_ocean, minecraft:deep_frozen_ocean, minecraft:deep_lukewarm_ocean
+	Orca, Cachalot Whale
+	Deep Separate Oceanarium Basins
+	Dark Prismarine, Deep Ocean Basin (depth min 10 blocks), Sea Lantern, Double-layer Reinforced Glass
+	Massive subterranean oceanarium with underwater viewing tunnels.
+	14
+	minecraft:ocean, minecraft:deep_ocean
+	Great White Shark
+	Circular Pelagic Aquarium
+	Sand, Gravel, Sea Grass, Prismarine Bricks, High-Pressure Reinforced Glass
+	360-degree acrylic viewing tunnel where great white sharks swim overhead.
+	15
+	minecraft:deep_ocean, minecraft:deep_cold_ocean
+	Giant Squid
+	Dark Light-Shielded Basin
+	Dark Prismarine, Ochre Froglight, Tinted Glass, Deep Abyss Water
+	Low-light abyssal exhibit designed to keep deep-sea cephalopods calm and visible.
+	16
+	minecraft:warm_ocean, minecraft:lukewarm_ocean
+	Mantis Shrimp
+	Reinforced Dual-Pane Marine Tank
+	Fire Coral, Horn Coral, Sand, Sea Pickle, Double-thickness High-Impact Glass
+	Vibrant coral reef exhibit built with club-strike impact-resistant glass.
+	17
+	minecraft:windswept_forest, minecraft:taiga, minecraft:desert, minecraft:badlands
+	Bald Eagle, Vulture
+	Shared High-Wire Aviary (Multi-Perch)
+	Tall Spruce Trees, Spruce Leaves, Cobblestone Cliffs, Water Stream, Sandstone, Cactus, High Timber Perches
+	High vaulted wire-mesh aviary (min 12 blocks tall) with mountain cliffs and tall tree branches.
+	18
+	minecraft:plains, minecraft:meadow
+	Mini Sheep
+	Walk-in Family Enclosure
+	Grass Block, Hay Block, Dandelion & Poppy Flowers, Low Oak Fences
+	Interactive family petting area with child-safe gates and feeding spots.
+	19
+	minecraft:mushroom_fields, minecraft:lush_caves, minecraft:cherry_grove, minecraft:desert, minecraft:badlands
+	Guster, Bunfungus, Mungus, Rocky Roller, Flutter
+	Themed Enclosed Glass Dome
+	Sand, Chiseled Sandstone, Mycelium, Huge Mushroom Block, Podzol, Shroomlight, Terracotta, Spore Blossom
+	Fantasy ecosystem with glowing giant mushrooms and an isolated mini sand vortex chamber.
+	
+
+BAGIAN 4: DAFTAR SATWA YANG DIELIMINASI (TIDAK DIMASUKKAN)
+Satwa berikut disaring keluar agar kebun binatang tetap memiliki daya tarik pameran yang rapi, efisien, aman, dan berkinerja stabil.
+
+
+No
+	Elimination Category
+	Excluded Animals (English Names)
+	Related Mod
+	Elimination Rationale
+	1
+	Ambient Spam / Small Insects / Pests
+	Blue Jay, Cardinal, Canary, Robin, Bat, Rat, Ant, Leafcutter Ant, Termite, Fly, Cockroach, Caterpillar, Butterfly, Snail, Slug, Firefly, Banana Slug, Jerboa, Sugar Glider
+	Naturalist, Wilder Nature, Naturalist (Alex's Mobs Fallback)
+	Hitbox and visual size too small, hard to spot for visitors, acts like ambient environmental clutter, and degrades world tick performance when caged in mass.
+	2
+	Extreme Dimension Monsters / Bosses
+	Laviathan, Bone Serpent, Void Worm, Crimson Mosquito, Warped Mosco, Murmur, Farseer, Underminer, Skelewag, Skreecher, Mimicube, Cosmaw
+	Naturalist (Alex's Mobs Fallback)
+	Highly hostile Nether/End monsters or boss entities with block-breaking attacks that endanger staff and visitors, nearly impossible to capture safely, and ruins realistic zoo atmosphere.
+	3
+	Enclosure Redundancy & Filtered Mobs
+	Humpback Whale, Black Bear, Seal, Boar, Turkey, Mimic Octopus, Rattlesnake
+	Naturalist, Wilder Nature, Naturalist (Alex's Mobs Fallback)
+	Cut for spatial efficiency because their roles are already covered by more attractive counterparts (Whale by Orca/Cachalot Whale, Black Bear by Grizzly/Polar Bear, Seal by Penguin, Boar by exotic fauna, and Turkey/Octopus/Rattlesnake being small or ordinary).
