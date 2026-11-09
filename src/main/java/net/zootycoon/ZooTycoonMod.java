@@ -115,6 +115,9 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.animal.habitat.HabitatEvaluator.reset();
             net.zootycoon.block.entity.ZooThermalBlockEntity.reset();
             net.zootycoon.construction.ConstructionManager.loadFromFile(server);
+        });
+
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTED.register(server -> {
             net.zootycoon.biome.ZooTerrainBiomeGenerator.generateForWorld(server.overworld());
         });
 
