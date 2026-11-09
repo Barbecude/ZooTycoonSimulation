@@ -14,6 +14,7 @@
     "compat.FieldGuideScanUnlockMixin"
   ],
   "client": [
+    "client.CameraMixin",
     "client.MouseHandlerMixin",
     "compat.FieldGuideScanManagerMixin",
     "client.ItemInHandRendererMixin",

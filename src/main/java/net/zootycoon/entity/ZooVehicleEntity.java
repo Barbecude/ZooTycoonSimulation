@@ -64,6 +64,9 @@ public class ZooVehicleEntity extends Entity {
     private static final EntityDataAccessor<Boolean> DATA_BRAKING = SynchedEntityData.defineId(
             ZooVehicleEntity.class, EntityDataSerializers.BOOLEAN
     );
+    private static final EntityDataAccessor<Boolean> DATA_HEADLIGHTS = SynchedEntityData.defineId(
+            ZooVehicleEntity.class, EntityDataSerializers.BOOLEAN
+    );
 
     public record WheelSpec(int cmd, float scale, Vec3 offset, boolean steered) {}
 
@@ -84,7 +87,8 @@ public class ZooVehicleEntity extends Entity {
             Vec3 trunkPickupOffset,
             List<Vec3> cargoSeatOffsets,
             float maxForwardSpeed,
-            float maxReverseSpeed
+            float maxReverseSpeed,
+            Vec3 headlightOffset
     ) {}
 
     private static final Map<String, VehicleSpec> SPECS = new LinkedHashMap<>();
@@ -105,7 +109,8 @@ public class ZooVehicleEntity extends Entity {
                 true, 2,
                 new Vec3(0.0, 0.0, -2.55),
                 List.of(new Vec3(0.0, 0.58, -1.10), new Vec3(0.0, 0.58, -2.05)),
-                0.58f, 0.28f
+                0.58f, 0.28f,
+                new Vec3(0.68, -0.12, 2.30)
         ));
 
         // 2. Jeep CJ-5 1964 (Open-back 4x4 Jeep)
@@ -123,7 +128,8 @@ public class ZooVehicleEntity extends Entity {
                 true, 1,
                 new Vec3(0.0, 0.0, -1.90),
                 List.of(new Vec3(0.0, 0.48, -1.15)),
-                0.62f, 0.30f
+                0.62f, 0.30f,
+                new Vec3(0.48, 0.35, 1.65)
         ));
 
         // 3. Ecto-1A (Long station wagon/ambulance with large rear bay)
@@ -141,7 +147,8 @@ public class ZooVehicleEntity extends Entity {
                 true, 2,
                 new Vec3(0.0, 0.0, -3.65),
                 List.of(new Vec3(0.0, 0.38, -1.65), new Vec3(0.0, 0.38, -2.75)),
-                0.66f, 0.30f
+                0.66f, 0.30f,
+                new Vec3(0.78, 0.30, 3.25)
         ));
 
         // 4. Hammer Monster Truck (Monster pickup truck with rear cargo bed)
@@ -159,7 +166,8 @@ public class ZooVehicleEntity extends Entity {
                 true, 2,
                 new Vec3(0.0, 0.0, -3.20),
                 List.of(new Vec3(0.0, 1.75, -1.60), new Vec3(0.0, 1.75, -2.65)),
-                0.65f, 0.32f
+                0.65f, 0.32f,
+                new Vec3(1.10, 0.70, 3.65)
         ));
 
         // 5. Oldsmobile Cutlass Supreme Coupe (1980)
@@ -177,7 +185,8 @@ public class ZooVehicleEntity extends Entity {
                 true, 1,
                 new Vec3(0.0, 0.0, -2.65),
                 List.of(new Vec3(0.0, 0.50, -1.95)),
-                0.68f, 0.30f
+                0.68f, 0.30f,
+                new Vec3(0.65, -0.45, 2.35)
         ));
 
         // 6. NEFAZ-66052 Tanker Truck
@@ -197,7 +206,8 @@ public class ZooVehicleEntity extends Entity {
                 true, 2,
                 new Vec3(0.0, 0.0, -4.30),
                 List.of(new Vec3(0.0, 1.40, -2.00), new Vec3(0.0, 1.40, -3.30)),
-                0.55f, 0.25f
+                0.55f, 0.25f,
+                new Vec3(0.88, 0.85, 3.85)
         ));
 
         // 7. Vanna (Small bathtub car - no trunk)
@@ -214,7 +224,8 @@ public class ZooVehicleEntity extends Entity {
                 false, 0,
                 Vec3.ZERO,
                 List.of(),
-                0.55f, 0.25f
+                0.55f, 0.25f,
+                new Vec3(0.38, 0.20, 1.25)
         ));
 
         // 8. ZIL-130 (Large cargo flatbed truck)
@@ -232,7 +243,8 @@ public class ZooVehicleEntity extends Entity {
                 true, 2,
                 new Vec3(0.0, 0.0, -3.70),
                 List.of(new Vec3(0.0, 1.15, -1.45), new Vec3(0.0, 1.15, -2.85)),
-                0.58f, 0.26f
+                0.58f, 0.26f,
+                new Vec3(0.85, 0.50, 3.05)
         ));
 
         // 9. Armored Truck 4x4 (Black)
@@ -250,7 +262,8 @@ public class ZooVehicleEntity extends Entity {
                 true, 2,
                 new Vec3(0.0, 0.0, -3.15),
                 List.of(new Vec3(0.0, 1.15, -1.40), new Vec3(0.0, 1.15, -2.35)),
-                0.62f, 0.28f
+                0.62f, 0.28f,
+                new Vec3(0.90, 0.55, 3.15)
         ));
 
         // 10. Armored Truck 4x4 (Gray-Red)
@@ -268,7 +281,8 @@ public class ZooVehicleEntity extends Entity {
                 true, 2,
                 new Vec3(0.0, 0.0, -3.15),
                 List.of(new Vec3(0.0, 1.15, -1.40), new Vec3(0.0, 1.15, -2.35)),
-                0.62f, 0.28f
+                0.62f, 0.28f,
+                new Vec3(0.90, 0.55, 3.15)
         ));
 
         // 11-17. ZAZ-968A & ZAZ-968M variants
@@ -299,7 +313,8 @@ public class ZooVehicleEntity extends Entity {
                 true, 1,
                 new Vec3(0.0, 0.0, -2.05),
                 List.of(new Vec3(0.0, 0.55, -1.10)),
-                0.55f, 0.28f
+                0.55f, 0.28f,
+                new Vec3(0.65, 0.25, 2.05)
         ));
     }
 
@@ -318,7 +333,8 @@ public class ZooVehicleEntity extends Entity {
                 true, 1,
                 new Vec3(0.0, 0.0, -2.05),
                 List.of(new Vec3(0.0, 0.50, -1.10)),
-                0.64f, 0.30f
+                0.64f, 0.30f,
+                new Vec3(0.52, -0.35, 1.85)
         ));
     }
 
@@ -411,6 +427,11 @@ public class ZooVehicleEntity extends Entity {
         builder.define(DATA_WHEEL_SPIN, 0.0f);
         builder.define(DATA_SPEED, 0.0f);
         builder.define(DATA_BRAKING, false);
+        builder.define(DATA_HEADLIGHTS, false);
+    }
+
+    public boolean hasHeadlightsOn() {
+        return this.entityData.get(DATA_HEADLIGHTS) || this.getDriver() != null;
     }
 
     public String getVehicleType() {
@@ -636,15 +657,13 @@ public class ZooVehicleEntity extends Entity {
                 boolean revBrake = (fInput > 0.05f && signedMove < -0.04f) || (fInput < -0.05f && signedMove > 0.04f);
                 boolean driftBrake = Math.abs(signedMove) > 0.34f && Math.abs(sAngle) > 22.0f;
                 this.entityData.set(DATA_BRAKING, (sJump && Math.abs(signedMove) > 0.025f) || revBrake || driftBrake);
+                this.entityData.set(DATA_HEADLIGHTS, true);
             } else {
                 this.entityData.set(DATA_STEER_ANGLE, this.localSteerAngle);
                 this.entityData.set(DATA_SPEED, this.currentSpeed);
                 this.entityData.set(DATA_WHEEL_SPIN, this.localWheelSpin);
                 this.entityData.set(DATA_BRAKING, false);
-            }
-
-            if (this.tickCount % 4 == 0) {
-                tickTrunkAnimalBoarding(spec);
+                this.entityData.set(DATA_HEADLIGHTS, false);
             }
         } else {
             if (!this.isControlledByLocalInstance()) {
@@ -862,30 +881,23 @@ public class ZooVehicleEntity extends Entity {
         this.prevTickSpeed = speed;
     }
 
-    private void tickTrunkAnimalBoarding(VehicleSpec spec) {
+    public boolean tryLoadNearbyAnimal(Player player) {
+        VehicleSpec spec = getSpec();
         if (!spec.hasTrunk()) {
-            return;
+            if (player instanceof ServerPlayer sp) {
+                ZooNetworkPayloads.sendToast(sp, "zootycoon.toast.title.warning", "zootycoon.vehicle.no_trunk", 2);
+            }
+            return false;
         }
-        List<Entity> currentCargo = getCargoPassengers();
-        if (currentCargo.size() >= spec.maxCargoAnimals()) {
-            return;
-        }
-        float serverSpeed = Math.abs(this.entityData.get(DATA_SPEED));
-        if (serverSpeed > 0.30f) {
-            return;
-        }
-
-        // Only auto-load when a player is driving or nearby guiding the animal to the trunk
-        Player nearbyPlayer = this.getDriver();
-        if (nearbyPlayer == null) {
-            nearbyPlayer = this.level().getNearestPlayer(this, 16.0);
-        }
-        if (nearbyPlayer == null) {
-            return;
+        if (getCargoPassengers().size() >= spec.maxCargoAnimals()) {
+            if (player instanceof ServerPlayer sp) {
+                ZooNetworkPayloads.sendToast(sp, "zootycoon.toast.title.warning", "zootycoon.vehicle.trunk_full", 2);
+            }
+            return false;
         }
 
         Vec3 trunkWorldPos = this.position().add(rotateLocalOffset(spec.trunkPickupOffset(), this.getYRot()));
-        AABB searchBox = AABB.ofSize(trunkWorldPos.add(0.0, 0.9, 0.0), 3.2, 2.6, 3.2);
+        AABB searchBox = AABB.ofSize(trunkWorldPos.add(0.0, 0.9, 0.0), 3.8, 3.0, 3.8);
 
         List<Mob> nearbyMobs = this.level().getEntitiesOfClass(Mob.class, searchBox, mob -> {
             if (!mob.isAlive() || mob.isPassenger()) {
@@ -909,6 +921,14 @@ public class ZooVehicleEntity extends Entity {
                     || ZooAnimalHungerManager.isZooAnimalCandidate(mob);
         });
 
+        if (nearbyMobs.isEmpty()) {
+            if (player instanceof ServerPlayer sp) {
+                ZooNetworkPayloads.sendToast(sp, "zootycoon.toast.title.info", "zootycoon.vehicle.no_animal_near_trunk", 1);
+            }
+            return false;
+        }
+
+        boolean loadedAny = false;
         for (Mob animal : nearbyMobs) {
             if (getCargoPassengers().size() >= spec.maxCargoAnimals()) {
                 break;
@@ -918,8 +938,9 @@ public class ZooVehicleEntity extends Entity {
             }
             animal.getNavigation().stop();
             if (animal.startRiding(this, true)) {
+                loadedAny = true;
                 this.level().playSound(null, this.blockPosition(), SoundEvents.HORSE_SADDLE, SoundSource.NEUTRAL, 1.0f, 1.0f);
-                if (nearbyPlayer instanceof ServerPlayer sp) {
+                if (player instanceof ServerPlayer sp) {
                     ZooNetworkPayloads.sendToast(
                             sp,
                             "zootycoon.toast.title.info",
@@ -930,6 +951,7 @@ public class ZooVehicleEntity extends Entity {
                 }
             }
         }
+        return loadedAny;
     }
 
     public boolean unloadCargoAnimals(Player actor) {

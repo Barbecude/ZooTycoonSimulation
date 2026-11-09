@@ -43,6 +43,12 @@ public class ZooTycoonClient implements ClientModInitializer {
             InputConstants.KEY_RSHIFT,
             KeyMapping.CATEGORY_MISC
     ));
+    public static final KeyMapping VEHICLE_LOAD_ANIMAL_KEY = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+            "key.zootycoon.vehicle_load_animal",
+            InputConstants.Type.KEYSYM,
+            InputConstants.KEY_G,
+            "key.categories.zootycoon"
+    ));
     private static boolean lastRShiftDown = false;
 
     public static boolean inStudio = false;
@@ -644,6 +650,32 @@ public class ZooTycoonClient implements ClientModInitializer {
                 client.setScreen(new MainManagementScreen());
             }
             lastRShiftDown = rShiftDown;
+
+            // Load nearby animal into vehicle when pressing 'G' (configurable keybind)
+            while (VEHICLE_LOAD_ANIMAL_KEY.consumeClick()) {
+                if (client.player != null && client.level != null && client.screen == null) {
+                    net.zootycoon.entity.ZooVehicleEntity targetVehicle = null;
+                    if (client.player.getVehicle() instanceof net.zootycoon.entity.ZooVehicleEntity ridingVeh) {
+                        targetVehicle = ridingVeh;
+                    } else {
+                        var nearbyVehicles = client.level.getEntitiesOfClass(
+                                net.zootycoon.entity.ZooVehicleEntity.class,
+                                client.player.getBoundingBox().inflate(5.5D)
+                        );
+                        double closestDist = Double.MAX_VALUE;
+                        for (net.zootycoon.entity.ZooVehicleEntity veh : nearbyVehicles) {
+                            double dist = client.player.distanceToSqr(veh);
+                            if (dist < closestDist) {
+                                closestDist = dist;
+                                targetVehicle = veh;
+                            }
+                        }
+                    }
+                    if (targetVehicle != null) {
+                        ClientPlayNetworking.send(new ZooNetworkPayloads.VehicleLoadAnimalPayload(targetVehicle.getId()));
+                    }
+                }
+            }
 
             // Client-side Spyglass & Field Guide long-range animal registration
             if (client.player != null && client.level != null) {

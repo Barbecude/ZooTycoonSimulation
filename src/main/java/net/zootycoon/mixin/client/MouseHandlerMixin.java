@@ -23,12 +23,19 @@ public class MouseHandlerMixin {
         }
         if (mc.screen != null || mc.player == null) return;
 
+        boolean ctrl = InputConstants.isKeyDown(window, InputConstants.KEY_LCONTROL)
+                || InputConstants.isKeyDown(window, InputConstants.KEY_RCONTROL);
+
+        // Vehicle third-person back camera zoom adjustment via Ctrl + Scroll
+        if (ctrl && net.zootycoon.client.camera.ZooVehicleCameraManager.isVehicleThirdPersonBack(mc)) {
+            net.zootycoon.client.camera.ZooVehicleCameraManager.onScroll(vertical);
+            ci.cancel();
+            return;
+        }
+
         boolean holdingTool = mc.player.getMainHandItem().is(net.minecraft.world.item.Items.STICK)
                 || mc.player.getOffhandItem().is(net.minecraft.world.item.Items.STICK);
         if (!holdingTool) return;
-
-        boolean ctrl = InputConstants.isKeyDown(window, InputConstants.KEY_LCONTROL)
-                || InputConstants.isKeyDown(window, InputConstants.KEY_RCONTROL);
         boolean alt = InputConstants.isKeyDown(window, InputConstants.KEY_LALT)
                 || InputConstants.isKeyDown(window, InputConstants.KEY_RALT);
         boolean shift = InputConstants.isKeyDown(window, InputConstants.KEY_LSHIFT)

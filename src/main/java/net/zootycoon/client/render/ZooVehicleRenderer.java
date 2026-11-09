@@ -122,12 +122,15 @@ public class ZooVehicleRenderer extends EntityRenderer<ZooVehicleEntity> {
             poseStack.popPose();
         }
 
+        // 4. Vehicle Headlights & Flashlight Beam
+        ZooVehicleHeadlightRenderer.renderHeadlights(entity, partialTick, poseStack, buffer);
+
         poseStack.popPose();
     }
 
     @Override
     public boolean shouldRender(ZooVehicleEntity entity, Frustum frustum, double camX, double camY, double camZ) {
-        return frustum.isVisible(entity.getBoundingBox().inflate(4.5D));
+        return frustum.isVisible(entity.getBoundingBox().inflate(28.0D));
     }
 
     @Override

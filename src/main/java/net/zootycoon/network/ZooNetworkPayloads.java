@@ -1419,6 +1419,17 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // 33. Vehicle Load Animal (C2S)
+    public record VehicleLoadAnimalPayload(int vehicleEntityId) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<VehicleLoadAnimalPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("vehicle_load_animal"));
+        public static final StreamCodec<FriendlyByteBuf, VehicleLoadAnimalPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> buf.writeInt(payload.vehicleEntityId),
+                buf -> new VehicleLoadAnimalPayload(buf.readInt())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     public static void sendToast(ServerPlayer player, String titleKey, String msgKey, int toastType, Object... args) {
         if (player == null) return;
         List<String> strArgs = new ArrayList<>();
@@ -1475,6 +1486,7 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
         PayloadTypeRegistry.playC2S().register(SupplyZookeeperFuelPayload.TYPE, SupplyZookeeperFuelPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ManageStaffGenericPayload.TYPE, ManageStaffGenericPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(PayStrikeSalaryPayload.TYPE, PayStrikeSalaryPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(VehicleLoadAnimalPayload.TYPE, VehicleLoadAnimalPayload.CODEC);
 
         PayloadTypeRegistry.playS2C().register(SyncClaimsPayload.TYPE, SyncClaimsPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncStudioStatePayload.TYPE, SyncStudioStatePayload.CODEC);
@@ -2609,6 +2621,21 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                     }
                 }
                 net.zootycoon.economy.ZooStaffManager.get(sLevel).tryPayStrikeSalary(player, targetOwner);
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(VehicleLoadAnimalPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                ServerLevel sLevel = player.serverLevel();
+                net.minecraft.world.entity.Entity ent = sLevel.getEntity(payload.vehicleEntityId());
+                if (ent instanceof net.zootycoon.entity.ZooVehicleEntity veh) {
+                    boolean isRiding = player.getVehicle() == veh;
+                    boolean isNear = player.distanceToSqr(veh) <= 49.0D;
+                    if (isRiding || isNear) {
+                        veh.tryLoadNearbyAnimal(player);
+                    }
+                }
             });
         });
     }

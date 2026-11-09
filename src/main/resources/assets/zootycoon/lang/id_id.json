@@ -790,5 +790,10 @@
   "zootycoon.dialog.staff.btn.close": "Tutup",
   "zootycoon.mob_bag.captured": "%s dimasukkan ke dalam Mob Bag.",
   "zootycoon.mob_bag.released": "%s dikeluarkan dari Mob Bag.",
-  "zootycoon.mob_bag.too_large": "Hewan ini terlalu besar untuk Mob Bag! Mob Bag hanya bisa membawa hewan kecil."
+  "zootycoon.mob_bag.too_large": "Hewan ini terlalu besar untuk Mob Bag! Mob Bag hanya bisa membawa hewan kecil.",
+  "key.categories.zootycoon": "Zoo Tycoon",
+  "key.zootycoon.vehicle_load_animal": "Muat Hewan ke Kendaraan",
+  "zootycoon.vehicle.no_animal_near_trunk": "Tidak ada hewan di dekat bagasi kendaraan.",
+  "zootycoon.vehicle.no_trunk": "Kendaraan ini tidak memiliki bagasi untuk mengangkut hewan.",
+  "zootycoon.vehicle.trunk_full": "Bagasi kendaraan sudah penuh!"
 }
