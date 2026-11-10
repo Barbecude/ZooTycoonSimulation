@@ -117,10 +117,6 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.construction.ConstructionManager.loadFromFile(server);
         });
 
-        net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTED.register(server -> {
-            net.zootycoon.biome.ZooTerrainBiomeGenerator.generateForWorld(server.overworld());
-        });
-
         // 5b-2. Initialize Mob Bag (karung khusus hewan kecil)
         net.zootycoon.item.MobBagHandler.initServerEvents();
 

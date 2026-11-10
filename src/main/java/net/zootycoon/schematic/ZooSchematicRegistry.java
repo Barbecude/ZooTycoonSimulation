@@ -26,7 +26,6 @@ public class ZooSchematicRegistry {
 
     public static void init() {
         SCHEMATICS.clear();
-        net.zootycoon.biome.ZooTerrainBiomeGenerator.generateDefaultsIfMissing();
         loadCustomSchematics();
     }
 

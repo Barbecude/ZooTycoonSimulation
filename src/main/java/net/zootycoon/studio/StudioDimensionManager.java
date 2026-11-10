@@ -299,19 +299,6 @@ public class StudioDimensionManager {
                         return 0;
                     }))
             );
-
-            // 6. Command: /terrain [nama terrain] -> Save design into "terrain"
-            dispatcher.register(Commands.literal("terrain")
-                    .then(Commands.argument("nama", StringArgumentType.greedyString()).executes(ctx -> {
-                        ServerPlayer player = ctx.getSource().getPlayer();
-                        if (player != null) {
-                            String name = StringArgumentType.getString(ctx, "nama").trim();
-                            ServerPlayNetworking.send(player, new ZooNetworkPayloads.RequestClientSelectionSavePayload(name, "terrain"));
-                            return 1;
-                        }
-                        return 0;
-                    }))
-            );
         });
     }
 

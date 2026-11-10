@@ -91,8 +91,7 @@ public class SchematicCatalogTab {
         int listWidth = 190;
         int listX = 20;
 
-        int catGap = 3;
-        int catBtnW = (listWidth - (catGap * 2)) / 3;
+        int catBtnW = (listWidth - 4) / 2;
         int catY = 48;
 
         ZooButton kandangBtn = new ZooButton(listX, catY, catBtnW, 20, ZooTranslations.component("zootycoon.ui.catalog.tab_enclosures"), b -> {
@@ -106,7 +105,7 @@ public class SchematicCatalogTab {
         kandangBtn.setSelected("enclosures".equals(this.category));
         screen.addWidgetPublic(kandangBtn);
 
-        ZooButton fasilitasBtn = new ZooButton(listX + catBtnW + catGap, catY, catBtnW, 20, ZooTranslations.component("zootycoon.ui.catalog.tab_essentials"), b -> {
+        ZooButton fasilitasBtn = new ZooButton(listX + catBtnW + 4, catY, catBtnW, 20, ZooTranslations.component("zootycoon.ui.catalog.tab_essentials"), b -> {
             if (!"essentials".equals(this.category)) {
                 this.category = "essentials";
                 this.selectedSchematic = null;
@@ -116,18 +115,6 @@ public class SchematicCatalogTab {
         });
         fasilitasBtn.setSelected("essentials".equals(this.category));
         screen.addWidgetPublic(fasilitasBtn);
-
-        int catBtnW3 = listWidth - (catBtnW * 2 + catGap * 2);
-        ZooButton terrainBtn = new ZooButton(listX + (catBtnW + catGap) * 2, catY, catBtnW3, 20, ZooTranslations.component("zootycoon.ui.catalog.tab_terrain"), b -> {
-            if (!"terrain".equals(this.category)) {
-                this.category = "terrain";
-                this.selectedSchematic = null;
-                this.scrollOffset = 0;
-                screen.setView(screen.getCurrentView());
-            }
-        });
-        terrainBtn.setSelected("terrain".equals(this.category));
-        screen.addWidgetPublic(terrainBtn);
 
         int startY = catY + 24;
 

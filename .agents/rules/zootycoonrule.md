@@ -59,10 +59,6 @@ fungsi yang belum fix atau belum ada atau masih cacat (Dilarang mengerjakan semu
 20. cashier logic
 21. Vehicle logic and assets
 
-fungsi yg belum ada atau masih cacat (jangan eksekusi fitur ini sebelum secara eksplisit diminta)
-
-
-
-- fitur "already builded biome" di kategori "terrain" di menu bangunan yang dimana already builded biome adalah biome yg di ambil dari world generation asli dari mod apapun misal user pake world generation vanila atau moded world generation apapun seperti tectonic nah di kategori terrain itu sudah ada already builded biome yg otomatis di generate oleh mod ini dan yg di generate nya itu world generation dari mod world generation itu sendiri dengan size biome yg 
-
+fungsi yg belum ada atau masih cacat (jangan eksekusi fitur ini sebelum secara eksplisit diminta) 
+1. 
 
