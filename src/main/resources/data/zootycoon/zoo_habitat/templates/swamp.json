@@ -5,8 +5,8 @@
     "minecraft:swamp",
     "minecraft:mangrove_swamp"
   ],
-  "min_temperature": 0.3,
-  "max_temperature": 1.8,
+  "min_temperature": -10.0,
+  "max_temperature": 10.0,
   "required_blocks": [
     {
       "type": "water",

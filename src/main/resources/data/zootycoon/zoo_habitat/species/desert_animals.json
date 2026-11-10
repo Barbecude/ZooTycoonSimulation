@@ -3,8 +3,16 @@
     "minecraft:camel",
     "alexsmobs:roadrunner",
     "alexsmobs:rattlesnake",
+    "naturalist:rattlesnake",
     "alexsmobs:komodo_dragon",
-    "naturalist:tortoise",
+    "naturalist:komodo_dragon",
+    "naturalist:vulture",
+    "naturalist:desert_scorpion",
+    "wildernature:scorpion",
+    "alexsmobs:jerboa",
+    "alexsmobs:tarantula_hawk",
+    "alexsmobs:guster",
+    "alexsmobs:rocky_roller",
     "minecraft:strider"
   ],
   "template": "zootycoon:desert"

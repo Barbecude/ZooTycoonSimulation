@@ -187,14 +187,17 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
             }
         }
 
+        float minTemp = obj.has("min_temperature") ? obj.get("min_temperature").getAsFloat() : baseTemplate.minTemperature();
+        float maxTemp = obj.has("max_temperature") ? obj.get("max_temperature").getAsFloat() : baseTemplate.maxTemperature();
+
         HabitatProfile profile = new HabitatProfile(
                 id,
                 baseTemplate.name(),
                 baseTemplate.displayName(),
                 baseTemplate.biomeTags(),
                 baseTemplate.biomeIds(),
-                baseTemplate.minTemperature(),
-                baseTemplate.maxTemperature(),
+                minTemp,
+                maxTemp,
                 finalBlocks
         );
 
@@ -254,43 +257,43 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
      * works immediately even before any reload listener is dispatched.
      */
     public static void initDefaults() {
-        // 1. Savanna
+        // 1. Savanna (Hot-only biome specialists)
         HabitatProfile savanna = new HabitatProfile(
                 ZooTycoonMod.id("savanna"),
                 "savanna",
                 "Savana",
                 List.of("#minecraft:is_savanna"),
                 List.of(ResourceLocation.parse("minecraft:savanna"), ResourceLocation.parse("minecraft:savanna_plateau"), ResourceLocation.parse("minecraft:windswept_savanna")),
-                0.70f,
-                2.5f,
+                1.25f,
+                10.0f,
                 List.of(new HabitatProfile.BlockRequirement("water", 4, "Air"))
         );
         TEMPLATES.put(ZooTycoonMod.id("savanna"), savanna);
         TEMPLATES.put(ZooTycoonMod.id("templates/savanna"), savanna);
 
-        // 2. Forest
+        // 2. Forest (Temperate - unaffected by seasonal shifts)
         HabitatProfile forest = new HabitatProfile(
                 ZooTycoonMod.id("forest"),
                 "forest",
                 "Hutan",
                 List.of("#minecraft:is_forest"),
                 List.of(ResourceLocation.parse("minecraft:forest"), ResourceLocation.parse("minecraft:flower_forest"), ResourceLocation.parse("minecraft:birch_forest"), ResourceLocation.parse("minecraft:dark_forest")),
-                0.25f,
-                1.8f,
+                -10.0f,
+                10.0f,
                 List.of(new HabitatProfile.BlockRequirement("oak", 6, "Pohon Oak"))
         );
         TEMPLATES.put(ZooTycoonMod.id("forest"), forest);
         TEMPLATES.put(ZooTycoonMod.id("templates/forest"), forest);
 
-        // 3. Jungle / Hutan Tropis
+        // 3. Jungle / Hutan Tropis (Moderate humid - unaffected by seasonal shifts)
         HabitatProfile jungle = new HabitatProfile(
                 ZooTycoonMod.id("jungle"),
                 "jungle",
                 "Hutan Tropis",
                 List.of("#minecraft:is_jungle"),
                 List.of(ResourceLocation.parse("minecraft:jungle"), ResourceLocation.parse("minecraft:sparse_jungle"), ResourceLocation.parse("minecraft:bamboo_jungle")),
-                0.70f,
-                2.5f,
+                -10.0f,
+                10.0f,
                 List.of(
                         new HabitatProfile.BlockRequirement("jungle_wood", 6, "Pohon Jungle"),
                         new HabitatProfile.BlockRequirement("water", 4, "Air")
@@ -299,7 +302,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
         TEMPLATES.put(ZooTycoonMod.id("jungle"), jungle);
         TEMPLATES.put(ZooTycoonMod.id("templates/jungle"), jungle);
 
-        // 4. Arctic / Snow
+        // 4. Arctic / Snow (Cold-only biome specialists)
         HabitatProfile snow = new HabitatProfile(
                 ZooTycoonMod.id("snow"),
                 "snow",
@@ -313,71 +316,71 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
         TEMPLATES.put(ZooTycoonMod.id("snow"), snow);
         TEMPLATES.put(ZooTycoonMod.id("templates/snow"), snow);
 
-        // 5. Desert / Gurun
+        // 5. Desert / Gurun (Hot-only biome specialists)
         HabitatProfile desert = new HabitatProfile(
                 ZooTycoonMod.id("desert"),
                 "desert",
                 "Gurun",
                 List.of("#minecraft:is_badlands"),
                 List.of(ResourceLocation.parse("minecraft:desert"), ResourceLocation.parse("minecraft:badlands"), ResourceLocation.parse("minecraft:eroded_badlands"), ResourceLocation.parse("minecraft:wooded_badlands")),
-                1.1f,
-                2.5f,
+                1.25f,
+                10.0f,
                 List.of(new HabitatProfile.BlockRequirement("sand", 8, "Blok Pasir"))
         );
         TEMPLATES.put(ZooTycoonMod.id("desert"), desert);
         TEMPLATES.put(ZooTycoonMod.id("templates/desert"), desert);
 
-        // 6. Plains / Padang Rumput
+        // 6. Plains / Padang Rumput (Temperate - unaffected by seasonal shifts)
         HabitatProfile plains = new HabitatProfile(
                 ZooTycoonMod.id("plains"),
                 "plains",
                 "Padang Rumput",
                 Collections.emptyList(),
                 List.of(ResourceLocation.parse("minecraft:plains"), ResourceLocation.parse("minecraft:sunflower_plains"), ResourceLocation.parse("minecraft:meadow"), ResourceLocation.parse("minecraft:cherry_grove")),
-                0.25f,
-                1.8f,
+                -10.0f,
+                10.0f,
                 List.of(new HabitatProfile.BlockRequirement("grass", 8, "Blok Rumput"))
         );
         TEMPLATES.put(ZooTycoonMod.id("plains"), plains);
         TEMPLATES.put(ZooTycoonMod.id("templates/plains"), plains);
 
-        // 7. Freshwater / Perairan Tawar
+        // 7. Freshwater / Perairan Tawar (Temperate - unaffected by seasonal shifts)
         HabitatProfile freshwater = new HabitatProfile(
                 ZooTycoonMod.id("freshwater"),
                 "freshwater",
                 "Perairan Tawar",
                 List.of("#minecraft:is_river"),
                 List.of(ResourceLocation.parse("minecraft:river"), ResourceLocation.parse("minecraft:swamp"), ResourceLocation.parse("minecraft:mangrove_swamp")),
-                0.2f,
-                1.8f,
+                -10.0f,
+                10.0f,
                 List.of(new HabitatProfile.BlockRequirement("water", 12, "Air"))
         );
         TEMPLATES.put(ZooTycoonMod.id("freshwater"), freshwater);
         TEMPLATES.put(ZooTycoonMod.id("templates/freshwater"), freshwater);
 
-        // 8. Ocean / Lautan
+        // 8. Ocean / Lautan (Temperate aquatic - unaffected by seasonal shifts)
         HabitatProfile ocean = new HabitatProfile(
                 ZooTycoonMod.id("ocean"),
                 "ocean",
                 "Lautan",
                 List.of("#minecraft:is_ocean", "#minecraft:is_deep_ocean"),
                 List.of(ResourceLocation.parse("minecraft:ocean"), ResourceLocation.parse("minecraft:deep_ocean"), ResourceLocation.parse("minecraft:warm_ocean"), ResourceLocation.parse("minecraft:lukewarm_ocean"), ResourceLocation.parse("minecraft:deep_lukewarm_ocean"), ResourceLocation.parse("minecraft:cold_ocean"), ResourceLocation.parse("minecraft:deep_cold_ocean"), ResourceLocation.parse("minecraft:frozen_ocean"), ResourceLocation.parse("minecraft:deep_frozen_ocean")),
-                -0.5f,
-                2.0f,
+                -10.0f,
+                10.0f,
                 List.of(new HabitatProfile.BlockRequirement("water", 16, "Air"))
         );
         TEMPLATES.put(ZooTycoonMod.id("ocean"), ocean);
         TEMPLATES.put(ZooTycoonMod.id("templates/ocean"), ocean);
 
-        // 9. Swamp / Rawa
+        // 9. Swamp / Rawa (Temperate wetland - unaffected by seasonal shifts)
         HabitatProfile swamp = new HabitatProfile(
                 ZooTycoonMod.id("swamp"),
                 "swamp",
                 "Rawa",
                 Collections.emptyList(),
                 List.of(ResourceLocation.parse("minecraft:swamp"), ResourceLocation.parse("minecraft:mangrove_swamp")),
-                0.5f,
-                1.0f,
+                -10.0f,
+                10.0f,
                 List.of(new HabitatProfile.BlockRequirement("water", 6, "Air"))
         );
         TEMPLATES.put(ZooTycoonMod.id("swamp"), swamp);
@@ -385,15 +388,15 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
 
         // Map species to default templates based on Zoo Tycoon Ecosystem Guide (Bagian 1, 2, 3)
 
-        // Zona 1: Savanna Safari (Elephant, Giraffe, Zebra, Ostrich)
+        // Zona 1: Savanna Safari (Hot-only specialists)
         HabitatProfile savannaSafari = new HabitatProfile(
                 ZooTycoonMod.id("savanna_safari"),
                 "savanna",
                 "Savana Safari",
                 List.of("#minecraft:is_savanna"),
-                List.of(ResourceLocation.parse("minecraft:savanna"), ResourceLocation.parse("minecraft:savanna_plateau"), ResourceLocation.parse("minecraft:windswept_savanna"), ResourceLocation.parse("minecraft:plains")),
-                0.70f,
-                2.5f,
+                List.of(ResourceLocation.parse("minecraft:savanna"), ResourceLocation.parse("minecraft:savanna_plateau"), ResourceLocation.parse("minecraft:windswept_savanna")),
+                1.25f,
+                10.0f,
                 List.of(
                         new HabitatProfile.BlockRequirement("water", 2, "Air"),
                         new HabitatProfile.BlockRequirement("acacia", 1, "Pohon Acacia"),
@@ -402,28 +405,30 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 )
         );
         registerDefaultSpecies(savannaSafari,
-                "alexsmobs:elephant", "naturalist:elephant",
+                "alexsmobs:elephant", "naturalist:elephant", "wildernature:elephant",
                 "naturalist:giraffe",
                 "naturalist:zebra",
-                "naturalist:ostrich",
+                "naturalist:ostrich", "alexsmobs:emu",
                 "naturalist:rhino", "alexsmobs:rhinoceros", "alexsmobs:gazelle");
 
-        // Zona 2: Apex Predators (Lion, Tiger, Snow Leopard)
+        // Zona 2: Apex Predators (Lion = Hot, Tiger = Temperate, Snow Leopard = Cold)
         HabitatProfile lionProfile = new HabitatProfile(
                 ZooTycoonMod.id("lion"),
                 "savanna",
                 "Savana (Singa)",
                 List.of("#minecraft:is_savanna"),
                 List.of(ResourceLocation.parse("minecraft:savanna"), ResourceLocation.parse("minecraft:windswept_savanna")),
-                0.70f,
-                2.5f,
+                1.25f,
+                10.0f,
                 List.of(
                         new HabitatProfile.BlockRequirement("water", 2, "Air"),
                         new HabitatProfile.BlockRequirement("stone", 2, "Batu Tebing (Smooth Stone)"),
                         new HabitatProfile.BlockRequirement("sandstone", 2, "Batu Pasir (Sandstone)")
                 )
         );
-        registerDefaultSpecies(lionProfile, "alexsmobs:lion", "naturalist:lion", "naturalist:hyena", "naturalist:leopard");
+        registerDefaultSpecies(lionProfile,
+                "alexsmobs:lion", "naturalist:lion", "wildernature:lion", "wildernature:lioness",
+                "naturalist:hyena");
 
         HabitatProfile tigerProfile = new HabitatProfile(
                 ZooTycoonMod.id("tiger"),
@@ -431,15 +436,15 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 "Hutan Tropis (Harimau)",
                 List.of("#minecraft:is_jungle"),
                 List.of(ResourceLocation.parse("minecraft:jungle"), ResourceLocation.parse("minecraft:sparse_jungle"), ResourceLocation.parse("minecraft:bamboo_jungle")),
-                0.70f,
-                2.5f,
+                -10.0f,
+                10.0f,
                 List.of(
                         new HabitatProfile.BlockRequirement("water", 2, "Air"),
                         new HabitatProfile.BlockRequirement("jungle_wood", 4, "Pohon Jungle"),
                         new HabitatProfile.BlockRequirement("bamboo", 2, "Batang Bambu")
                 )
         );
-        registerDefaultSpecies(tigerProfile, "alexsmobs:tiger", "naturalist:tiger");
+        registerDefaultSpecies(tigerProfile, "alexsmobs:tiger", "naturalist:tiger", "naturalist:leopard");
 
         HabitatProfile snowLeopardProfile = new HabitatProfile(
                 ZooTycoonMod.id("snow_leopard"),
@@ -457,15 +462,15 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
         );
         registerDefaultSpecies(snowLeopardProfile, "alexsmobs:snow_leopard");
 
-        // Zona 3: Wetland Semi-Aquatic (Hippo, Alligator, Anaconda)
+        // Zona 3: Wetland Semi-Aquatic (Alligator, Anaconda = Temperate; Hippo = Hot wetland specialist)
         HabitatProfile wetlandProfile = new HabitatProfile(
                 ZooTycoonMod.id("wetland"),
                 "swamp",
                 "Lahan Basah / Rawa",
                 List.of("#minecraft:is_river"),
                 List.of(ResourceLocation.parse("minecraft:swamp"), ResourceLocation.parse("minecraft:mangrove_swamp"), ResourceLocation.parse("minecraft:river"), ResourceLocation.parse("minecraft:jungle")),
-                0.40f,
-                2.0f,
+                -10.0f,
+                10.0f,
                 List.of(
                         new HabitatProfile.BlockRequirement("water", 4, "Air Kolam"),
                         new HabitatProfile.BlockRequirement("mud", 2, "Blok Lumpur"),
@@ -473,19 +478,33 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 )
         );
         registerDefaultSpecies(wetlandProfile,
-                "naturalist:hippo",
-                "naturalist:alligator", "alexsmobs:crocodile", "naturalist:crocodile", "alexsmobs:alligator_snapping_turtle",
-                "alexsmobs:anaconda");
+                "naturalist:alligator", "alexsmobs:crocodile", "naturalist:crocodile", "alexsmobs:caiman",
+                "alexsmobs:alligator_snapping_turtle", "alexsmobs:anaconda");
 
-        // Zona 4: Boreal Forest (Deer, Grizzly Bear, Raccoon)
+        HabitatProfile hotWetlandProfile = new HabitatProfile(
+                ZooTycoonMod.id("hot_wetland"),
+                "swamp",
+                "Sungai Tropis / Sabana (Kuda Nil)",
+                List.of("#minecraft:is_savanna", "#minecraft:is_river"),
+                List.of(ResourceLocation.parse("minecraft:savanna"), ResourceLocation.parse("minecraft:swamp"), ResourceLocation.parse("minecraft:mangrove_swamp"), ResourceLocation.parse("minecraft:river")),
+                1.25f,
+                10.0f,
+                List.of(
+                        new HabitatProfile.BlockRequirement("water", 4, "Air Kolam"),
+                        new HabitatProfile.BlockRequirement("mud", 2, "Blok Lumpur")
+                )
+        );
+        registerDefaultSpecies(hotWetlandProfile, "naturalist:hippo", "wildernature:hippo");
+
+        // Zona 4: Boreal Forest (Deer, Grizzly Bear, Black Bear, Raccoon = Temperate)
         HabitatProfile borealForest = new HabitatProfile(
                 ZooTycoonMod.id("boreal_forest"),
                 "forest",
                 "Hutan Taiga",
                 List.of("#minecraft:is_forest", "#minecraft:is_taiga"),
                 List.of(ResourceLocation.parse("minecraft:forest"), ResourceLocation.parse("minecraft:birch_forest"), ResourceLocation.parse("minecraft:dark_forest"), ResourceLocation.parse("minecraft:taiga"), ResourceLocation.parse("minecraft:old_growth_pine_taiga")),
-                0.20f,
-                1.5f,
+                -10.0f,
+                10.0f,
                 List.of(
                         new HabitatProfile.BlockRequirement("spruce", 4, "Pohon Spruce"),
                         new HabitatProfile.BlockRequirement("podzol", 2, "Blok Podzol"),
@@ -494,19 +513,21 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 )
         );
         registerDefaultSpecies(borealForest,
-                "naturalist:deer", "alexsmobs:moose",
+                "naturalist:deer", "wildernature:deer", "alexsmobs:moose",
                 "alexsmobs:grizzly_bear", "naturalist:bear", "naturalist:black_bear",
-                "alexsmobs:raccoon");
+                "alexsmobs:raccoon", "wildernature:raccoon", "wildernature:beaver", "wildernature:bison", "alexsmobs:bison",
+                "wildernature:boar", "naturalist:boar", "wildernature:hedgehog", "naturalist:hedgehog",
+                "wildernature:squirrel", "wildernature:swift_fox", "wildernature:turkey");
 
-        // Zona 5: Jungle Canopy (Gorilla, Capuchin Monkey)
+        // Zona 5: Jungle Canopy (Gorilla, Capuchin Monkey, Gelada Monkey, Toucan = Temperate humid)
         HabitatProfile jungleCanopy = new HabitatProfile(
                 ZooTycoonMod.id("jungle_canopy"),
                 "jungle",
                 "Kanopi Jungle",
                 List.of("#minecraft:is_jungle"),
                 List.of(ResourceLocation.parse("minecraft:jungle"), ResourceLocation.parse("minecraft:bamboo_jungle"), ResourceLocation.parse("minecraft:sparse_jungle")),
-                0.70f,
-                2.5f,
+                -10.0f,
+                10.0f,
                 List.of(
                         new HabitatProfile.BlockRequirement("jungle_wood", 4, "Pohon Jungle"),
                         new HabitatProfile.BlockRequirement("bamboo", 2, "Batang Bambu"),
@@ -517,15 +538,15 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
         registerDefaultSpecies(jungleCanopy,
                 "alexsmobs:gorilla", "alexsmobs:capuchin_monkey", "alexsmobs:gelada_monkey", "alexsmobs:toucan");
 
-        // Zona 6: Walk-in Petting (Capybara, Giant Tortoise)
+        // Zona 6: Walk-in Petting (Capybara, Tortoise = Temperate)
         HabitatProfile walkInPetting = new HabitatProfile(
                 ZooTycoonMod.id("walk_in_petting"),
                 "freshwater",
                 "Taman Satwa Jinak",
                 Collections.emptyList(),
                 List.of(ResourceLocation.parse("minecraft:swamp"), ResourceLocation.parse("minecraft:river"), ResourceLocation.parse("minecraft:plains"), ResourceLocation.parse("minecraft:meadow")),
-                0.30f,
-                2.0f,
+                -10.0f,
+                10.0f,
                 List.of(
                         new HabitatProfile.BlockRequirement("water", 2, "Air"),
                         new HabitatProfile.BlockRequirement("mud", 1, "Blok Lumpur"),
@@ -537,52 +558,67 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 "naturalist:capybara",
                 "naturalist:giant_tortoise", "naturalist:tortoise");
 
-        // Zona 7: Arid Scrubland (Kangaroo, Giant Anteater)
+        // Zona 7: Arid Scrubland (Kangaroo = Hot savanna/outback) & Anteater (Temperate)
         HabitatProfile aridScrubland = new HabitatProfile(
                 ZooTycoonMod.id("arid_scrubland"),
                 "savanna",
                 "Semak Kering Arid",
                 List.of("#minecraft:is_badlands"),
                 List.of(ResourceLocation.parse("minecraft:savanna"), ResourceLocation.parse("minecraft:badlands"), ResourceLocation.parse("minecraft:sparse_jungle")),
-                0.80f,
-                2.5f,
+                1.25f,
+                10.0f,
                 List.of(
                         new HabitatProfile.BlockRequirement("red_sand", 2, "Blok Pasir Merah"),
                         new HabitatProfile.BlockRequirement("terracotta", 2, "Blok Terracotta"),
                         new HabitatProfile.BlockRequirement("water", 2, "Air")
                 )
         );
-        registerDefaultSpecies(aridScrubland,
-                "alexsmobs:kangaroo", "alexsmobs:giant_anteater");
+        registerDefaultSpecies(aridScrubland, "alexsmobs:kangaroo");
 
-        // Zona 8: Prehistoric / Dangerous (Cassowary, Komodo Dragon)
+        HabitatProfile anteaterProfile = new HabitatProfile(
+                ZooTycoonMod.id("anteater_scrubland"),
+                "plains",
+                "Sabana / Semak Terbuka (Anteater)",
+                List.of("#minecraft:is_savanna"),
+                List.of(ResourceLocation.parse("minecraft:savanna"), ResourceLocation.parse("minecraft:plains"), ResourceLocation.parse("minecraft:sparse_jungle")),
+                -10.0f,
+                10.0f,
+                List.of(
+                        new HabitatProfile.BlockRequirement("grass", 4, "Blok Rumput"),
+                        new HabitatProfile.BlockRequirement("water", 2, "Air")
+                )
+        );
+        registerDefaultSpecies(anteaterProfile, "alexsmobs:anteater", "alexsmobs:giant_anteater");
+
+        // Zona 8: Desert / Badlands Hot Specialists (Komodo Dragon, Scorpion, Rattlesnake, Roadrunner, Vulture, Jerboa)
         HabitatProfile prehistoricProfile = new HabitatProfile(
                 ZooTycoonMod.id("prehistoric_zone"),
-                "savanna",
-                "Kandang Prasejarah",
-                Collections.emptyList(),
-                List.of(ResourceLocation.parse("minecraft:jungle"), ResourceLocation.parse("minecraft:savanna"), ResourceLocation.parse("minecraft:badlands"), ResourceLocation.parse("minecraft:desert")),
-                0.80f,
-                2.5f,
+                "desert",
+                "Gurun / Kering Panas",
+                List.of("#minecraft:is_badlands", "#minecraft:is_savanna"),
+                List.of(ResourceLocation.parse("minecraft:desert"), ResourceLocation.parse("minecraft:badlands"), ResourceLocation.parse("minecraft:savanna")),
+                1.25f,
+                10.0f,
                 List.of(
                         new HabitatProfile.BlockRequirement("sandstone", 2, "Batu Pasir (Sandstone)"),
-                        new HabitatProfile.BlockRequirement("bamboo", 2, "Batang Bambu"),
-                        new HabitatProfile.BlockRequirement("bone", 1, "Blok Tulang")
+                        new HabitatProfile.BlockRequirement("sand", 4, "Blok Pasir")
                 )
         );
         registerDefaultSpecies(prehistoricProfile,
-                "wildernature:cassowary", "alexsmobs:emu",
-                "naturalist:komodo_dragon", "alexsmobs:komodo_dragon");
+                "naturalist:komodo_dragon", "alexsmobs:komodo_dragon",
+                "alexsmobs:roadrunner", "alexsmobs:rattlesnake", "naturalist:rattlesnake",
+                "naturalist:vulture", "wildernature:scorpion", "naturalist:desert_scorpion",
+                "alexsmobs:jerboa", "alexsmobs:tarantula_hawk");
 
-        // Zona 9: Desert Oasis (Camel)
+        // Zona 9: Desert Oasis (Camel = Hot-only)
         HabitatProfile camelProfile = new HabitatProfile(
                 ZooTycoonMod.id("desert_oasis"),
                 "desert",
                 "Oasis Gurun",
                 Collections.emptyList(),
                 List.of(ResourceLocation.parse("minecraft:desert")),
-                1.1f,
-                2.5f,
+                1.25f,
+                10.0f,
                 List.of(
                         new HabitatProfile.BlockRequirement("sand", 6, "Blok Pasir"),
                         new HabitatProfile.BlockRequirement("sandstone", 2, "Batu Pasir (Sandstone)"),
@@ -591,15 +627,15 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
         );
         registerDefaultSpecies(camelProfile, "minecraft:camel");
 
-        // Zona 10: Bamboo Garden (Panda)
+        // Zona 10: Bamboo Garden (Panda = Temperate)
         HabitatProfile pandaProfile = new HabitatProfile(
                 ZooTycoonMod.id("panda_garden"),
                 "jungle",
                 "Taman Bambu Panda",
                 Collections.emptyList(),
                 List.of(ResourceLocation.parse("minecraft:bamboo_jungle"), ResourceLocation.parse("minecraft:sparse_jungle")),
-                0.60f,
-                2.0f,
+                -10.0f,
+                10.0f,
                 List.of(
                         new HabitatProfile.BlockRequirement("bamboo", 6, "Batang Bambu"),
                         new HabitatProfile.BlockRequirement("jungle_wood", 2, "Pohon Jungle"),
@@ -608,7 +644,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
         );
         registerDefaultSpecies(pandaProfile, "minecraft:panda");
 
-        // Zona 11: Clean Ice Basin (Penguin)
+        // Zona 11: Clean Ice Basin (Seal = Cold-only)
         HabitatProfile penguinProfile = new HabitatProfile(
                 ZooTycoonMod.id("clean_ice_basin"),
                 "snow",
@@ -616,7 +652,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 Collections.emptyList(),
                 List.of(ResourceLocation.parse("minecraft:snowy_beach"), ResourceLocation.parse("minecraft:frozen_ocean"), ResourceLocation.parse("minecraft:stony_shore")),
                 -10.0f,
-                0.35f,
+                0.25f,
                 List.of(
                         new HabitatProfile.BlockRequirement("ice", 4, "Blok Es (Packed/Blue)"),
                         new HabitatProfile.BlockRequirement("snow", 4, "Blok Salju"),
@@ -624,9 +660,9 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                         new HabitatProfile.BlockRequirement("water", 4, "Air Kolam")
                 )
         );
-        registerDefaultSpecies(penguinProfile, "alexsmobs:penguin");
+        registerDefaultSpecies(penguinProfile, "alexsmobs:seal");
 
-        // Zona 12: Glacial Dome (Polar Bear, Mammoth, Froststalker)
+        // Zona 12: Glacial Dome (Polar Bear, Mammoth, Froststalker = Cold-only)
         HabitatProfile glacialDome = new HabitatProfile(
                 ZooTycoonMod.id("glacial_dome"),
                 "snow",
@@ -634,7 +670,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 List.of("#minecraft:spawns_snow_foxes"),
                 List.of(ResourceLocation.parse("minecraft:snowy_plains"), ResourceLocation.parse("minecraft:ice_spikes"), ResourceLocation.parse("minecraft:frozen_peaks"), ResourceLocation.parse("minecraft:grove")),
                 -10.0f,
-                0.20f,
+                0.25f,
                 List.of(
                         new HabitatProfile.BlockRequirement("ice", 4, "Blok Es (Packed/Blue)"),
                         new HabitatProfile.BlockRequirement("snow", 6, "Blok Salju"),
@@ -642,53 +678,36 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 )
         );
         registerDefaultSpecies(glacialDome,
-                "minecraft:polar_bear", "alexsmobs:mammoth", "alexsmobs:froststalker");
+                "minecraft:polar_bear", "alexsmobs:mammoth", "naturalist:mammoth", "alexsmobs:froststalker", "minecraft:goat");
 
-        // Zona 13-16: Pelagic & Oceanarium (Orca, Whale, Shark, Squid, Mantis Shrimp)
+        // Zona 13-16: Pelagic & Oceanarium (Orca, Whale, Shark, Squid, Mantis Shrimp = Temperate marine)
         HabitatProfile pelagicProfile = new HabitatProfile(
                 ZooTycoonMod.id("ocean_pelagic"),
                 "ocean",
                 "Oseanarium",
                 List.of("#minecraft:is_ocean", "#minecraft:is_deep_ocean"),
                 List.of(ResourceLocation.parse("minecraft:deep_ocean"), ResourceLocation.parse("minecraft:deep_cold_ocean"), ResourceLocation.parse("minecraft:deep_frozen_ocean"), ResourceLocation.parse("minecraft:deep_lukewarm_ocean"), ResourceLocation.parse("minecraft:ocean"), ResourceLocation.parse("minecraft:warm_ocean")),
-                -0.5f,
-                2.0f,
+                -10.0f,
+                10.0f,
                 List.of(
                         new HabitatProfile.BlockRequirement("water", 16, "Air Laut"),
                         new HabitatProfile.BlockRequirement("coral", 4, "Blok Prismarine / Karang")
                 )
         );
         registerDefaultSpecies(pelagicProfile,
-                "alexsmobs:orca", "alexsmobs:cachalot_whale", "naturalist:shark",
+                "alexsmobs:orca", "alexsmobs:cachalot_whale",
+                "naturalist:great_white_shark", "alexsmobs:great_white_shark", "naturalist:shark",
                 "alexsmobs:giant_squid", "alexsmobs:mantis_shrimp", "minecraft:dolphin");
 
-        // Zona 17: High-Wire Aviary (Bald Eagle, Vulture)
-        HabitatProfile aviaryProfile = new HabitatProfile(
-                ZooTycoonMod.id("aviary"),
-                "forest",
-                "Kubah Aviari",
-                Collections.emptyList(),
-                List.of(ResourceLocation.parse("minecraft:windswept_forest"), ResourceLocation.parse("minecraft:taiga"), ResourceLocation.parse("minecraft:desert"), ResourceLocation.parse("minecraft:badlands")),
-                0.20f,
-                2.2f,
-                List.of(
-                        new HabitatProfile.BlockRequirement("spruce", 4, "Pohon Spruce"),
-                        new HabitatProfile.BlockRequirement("stone", 2, "Batu Tebing (Smooth Stone)"),
-                        new HabitatProfile.BlockRequirement("water", 2, "Air")
-                )
-        );
-        registerDefaultSpecies(aviaryProfile,
-                "alexsmobs:bald_eagle", "naturalist:vulture");
-
-        // Zona 18: Petting Farm (Mini Sheep)
+        // Zona 17: Petting Farm (Mini Sheep & Livestock = Temperate)
         HabitatProfile pettingFarm = new HabitatProfile(
                 ZooTycoonMod.id("petting_farm"),
                 "plains",
                 "Kandang Domba Mini",
                 Collections.emptyList(),
                 List.of(ResourceLocation.parse("minecraft:plains"), ResourceLocation.parse("minecraft:meadow")),
-                0.25f,
-                1.8f,
+                -10.0f,
+                10.0f,
                 List.of(
                         new HabitatProfile.BlockRequirement("grass", 6, "Blok Rumput"),
                         new HabitatProfile.BlockRequirement("hay", 2, "Bale Jerami (Hay Block)"),
@@ -698,24 +717,38 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
         registerDefaultSpecies(pettingFarm,
                 "wildernature:minisheep", "wildernature:mini_sheep", "minecraft:sheep", "minecraft:cow", "minecraft:pig", "minecraft:chicken", "minecraft:rabbit");
 
-        // Zona 19: Fantasy Dome (Guster, Bunfungus, Mungus, Rocky Roller, Flutter)
-        HabitatProfile fantasyDome = new HabitatProfile(
+        // Zona 18: Fantasy Dome (Split: Guster/Rocky Roller = Hot desert/badlands; Bunfungus/Mungus/Flutter = Temperate fungi)
+        HabitatProfile fantasyFungiDome = new HabitatProfile(
                 ZooTycoonMod.id("fantasy_dome"),
                 "fantasy",
                 "Kubah Jamur Fantasi",
                 Collections.emptyList(),
-                List.of(ResourceLocation.parse("minecraft:mushroom_fields"), ResourceLocation.parse("minecraft:lush_caves"), ResourceLocation.parse("minecraft:cherry_grove"), ResourceLocation.parse("minecraft:desert"), ResourceLocation.parse("minecraft:badlands")),
-                0.20f,
-                2.2f,
+                List.of(ResourceLocation.parse("minecraft:mushroom_fields"), ResourceLocation.parse("minecraft:lush_caves"), ResourceLocation.parse("minecraft:cherry_grove")),
+                -10.0f,
+                10.0f,
                 List.of(
                         new HabitatProfile.BlockRequirement("mushrooms", 2, "Blok Jamur / Miselium"),
-                        new HabitatProfile.BlockRequirement("podzol", 2, "Blok Podzol / Miselium"),
+                        new HabitatProfile.BlockRequirement("podzol", 2, "Blok Podzol / Miselium")
+                )
+        );
+        registerDefaultSpecies(fantasyFungiDome,
+                "alexsmobs:bunfungus", "alexsmobs:mungus", "alexsmobs:flutter");
+
+        HabitatProfile fantasyAridDome = new HabitatProfile(
+                ZooTycoonMod.id("fantasy_arid_dome"),
+                "desert",
+                "Gurun / Badlands Fantasi",
+                List.of("#minecraft:is_badlands"),
+                List.of(ResourceLocation.parse("minecraft:desert"), ResourceLocation.parse("minecraft:badlands"), ResourceLocation.parse("minecraft:eroded_badlands")),
+                1.25f,
+                10.0f,
+                List.of(
+                        new HabitatProfile.BlockRequirement("sand", 4, "Blok Pasir"),
                         new HabitatProfile.BlockRequirement("terracotta", 2, "Blok Terracotta / Pasir")
                 )
         );
-        registerDefaultSpecies(fantasyDome,
-                "alexsmobs:guster", "alexsmobs:bunfungus", "alexsmobs:mungus",
-                "alexsmobs:rocky_roller", "alexsmobs:flutter");
+        registerDefaultSpecies(fantasyAridDome,
+                "alexsmobs:guster", "alexsmobs:rocky_roller");
     }
 
     private static void registerDefaultSpecies(HabitatProfile profile, String... entityIds) {
@@ -728,7 +761,36 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
         if (id == null) return TEMPLATES.get(ZooTycoonMod.id("plains"));
         String path = id.getPath().toLowerCase(Locale.ROOT);
 
-        // 1. Jungle species
+        // 1. Arctic / Snow specialists FIRST so snow_leopard never gets absorbed by leopard/jungle
+        if (path.contains("polar_bear") || path.contains("froststalker") || path.contains("mammoth")
+                || path.contains("snow_leopard") || path.contains("seal") || path.contains("walrus")
+                || path.contains("arctic") || path.contains("snow") || path.contains("goat")
+                || path.contains("reindeer")) {
+            HabitatProfile t = TEMPLATES.get(ZooTycoonMod.id("snow"));
+            if (t != null) return t;
+        }
+
+        // 2. Desert / Arid Hot specialists
+        if (path.contains("camel") || path.contains("rattlesnake") || path.contains("scorpion")
+                || path.contains("fennec") || path.contains("roadrunner") || path.contains("armadillo")
+                || path.contains("jerboa") || path.contains("komodo") || path.contains("vulture")
+                || path.contains("guster") || path.contains("rocky_roller") || path.contains("tarantula_hawk")
+                || path.contains("strider")) {
+            HabitatProfile t = TEMPLATES.get(ZooTycoonMod.id("desert"));
+            if (t != null) return t;
+        }
+
+        // 3. Hot Savanna specialists
+        if (path.contains("lion") || path.contains("elephant") || path.contains("zebra")
+                || path.contains("rhino") || path.contains("giraffe") || path.contains("hyena")
+                || path.contains("gazelle") || path.contains("antelope") || path.contains("kangaroo")
+                || path.contains("ostrich") || path.contains("emu") || path.contains("warthog")
+                || path.contains("meerkat") || path.contains("hippo")) {
+            HabitatProfile t = TEMPLATES.get(ZooTycoonMod.id("savanna"));
+            if (t != null) return t;
+        }
+
+        // 4. Jungle species (Temperate/Humid - unaffected by seasonal shifts)
         if (path.contains("tiger") || path.contains("panther") || path.contains("jaguar")
                 || path.contains("gorilla") || path.contains("monkey") || path.contains("chimpanzee")
                 || path.contains("parrot") || path.contains("toucan") || path.contains("ocelot")
@@ -737,61 +799,38 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
             if (t != null) return t;
         }
 
-        // 2. Savanna species
-        if (path.contains("lion") || path.contains("elephant") || path.contains("zebra")
-                || path.contains("rhino") || path.contains("giraffe") || path.contains("hyena")
-                || path.contains("gazelle") || path.contains("antelope") || path.contains("kangaroo")
-                || path.contains("ostrich") || path.contains("warthog") || path.contains("meerkat")
-                || path.contains("llama")) {
-            HabitatProfile t = TEMPLATES.get(ZooTycoonMod.id("savanna"));
-            if (t != null) return t;
-        }
-
-        // 3. Arctic / Snow species
-        if (path.contains("polar_bear") || path.contains("penguin") || path.contains("seal")
-                || path.contains("walrus") || path.contains("arctic") || path.contains("snow")
-                || path.contains("reindeer") || path.contains("yak") || path.contains("goat")) {
-            HabitatProfile t = TEMPLATES.get(ZooTycoonMod.id("snow"));
-            if (t != null) return t;
-        }
-
-        // 4. Desert species
-        if (path.contains("camel") || path.contains("rattlesnake") || path.contains("scorpion")
-                || path.contains("fennec") || path.contains("roadrunner") || path.contains("armadillo")
-                || path.contains("tortoise") || path.contains("komodo") || path.contains("lizard")
-                || path.contains("vulture") || path.contains("strider")) {
-            HabitatProfile t = TEMPLATES.get(ZooTycoonMod.id("desert"));
-            if (t != null) return t;
-        }
-
-        // 5. Freshwater & Swamp species
-        if (path.contains("hippo") || path.contains("crocodile") || path.contains("alligator")
+        // 5. Freshwater & Swamp species (Temperate - unaffected by seasonal shifts)
+        if (path.contains("crocodile") || path.contains("alligator") || path.contains("anaconda")
                 || path.contains("duck") || path.contains("platypus") || path.contains("frog")
-                || path.contains("toad") || path.contains("turtle") || path.contains("beaver")
-                || path.contains("otter") || path.contains("mudskipper") || path.contains("caiman")) {
+                || path.contains("toad") || path.contains("turtle") || path.contains("tortoise")
+                || path.contains("terrapin") || path.contains("beaver") || path.contains("otter")
+                || path.contains("mudskipper") || path.contains("caiman") || path.contains("capybara")) {
             HabitatProfile t = TEMPLATES.get(ZooTycoonMod.id("swamp"));
             if (t != null) return t;
         }
 
-        // 6. Ocean species
+        // 6. Ocean species (Temperate - unaffected by seasonal shifts)
         if (path.contains("dolphin") || path.contains("orca") || path.contains("whale")
-                || path.contains("shark") || path.contains("seagull") || path.contains("squid")) {
+                || path.contains("shark") || path.contains("seagull") || path.contains("squid")
+                || path.contains("octopus") || path.contains("lobster") || path.contains("ray")
+                || path.contains("crab") || path.contains("fish") || path.contains("jelly")) {
             HabitatProfile t = TEMPLATES.get(ZooTycoonMod.id("ocean"));
             if (t != null) return t;
         }
 
-        // 7. Forest species
+        // 7. Forest species (Temperate - unaffected by seasonal shifts)
         if (path.contains("bison") || path.contains("deer") || path.contains("boar")
                 || path.contains("wolf") || path.contains("fox") || path.contains("bear")
                 || path.contains("moose") || path.contains("raccoon") || path.contains("badger")
                 || path.contains("squirrel") || path.contains("skunk") || path.contains("crow")
                 || path.contains("eagle") || path.contains("robin") || path.contains("cardinal")
-                || path.contains("bluejay") || path.contains("finch")) {
+                || path.contains("bluejay") || path.contains("blue_jay") || path.contains("finch")
+                || path.contains("hedgehog") || path.contains("turkey")) {
             HabitatProfile t = TEMPLATES.get(ZooTycoonMod.id("forest"));
             if (t != null) return t;
         }
 
-        // 8. Default fallback: Plains (Padang Rumput)
+        // 8. Default fallback: Plains (Temperate - unaffected by seasonal shifts)
         HabitatProfile fallback = TEMPLATES.get(ZooTycoonMod.id("plains"));
         return fallback != null ? fallback : TEMPLATES.values().stream().findFirst().orElse(null);
     }

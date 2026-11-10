@@ -10,8 +10,13 @@
     "minecraft:rabbit",
     "minecraft:sniffer",
     "minecraft:cat",
+    "minecraft:llama",
+    "minecraft:trader_llama",
     "naturalist:sparrow",
-    "alexsmobs:emu"
+    "naturalist:tortoise",
+    "wildernature:minisheep",
+    "wildernature:mini_sheep",
+    "wildernature:turkey"
   ],
   "template": "zootycoon:plains"
 }

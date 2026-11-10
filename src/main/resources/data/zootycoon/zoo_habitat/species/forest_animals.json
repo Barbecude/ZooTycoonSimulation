@@ -3,13 +3,24 @@
     "minecraft:wolf",
     "naturalist:wolf",
     "minecraft:fox",
+    "wildernature:swift_fox",
     "naturalist:bear",
+    "naturalist:black_bear",
     "alexsmobs:grizzly_bear",
     "naturalist:deer",
+    "wildernature:deer",
     "alexsmobs:moose",
     "alexsmobs:raccoon",
+    "wildernature:raccoon",
+    "alexsmobs:bison",
+    "wildernature:bison",
+    "wildernature:beaver",
+    "wildernature:hedgehog",
+    "naturalist:hedgehog",
+    "wildernature:squirrel",
     "alexsmobs:bald_eagle",
-    "naturalist:boar"
+    "naturalist:boar",
+    "wildernature:boar"
   ],
   "template": "zootycoon:forest"
 }

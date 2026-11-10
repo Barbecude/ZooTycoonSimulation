@@ -3,8 +3,9 @@
     "alexsmobs:crocodile",
     "naturalist:crocodile",
     "naturalist:alligator",
-    "alexsmobs:alligator_snapping_turtle",
-    "naturalist:hippo"
+    "alexsmobs:caiman",
+    "alexsmobs:anaconda",
+    "alexsmobs:alligator_snapping_turtle"
   ],
   "template": "zootycoon:swamp"
 }

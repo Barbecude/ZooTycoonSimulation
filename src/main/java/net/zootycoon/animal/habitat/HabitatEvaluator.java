@@ -564,12 +564,17 @@ public class HabitatEvaluator {
      */
     public static String findPredatorThreat(ServerLevel level, LivingEntity animal) {
         if (level == null || animal == null || !animal.isAlive()) return null;
+        if (net.zootycoon.animal.ZooAnimalHungerManager.isMultipartSegmentEntity(animal)) {
+            return null;
+        }
 
         boolean isSelfPredator = isApexPredator(animal);
         List<LivingEntity> nearby = level.getEntitiesOfClass(
                 LivingEntity.class,
                 animal.getBoundingBox().inflate(20.0),
-                e -> e != animal && e.isAlive() && isApexPredator(e)
+                e -> e != animal && e.isAlive()
+                        && !net.zootycoon.animal.ZooAnimalHungerManager.isMultipartSegmentEntity(e)
+                        && isApexPredator(e)
         );
 
         for (LivingEntity predator : nearby) {

@@ -1,0 +1,10 @@
+{
+  "entities": [
+    "alexsmobs:seal",
+    "alexsmobs:mammoth",
+    "naturalist:mammoth",
+    "alexsmobs:froststalker",
+    "alexsmobs:snow_leopard"
+  ],
+  "template": "zootycoon:snow"
+}

@@ -2,12 +2,15 @@
   "entities": [
     "naturalist:zebra",
     "naturalist:rhino",
+    "alexsmobs:rhinoceros",
     "alexsmobs:gazelle",
     "alexsmobs:kangaroo",
+    "naturalist:ostrich",
+    "alexsmobs:emu",
     "naturalist:hyena",
-    "naturalist:leopard",
-    "minecraft:llama",
-    "minecraft:trader_llama"
+    "wildernature:elephant",
+    "wildernature:lion",
+    "wildernature:lioness"
   ],
   "template": "zootycoon:savanna"
 }

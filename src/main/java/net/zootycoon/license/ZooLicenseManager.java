@@ -622,6 +622,14 @@ public class ZooLicenseManager {
 
     public void openInspectorDialog(ServerPlayer player, ZooInspectorEntity inspector) {
         if (player == null || inspector == null) return;
+        ZooInspectorEntity.InspectorPhase phase = inspector.getPhase();
+        if (phase == ZooInspectorEntity.InspectorPhase.APPROACHING_PLAYER
+                || phase == ZooInspectorEntity.InspectorPhase.WAITING_RESULT_CLAIM) {
+            if (phase == ZooInspectorEntity.InspectorPhase.APPROACHING_PLAYER) {
+                inspector.setPhase(ZooInspectorEntity.InspectorPhase.WAITING_RESULT_CLAIM);
+            }
+            inspector.markResultDialogOpened();
+        }
         PlayerLicenseProfile profile = getProfile(player.getUUID());
         int tierLevel = inspector.getTierLevel();
         TierProgressData tierData = profile.getTierData(tierLevel);

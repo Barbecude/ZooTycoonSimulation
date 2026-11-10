@@ -8,8 +8,8 @@
     "minecraft:eroded_badlands",
     "minecraft:wooded_badlands"
   ],
-  "min_temperature": 1.1,
-  "max_temperature": 2.5,
+  "min_temperature": 1.25,
+  "max_temperature": 10.0,
   "required_blocks": [
     {
       "type": "sand",

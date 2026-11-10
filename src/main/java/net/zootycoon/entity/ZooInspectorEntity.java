@@ -78,6 +78,7 @@ public class ZooInspectorEntity extends PathfinderMob {
     private int phaseTimer = 0;
     private int stuckTicks = 0;
     private Vec3 lastProgressPos = Vec3.ZERO;
+    private boolean resultDialogOpened = false;
 
     public ZooInspectorEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
@@ -232,13 +233,23 @@ public class ZooInspectorEntity extends PathfinderMob {
         LicenseTier tier = LicenseTier.byLevel(tierLevel);
         setTotalCount(tier.getRequiredSpecies().size());
         setInspectedCount(0);
+        this.resultDialogOpened = false;
         setPhase(InspectorPhase.WAITING_CONFIRMATION);
+    }
+
+    public boolean isResultDialogOpened() {
+        return resultDialogOpened;
+    }
+
+    public void markResultDialogOpened() {
+        this.resultDialogOpened = true;
     }
 
     public void beginInspection(ServerLevel level) {
         if (getPhase() != InspectorPhase.WAITING_CONFIRMATION && getPhase() != InspectorPhase.ARRIVING_AT_GATE) {
             return;
         }
+        this.resultDialogOpened = false;
         LicenseTier tier = LicenseTier.byLevel(getTierLevel());
         pendingSpeciesKeys.clear();
         inspectedSpeciesDisplayNames.clear();
@@ -588,13 +599,43 @@ public class ZooInspectorEntity extends PathfinderMob {
     }
 
     private void tickWaitingResultClaim(ServerLevel level) {
-        this.getNavigation().stop();
         UUID ownerUuid = getOwnerUuid();
-        if (ownerUuid != null) {
-            Player player = level.getPlayerByUUID(ownerUuid);
-            if (player != null && player.distanceToSqr(this) <= 100.0D) {
-                this.getLookControl().setLookAt(player, 30.0F, 30.0F);
+        ServerPlayer player = ownerUuid != null ? level.getServer().getPlayerList().getPlayer(ownerUuid) : null;
+        if (player == null || player.level() != level) {
+            this.getNavigation().stop();
+            return;
+        }
+
+        double distSq = this.distanceToSqr(player);
+        if (!resultDialogOpened) {
+            this.getLookControl().setLookAt(player, 30.0F, 30.0F);
+            if (distSq > 16.0D) {
+                if (phaseTimer % 10 == 1 || this.getNavigation().isDone()) {
+                    this.getNavigation().moveTo(player, 1.15D);
+                }
+                if (this.position().distanceToSqr(lastProgressPos) < 0.08D) {
+                    stuckTicks++;
+                } else {
+                    stuckTicks = 0;
+                    lastProgressPos = this.position();
+                }
+                if (stuckTicks >= 80 || distSq > 1024.0D) {
+                    safeTeleportNear(level, player.blockPosition(), 4);
+                    this.getNavigation().stop();
+                    this.stuckTicks = 0;
+                    this.lastProgressPos = this.position();
+                }
+            } else {
+                this.getNavigation().stop();
+                this.stuckTicks = 0;
+                this.lastProgressPos = this.position();
             }
+            return;
+        }
+
+        this.getNavigation().stop();
+        if (distSq <= 100.0D) {
+            this.getLookControl().setLookAt(player, 30.0F, 30.0F);
         }
     }
 
@@ -753,6 +794,7 @@ public class ZooInspectorEntity extends PathfinderMob {
         tag.putInt("InspectedCount", getInspectedCount());
         tag.putInt("TotalCount", getTotalCount());
         tag.putLong("GatePos", gatePos.asLong());
+        tag.putBoolean("ResultDialogOpened", resultDialogOpened);
 
         ListTag pendingTag = new ListTag();
         for (String s : pendingSpeciesKeys) pendingTag.add(StringTag.valueOf(s));
@@ -776,6 +818,7 @@ public class ZooInspectorEntity extends PathfinderMob {
         if (tag.contains("InspectedCount")) setInspectedCount(tag.getInt("InspectedCount"));
         if (tag.contains("TotalCount")) setTotalCount(tag.getInt("TotalCount"));
         if (tag.contains("GatePos")) gatePos = BlockPos.of(tag.getLong("GatePos"));
+        this.resultDialogOpened = tag.getBoolean("ResultDialogOpened");
 
         pendingSpeciesKeys.clear();
         if (tag.contains("PendingSpecies", Tag.TAG_LIST)) {

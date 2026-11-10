@@ -176,4 +176,44 @@ public class F12_AnimalInfoBoardAndBannerOrientationTest {
         assertTrue(hungerSrc.contains("isMultipartSegmentEntity"));
         assertTrue(hungerSrc.contains("resolveRootAnimalEntity"));
     }
+
+    @Test
+    @DisplayName("Anaconda predator exclusion, extreme-biome-only thermal comfort, and persistent inspector follow")
+    void testThermalRangesPredatorExclusionAndInspectorFollow() throws Exception {
+        String evalSrc = Files.readString(new File("src/main/java/net/zootycoon/animal/habitat/HabitatEvaluator.java").toPath());
+        assertTrue(evalSrc.contains("!net.zootycoon.animal.ZooAnimalHungerManager.isMultipartSegmentEntity(e)"));
+
+        net.zootycoon.animal.habitat.HabitatProfileLoader.initDefaults();
+
+        // Hot-only specialists get cold outside hot biomes (< 1.25) and never overheat in hot biomes
+        for (String id : new String[]{"naturalist:giraffe", "minecraft:camel", "wildernature:lion", "wildernature:scorpion", "alexsmobs:guster"}) {
+            var p = net.zootycoon.animal.habitat.HabitatProfileLoader.getDynamicFallbackProfile(ResourceLocation.parse(id));
+            assertNotNull(p, "Fallback missing for " + id);
+            assertTrue(p.minTemperature() >= 1.25f, id + " minTemperature should require hot climate");
+            assertTrue(p.maxTemperature() >= 10.0f, id + " maxTemperature should stay open");
+        }
+
+        // Cold-only specialists overheat outside cold biomes (> 0.25)
+        for (String id : new String[]{"minecraft:polar_bear", "alexsmobs:froststalker", "alexsmobs:snow_leopard", "alexsmobs:seal"}) {
+            var p = net.zootycoon.animal.habitat.HabitatProfileLoader.getDynamicFallbackProfile(ResourceLocation.parse(id));
+            assertNotNull(p, "Fallback missing for " + id);
+            assertTrue(p.minTemperature() <= -10.0f, id + " minTemperature should handle freezing");
+            assertTrue(p.maxTemperature() <= 0.25f, id + " maxTemperature should overheat outside snow biomes");
+        }
+
+        // Temperate/moderate species across all 3 mods stay comfortable across all seasons (-10..10)
+        for (String id : new String[]{"naturalist:deer", "wildernature:minisheep", "alexsmobs:raccoon", "naturalist:black_bear", "alexsmobs:toucan", "alexsmobs:anaconda", "naturalist:tortoise", "wildernature:bison", "alexsmobs:orca"}) {
+            var p = net.zootycoon.animal.habitat.HabitatProfileLoader.getDynamicFallbackProfile(ResourceLocation.parse(id));
+            assertNotNull(p, "Fallback missing for " + id);
+            assertTrue(p.minTemperature() <= -10.0f, id + " should not require heater across seasons");
+            assertTrue(p.maxTemperature() >= 10.0f, id + " should not require cooler across seasons");
+        }
+
+        // Persistent inspector follow until result dialog is opened
+        String insSrc = Files.readString(new File("src/main/java/net/zootycoon/entity/ZooInspectorEntity.java").toPath());
+        assertTrue(insSrc.contains("resultDialogOpened"));
+        assertTrue(insSrc.contains("markResultDialogOpened"));
+        String mgrSrc = Files.readString(new File("src/main/java/net/zootycoon/license/ZooLicenseManager.java").toPath());
+        assertTrue(mgrSrc.contains("inspector.markResultDialogOpened()"));
+    }
 }
