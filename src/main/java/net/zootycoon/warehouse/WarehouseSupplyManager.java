@@ -357,11 +357,11 @@ public class WarehouseSupplyManager {
                     boolean isGrazing = (diet != null && diet.feedingType == net.zootycoon.animal.AnimalDietRegistry.FeedingType.GRAZING);
                     if (isGrazing) {
                         if (!req.partiallyDelivered) {
-                            boolean hasFood = keeper.getFoodStock() > ZOOKEEPER_LOW_STOCK_THRESHOLD;
+                            boolean hasSupplies = keeper.hasVegetationSupplies(diet);
+                            boolean hasFood = !keeper.peekFoodForFamily(keeper.getAssignedFamily(sLevel)).isEmpty();
+                            boolean isHungry = isAnyFamilyHungry(sLevel, keeper);
                             boolean hasEnoughNaturalFood = targetAnimal != null && net.zootycoon.animal.AnimalDietRegistry.hasNaturalFoodNearby(sLevel, targetAnimal);
-                            if (hasFood) {
-                                it.remove();
-                            } else if (req.isGrazingVegetationRequest && (keeper.hasVegetationSupplies(diet) || hasEnoughNaturalFood)) {
+                            if (hasSupplies || hasFood || (!isHungry && hasEnoughNaturalFood)) {
                                 it.remove();
                             }
                         }
@@ -415,30 +415,17 @@ public class WarehouseSupplyManager {
                                 boolean isGrazing = (diet != null && diet.feedingType == AnimalDietRegistry.FeedingType.GRAZING);
                                 if (isGrazing) {
                                     boolean hasSupplies = keeper.hasVegetationSupplies(diet);
-                                    boolean hasFoodStock = keeper.getFoodStock() > ZOOKEEPER_LOW_STOCK_THRESHOLD;
+                                    boolean hasFood = !keeper.peekFoodForFamily(keeper.getAssignedFamily(sLevel)).isEmpty();
+                                    boolean isHungry = isAnyFamilyHungry(sLevel, keeper);
                                     boolean hasEnoughNaturalFood = AnimalDietRegistry.hasNaturalFoodNearby(sLevel, animal);
-                                    List<ItemStack> otherFoods = AnimalDietRegistry.getFoodsForAnimal(animal);
-                                    boolean canEatOtherFoods = otherFoods != null && !otherFoods.isEmpty();
 
                                     StaffSupplyRequest existing = ACTIVE_REQUESTS.get(keeper.getUUID());
                                     if (existing != null && EmptyBarrelBlockEntity.CAT_ANIMAL_FOOD.equalsIgnoreCase(existing.category)) {
-                                        // If keeper has food or vegetation is already sufficient, remove existing request
-                                        if (hasFoodStock || (existing.isGrazingVegetationRequest && (hasSupplies || hasEnoughNaturalFood))) {
+                                        if (hasSupplies || hasFood || (!isHungry && hasEnoughNaturalFood)) {
                                             ACTIVE_REQUESTS.remove(keeper.getUUID());
                                         }
-                                    } else if (!hasFoodStock) {
-                                        // Only request when zookeeper has NO food items left
-                                        // If natural food (e.g. leaves/grass) is already abundant, request edible items (apples, wheat, etc.)
-                                        boolean requestVegetation;
-                                        if (hasEnoughNaturalFood || hasSupplies) {
-                                            requestVegetation = false;
-                                        } else if (!canEatOtherFoods) {
-                                            requestVegetation = true;
-                                        } else {
-                                            requestVegetation = RANDOM.nextBoolean();
-                                        }
-
-                                        StaffSupplyRequest created = createZookeeperRequest(sLevel, keeper, animal, requestVegetation);
+                                    } else if (!hasSupplies && !hasFood && (isHungry || !hasEnoughNaturalFood)) {
+                                        StaffSupplyRequest created = createZookeeperRequest(sLevel, keeper, animal, true);
                                         ACTIVE_REQUESTS.put(keeper.getUUID(), created);
                                         notifyNewStaffRequest(sLevel, barrel, created);
                                     }
@@ -630,20 +617,16 @@ public class WarehouseSupplyManager {
         boolean isGrazing = (diet != null && diet.feedingType == AnimalDietRegistry.FeedingType.GRAZING);
 
         if (isGrazing) {
-            List<ItemStack> allFoods = AnimalDietRegistry.getFoodsForAnimal(animal);
-            boolean hasOtherFoods = allFoods != null && !allFoods.isEmpty();
+            req.isGrazingVegetationRequest = true;
+            req.requiredFoodCount = diet.reforestationCount;
+            String label = (diet.reforestationItem == Items.BONE_MEAL) ? "Bone Meal" : diet.missingBlockLabel;
+            req.subtitle = "Satwa: " + animalName + " (" + label + ")";
+            req.targetItems.add(new ItemStack(diet.reforestationItem, diet.reforestationCount));
 
-            // Randomize between vegetation (rumput/bone meal) and food items (apel, wortel, gandum)
-            boolean pickVegetation = forceVegetation || !hasOtherFoods || RANDOM.nextBoolean();
-            if (pickVegetation) {
-                req.isGrazingVegetationRequest = true;
-                req.requiredFoodCount = diet.reforestationCount;
-                req.subtitle = "Satwa: " + animalName + " (" + diet.missingBlockLabel + ")";
-                req.targetItems.add(new ItemStack(diet.reforestationItem, diet.reforestationCount));
-            } else {
-                req.isGrazingVegetationRequest = false;
+            List<ItemStack> allFoods = AnimalDietRegistry.getFoodsForAnimal(animal);
+            if (allFoods != null) {
                 for (ItemStack foodSt : allFoods) {
-                    if (foodSt != null && !foodSt.isEmpty()) {
+                    if (foodSt != null && !foodSt.isEmpty() && !foodSt.is(diet.reforestationItem)) {
                         req.targetItems.add(new ItemStack(foodSt.getItem(), foodPerVariant));
                     }
                 }
@@ -746,6 +729,17 @@ public class WarehouseSupplyManager {
         }
 
         return null;
+    }
+
+    private static boolean isAnyFamilyHungry(ServerLevel sLevel, ZooZookeeperEntity keeper) {
+        if (keeper == null || sLevel == null) return false;
+        List<LivingEntity> family = keeper.getAssignedFamily(sLevel);
+        for (LivingEntity m : family) {
+            if (m != null && m.isAlive() && net.zootycoon.animal.ZooAnimalHungerManager.getHunger(m) <= 75) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static boolean isVegetationRequest(StaffSupplyRequest req) {

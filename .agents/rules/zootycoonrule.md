@@ -34,7 +34,7 @@ jangan pernah kasih zookeper awalan makanan, hanya player yang harus ngasih maka
 
 lokasi makanan satwa AnimalDietRegistry.java
 
-fungsi yg udah fix (tidak boleh sampe rusak karena mengubah kode):
+fungsi yg udah fix (tidak boleh sampe rusak karena mengubah kode:
 1. Logic builder dan ui dialog nya
 2. Logic pemilihan zookeper untuk hewan
 3. dialog zookeper dan ui nya
@@ -58,8 +58,8 @@ fungsi yang belum fix atau belum ada atau masih cacat (Dilarang mengerjakan semu
 19. Gudang. empty barrel ui gui button and logic
 20. cashier logic
 21. Vehicle logic and assets
+22. inspector logic
 
 fungsi yg belum ada atau masih cacat (jangan eksekusi fitur ini sebelum secara eksplisit diminta) 
 
-1. inspector
-
+1. feedign through & zookeper

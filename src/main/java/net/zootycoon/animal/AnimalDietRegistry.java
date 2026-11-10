@@ -665,6 +665,11 @@ public class AnimalDietRegistry {
         List<ItemStack> list = new ArrayList<>();
 
         AnimalDiet diet = getDiet(entity);
+        if (diet != null && diet.feedingType == FeedingType.GRAZING && diet.reforestationItem != null && diet.reforestationItem != Items.AIR) {
+            if (seen.add(diet.reforestationItem)) {
+                list.add(new ItemStack(diet.reforestationItem));
+            }
+        }
         if (diet != null && diet.acceptedFoods != null) {
             for (Item item : diet.acceptedFoods) {
                 if (item != null && item != Items.AIR && seen.add(item)) {
@@ -771,6 +776,11 @@ public class AnimalDietRegistry {
         Set<Item> seen = new LinkedHashSet<>();
         List<ItemStack> list = new ArrayList<>();
         if (diet != null) {
+            if (diet.feedingType == FeedingType.GRAZING && diet.reforestationItem != null && diet.reforestationItem != Items.AIR) {
+                if (seen.add(diet.reforestationItem)) {
+                    list.add(new ItemStack(diet.reforestationItem));
+                }
+            }
             for (Item item : diet.acceptedFoods) {
                 if (item != null && item != Items.AIR && seen.add(item)) {
                     list.add(new ItemStack(item));
@@ -823,6 +833,7 @@ public class AnimalDietRegistry {
         }
         AnimalDiet diet = getDiet(entity);
         if (diet == null) return false;
+        if (diet.feedingType == FeedingType.GRAZING && diet.reforestationItem != null && stack.is(diet.reforestationItem)) return true;
         if (diet.acceptsRawMeat && isRawMeat(stack)) return true;
         if (diet.acceptsRawFish && isRawFish(stack)) return true;
         Item item = stack.getItem();

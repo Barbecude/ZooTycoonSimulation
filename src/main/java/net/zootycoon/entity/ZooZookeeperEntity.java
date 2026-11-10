@@ -1043,7 +1043,54 @@ public class ZooZookeeperEntity extends PathfinderMob {
             boolean isThrownMeat = (diet != null && diet.feedingType == AnimalDietRegistry.FeedingType.THROWN_MEAT);
 
             if (isGrazing) {
-                // Grazing animals: Zookeeper replants vegetation in enclosure when carried
+                List<LivingEntity> family = getAssignedFamily(sLevel);
+                LivingEntity hungryTarget = null;
+                int minHunger = 75;
+                for (LivingEntity member : family) {
+                    int h = ZooAnimalHungerManager.getHunger(member);
+                    if (h <= 75 && h <= minHunger) {
+                        minHunger = h;
+                        hungryTarget = member;
+                    }
+                }
+
+                // 1. If hungry grazing animal exists and keeper carries edible food, feed or throw directly!
+                ItemStack carriedFood = this.peekFoodForFamily(family);
+                if (hungryTarget != null && !carriedFood.isEmpty()) {
+                    currentDutyState = "FEEDING_ANIMAL";
+                    Item targetFoodItem = carriedFood.getItem();
+                    this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(targetFoodItem));
+
+                    double distSq = this.distanceToSqr(hungryTarget);
+                    if (distSq > 4.5 * 4.5) {
+                        this.getNavigation().moveTo(hungryTarget, 1.25);
+                        return;
+                    } else {
+                        this.getNavigation().stop();
+                        this.getLookControl().setLookAt(hungryTarget, 30.0F, 30.0F);
+                        this.swing(InteractionHand.MAIN_HAND);
+
+                        ItemStack takenFood = this.takeFoodForFamily(family, 1);
+                        ItemStack feedStack = !takenFood.isEmpty() ? takenFood : new ItemStack(targetFoodItem, 1);
+
+                        if (distSq <= 3.5 * 3.5) {
+                            ZooAnimalHungerManager.feedAnimal(hungryTarget, feedStack, null);
+                        } else {
+                            ItemEntity itemEntity = new ItemEntity(sLevel, this.getX(), this.getEyeY() - 0.2, this.getZ(), feedStack);
+                            Vec3 targetPos = hungryTarget.position().add(0, hungryTarget.getBbHeight() * 0.25, 0);
+                            Vec3 throwVec = targetPos.subtract(itemEntity.position()).normalize().scale(0.38);
+                            itemEntity.setDeltaMovement(throwVec.x, throwVec.y + 0.12, throwVec.z);
+                            itemEntity.setDefaultPickUpDelay();
+                            sLevel.addFreshEntity(itemEntity);
+                        }
+
+                        sLevel.playSound(null, this.blockPosition(), SoundEvents.GENERIC_EAT, SoundSource.NEUTRAL, 0.8f, 1.0f);
+                        actionCooldown = 40; // 2 seconds cooldown
+                        return;
+                    }
+                }
+
+                // 2. Grazing animals: Zookeeper replants vegetation in enclosure when carried
                 ItemStack carriedVegetation = this.peekMatchingVegetation(diet);
                 if (!carriedVegetation.isEmpty()) {
                     BlockPos plantPos = findValidPlantingSpotNearAnimal(sLevel, assignedAnimal, carriedVegetation.getItem());
@@ -1055,7 +1102,10 @@ public class ZooZookeeperEntity extends PathfinderMob {
                         return;
                     }
                 }
-                // If keeper has food items (such as apples, wheat, carrots) or animal needs trough food, proceed to trough duty below!
+
+                if (hungryTarget != null) {
+                    currentDutyState = "NEED_FOOD";
+                }
             }
 
             if (isThrownMeat) {
@@ -1368,14 +1418,17 @@ public class ZooZookeeperEntity extends PathfinderMob {
                     boolean isThrownDiet = (diet != null && diet.feedingType == AnimalDietRegistry.FeedingType.THROWN_MEAT);
 
                     if (this.getFoodStock() <= 0) {
+                        String vegLabel = (diet != null && diet.reforestationItem == Items.BONE_MEAL) ? "Bone Meal" : (diet != null ? diet.missingBlockLabel : "Rumput");
                         dialogText = isGrazingDiet
-                                ? "Satwa ini mencari makan sendiri di kandang. Pastikan vegetasi alami (" + (diet != null ? diet.missingBlockLabel : "Rumput") + ") tersedia!"
+                                ? (hunger <= 75
+                                        ? dialogAnimalName + " sedang lapar (" + hungerColoredStr + ")! Beri saya " + vegLabel + " untuk ditanam atau pakan langsung."
+                                        : "Satwa ini mencari makan vegetasi di kandang (" + hungerColoredStr + "). Pastikan " + vegLabel + " atau vegetasi tersedia!")
                                 : (isThrownDiet
                                 ? ZooTranslations.get("zootycoon.dialog.zookeeper.empty_stock_throw", dialogAnimalName, hungerColoredStr)
                                 : ZooTranslations.get("zootycoon.dialog.zookeeper.empty_stock", dialogAnimalName, hungerColoredStr));
                     } else {
                         dialogText = isGrazingDiet
-                                ? "Saya sedang merawat & menanam vegetasi untuk " + dialogAnimalName + "! Stok bibit: " + this.getFoodStock() + "x."
+                                ? "Saya sedang merawat & memberi makan " + dialogAnimalName + " (" + hungerColoredStr + ")! Stok: " + this.getFoodStock() + "x."
                                 : (isThrownDiet
                                 ? ZooTranslations.get("zootycoon.dialog.zookeeper.speech_with_animal_throw", dialogAnimalName, hungerColoredStr, String.valueOf(this.getFoodStock()))
                                 : ZooTranslations.get("zootycoon.dialog.zookeeper.speech_with_animal", dialogAnimalName, hungerColoredStr, String.valueOf(this.getFoodStock())));
@@ -1541,10 +1594,12 @@ public class ZooZookeeperEntity extends PathfinderMob {
         for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
             ItemStack st = player.getInventory().getItem(i);
             if (!st.isEmpty()) {
-                if (AnimalDietRegistry.isAnyFood(st) || AnimalDietRegistry.isAnyTroughFood(st)) {
+                var diet = (animal != null) ? AnimalDietRegistry.getDiet(animal) : null;
+                boolean isVeg = isMatchingVegetationItem(st, diet);
+                if (AnimalDietRegistry.isAnyFood(st) || AnimalDietRegistry.isAnyTroughFood(st) || isVeg) {
                     hasAnyFoodItem = true;
                 }
-                boolean valid = (animal != null) ? AnimalDietRegistry.isFoodValid(animal, st) : (AnimalDietRegistry.isAnyFood(st) || AnimalDietRegistry.isAnyTroughFood(st));
+                boolean valid = (animal != null) ? (AnimalDietRegistry.isFoodValid(animal, st) || isVeg) : (AnimalDietRegistry.isAnyFood(st) || AnimalDietRegistry.isAnyTroughFood(st));
                 if (valid) {
                     int toTake = Math.min(st.getCount(), 32 - totalGiven);
                     ItemStack taken = st.split(toTake);
@@ -2125,7 +2180,8 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
                     boolean isValidSpot = false;
                     if (item == Items.BONE_MEAL) {
-                        if (groundState.is(Blocks.GRASS_BLOCK) && (aboveState.isAir() || aboveState.canBeReplaced())) {
+                        if ((groundState.is(Blocks.GRASS_BLOCK) || groundState.is(Blocks.DIRT) || groundState.is(Blocks.COARSE_DIRT) || groundState.is(Blocks.ROOTED_DIRT))
+                                && (aboveState.isAir() || aboveState.canBeReplaced())) {
                             if (!aboveState.is(Blocks.SHORT_GRASS) && !aboveState.is(Blocks.TALL_GRASS) && !aboveState.is(Blocks.FERN)) {
                                 isValidSpot = true;
                             }
@@ -2243,7 +2299,8 @@ public class ZooZookeeperEntity extends PathfinderMob {
         BlockState above = sLevel.getBlockState(targetPlantingPos.above());
         boolean stillValid = false;
         if (carried.is(Items.BONE_MEAL)) {
-            stillValid = ground.is(Blocks.GRASS_BLOCK) && (above.isAir() || above.canBeReplaced())
+            stillValid = (ground.is(Blocks.GRASS_BLOCK) || ground.is(Blocks.DIRT) || ground.is(Blocks.COARSE_DIRT) || ground.is(Blocks.ROOTED_DIRT))
+                    && (above.isAir() || above.canBeReplaced())
                     && !above.is(Blocks.SHORT_GRASS) && !above.is(Blocks.TALL_GRASS);
         } else if (carried.getItem() instanceof net.minecraft.world.item.BlockItem) {
             stillValid = (above.isAir() || above.canBeReplaced());
@@ -2315,7 +2372,9 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
         if (item == Items.BONE_MEAL) {
             BlockState state = sLevel.getBlockState(pos);
-            if (state.getBlock() instanceof net.minecraft.world.level.block.BonemealableBlock bonemealable) {
+            if (state.is(Blocks.DIRT) || state.is(Blocks.COARSE_DIRT) || state.is(Blocks.ROOTED_DIRT)) {
+                sLevel.setBlockAndUpdate(pos, Blocks.GRASS_BLOCK.defaultBlockState());
+            } else if (state.getBlock() instanceof net.minecraft.world.level.block.BonemealableBlock bonemealable) {
                 if (bonemealable.isValidBonemealTarget(sLevel, pos, state)) {
                     bonemealable.performBonemeal(sLevel, sLevel.random, pos, state);
                 }
