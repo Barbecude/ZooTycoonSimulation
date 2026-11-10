@@ -179,22 +179,8 @@ public class ZooBuilderEntity extends PathfinderMob {
     }
 
     public boolean isOnStrike() {
-        if (!(this.level() instanceof ServerLevel sLevel)) return false;
-        UUID checkOwner = this.payerUuid;
-        if (checkOwner == null) {
-            ConstructionSite site = resolveSite();
-            if (site != null) {
-                checkOwner = site.getOwnerUuid();
-            }
-        }
-        if (checkOwner == null) {
-            var claimOpt = net.zootycoon.claim.ZooClaimManager.get(sLevel).getClaimAt(this.blockPosition());
-            if (claimOpt.isPresent()) {
-                checkOwner = claimOpt.get().getOwnerUuid();
-                this.payerUuid = checkOwner;
-            }
-        }
-        return checkOwner != null && net.zootycoon.economy.ZooStaffManager.get(sLevel).isStaffEntityOnStrike(checkOwner, this.getUUID());
+        // Kuli bangunan dibayar per proyek bangunan, tidak pernah ikut mogok gaji harian
+        return false;
     }
 
     @Override
@@ -205,28 +191,16 @@ public class ZooBuilderEntity extends PathfinderMob {
             return;
         }
 
-        if (callTargetUuid != null && this.level() instanceof ServerLevel callLevel) {
-            if (isOnStrike() && this.tickCount % 60 == 0) {
-                callLevel.sendParticles(ParticleTypes.ANGRY_VILLAGER, this.getX(), this.getY() + 1.2D, this.getZ(), 1, 0.1, 0.1, 0.1, 0.0);
-            }
-            tickCall(callLevel);
-            return;
-        }
-
-        if (isOnStrike()) {
-            this.getNavigation().stop();
-            if (this.tickCount % 60 == 0 && this.level() instanceof ServerLevel sLevel) {
-                sLevel.sendParticles(ParticleTypes.ANGRY_VILLAGER, this.getX(), this.getY() + 1.2D, this.getZ(), 1, 0.1, 0.1, 0.1, 0.0);
-            }
-            return;
-        }
-
         if (this.tickCount % 10 == 0) {
             updateNeedsIndicator();
             if (this.getItemBySlot(EquipmentSlot.HEAD).isEmpty()) {
                 this.setItemSlot(EquipmentSlot.HEAD, ZooItems.createHardhat());
                 this.setDropChance(EquipmentSlot.HEAD, 0.0f);
             }
+        }
+
+        if (callTargetUuid != null && this.level() instanceof ServerLevel callLevel) {
+            tickCall(callLevel);
         }
 
         // ==========================================

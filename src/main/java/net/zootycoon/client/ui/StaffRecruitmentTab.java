@@ -288,9 +288,7 @@ public class StaffRecruitmentTab {
         if (staffType == null) return names;
         switch (staffType.toLowerCase()) {
             case "builder" -> {
-                for (var b : ZooTycoonClient.clientBuilderList) {
-                    if (b.isOnStrike()) names.add(b.name());
-                }
+                // Kuli bangunan tidak ikut mogok gaji harian
             }
             case "zookeeper" -> {
                 for (var zk : ZooTycoonClient.clientZookeeperList) {

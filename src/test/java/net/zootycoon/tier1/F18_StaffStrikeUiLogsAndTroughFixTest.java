@@ -87,7 +87,15 @@ public class F18_StaffStrikeUiLogsAndTroughFixTest {
 
         String staffMgr = Files.readString(Path.of("src/main/java/net/zootycoon/economy/ZooStaffManager.java"));
         assertTrue(staffMgr.contains("!zk.isOnStrike()"), "Striking zookeepers must still be callable");
-        assertTrue(staffMgr.contains("!b.isOnStrike()"), "Striking builders must still be callable");
+
+        assertFalse(net.zootycoon.economy.ZooStaffManager.canStaffRoleStrike("builder"), "Builders must never go on strike");
+        assertTrue(net.zootycoon.economy.ZooStaffManager.canStaffRoleStrike("zookeeper"));
+        assertTrue(net.zootycoon.economy.ZooStaffManager.canStaffRoleStrike("security"));
+        assertTrue(net.zootycoon.economy.ZooStaffManager.canStaffRoleStrike("cashier"));
+
+        String builderSrc = Files.readString(Path.of("src/main/java/net/zootycoon/entity/ZooBuilderEntity.java")).replace("\r\n", "\n");
+        assertTrue(builderSrc.contains("public boolean isOnStrike() {\n        // Kuli"),
+                "ZooBuilderEntity.isOnStrike must unconditionally return false");
     }
 
     @Test

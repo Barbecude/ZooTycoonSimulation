@@ -240,7 +240,19 @@ public class ZooStaffManager {
         }
     }
 
-    private boolean isOwnedStaffEntity(net.minecraft.world.entity.Entity ent, UUID ownerUuid) {
+    /** Returns true for staff roles that earn daily wages and can go on strike (excludes Builders). */
+    public static boolean canStaffRoleStrike(String roleOrType) {
+        if (roleOrType == null) return false;
+        String lower = roleOrType.toLowerCase(java.util.Locale.ROOT);
+        if (lower.contains("builder") || lower.contains("kuli")) {
+            return false;
+        }
+        return lower.contains("zookeeper")
+                || lower.contains("security") || lower.contains("satpam")
+                || lower.contains("cashier") || lower.contains("kasir");
+    }
+
+    private boolean isOwnedStrikeEligibleStaffEntity(net.minecraft.world.entity.Entity ent, UUID ownerUuid) {
         if (ent == null || !ent.isAlive()) return false;
         if (ent instanceof net.zootycoon.entity.ZooZookeeperEntity zk) {
             return ownerUuid.equals(zk.getOwnerUuid());
@@ -248,8 +260,6 @@ public class ZooStaffManager {
             return ownerUuid.equals(sec.getOwnerUuid());
         } else if (ent instanceof net.zootycoon.entity.ZooCashierEntity cash) {
             return ownerUuid.equals(cash.getOwnerUuid());
-        } else if (ent instanceof net.zootycoon.entity.ZooBuilderEntity b) {
-            return ownerUuid.equals(b.getOwnerUuid());
         }
         return false;
     }
@@ -268,7 +278,7 @@ public class ZooStaffManager {
         if (ownerUuid == null || server == null) return labels;
         for (ServerLevel lvl : server.getAllLevels()) {
             for (net.minecraft.world.entity.Entity ent : lvl.getAllEntities()) {
-                if (isOwnedStaffEntity(ent, ownerUuid) && isStaffEntityOnStrike(ownerUuid, ent.getUUID())) {
+                if (isOwnedStrikeEligibleStaffEntity(ent, ownerUuid) && isStaffEntityOnStrike(ownerUuid, ent.getUUID())) {
                     String name = ent.hasCustomName() ? ent.getCustomName().getString() : ent.getName().getString();
                     labels.add(getStaffRoleLabel(ent) + ": " + name);
                 }
@@ -287,7 +297,7 @@ public class ZooStaffManager {
             boolean foundAny = false;
             for (ServerLevel lvl : server.getAllLevels()) {
                 for (net.minecraft.world.entity.Entity ent : lvl.getAllEntities()) {
-                    if (isOwnedStaffEntity(ent, playerUuid)) {
+                    if (isOwnedStrikeEligibleStaffEntity(ent, playerUuid)) {
                         foundAny = true;
                         if (isStaffEntityOnStrike(playerUuid, ent.getUUID())) {
                             return true;
@@ -412,9 +422,9 @@ public class ZooStaffManager {
         } else if (staffEntity instanceof net.zootycoon.entity.ZooCashierEntity cash) {
             if (cash.getOwnerUuid() != null) ownerId = cash.getOwnerUuid();
             individualWage = ZooEconomyEngine.CASHIER_DAILY_WAGE;
-        } else if (staffEntity instanceof net.zootycoon.entity.ZooBuilderEntity b) {
-            if (b.getOwnerUuid() != null) ownerId = b.getOwnerUuid();
-            individualWage = ZooEconomyEngine.BUILDER_DAILY_WAGE;
+        } else if (staffEntity instanceof net.zootycoon.entity.ZooBuilderEntity) {
+            // Builders are paid per project and never go on daily-wage strike
+            return true;
         } else {
             return tryPayStrikeSalary(player, ownerId);
         }

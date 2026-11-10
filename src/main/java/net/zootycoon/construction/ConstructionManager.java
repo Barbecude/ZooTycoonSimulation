@@ -355,16 +355,7 @@ public class ConstructionManager {
                 }
             }
 
-            boolean builderOnStrike = builder != null
-                    ? builder.isOnStrike()
-                    : (site.getOwnerUuid() != null && site.getBuilderUuid() != null
-                            && net.zootycoon.economy.ZooStaffManager.get(level).isStaffEntityOnStrike(site.getOwnerUuid(), site.getBuilderUuid()));
-            if (builderOnStrike) {
-                if (builder != null) {
-                    builder.getNavigation().stop();
-                }
-                continue;
-            }
+            // Builders are paid per construction project and never pause for daily-wage strikes
 
             // ==========================================
             // PHASE 1: LAND CLEARING (Pembersihan Lahan)
