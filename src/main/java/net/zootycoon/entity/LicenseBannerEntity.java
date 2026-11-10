@@ -73,7 +73,7 @@ public class LicenseBannerEntity extends HangingEntity {
     @Override
     public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
         super.onSyncedDataUpdated(key);
-        if (DATA_DIRECTION_3D.equals(key)) {
+        if (DATA_DIRECTION_3D.equals(key) || DATA_SPECIES_KEY.equals(key)) {
             Direction dir = Direction.from3DDataValue(this.entityData.get(DATA_DIRECTION_3D));
             if (dir.getAxis().isHorizontal()) {
                 if (this.pos == null) {
@@ -120,9 +120,16 @@ public class LicenseBannerEntity extends HangingEntity {
         if (direction == null || !direction.getAxis().isHorizontal()) {
             direction = Direction.SOUTH;
         }
-        // Place banner box flush against the face of the clicked block
-        Vec3 center = Vec3.atCenterOf(pos).relative(direction, -0.46875D).add(0.0D, 0.5D, 0.0D);
         Direction.Axis axis = direction.getAxis();
+        if (isAnimalInfoBanner()) {
+            Vec3 center = Vec3.atBottomCenterOf(pos).add(0.0D, 0.9375D, 0.0D);
+            double sizeX = axis == Direction.Axis.X ? 0.25D : 2.0D;
+            double sizeY = 1.875D;
+            double sizeZ = axis == Direction.Axis.Z ? 0.25D : 2.0D;
+            return AABB.ofSize(center, sizeX, sizeY, sizeZ);
+        }
+        // Place certificate banner box flush against the face of the clicked block
+        Vec3 center = Vec3.atCenterOf(pos).relative(direction, -0.46875D).add(0.0D, 0.5D, 0.0D);
         double sizeX = axis == Direction.Axis.X ? 0.0625D : 3.0D;
         double sizeY = 2.0D;
         double sizeZ = axis == Direction.Axis.Z ? 0.0625D : 3.0D;
@@ -135,6 +142,23 @@ public class LicenseBannerEntity extends HangingEntity {
         if (dir == null || !dir.getAxis().isHorizontal()) return false;
         if (this.pos == null) {
             this.pos = this.blockPosition();
+        }
+        if (isAnimalInfoBanner()) {
+            BlockPos belowPos = this.pos.below();
+            var belowState = this.level().getBlockState(belowPos);
+            boolean hasGroundSupport = !belowState.isAir()
+                    && (belowState.isSolid() || !belowState.getCollisionShape(this.level(), belowPos).isEmpty());
+
+            BlockPos wallBase = this.pos.relative(dir.getOpposite());
+            var wallState = this.level().getBlockState(wallBase);
+            boolean hasWallSupport = !wallState.isAir()
+                    && (wallState.isSolid() || !wallState.getCollisionShape(this.level(), wallBase).isEmpty());
+
+            if (!hasGroundSupport && !hasWallSupport) {
+                return false;
+            }
+            return this.level().getEntities(this, this.getBoundingBox(),
+                    e -> e instanceof HangingEntity he && this.pos.equals(he.getPos())).isEmpty();
         }
         BlockPos wallBase = this.pos.relative(dir.getOpposite());
         // Verify supporting wall at the center position where the banner is mounted

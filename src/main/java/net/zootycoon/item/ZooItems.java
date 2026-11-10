@@ -568,6 +568,11 @@ public class ZooItems {
             entries.accept(LICENSE_BANNER_TIER_3);
             entries.accept(LICENSE_BANNER_TIER_4);
             entries.accept(LICENSE_BANNER_TIER_5);
+            for (net.zootycoon.license.LicenseTier tier : net.zootycoon.license.LicenseTier.values()) {
+                for (net.zootycoon.license.LicenseTier.SpeciesEntry entry : tier.getRequiredSpecies()) {
+                    entries.accept(LicenseBannerItem.createAnimalInfoBannerStack(tier.getTierLevel(), entry.speciesKey(), ""));
+                }
+            }
             entries.accept(COPPER_WATERING_CAN);
             entries.accept(IRON_WATERING_CAN);
             entries.accept(GOLD_WATERING_CAN);

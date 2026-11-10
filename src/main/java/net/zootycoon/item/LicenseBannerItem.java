@@ -12,16 +12,21 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.item.component.CustomModelData;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.zootycoon.entity.LicenseBannerEntity;
 import net.zootycoon.license.LicenseTier;
 import net.zootycoon.util.ZooTranslations;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class LicenseBannerItem extends Item {
+
+    public static final int ANIMAL_INFO_BOARD_CUSTOM_MODEL_DATA = 9001;
 
     private final int tierLevel;
 
@@ -63,6 +68,7 @@ public class LicenseBannerItem extends Item {
         tag.putString("SpeciesKey", speciesKey != null ? speciesKey : "");
         tag.putString("ZooName", (zooName != null && !zooName.isEmpty()) ? zooName : "Player's Zoo");
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(ANIMAL_INFO_BOARD_CUSTOM_MODEL_DATA));
         return stack;
     }
 
@@ -86,15 +92,10 @@ public class LicenseBannerItem extends Item {
     public InteractionResult useOn(UseOnContext context) {
         BlockPos clickedPos = context.getClickedPos();
         Direction direction = context.getClickedFace();
-        BlockPos placePos = clickedPos.relative(direction);
+        Level level = context.getLevel();
         Player player = context.getPlayer();
         ItemStack itemStack = context.getItemInHand();
 
-        if (player != null && !this.mayPlace(player, direction, itemStack, placePos)) {
-            return InteractionResult.FAIL;
-        }
-
-        Level level = context.getLevel();
         String zooName = player != null ? player.getName().getString() + "'s Zoo" : "Player's Zoo";
         String speciesKey = "";
         CustomData cd = itemStack.get(DataComponents.CUSTOM_DATA);
@@ -108,7 +109,27 @@ public class LicenseBannerItem extends Item {
             }
         }
 
-        LicenseBannerEntity banner = new LicenseBannerEntity(level, placePos, direction, this.tierLevel, zooName, speciesKey);
+        boolean isInfoBoard = !speciesKey.isEmpty();
+        BlockState clickedState = level.getBlockState(clickedPos);
+        BlockPos placePos = (isInfoBoard && clickedState.canBeReplaced())
+                ? clickedPos
+                : clickedPos.relative(direction);
+
+        if (isInfoBoard) {
+            if (player != null && !this.mayPlaceInfoBoard(player, direction, itemStack, placePos)) {
+                return InteractionResult.FAIL;
+            }
+        } else if (player != null && !this.mayPlace(player, direction, itemStack, placePos)) {
+            return InteractionResult.FAIL;
+        }
+
+        Direction facingDir = isInfoBoard
+                ? (direction.getAxis().isHorizontal()
+                        ? direction
+                        : (player != null ? player.getDirection().getOpposite() : Direction.SOUTH))
+                : direction;
+
+        LicenseBannerEntity banner = new LicenseBannerEntity(level, placePos, facingDir, this.tierLevel, zooName, speciesKey);
         if (banner.survives()) {
             if (!level.isClientSide) {
                 banner.playPlacementSound();
@@ -118,7 +139,9 @@ public class LicenseBannerItem extends Item {
                     net.zootycoon.advancement.ZooAdvancements.grant(sp, net.zootycoon.advancement.ZooAdvancements.PLACE_BANNER);
                 }
             }
-            itemStack.shrink(1);
+            if (player == null || !player.getAbilities().instabuild) {
+                itemStack.shrink(1);
+            }
             return InteractionResult.sidedSuccess(level.isClientSide);
         } else {
             return InteractionResult.CONSUME;
@@ -127,6 +150,10 @@ public class LicenseBannerItem extends Item {
 
     protected boolean mayPlace(Player player, Direction direction, ItemStack stack, BlockPos pos) {
         return direction.getAxis().isHorizontal() && player.mayUseItemAt(pos, direction, stack);
+    }
+
+    protected boolean mayPlaceInfoBoard(Player player, Direction direction, ItemStack stack, BlockPos pos) {
+        return direction != Direction.DOWN && player.mayUseItemAt(pos, direction, stack);
     }
 
     @Override
@@ -149,7 +176,9 @@ public class LicenseBannerItem extends Item {
             tooltip.add(Component.translatable("zootycoon.species.info_banner.subtitle", tier.getTierLevel()).withStyle(ChatFormatting.AQUA));
             String funFact = ZooTranslations.get("zootycoon.species." + speciesKey + ".fun_fact");
             if (funFact != null && !funFact.isEmpty()) {
-                tooltip.add(Component.literal(funFact).withStyle(ChatFormatting.GRAY));
+                for (String line : wrapTooltipText(funFact, 44)) {
+                    tooltip.add(Component.literal(line).withStyle(ChatFormatting.GRAY));
+                }
             }
             super.appendHoverText(stack, context, tooltip, flag);
             return;
@@ -160,5 +189,25 @@ public class LicenseBannerItem extends Item {
         tooltip.add(Component.literal("Tier " + tier.getTierLevel() + ": " + tier.getDisplayName()).withStyle(ChatFormatting.AQUA));
         tooltip.add(Component.translatable("item.zootycoon.license_banner.desc").withStyle(ChatFormatting.GRAY));
         super.appendHoverText(stack, context, tooltip, flag);
+    }
+
+    private static List<String> wrapTooltipText(String text, int maxLineLength) {
+        List<String> lines = new ArrayList<>();
+        if (text == null || text.isEmpty()) return lines;
+        StringBuilder current = new StringBuilder();
+        for (String word : text.split("\\s+")) {
+            if (current.length() > 0 && current.length() + 1 + word.length() > maxLineLength) {
+                lines.add(current.toString());
+                current.setLength(0);
+            }
+            if (current.length() > 0) {
+                current.append(' ');
+            }
+            current.append(word);
+        }
+        if (current.length() > 0) {
+            lines.add(current.toString());
+        }
+        return lines;
     }
 }
