@@ -696,7 +696,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 )
         );
         registerDefaultSpecies(pettingFarm,
-                "wildernature:mini_sheep", "minecraft:sheep", "minecraft:cow", "minecraft:pig", "minecraft:chicken", "minecraft:rabbit");
+                "wildernature:minisheep", "wildernature:mini_sheep", "minecraft:sheep", "minecraft:cow", "minecraft:pig", "minecraft:chicken", "minecraft:rabbit");
 
         // Zona 19: Fantasy Dome (Guster, Bunfungus, Mungus, Rocky Roller, Flutter)
         HabitatProfile fantasyDome = new HabitatProfile(

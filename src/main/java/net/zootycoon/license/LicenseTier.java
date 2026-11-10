@@ -16,8 +16,8 @@ public enum LicenseTier {
             0.0D,
             0xFF4ADE80,
             List.of(
-                    new SpeciesEntry("mini_sheep", "Mini Sheep", List.of("wildernature:mini_sheep", "minecraft:sheep")),
-                    new SpeciesEntry("deer", "Deer", List.of("naturalist:deer")),
+                    new SpeciesEntry("mini_sheep", "Mini Sheep", List.of("wildernature:minisheep", "wildernature:mini_sheep")),
+                    new SpeciesEntry("deer", "Deer", List.of("naturalist:deer", "wildernature:deer")),
                     new SpeciesEntry("raccoon", "Raccoon", List.of("alexsmobs:raccoon")),
                     new SpeciesEntry("capybara", "Capybara", List.of("naturalist:capybara")),
                     new SpeciesEntry("tortoise", "Giant Tortoise", List.of("naturalist:tortoise", "minecraft:turtle")),

@@ -43,7 +43,7 @@ public class MainManagementScreen extends Screen {
     private ZooButton collectionBtn;
     private ZooButton inspectorBtn;
     private static final ResourceLocation LOG_HISTORY_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/log_history.png");
-    private static final ResourceLocation ANIMAL_LIST_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/animal_list_cute.png");
+    private static final ResourceLocation ANIMAL_LIST_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/animals.png");
     private static final ResourceLocation ANIMAL_COLLECTION_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/animal_collection_cute.png");
     private static final ResourceLocation LICENSE_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/license_cute.png");
 

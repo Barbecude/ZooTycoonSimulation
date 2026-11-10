@@ -393,6 +393,7 @@ public class AnimalDietRegistry {
         // 4. WILDER NATURE & ADDITIONAL ALEX'S MOBS / NATURALIST
         // ==========================================
         register("wildernature:cassowary", FeedingType.TROUGH, "Omnivora", "Omnivora (Melon, Apel, Biji & Serangga)", Items.MELON_SLICE, Items.APPLE, Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS, Items.WHEAT, Items.SPIDER_EYE);
+        registerGrazing("wildernature:minisheep", "Herbivora", "Mencari Makan Sendiri (Rumput)", Set.of(Blocks.SHORT_GRASS, Blocks.TALL_GRASS, Blocks.FERN), "Rumput", Items.BONE_MEAL, 16, Items.WHEAT, Items.HAY_BLOCK);
         registerGrazing("wildernature:mini_sheep", "Herbivora", "Mencari Makan Sendiri (Rumput)", Set.of(Blocks.SHORT_GRASS, Blocks.TALL_GRASS, Blocks.FERN), "Rumput", Items.BONE_MEAL, 16, Items.WHEAT, Items.HAY_BLOCK);
         register("naturalist:ostrich", FeedingType.TROUGH, "Granivora", "Granivora (Biji-bijian, Rumput, Apel & Wortel)", Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS, Items.TORCHFLOWER_SEEDS, Items.CARROT, Items.WHEAT, Items.HAY_BLOCK, Items.APPLE);
         registerGrazing("naturalist:capybara", "Herbivora", "Mencari Makan Sendiri (Rumput & Lily Pad)", Set.of(Blocks.SHORT_GRASS, Blocks.TALL_GRASS, Blocks.FERN, Blocks.LILY_PAD), "Rumput / Lily Pad", Items.BONE_MEAL, 16, Items.APPLE, Items.CARROT, Items.MELON_SLICE, Items.WHEAT);
