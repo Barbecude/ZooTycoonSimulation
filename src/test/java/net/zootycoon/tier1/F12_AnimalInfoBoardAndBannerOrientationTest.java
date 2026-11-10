@@ -2,17 +2,21 @@ package net.zootycoon.tier1;
 
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomModelData;
 import net.zootycoon.TestHelper;
+import net.zootycoon.animal.habitat.HabitatEvaluator;
 import net.zootycoon.client.render.LicenseBannerRenderer;
 import net.zootycoon.item.LicenseBannerItem;
 import net.zootycoon.license.LicenseTier;
+import net.zootycoon.network.ZooNetworkPayloads;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -56,6 +60,14 @@ public class F12_AnimalInfoBoardAndBannerOrientationTest {
         assertEquals(64, entityDims.width());
         assertEquals(64, entityDims.height());
 
+        ResourceLocation parchmentLoc = LicenseBannerRenderer.getAnimalInfoParchmentTexture();
+        File parchmentTex = TestHelper.getAssetFile(parchmentLoc.getPath());
+        assertTrue(parchmentTex.exists(), "Medal-free parchment texture must exist");
+        TestHelper.PngDimensions parchmentDims = TestHelper.getPngDimensions(parchmentTex);
+        assertTrue(parchmentDims.validPng());
+        assertEquals(384, parchmentDims.width());
+        assertEquals(256, parchmentDims.height());
+
         File itemTex = TestHelper.getAssetFile("textures/item/animal_info_board.png");
         assertTrue(itemTex.exists(), "Item icon texture for standing info board must exist");
 
@@ -69,5 +81,31 @@ public class F12_AnimalInfoBoardAndBannerOrientationTest {
             assertTrue(json.contains("\"custom_model_data\": 9001"), "Tier " + tier + " model must override custom_model_data 9001");
             assertTrue(json.contains("zootycoon:item/animal_info_board"), "Tier " + tier + " model must point to animal_info_board");
         }
+    }
+
+    @Test
+    @DisplayName("Menu labels, Creative summon keys, and Creative perfect tag match plan")
+    void testMenuLabelsAndCreativeSummonContracts() {
+        Map<String, String> idLang = TestHelper.getIdLang();
+        Map<String, String> enLang = TestHelper.getEnLang();
+
+        assertEquals("Lisensi", idLang.get("zootycoon.ui.card.claim"));
+        assertEquals("Lisensi", idLang.get("zootycoon.license.collection.title"));
+        assertEquals("Bangunan", idLang.get("zootycoon.ui.card.buildings"));
+
+        assertEquals("Licenses", enLang.get("zootycoon.ui.card.claim"));
+        assertEquals("Licenses", enLang.get("zootycoon.license.collection.title"));
+        assertEquals("Buildings", enLang.get("zootycoon.ui.card.buildings"));
+
+        assertTrue(idLang.containsKey("zootycoon.license.btn.summon_tier"));
+        assertTrue(idLang.containsKey("zootycoon.license.btn.summon_tier_tooltip"));
+        assertTrue(idLang.containsKey("zootycoon.license.toast.summon_tier_done"));
+        assertTrue(enLang.containsKey("zootycoon.license.btn.summon_tier"));
+        assertTrue(enLang.containsKey("zootycoon.license.btn.summon_tier_tooltip"));
+        assertTrue(enLang.containsKey("zootycoon.license.toast.summon_tier_done"));
+
+        assertEquals("zoo_creative_perfect", HabitatEvaluator.CREATIVE_PERFECT_TAG);
+        var payload = new ZooNetworkPayloads.SummonTierAnimalsPayload(3);
+        assertEquals(3, payload.tierLevel());
     }
 }

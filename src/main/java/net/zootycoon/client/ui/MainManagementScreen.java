@@ -123,7 +123,7 @@ public class MainManagementScreen extends Screen {
             int row0Y = startY;
             int row1Y = startY + cardHeight + cardGapY;
 
-            // 1. Koleksi Satwa & Lisensi Card
+            // 1. Lisensi Card
             addRenderableWidget(new ZooGridCard(
                     col0X, row0Y, cardWidth, cardHeight,
                     ZooTranslations.get("zootycoon.ui.card.claim"),
@@ -135,7 +135,7 @@ public class MainManagementScreen extends Screen {
                                 new net.zootycoon.network.ZooNetworkPayloads.RequestLicenseSyncPayload()
                         );
                     }
-            ).withIcon(ANIMAL_COLLECTION_ICON, 24, 24, 24, 24));
+            ).withIcon(LICENSE_ICON, 40, 40, 40, 40));
 
             // 2. Buildings Card
             addRenderableWidget(new ZooGridCard(
@@ -156,7 +156,7 @@ public class MainManagementScreen extends Screen {
                     col1X, row1Y, cardWidth, cardHeight,
                     ZooTranslations.get("zootycoon.ui.card.animals"),
                     card -> setView(ViewState.ANIMAL_MANAGEMENT)
-            ).withIcon(ANIMAL_LIST_ICON, 32, 32, 32, 32));
+            ).withIcon(ANIMAL_LIST_ICON, 48, 48, 48, 48));
         } else {
             addRenderableWidget(new ZooButton(20, 14, 86, 22, ZooTranslations.component("zootycoon.ui.btn.back"), b -> {
                 boolean isStaffSub = currentView == ViewState.ZOOKEEPER_MANAGE

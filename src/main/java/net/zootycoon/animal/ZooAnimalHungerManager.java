@@ -311,6 +311,20 @@ public class ZooAnimalHungerManager {
                 mob.setPersistenceRequired();
             }
 
+            // Creative test animals keep invulnerable health and full needs
+            if (animal.getTags().contains(net.zootycoon.animal.habitat.HabitatEvaluator.CREATIVE_PERFECT_TAG)) {
+                if (!animal.isInvulnerable()) {
+                    animal.setInvulnerable(true);
+                }
+                if (getHunger(animal) != MAX_HUNGER) setHunger(animal, MAX_HUNGER);
+                if (getThirst(animal) != MAX_THIRST) setThirst(animal, MAX_THIRST);
+                if (getCleanliness(animal) != MAX_CLEANLINESS) setCleanliness(animal, MAX_CLEANLINESS);
+                if (animal.getHealth() < animal.getMaxHealth()) {
+                    animal.setHealth(animal.getMaxHealth());
+                }
+                continue;
+            }
+
             // Universal thirst decay
             if (level.getGameTime() % thirstDecayInterval == 0) {
                 int thirst = getThirst(animal);

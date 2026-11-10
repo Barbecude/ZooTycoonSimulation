@@ -14,6 +14,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.decoration.HangingEntity;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameRules;
@@ -197,17 +198,25 @@ public class LicenseBannerEntity extends HangingEntity {
 
     @Override
     public void dropItem(Entity brokenEntity) {
-        if (!this.level().getGameRules().getBoolean(GameRules.RULE_DOENTITYDROPS)) {
+        if (brokenEntity instanceof Player player && player.hasInfiniteMaterials()) {
+            this.playSound(SoundEvents.PAINTING_BREAK, 1.0F, 1.0F);
+            return;
+        }
+        // Only respect doEntityDrops for non-player removals; survival player breaks must never destroy placed boards/certificates
+        if (brokenEntity == null && !this.level().getGameRules().getBoolean(GameRules.RULE_DOENTITYDROPS)) {
             return;
         }
         this.playSound(SoundEvents.PAINTING_BREAK, 1.0F, 1.0F);
-        if (brokenEntity instanceof Player player && player.hasInfiniteMaterials()) {
-            return;
-        }
         ItemStack drop = isAnimalInfoBanner()
                 ? LicenseBannerItem.createAnimalInfoBannerStack(getTierLevel(), getSpeciesKey(), getZooName())
                 : LicenseBannerItem.createStackForTier(getTierLevel(), getZooName());
-        this.spawnAtLocation(drop);
+        Direction dir = this.getDirection();
+        double dropX = this.getX() + (dir != null ? dir.getStepX() * 0.25D : 0.0D);
+        double dropY = this.getY();
+        double dropZ = this.getZ() + (dir != null ? dir.getStepZ() * 0.25D : 0.0D);
+        ItemEntity itemEntity = new ItemEntity(this.level(), dropX, dropY, dropZ, drop);
+        itemEntity.setDefaultPickUpDelay();
+        this.level().addFreshEntity(itemEntity);
     }
 
     @Override

@@ -1603,6 +1603,17 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // 39. Creative Summon All Tier Animals Payload (C2S)
+    public record SummonTierAnimalsPayload(int tierLevel) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<SummonTierAnimalsPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("summon_tier_animals"));
+        public static final StreamCodec<FriendlyByteBuf, SummonTierAnimalsPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> buf.writeInt(payload.tierLevel),
+                buf -> new SummonTierAnimalsPayload(buf.readInt())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     public static final int TOAST_INFO = 0;
     public static final int TOAST_SUCCESS = 1;
     public static final int TOAST_WARNING = 2;
@@ -1670,6 +1681,7 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
         PayloadTypeRegistry.playC2S().register(RequestSpeciesBiomesPayload.TYPE, RequestSpeciesBiomesPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(BuyAnimalInfoBannerPayload.TYPE, BuyAnimalInfoBannerPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(InspectorActionPayload.TYPE, InspectorActionPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(SummonTierAnimalsPayload.TYPE, SummonTierAnimalsPayload.CODEC);
 
         PayloadTypeRegistry.playS2C().register(SyncClaimsPayload.TYPE, SyncClaimsPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncStudioStatePayload.TYPE, SyncStudioStatePayload.CODEC);
@@ -2877,6 +2889,65 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                 }
             });
         });
+
+        ServerPlayNetworking.registerGlobalReceiver(SummonTierAnimalsPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                if (player == null || !player.isCreative() || !(player.level() instanceof ServerLevel sLevel)) {
+                    return;
+                }
+                net.zootycoon.license.LicenseTier tier = net.zootycoon.license.LicenseTier.byLevel(payload.tierLevel());
+                var speciesList = tier.getRequiredSpecies();
+                int total = speciesList.size();
+                int spawned = 0;
+                double radius = 4.5D;
+                for (int i = 0; i < total; i++) {
+                    var entry = speciesList.get(i);
+                    net.minecraft.world.entity.EntityType<?> entityType = entry.resolveEntityType();
+                    if (entityType == null) continue;
+                    net.minecraft.world.entity.Entity raw = entityType.create(sLevel);
+                    if (!(raw instanceof net.minecraft.world.entity.LivingEntity animal)) {
+                        if (raw != null) raw.discard();
+                        continue;
+                    }
+                    double angle = (2.0D * Math.PI * i) / Math.max(1, total);
+                    double sx = player.getX() + Math.cos(angle) * radius;
+                    double sz = player.getZ() + Math.sin(angle) * radius;
+                    double sy = findCreativeSummonY(sLevel, net.minecraft.core.BlockPos.containing(sx, player.getY(), sz), player.getY());
+                    animal.moveTo(sx, sy, sz, (float) Math.toDegrees(angle) + 90.0F, 0.0F);
+                    animal.setInvulnerable(true);
+                    animal.setHealth(animal.getMaxHealth());
+                    animal.addTag(net.zootycoon.animal.habitat.HabitatEvaluator.CREATIVE_PERFECT_TAG);
+                    if (animal instanceof net.minecraft.world.entity.Mob mob) {
+                        mob.setPersistenceRequired();
+                    }
+                    net.zootycoon.animal.ZooAnimalHungerManager.setTagged(animal, true);
+                    net.zootycoon.animal.ZooAnimalHungerManager.setOwner(animal, player.getUUID());
+                    net.zootycoon.animal.ZooAnimalHungerManager.setHunger(animal, net.zootycoon.animal.ZooAnimalHungerManager.MAX_HUNGER);
+                    net.zootycoon.animal.ZooAnimalHungerManager.setThirst(animal, net.zootycoon.animal.ZooAnimalHungerManager.MAX_THIRST);
+                    net.zootycoon.animal.ZooAnimalHungerManager.setCleanliness(animal, net.zootycoon.animal.ZooAnimalHungerManager.MAX_CLEANLINESS);
+                    if (sLevel.addFreshEntity(animal)) {
+                        net.zootycoon.license.ZooLicenseManager.get(sLevel).onAnimalRegistered(sLevel, player, animal);
+                        spawned++;
+                    }
+                }
+                sendAnimalSync(player);
+                sendToast(player, "zootycoon.toast.title.inspector",
+                        "zootycoon.license.toast.summon_tier_done", TOAST_SUCCESS, spawned, tier.getDisplayName());
+            });
+        });
+    }
+
+    private static double findCreativeSummonY(ServerLevel level, net.minecraft.core.BlockPos basePos, double fallbackY) {
+        for (int dy = 2; dy >= -3; dy--) {
+            net.minecraft.core.BlockPos check = basePos.offset(0, dy, 0);
+            if (!level.getBlockState(check.below()).getCollisionShape(level, check.below()).isEmpty()
+                    && level.getBlockState(check).getCollisionShape(level, check).isEmpty()
+                    && level.getBlockState(check.above()).getCollisionShape(level, check.above()).isEmpty()) {
+                return check.getY();
+            }
+        }
+        return fallbackY;
     }
 
     public static void sendLicenseSync(ServerPlayer player) {

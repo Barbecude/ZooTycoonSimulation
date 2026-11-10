@@ -39,6 +39,8 @@ public class LicenseBannerRenderer extends EntityRenderer<LicenseBannerEntity> {
             ResourceLocation.fromNamespaceAndPath("wildernature", "textures/entity/bounty_board.png");
     private static final ResourceLocation FALLBACK_BOARD_TEXTURE =
             ZooTycoonMod.id("textures/entity/animal_info_board.png");
+    private static final ResourceLocation ANIMAL_INFO_PARCHMENT_TEXTURE =
+            ZooTycoonMod.id("textures/entity/license_banner/animal_info_parchment.png");
 
     private final ModelPart bountyBoardModel;
 
@@ -83,9 +85,13 @@ public class LicenseBannerRenderer extends EntityRenderer<LicenseBannerEntity> {
         return ZooTycoonMod.id("textures/entity/license_banner/tier_" + Math.clamp(tierLevel, 1, 5) + ".png");
     }
 
+    public static ResourceLocation getAnimalInfoParchmentTexture() {
+        return ANIMAL_INFO_PARCHMENT_TEXTURE;
+    }
+
     @Override
     public ResourceLocation getTextureLocation(LicenseBannerEntity entity) {
-        return getCustomBannerTexture(entity.getTierLevel());
+        return entity.isAnimalInfoBanner() ? ANIMAL_INFO_PARCHMENT_TEXTURE : getCustomBannerTexture(entity.getTierLevel());
     }
 
     @Override
@@ -99,7 +105,7 @@ public class LicenseBannerRenderer extends EntityRenderer<LicenseBannerEntity> {
         ResourceLocation customTex = getCustomBannerTexture(tierLevel);
 
         if (entity.isAnimalInfoBanner()) {
-            renderAnimalInfoBanner(entity, tierLevel, customTex, partialTick, poseStack, bufferSource, packedLight);
+            renderAnimalInfoBanner(entity, partialTick, poseStack, bufferSource, packedLight);
         } else {
             // 1. Render 3x2 Textured Wooden Plaque with Parchment in world space with scene lighting
             renderPlaqueQuad(poseStack, bufferSource, customTex, packedLight, 1.5F, 1.0F, 0.0F, 0.01F, true);
@@ -111,7 +117,7 @@ public class LicenseBannerRenderer extends EntityRenderer<LicenseBannerEntity> {
         super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
     }
 
-    private void renderAnimalInfoBanner(LicenseBannerEntity entity, int tierLevel, ResourceLocation plaqueTex, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int light) {
+    private void renderAnimalInfoBanner(LicenseBannerEntity entity, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int light) {
         // 1. Standing wooden Bounty Board stand & frame (2 blocks wide, 1.875 blocks tall)
         poseStack.pushPose();
         poseStack.translate(-0.5F, 0.5625F, 0.0F);
@@ -120,13 +126,13 @@ public class LicenseBannerRenderer extends EntityRenderer<LicenseBannerEntity> {
         bountyBoardModel.render(poseStack, boardVc, light, OverlayTexture.NO_OVERLAY);
         poseStack.popPose();
 
-        // 2. Parchment info panel seated inside the 28x18 rectangular board slot (centered at Y = +0.25)
-        renderPlaqueQuad(poseStack, bufferSource, plaqueTex, light, 0.855F, 0.545F, 0.25F, 0.02F, false);
+        // 2. Clean medal-free parchment info panel seated inside the 28x18 rectangular board slot (centered at Y = +0.25)
+        renderPlaqueQuad(poseStack, bufferSource, ANIMAL_INFO_PARCHMENT_TEXTURE, light, 0.855F, 0.545F, 0.25F, 0.02F, false);
 
-        // 3. 3D Animal Model & Fun Fact Text inside the rectangular board slot
+        // 3. Framed 2D Animal Photo & Fun Fact Text inside the rectangular board slot
         String speciesKey = entity.getSpeciesKey();
-        render3DAnimalEntity(speciesKey, poseStack, bufferSource, light, partialTick);
-        renderAnimalInfoText(speciesKey, tierLevel, poseStack, bufferSource, light);
+        render2DAnimalPhoto(speciesKey, poseStack, bufferSource, light, partialTick);
+        renderAnimalInfoText(speciesKey, poseStack, bufferSource, light);
     }
 
     private LivingEntity getOrCreateDummy(String primaryId, EntityType<?> type) {
@@ -143,7 +149,10 @@ public class LicenseBannerRenderer extends EntityRenderer<LicenseBannerEntity> {
         });
     }
 
-    private void render3DAnimalEntity(String speciesKey, PoseStack poseStack, MultiBufferSource bufferSource, int light, float partialTick) {
+    private void render2DAnimalPhoto(String speciesKey, PoseStack poseStack, MultiBufferSource bufferSource, int light, float partialTick) {
+        // Photo mat frame on left pane (centered at X = -0.45, Y = +0.25)
+        renderPhotoFrame(poseStack, bufferSource, light, -0.45F, 0.25F, 0.30F, 0.37F);
+
         LicenseTier.SpeciesEntry entry = LicenseTier.findSpeciesEntry(speciesKey);
         if (entry == null) return;
         EntityType<?> entityType = entry.resolveEntityType();
@@ -153,30 +162,54 @@ public class LicenseBannerRenderer extends EntityRenderer<LicenseBannerEntity> {
         if (dummy == null) return;
 
         poseStack.pushPose();
-        // Left pane inside the 28x18 bounty board window (centered at X = -0.46, Y = -0.10)
-        float bbMax = Math.max(0.6f, Math.max(dummy.getBbHeight(), dummy.getBbWidth()));
-        float scale = Math.clamp(0.45F / bbMax, 0.10F, 0.34F);
-        float zOffset = 0.05F + Math.min(0.16F, dummy.getBbWidth() * scale * 0.55F);
-        poseStack.translate(-0.46F, -0.10F, zOffset);
-        poseStack.scale(scale, scale, scale);
+        float photoW = 0.50F;
+        float photoH = 0.62F;
+        float bbW = Math.max(0.5F, dummy.getBbWidth());
+        float bbH = Math.max(0.5F, dummy.getBbHeight());
+        float scaleXY = Math.clamp(Math.min(photoW / bbW, photoH / bbH), 0.10F, 0.36F);
+        float bottomY = 0.25F - (bbH * scaleXY) * 0.5F;
 
-        // Subtle breathing/idle rotation
-        long gameTime = dummy.level() != null ? dummy.level().getGameTime() : 0L;
-        float rotY = 25.0F + (float) Math.sin((gameTime + partialTick) * 0.04F) * 12.0F;
-        poseStack.mulPose(Axis.YP.rotationDegrees(rotY));
+        // Flat 2D portrait tucked cleanly inside the wooden Bounty Board frame
+        poseStack.translate(-0.45F, bottomY, 0.036F);
+        poseStack.scale(scaleXY, scaleXY, 0.015F);
+        poseStack.mulPose(Axis.YP.rotationDegrees(30.0F));
 
-        // In-world lighting and shadow suppression
         EntityRenderDispatcher dispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
         dispatcher.setRenderShadow(false);
-        dispatcher.render(dummy, 0.0D, 0.0D, 0.0D, 0.0F, partialTick, poseStack, bufferSource, light);
+        dispatcher.render(dummy, 0.0D, 0.0D, 0.0D, 0.0F, 0.0F, poseStack, bufferSource, light);
         dispatcher.setRenderShadow(true);
 
         poseStack.popPose();
     }
 
-    private void renderAnimalInfoText(String speciesKey, int tierLevel, PoseStack poseStack, MultiBufferSource bufferSource, int light) {
+    private void renderPhotoFrame(PoseStack poseStack, MultiBufferSource bufferSource, int light,
+                                  float centerX, float centerY, float halfW, float halfH) {
+        PoseStack.Pose pose = poseStack.last();
+        Matrix4f matrix = pose.pose();
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.entitySolid(ANIMAL_INFO_PARCHMENT_TEXTURE));
+
+        // Outer wood/gold border sampled from parchment border corner
+        float zBorder = 0.023F;
+        float bu0 = 0.004F, bu1 = 0.020F, bv0 = 0.004F, bv1 = 0.020F;
+        vc.addVertex(matrix, centerX - halfW, centerY - halfH, zBorder).setColor(255, 255, 255, 255).setUv(bu0, bv1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
+        vc.addVertex(matrix, centerX + halfW, centerY - halfH, zBorder).setColor(255, 255, 255, 255).setUv(bu1, bv1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
+        vc.addVertex(matrix, centerX + halfW, centerY + halfH, zBorder).setColor(255, 255, 255, 255).setUv(bu1, bv0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
+        vc.addVertex(matrix, centerX - halfW, centerY + halfH, zBorder).setColor(255, 255, 255, 255).setUv(bu0, bv0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
+
+        // Inner soft backdrop sampled from parchment interior
+        float zInner = 0.025F;
+        float pad = 0.025F;
+        float pu0 = 0.25F, pu1 = 0.35F, pv0 = 0.25F, pv1 = 0.35F;
+        float iW = halfW - pad;
+        float iH = halfH - pad;
+        vc.addVertex(matrix, centerX - iW, centerY - iH, zInner).setColor(242, 232, 210, 255).setUv(pu0, pv1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
+        vc.addVertex(matrix, centerX + iW, centerY - iH, zInner).setColor(242, 232, 210, 255).setUv(pu1, pv1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
+        vc.addVertex(matrix, centerX + iW, centerY + iH, zInner).setColor(242, 232, 210, 255).setUv(pu1, pv0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
+        vc.addVertex(matrix, centerX - iW, centerY + iH, zInner).setColor(242, 232, 210, 255).setUv(pu0, pv0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
+    }
+
+    private void renderAnimalInfoText(String speciesKey, PoseStack poseStack, MultiBufferSource bufferSource, int light) {
         LicenseTier.SpeciesEntry entry = LicenseTier.findSpeciesEntry(speciesKey);
-        LicenseTier tier = LicenseTier.byLevel(tierLevel);
         Font font = Minecraft.getInstance().font;
 
         poseStack.pushPose();
@@ -185,30 +218,26 @@ public class LicenseBannerRenderer extends EntityRenderer<LicenseBannerEntity> {
         poseStack.scale(0.0074F, -0.0074F, 0.0074F);
 
         Matrix4f textMat = poseStack.last().pose();
-        int textStartX = -8;
-        int textWidth = 110;
+        int textStartX = -10;
+        int textWidth = 112;
 
         // 1. English Official Name (Enlarged)
         String officialName = entry != null ? entry.defaultName() : speciesKey;
         String trimmedName = font.plainSubstrByWidth(officialName, (int) (textWidth / 1.25F));
         poseStack.pushPose();
-        poseStack.translate(textStartX, -56.0F, 0.0F);
+        poseStack.translate(textStartX, -52.0F, 0.0F);
         poseStack.scale(1.25F, 1.25F, 1.0F);
         font.drawInBatch(trimmedName, 0, 0, 0xFF1F1206, false, poseStack.last().pose(), bufferSource, Font.DisplayMode.POLYGON_OFFSET, 0, light);
         poseStack.popPose();
 
-        // 2. Category / Tier Subtitle
-        String subtitle = font.plainSubstrByWidth(tier.getDisplayName().toUpperCase() + " • EXHIBIT", textWidth);
-        font.drawInBatch(subtitle, textStartX, -40, 0xFF5A432D, false, textMat, bufferSource, Font.DisplayMode.POLYGON_OFFSET, 0, light);
-
-        // 3. Fun Fact Header
+        // 2. Fun Fact Header (no license tier subtitle)
         String funFactTitle = ZooTranslations.get("zootycoon.license.banner.fun_fact_title");
-        font.drawInBatch(funFactTitle, textStartX, -26, 0xFF7D1B1B, false, textMat, bufferSource, Font.DisplayMode.POLYGON_OFFSET, 0, light);
+        font.drawInBatch(funFactTitle, textStartX, -32, 0xFF7D1B1B, false, textMat, bufferSource, Font.DisplayMode.POLYGON_OFFSET, 0, light);
 
-        // 4. Wrapped Educational Fun Fact Description
+        // 3. Wrapped Educational Fun Fact Description
         String funFact = ZooTranslations.get("zootycoon.species." + speciesKey + ".fun_fact");
         var wrappedLines = font.split(Component.literal(funFact), textWidth);
-        int lineY = -14;
+        int lineY = -20;
         for (var formattedLine : wrappedLines) {
             font.drawInBatch(formattedLine, textStartX, lineY, 0xFF2E1B0E, false, textMat, bufferSource, Font.DisplayMode.POLYGON_OFFSET, 0, light);
             lineY += 9;
@@ -284,33 +313,21 @@ public class LicenseBannerRenderer extends EntityRenderer<LicenseBannerEntity> {
 
         Matrix4f textMat = poseStack.last().pose();
 
-        // 1. Official Header Inscription
-        String header = ZooTranslations.get("zootycoon.license.banner.header");
-        drawCenteredOffset(font, header, 0, -56, 0xFF2A1708, textMat, bufferSource, light);
-
-        // 2. License Tier Title (Enlarged)
+        // 1. License Tier Title (Enlarged, cleanly centered above the medal)
         poseStack.pushPose();
-        poseStack.translate(0.0F, -34.0F, 0.001F);
+        poseStack.translate(0.0F, -32.0F, 0.001F);
         poseStack.scale(1.35F, 1.35F, 1.0F);
         String tierTitle = tier.getDisplayName().toUpperCase();
         drawCenteredOffset(font, tierTitle, 0, 0, 0xFF1F1206, poseStack.last().pose(), bufferSource, light);
         poseStack.popPose();
 
-        // 3. Certified Status Badge
-        String tierSub = "TIER " + tier.getTierLevel() + " • " + ZooTranslations.get("zootycoon.license.banner.certified");
-        drawCenteredOffset(font, tierSub, 0, -10, 0xFF5A432D, textMat, bufferSource, light);
-
-        // 4. Zoo Name / Awardee
+        // 2. Zoo Name / Awardee
         String awardedTo = ZooTranslations.get("zootycoon.license.banner.awarded_to", entity.getZooName());
-        drawCenteredOffset(font, awardedTo, 0, 10, 0xFF2E1B0E, textMat, bufferSource, light);
+        drawCenteredOffset(font, awardedTo, 0, -4, 0xFF2E1B0E, textMat, bufferSource, light);
 
-        // 5. Species Verified Info
+        // 3. Species Verified Info
         String speciesInfo = ZooTranslations.get("zootycoon.license.banner.species_verified", tier.getRequiredSpecies().size());
-        drawCenteredOffset(font, speciesInfo, 0, 26, 0xFF6A5442, textMat, bufferSource, light);
-
-        // 6. Seal Authority Endorsement
-        String seal = ZooTranslations.get("zootycoon.license.banner.seal");
-        drawCenteredOffset(font, seal, 0, 56, 0xFF7D1B1B, textMat, bufferSource, light);
+        drawCenteredOffset(font, speciesInfo, 0, 14, 0xFF6A5442, textMat, bufferSource, light);
 
         poseStack.popPose();
     }

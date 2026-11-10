@@ -38,6 +38,8 @@ public class AnimalCollectionModal {
     private int[] biomeHoverRect = null;
     private List<String> biomeHoverList = null;
     private String infoBoardTooltip = null;
+    private String summonTooltip = null;
+    private final Map<Integer, int[]> summonButtonRects = new HashMap<>();
 
     public AnimalCollectionModal(MainManagementScreen parent) {
         this.parent = parent;
@@ -105,7 +107,7 @@ public class AnimalCollectionModal {
         // Header Bar
         graphics.fill(modalX + 1, modalY + 1, modalX + modalW - 1, modalY + 28, 0xFF171D29);
         graphics.fill(modalX + 1, modalY + 28, modalX + modalW - 1, modalY + 29, 0xFF262F42);
-        graphics.drawString(font, ZooTranslations.get("zootycoon.license.collection.title"), modalX + 12, modalY + 10, 0xFFFFD700, false);
+        graphics.drawString(font, ZooTranslations.get("zootycoon.license.collection.title"), modalX + 12, modalY + 10, 0xFFF1F5F9, false);
 
         // Close [X] Button
         int closeX = modalX + modalW - 24;
@@ -118,15 +120,17 @@ public class AnimalCollectionModal {
         this.biomeHoverRect = null;
         this.biomeHoverList = null;
         this.infoBoardTooltip = null;
+        this.summonTooltip = null;
+        this.summonButtonRects.clear();
         InspectorState inspector = inspectorState();
         int[] ib = inspectorButtonRect(font, modalX, modalY, modalW);
         boolean hoverInspector = mouseX >= ib[0] && mouseX <= ib[0] + ib[2] && mouseY >= ib[1] && mouseY <= ib[1] + ib[3];
-        int ibBg = !inspector.canRequest() ? 0xFF2A2D35 : (hoverInspector ? 0xFF2563EB : 0xFF1D4ED8);
-        int ibBorder = !inspector.canRequest() ? 0xFF3F4450 : (hoverInspector ? 0xFF60A5FA : 0xFF3B82F6);
+        int ibBg = !inspector.canRequest() ? 0xFF1E2430 : (hoverInspector ? 0xFF2563EB : 0xFF1D4ED8);
+        int ibBorder = !inspector.canRequest() ? 0xFF334155 : (hoverInspector ? 0xFF60A5FA : 0xFF3B82F6);
         graphics.fill(ib[0], ib[1], ib[0] + ib[2], ib[1] + ib[3], ibBg);
         graphics.renderOutline(ib[0], ib[1], ib[2], ib[3], ibBorder);
         String ibText = ZooTranslations.get(inspector.pendingClaim() ? "zootycoon.license.btn.claim_inspector" : "zootycoon.license.btn.call_inspector");
-        graphics.drawCenteredString(font, ibText, ib[0] + ib[2] / 2, ib[1] + 5, inspector.canRequest() ? 0xFFFFFFFF : 0xFF6B7280);
+        graphics.drawCenteredString(font, ibText, ib[0] + ib[2] / 2, ib[1] + 5, inspector.canRequest() ? 0xFFFFFFFF : 0xFF64748B);
 
         // Left Grid Area vs Right Detail Panel
         int detailW = 152;
@@ -147,18 +151,39 @@ public class AnimalCollectionModal {
             boolean tierUnlocked = ZooLicenseManager.isClientTierUnlocked(tier.getTierLevel());
             ZooLicenseManager.TierProgressData tierData = ZooLicenseManager.getClientTierData(tier.getTierLevel());
 
-            // Tier Section Header
-            graphics.fill(gridX, curY, gridX + gridW - 6, curY + 18, 0xFF1A2130);
-            graphics.fill(gridX, curY, gridX + 3, curY + 18, tier.getAccentColor());
+            // Tier Section Header (restrained slate hierarchy)
+            graphics.fill(gridX, curY, gridX + gridW - 6, curY + 18, 0xFF18202E);
+            graphics.fill(gridX, curY, gridX + 3, curY + 18, tierUnlocked ? 0xFF3B82F6 : 0xFF334155);
 
             String tierHeader = tier.getDisplayName();
-            graphics.drawString(font, tierHeader, gridX + 8, curY + 5, tierUnlocked ? 0xFFFFFFFF : 0xFF9CA3AF, false);
+            graphics.drawString(font, tierHeader, gridX + 8, curY + 5, tierUnlocked ? 0xFFF1F5F9 : 0xFF94A3B8, false);
 
             String tierBadgeKey = !tierUnlocked ? "zootycoon.license.state.locked"
                     : (tierData.licenseClaimed ? "zootycoon.license.state.certified" : "zootycoon.license.state.unverified");
             String tierBadge = ZooTranslations.get(tierBadgeKey);
-            int badgeColor = !tierUnlocked ? 0xFFF87171 : (tierData.licenseClaimed ? 0xFF4ADE80 : 0xFFFBBF24);
-            graphics.drawString(font, tierBadge, gridX + gridW - 12 - font.width(tierBadge), curY + 5, badgeColor, false);
+            int badgeColor = !tierUnlocked ? 0xFF64748B : (tierData.licenseClaimed ? 0xFF6EE7B7 : 0xFFCBD5E1);
+            int badgeX = gridX + gridW - 12 - font.width(tierBadge);
+            graphics.drawString(font, tierBadge, badgeX, curY + 5, badgeColor, false);
+
+            // Creative-only per-tier Summon All button for testing
+            if (inspector.creative()) {
+                String summonLabel = ZooTranslations.get("zootycoon.license.btn.summon_tier");
+                int sW = font.width(summonLabel) + 8;
+                int sX = badgeX - 6 - sW;
+                int sY = curY + 2;
+                int sH = 14;
+                if (sY + sH >= gridY && sY <= gridY + gridH) {
+                    boolean hoverSummon = mouseY >= gridY && mouseY <= gridY + gridH
+                            && mouseX >= sX && mouseX <= sX + sW && mouseY >= sY && mouseY <= sY + sH;
+                    graphics.fill(sX, sY, sX + sW, sY + sH, hoverSummon ? 0xFF2563EB : 0xFF1D4ED8);
+                    graphics.renderOutline(sX, sY, sW, sH, hoverSummon ? 0xFF60A5FA : 0xFF3B82F6);
+                    graphics.drawCenteredString(font, summonLabel, sX + sW / 2, sY + 3, 0xFFFFFFFF);
+                    this.summonButtonRects.put(tier.getTierLevel(), new int[]{sX, sY, sW, sH});
+                    if (hoverSummon) {
+                        this.summonTooltip = ZooTranslations.get("zootycoon.license.btn.summon_tier_tooltip", tier.getDisplayName());
+                    }
+                }
+            }
 
             curY += 22;
 
@@ -189,7 +214,7 @@ public class AnimalCollectionModal {
             graphics.fill(trackX, gridY, trackX + 2, gridY + gridH, 0xFF1F2633);
             int thumbH = Math.max(18, (int) ((float) gridH * gridH / (float) totalContentH));
             int thumbY = gridY + (int) ((gridH - thumbH) * ((float) scrollOffset / (float) maxScroll));
-            graphics.fill(trackX, thumbY, trackX + 2, thumbY + thumbH, 0xFF38BDF8);
+            graphics.fill(trackX, thumbY, trackX + 2, thumbY + thumbH, 0xFF3B82F6);
         }
 
         // Right Detail Column
@@ -200,6 +225,8 @@ public class AnimalCollectionModal {
         // Tooltips last, so they sit above every other element of the modal
         if (hoverInspector) {
             graphics.renderTooltip(font, Component.literal(inspectorTooltip(inspector)), mouseX, mouseY);
+        } else if (summonTooltip != null) {
+            graphics.renderTooltip(font, Component.literal(summonTooltip), mouseX, mouseY);
         } else if (infoBoardTooltip != null) {
             graphics.renderTooltip(font, Component.literal(infoBoardTooltip), mouseX, mouseY);
         } else if (biomeHoverRect != null && biomeHoverList != null && !biomeHoverList.isEmpty()
@@ -236,8 +263,8 @@ public class AnimalCollectionModal {
         boolean isSelected = selectedEntry != null && selectedEntry.speciesKey().equals(entry.speciesKey());
         boolean hovered = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
 
-        int bg = isSelected ? 0xFF1F293D : (hovered ? 0xFF1A2232 : 0xFF141923);
-        int border = isSelected ? 0xFF38BDF8 : (owned ? 0xFF22543D : (!tierUnlocked ? 0xFF3B1D24 : 0xFF252D3D));
+        int bg = isSelected ? 0xFF1E293B : (hovered ? 0xFF182030 : 0xFF121722);
+        int border = isSelected ? 0xFFE2E8F0 : (owned ? 0xFF2C4A3E : (!tierUnlocked ? 0xFF252A36 : 0xFF283142));
 
         graphics.fill(x, y, x + w, y + h, bg);
         graphics.fill(x, y, x + w, y + 1, border);
@@ -282,7 +309,7 @@ public class AnimalCollectionModal {
 
         // Species Name
         String name = font.plainSubstrByWidth(entry.getDisplayName(), w - 6);
-        int nameColor = owned ? 0xFFFFFFFF : (tierUnlocked ? 0xFFD1D5DB : 0xFF6B7280);
+        int nameColor = owned ? 0xFFF1F5F9 : (tierUnlocked ? 0xFFCBD5E1 : 0xFF64748B);
         graphics.drawCenteredString(font, name, x + w / 2, y + h - 21, nameColor);
 
         // Status Label
@@ -290,13 +317,13 @@ public class AnimalCollectionModal {
         int statusColor;
         if (owned) {
             statusText = ZooTranslations.get("zootycoon.license.collection.owned");
-            statusColor = 0xFF4ADE80;
+            statusColor = 0xFF6EE7B7;
         } else if (tierUnlocked) {
             statusText = ZooTranslations.get("zootycoon.license.collection.unowned");
-            statusColor = 0xFFFBBF24;
+            statusColor = 0xFF94A3B8;
         } else {
             statusText = ZooTranslations.get("zootycoon.license.collection.locked");
-            statusColor = 0xFFF87171;
+            statusColor = 0xFF64748B;
         }
         String clippedStatus = font.plainSubstrByWidth(statusText, w - 4);
         graphics.drawCenteredString(font, clippedStatus, x + w / 2, y + h - 10, statusColor);
@@ -342,7 +369,7 @@ public class AnimalCollectionModal {
         }
 
         int infoY = y + previewBoxH + 12;
-        graphics.drawCenteredString(font, selectedEntry.getDisplayName(), x + w / 2, infoY, 0xFFFFFFFF);
+        graphics.drawCenteredString(font, selectedEntry.getDisplayName(), x + w / 2, infoY, 0xFFF1F5F9);
         infoY += 13;
 
         // Ownership / Lock Status Badge
@@ -350,13 +377,13 @@ public class AnimalCollectionModal {
         int statusCol;
         if (owned) {
             statusStr = ZooTranslations.get("zootycoon.license.collection.owned");
-            statusCol = 0xFF4ADE80;
+            statusCol = 0xFF6EE7B7;
         } else if (tierUnlocked) {
             statusStr = ZooTranslations.get("zootycoon.license.collection.unowned");
-            statusCol = 0xFFFBBF24;
+            statusCol = 0xFF94A3B8;
         } else {
             statusStr = ZooTranslations.get("zootycoon.license.collection.locked");
-            statusCol = 0xFFF87171;
+            statusCol = 0xFF64748B;
         }
         graphics.drawCenteredString(font, statusStr, x + w / 2, infoY, statusCol);
         infoY += 15;
@@ -371,7 +398,7 @@ public class AnimalCollectionModal {
             String lockNote = ZooTranslations.get("zootycoon.license.collection.locked_hint", selectedTier.getDisplayName());
             List<FormattedCharSequence> lines = font.split(Component.literal(lockNote), w - 16);
             for (FormattedCharSequence line : lines) {
-                graphics.drawString(font, line, x + 8, infoY, 0xFFF87171, false);
+                graphics.drawString(font, line, x + 8, infoY, 0xFF94A3B8, false);
                 infoY += 11;
             }
             return;
@@ -381,16 +408,16 @@ public class AnimalCollectionModal {
         if (dummy != null) {
             AnimalDietRegistry.AnimalDiet diet = AnimalDietRegistry.getDiet(dummy);
             if (diet != null) {
-                graphics.drawString(font, ZooTranslations.get("zootycoon.license.collection.diet_label"), x + 8, infoY, 0xFF9CA3AF, false);
+                graphics.drawString(font, ZooTranslations.get("zootycoon.license.collection.diet_label"), x + 8, infoY, 0xFF94A3B8, false);
                 infoY += 11;
                 String sub = font.plainSubstrByWidth(diet.getSubtitle(), w - 16);
-                graphics.drawString(font, sub, x + 8, infoY, 0xFFC084FC, false);
+                graphics.drawString(font, sub, x + 8, infoY, 0xFFE2E8F0, false);
                 infoY += 14;
             }
 
             List<ItemStack> foods = AnimalDietRegistry.getFavoriteFoodStacks(dummy);
             if (!foods.isEmpty()) {
-                graphics.drawString(font, ZooTranslations.get("zootycoon.ui.animals.favorite_food"), x + 8, infoY, 0xFF9CA3AF, false);
+                graphics.drawString(font, ZooTranslations.get("zootycoon.ui.animals.favorite_food"), x + 8, infoY, 0xFF94A3B8, false);
                 infoY += 12;
                 int fx = x + 8;
                 int maxIcons = Math.min(5, foods.size());
@@ -408,25 +435,25 @@ public class AnimalCollectionModal {
             net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
                     new net.zootycoon.network.ZooNetworkPayloads.RequestSpeciesBiomesPayload(speciesKey));
         }
-        graphics.drawString(font, ZooTranslations.get("zootycoon.license.collection.spawns_in"), x + 8, infoY, 0xFF9CA3AF, false);
+        graphics.drawString(font, ZooTranslations.get("zootycoon.license.collection.spawns_in"), x + 8, infoY, 0xFF94A3B8, false);
         infoY += 11;
         List<String> biomes = BIOME_CACHE.get(speciesKey);
         int biomeAreaBottom = y + h - 20 - 8 - 6;
         int maxLines = Math.max(0, (biomeAreaBottom - infoY) / 10);
         if (biomes == null) {
-            graphics.drawString(font, ZooTranslations.get("zootycoon.license.collection.biomes_loading"), x + 8, infoY, 0xFF81E6D9, false);
+            graphics.drawString(font, ZooTranslations.get("zootycoon.license.collection.biomes_loading"), x + 8, infoY, 0xFFCBD5E1, false);
         } else if (biomes.isEmpty()) {
-            graphics.drawString(font, ZooTranslations.get("zootycoon.license.collection.no_spawn"), x + 8, infoY, 0xFF81E6D9, false);
+            graphics.drawString(font, ZooTranslations.get("zootycoon.license.collection.no_spawn"), x + 8, infoY, 0xFFCBD5E1, false);
         } else {
             List<FormattedCharSequence> lines = font.split(Component.literal(String.join(", ", biomes)), w - 16);
             int shown = Math.min(lines.size(), maxLines);
             for (int i = 0; i < shown; i++) {
-                graphics.drawString(font, lines.get(i), x + 8, infoY + i * 10, 0xFF81E6D9, false);
+                graphics.drawString(font, lines.get(i), x + 8, infoY + i * 10, 0xFFCBD5E1, false);
             }
             if (shown < lines.size()) {
                 this.biomeHoverRect = new int[]{x + 8, infoY, w - 16, Math.max(10, shown * 10)};
                 this.biomeHoverList = biomes;
-                graphics.drawString(font, "...", x + 8, infoY + shown * 10, 0xFF9CA3AF, false);
+                graphics.drawString(font, "...", x + 8, infoY + shown * 10, 0xFF94A3B8, false);
             }
         }
     }
@@ -526,6 +553,16 @@ public class AnimalCollectionModal {
         }
 
         if (mouseX >= gridX && mouseX <= gridX + gridW && mouseY >= gridY && mouseY <= gridY + gridH) {
+            for (var entry : summonButtonRects.entrySet()) {
+                int[] r = entry.getValue();
+                if (mouseX >= r[0] && mouseX <= r[0] + r[2] && mouseY >= r[1] && mouseY <= r[1] + r[3]) {
+                    net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+                            new net.zootycoon.network.ZooNetworkPayloads.SummonTierAnimalsPayload(entry.getKey())
+                    );
+                    parent.onClose();
+                    return true;
+                }
+            }
             int cols = 4;
             int cardGap = 6;
             int cardW = (gridW - (cardGap * (cols - 1)) - 6) / cols;

@@ -27,6 +27,8 @@ import java.util.*;
  */
 public class HabitatEvaluator {
 
+    public static final String CREATIVE_PERFECT_TAG = "zoo_creative_perfect";
+
     public enum HabitatStatus {
         SUITABLE,
         UNSUITABLE,
@@ -122,6 +124,10 @@ public class HabitatEvaluator {
         }
 
         HabitatProfile profile = HabitatProfileLoader.getProfile(animal);
+        if (animal.getTags().contains(CREATIVE_PERFECT_TAG)) {
+            String ecoName = profile != null ? profile.displayName() : "-";
+            return new HabitatResult(HabitatStatus.SUITABLE, ecoName, true, false, true, true, false, true, false, true, Collections.emptyList());
+        }
         if (profile == null) {
             return new HabitatResult(HabitatStatus.NO_DATA, "-", false, false, false, false, false, false, false, false, Collections.emptyList());
         }
