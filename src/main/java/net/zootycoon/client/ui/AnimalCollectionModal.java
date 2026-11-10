@@ -11,6 +11,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.zootycoon.animal.AnimalDietRegistry;
 import net.zootycoon.animal.habitat.HabitatProfile;
 import net.zootycoon.animal.habitat.HabitatProfileLoader;
@@ -27,6 +28,7 @@ public class AnimalCollectionModal {
     /** Biome names per species key, filled by the server (client has no biome spawn data). */
     public static final Map<String, List<String>> BIOME_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
     private static final java.util.Set<String> REQUESTED_BIOMES = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private static final ItemStack EMERALD_ICON = new ItemStack(Items.EMERALD);
 
     private final MainManagementScreen parent;
     private final Map<String, LivingEntity> dummyEntityCache = new HashMap<>();
@@ -125,12 +127,9 @@ public class AnimalCollectionModal {
         InspectorState inspector = inspectorState();
         int[] ib = inspectorButtonRect(font, modalX, modalY, modalW);
         boolean hoverInspector = mouseX >= ib[0] && mouseX <= ib[0] + ib[2] && mouseY >= ib[1] && mouseY <= ib[1] + ib[3];
-        int ibBg = !inspector.canRequest() ? 0xFF1E2430 : (hoverInspector ? 0xFF2563EB : 0xFF1D4ED8);
-        int ibBorder = !inspector.canRequest() ? 0xFF334155 : (hoverInspector ? 0xFF60A5FA : 0xFF3B82F6);
-        graphics.fill(ib[0], ib[1], ib[0] + ib[2], ib[1] + ib[3], ibBg);
-        graphics.renderOutline(ib[0], ib[1], ib[2], ib[3], ibBorder);
+        drawSlateButtonBox(graphics, ib[0], ib[1], ib[2], ib[3], inspector.canRequest(), hoverInspector);
         String ibText = ZooTranslations.get(inspector.pendingClaim() ? "zootycoon.license.btn.claim_inspector" : "zootycoon.license.btn.call_inspector");
-        graphics.drawCenteredString(font, ibText, ib[0] + ib[2] / 2, ib[1] + 5, inspector.canRequest() ? 0xFFFFFFFF : 0xFF64748B);
+        graphics.drawCenteredString(font, ibText, ib[0] + ib[2] / 2, ib[1] + 5, inspector.canRequest() ? 0xFFF1F5F9 : 0xFF64748B);
 
         // Left Grid Area vs Right Detail Panel
         int detailW = 152;
@@ -462,19 +461,39 @@ public class AnimalCollectionModal {
         return new int[]{detailX + 8, detailY + detailH - 20 - 8, detailW - 16, 20};
     }
 
+    private static void drawSlateButtonBox(GuiGraphics graphics, int x, int y, int w, int h, boolean enabled, boolean hover) {
+        int bg = !enabled ? 0xFF1A1F2B : (hover ? 0xFF2E3A50 : 0xFF232C3D);
+        int border = !enabled ? 0xFF2D3545 : (hover ? 0xFF94A3B8 : 0xFF475569);
+        graphics.fill(x, y, x + w, y + h, bg);
+        graphics.renderOutline(x, y, w, h, border);
+    }
+
     private void renderInfoBoardButton(GuiGraphics graphics, Font font, int x, int y, int w, int h, int mouseX, int mouseY, boolean enabled) {
         int[] b = infoBoardButtonRect(x, y, w, h);
         boolean hover = mouseX >= b[0] && mouseX <= b[0] + b[2] && mouseY >= b[1] && mouseY <= b[1] + b[3];
-        int bg = !enabled ? 0xFF2A2D35 : (hover ? 0xFF2563EB : 0xFF1D4ED8);
-        int border = !enabled ? 0xFF3F4450 : (hover ? 0xFF60A5FA : 0xFF3B82F6);
-        graphics.fill(b[0], b[1], b[0] + b[2], b[1] + b[3], bg);
-        graphics.renderOutline(b[0], b[1], b[2], b[3], border);
+        drawSlateButtonBox(graphics, b[0], b[1], b[2], b[3], enabled, hover);
         Minecraft mc = Minecraft.getInstance();
         boolean creative = mc.player != null && mc.player.isCreative();
-        String text = creative
-                ? ZooTranslations.get("zootycoon.license.btn.buy_info_board_free")
-                : ZooTranslations.get("zootycoon.license.btn.buy_info_board", ZooLicenseManager.INFO_BOARD_PRICE);
-        graphics.drawCenteredString(font, font.plainSubstrByWidth(text, b[2] - 6), b[0] + b[2] / 2, b[1] + 6, enabled ? 0xFFFFFFFF : 0xFF6B7280);
+        int textColor = enabled ? 0xFFF1F5F9 : 0xFF64748B;
+        if (creative) {
+            String text = ZooTranslations.get("zootycoon.license.btn.buy_info_board_free");
+            graphics.drawCenteredString(font, font.plainSubstrByWidth(text, b[2] - 6), b[0] + b[2] / 2, b[1] + 6, textColor);
+        } else {
+            String priceStr = String.valueOf(ZooLicenseManager.INFO_BOARD_PRICE);
+            int iconW = 16;
+            int gapAfterText = 3;
+            int gapAfterIcon = 1;
+            int priceW = font.width(priceStr);
+            int maxLabelW = Math.max(20, b[2] - 8 - gapAfterText - iconW - gapAfterIcon - priceW);
+            String label = font.plainSubstrByWidth(ZooTranslations.get("zootycoon.license.btn.buy_info_board"), maxLabelW);
+            int labelW = font.width(label);
+            int totalW = labelW + gapAfterText + iconW + gapAfterIcon + priceW;
+            int startX = b[0] + (b[2] - totalW) / 2;
+            graphics.drawString(font, label, startX, b[1] + 6, textColor, false);
+            int iconX = startX + labelW + gapAfterText;
+            graphics.renderItem(EMERALD_ICON, iconX, b[1] + 2);
+            graphics.drawString(font, priceStr, iconX + iconW + gapAfterIcon, b[1] + 6, enabled ? 0xFF6EE7B7 : 0xFF64748B, false);
+        }
         if (hover && !enabled) {
             this.infoBoardTooltip = ZooTranslations.get("zootycoon.license.btn.buy_info_board_locked");
         }

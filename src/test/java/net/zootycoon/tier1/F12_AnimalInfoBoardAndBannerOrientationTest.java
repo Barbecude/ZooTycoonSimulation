@@ -126,5 +126,11 @@ public class F12_AnimalInfoBoardAndBannerOrientationTest {
 
         String itemSource = Files.readString(new File("src/main/java/net/zootycoon/item/LicenseBannerItem.java").toPath());
         assertTrue(itemSource.contains("!isInfoBoard && player instanceof net.minecraft.server.level.ServerPlayer"));
+
+        assertEquals("Beli Papan Info", idLang.get("zootycoon.license.btn.buy_info_board"));
+        assertEquals("Beli Papan Info", enLang.get("zootycoon.license.btn.buy_info_board"));
+        String modalSource = Files.readString(new File("src/main/java/net/zootycoon/client/ui/AnimalCollectionModal.java").toPath());
+        assertTrue(modalSource.contains("Items.EMERALD"));
+        assertTrue(modalSource.contains("drawSlateButtonBox"));
     }
 }
