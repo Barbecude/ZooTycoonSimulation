@@ -553,18 +553,18 @@ public class ZooAnimalHungerManager {
         // 4. Suhu / Iklim (Temperature discomfort -> Freezing or Weakness/Heat)
         var habitatProfile = net.zootycoon.animal.habitat.HabitatProfileLoader.getProfile(animal);
         if (habitatProfile != null) {
-            float effectiveTemp = net.zootycoon.animal.ZooClimate.getEffectiveTemperature(level, animal.blockPosition());
-            if (effectiveTemp < habitatProfile.minTemperature()) {
+            var thermal = ZooClimate.evaluateThermalState(level, animal.blockPosition(), habitatProfile);
+            if (thermal.tooCold()) {
                 // Too Cold: Freezing Ticks
                 animal.setTicksFrozen(Math.min(animal.getTicksRequiredToFreeze() + 60, animal.getTicksFrozen() + 30));
-                if (effectiveTemp < habitatProfile.minTemperature() - 0.35f && level.getGameTime() % 80 == 0) {
+                if (thermal.effectiveTemp() < habitatProfile.minTemperature() - 0.35f && level.getGameTime() % 80 == 0) {
                     animal.hurt(animal.damageSources().freeze(), 1.0f);
                 }
-            } else if (effectiveTemp > habitatProfile.maxTemperature()) {
+            } else if (thermal.tooHot()) {
                 // Too Hot: Weakness + Hunger
                 animal.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80, 0, false, true, true));
                 animal.addEffect(new MobEffectInstance(MobEffects.HUNGER, 80, 0, false, false, true));
-                if (effectiveTemp > habitatProfile.maxTemperature() + 0.35f && level.getGameTime() % 80 == 0) {
+                if (thermal.effectiveTemp() > habitatProfile.maxTemperature() + 0.35f && level.getGameTime() % 80 == 0) {
                     animal.hurt(animal.damageSources().onFire(), 1.0f);
                     level.sendParticles(ParticleTypes.FLAME, animal.getX(), animal.getY() + animal.getBbHeight() * 0.5, animal.getZ(), 3, 0.1, 0.1, 0.1, 0.01);
                 }

@@ -142,14 +142,20 @@ public class FabricSeasonsCompat {
         checkInit();
         if (level == null || pos == null) return 0.5f;
         Holder<Biome> biomeHolder = level.getBiome(pos);
+        float effectiveTemp;
         if (isPresent && injectBiomeTemperatureMethod != null) {
             try {
                 injectBiomeTemperatureMethod.invoke(null, biomeHolder, level);
-            } catch (Throwable ignored) {}
+                // injectBiomeTemperature already applies Fabric Seasons' seasonal temperature to the biome
+                effectiveTemp = biomeHolder.value().getBaseTemperature();
+            } catch (Throwable ignored) {
+                float baseTemp = biomeHolder.value().getBaseTemperature();
+                effectiveTemp = calculateSeasonalTemperature(getCurrentSeason(level), baseTemp);
+            }
+        } else {
+            float baseTemp = biomeHolder.value().getBaseTemperature();
+            effectiveTemp = calculateSeasonalTemperature(getCurrentSeason(level), baseTemp);
         }
-        float baseTemp = biomeHolder.value().getBaseTemperature();
-        String currentSeason = getCurrentSeason(level);
-        float effectiveTemp = calculateSeasonalTemperature(currentSeason, baseTemp);
 
         if (pos.getY() > 80) {
             float heightDrop = (pos.getY() - 80) * 0.05f / 40.0f;

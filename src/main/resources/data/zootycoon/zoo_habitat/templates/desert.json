@@ -3,6 +3,8 @@
   "display_name": "Gurun",
   "biomes": [
     "#minecraft:is_badlands",
+    "#c:is_desert",
+    "#c:is_badlands",
     "minecraft:desert",
     "minecraft:badlands",
     "minecraft:eroded_badlands",

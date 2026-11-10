@@ -3,7 +3,5 @@
     "naturalist:hippo",
     "wildernature:hippo"
   ],
-  "template": "zootycoon:swamp",
-  "min_temperature": 1.25,
-  "max_temperature": 10.0
+  "template": "zootycoon:hot_wetland"
 }

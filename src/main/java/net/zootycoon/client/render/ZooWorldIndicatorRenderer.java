@@ -257,9 +257,10 @@ public class ZooWorldIndicatorRenderer {
                             boolean hot = false;
                             boolean cold = false;
                             if (profile != null) {
-                                float effTemp = ZooClimate.getEffectiveTemperature(living);
-                                cold = effTemp < profile.minTemperature();
-                                hot = effTemp > profile.maxTemperature();
+                                ZooClimate.ThermalAssessment thermalAssessment =
+                                        ZooClimate.evaluateThermalState(living.level(), living.blockPosition(), profile);
+                                cold = thermalAssessment.tooCold();
+                                hot = thermalAssessment.tooHot();
                             }
                             thermal = new CachedThermalStatus(gameTime, hot, cold);
                             THERMAL_CACHE.put(living.getId(), thermal);

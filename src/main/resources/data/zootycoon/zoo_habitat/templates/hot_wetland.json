@@ -1,0 +1,27 @@
+{
+  "name": "hot_wetland",
+  "display_name": "Sungai Tropis / Sabana",
+  "biomes": [
+    "#minecraft:is_savanna",
+    "#c:is_savanna",
+    "#minecraft:is_river",
+    "minecraft:savanna",
+    "minecraft:swamp",
+    "minecraft:mangrove_swamp",
+    "minecraft:river"
+  ],
+  "min_temperature": 1.25,
+  "max_temperature": 10.0,
+  "required_blocks": [
+    {
+      "type": "water",
+      "min_count": 4,
+      "label": "Air"
+    },
+    {
+      "type": "mud",
+      "min_count": 2,
+      "label": "Blok Lumpur"
+    }
+  ]
+}

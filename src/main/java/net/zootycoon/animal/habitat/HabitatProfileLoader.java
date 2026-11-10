@@ -227,6 +227,15 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
     public static HabitatProfile getProfile(Entity entity) {
         if (entity == null) return null;
         ResourceLocation id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
+        return getProfileByResourceLocation(id);
+    }
+
+    public static HabitatProfile getProfileByIdString(String entityId) {
+        if (entityId == null || entityId.isBlank()) return null;
+        return getProfileByResourceLocation(ResourceLocation.tryParse(entityId.trim().toLowerCase(Locale.ROOT)));
+    }
+
+    public static HabitatProfile getProfileByResourceLocation(ResourceLocation id) {
         if (id == null) return null;
 
         String fullKey = id.toString().toLowerCase(Locale.ROOT);
@@ -262,7 +271,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 ZooTycoonMod.id("savanna"),
                 "savanna",
                 "Savana",
-                List.of("#minecraft:is_savanna"),
+                List.of("#minecraft:is_savanna", "#c:is_savanna"),
                 List.of(ResourceLocation.parse("minecraft:savanna"), ResourceLocation.parse("minecraft:savanna_plateau"), ResourceLocation.parse("minecraft:windswept_savanna")),
                 1.25f,
                 10.0f,
@@ -307,7 +316,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 ZooTycoonMod.id("snow"),
                 "snow",
                 "Kutub/Salju",
-                List.of("#minecraft:spawns_snow_foxes", "#minecraft:spawns_white_rabbits"),
+                List.of("#minecraft:spawns_snow_foxes", "#minecraft:spawns_white_rabbits", "#c:is_snowy", "#c:is_icy"),
                 List.of(ResourceLocation.parse("minecraft:snowy_plains"), ResourceLocation.parse("minecraft:ice_spikes"), ResourceLocation.parse("minecraft:snowy_taiga"), ResourceLocation.parse("minecraft:snowy_slopes"), ResourceLocation.parse("minecraft:frozen_peaks"), ResourceLocation.parse("minecraft:jagged_peaks"), ResourceLocation.parse("minecraft:grove"), ResourceLocation.parse("minecraft:frozen_ocean"), ResourceLocation.parse("minecraft:deep_frozen_ocean")),
                 -10.0f,
                 0.25f,
@@ -321,7 +330,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 ZooTycoonMod.id("desert"),
                 "desert",
                 "Gurun",
-                List.of("#minecraft:is_badlands"),
+                List.of("#minecraft:is_badlands", "#c:is_desert", "#c:is_badlands"),
                 List.of(ResourceLocation.parse("minecraft:desert"), ResourceLocation.parse("minecraft:badlands"), ResourceLocation.parse("minecraft:eroded_badlands"), ResourceLocation.parse("minecraft:wooded_badlands")),
                 1.25f,
                 10.0f,
@@ -764,8 +773,8 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
         // 1. Arctic / Snow specialists FIRST so snow_leopard never gets absorbed by leopard/jungle
         if (path.contains("polar_bear") || path.contains("froststalker") || path.contains("mammoth")
                 || path.contains("snow_leopard") || path.contains("seal") || path.contains("walrus")
-                || path.contains("arctic") || path.contains("snow") || path.contains("goat")
-                || path.contains("reindeer")) {
+                || path.contains("penguin") || path.contains("arctic") || path.contains("snow")
+                || path.contains("goat") || path.contains("reindeer")) {
             HabitatProfile t = TEMPLATES.get(ZooTycoonMod.id("snow"));
             if (t != null) return t;
         }
@@ -785,7 +794,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 || path.contains("rhino") || path.contains("giraffe") || path.contains("hyena")
                 || path.contains("gazelle") || path.contains("antelope") || path.contains("kangaroo")
                 || path.contains("ostrich") || path.contains("emu") || path.contains("warthog")
-                || path.contains("meerkat") || path.contains("hippo")) {
+                || path.contains("meerkat") || path.contains("hippo") || path.contains("flamingo")) {
             HabitatProfile t = TEMPLATES.get(ZooTycoonMod.id("savanna"));
             if (t != null) return t;
         }

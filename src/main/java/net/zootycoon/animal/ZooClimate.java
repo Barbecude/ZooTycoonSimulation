@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
+import net.zootycoon.animal.habitat.HabitatProfile;
 import net.zootycoon.compat.FabricSeasonsCompat;
 import net.zootycoon.compat.SereneSeasonsCompat;
 
@@ -14,6 +15,80 @@ import java.util.Locale;
  * Uses Fabric Seasons (or Serene Seasons fallback) and accurate Minecraft biome temperature calculations.
  */
 public class ZooClimate {
+
+    public record ThermalAssessment(boolean tooCold, boolean tooHot, float effectiveTemp) {}
+
+    public static boolean isHotSpecialist(HabitatProfile profile) {
+        return profile != null && profile.minTemperature() >= 1.0f;
+    }
+
+    public static boolean isColdSpecialist(HabitatProfile profile) {
+        return profile != null && profile.maxTemperature() <= 0.35f;
+    }
+
+    /**
+     * Evaluates thermal comfort using biome specialization:
+     * - Temperate/moderate species are immune to seasonal swings and never require heaters or coolers.
+     * - Hot-only species stay comfortable in their native biome outside Winter; outside hot biomes or in unheated Winter they feel cold.
+     * - Cold-only species stay comfortable in their native biome outside Summer; outside cold biomes or in uncooled Summer they feel hot.
+     */
+    public static ThermalAssessment evaluateThermalState(
+            float effectiveTemp,
+            float thermalAdjustment,
+            String season,
+            boolean inNativeBiome,
+            HabitatProfile profile
+    ) {
+        if (profile == null) {
+            return new ThermalAssessment(false, false, effectiveTemp);
+        }
+        boolean hotSpec = isHotSpecialist(profile);
+        boolean coldSpec = isColdSpecialist(profile);
+        if (!hotSpec && !coldSpec) {
+            return new ThermalAssessment(false, false, effectiveTemp);
+        }
+
+        if (hotSpec) {
+            boolean tooCold;
+            if (inNativeBiome) {
+                tooCold = "WINTER".equalsIgnoreCase(season)
+                        && effectiveTemp < profile.minTemperature()
+                        && thermalAdjustment < 0.50f;
+            } else {
+                tooCold = effectiveTemp < profile.minTemperature();
+            }
+            return new ThermalAssessment(tooCold, false, effectiveTemp);
+        }
+
+        boolean tooHot;
+        if (inNativeBiome) {
+            tooHot = "SUMMER".equalsIgnoreCase(season)
+                    && effectiveTemp > profile.maxTemperature()
+                    && thermalAdjustment > -0.50f;
+        } else {
+            tooHot = effectiveTemp > profile.maxTemperature();
+        }
+        return new ThermalAssessment(false, tooHot, effectiveTemp);
+    }
+
+    public static ThermalAssessment evaluateThermalState(Level level, BlockPos pos, HabitatProfile profile) {
+        float effectiveTemp = getEffectiveTemperature(level, pos);
+        if (level == null || pos == null || profile == null) {
+            return evaluateThermalState(effectiveTemp, 0.0f, "SPRING", false, profile);
+        }
+        float adjustment = getThermalAdjustment(pos);
+        String season = getCurrentSeason(level);
+        boolean inNativeBiome = profile.matchesBiome(level.getBiome(pos));
+        return evaluateThermalState(effectiveTemp, adjustment, season, inNativeBiome, profile);
+    }
+
+    public static boolean isTooCold(Level level, BlockPos pos, HabitatProfile profile) {
+        return evaluateThermalState(level, pos, profile).tooCold();
+    }
+
+    public static boolean isTooHot(Level level, BlockPos pos, HabitatProfile profile) {
+        return evaluateThermalState(level, pos, profile).tooHot();
+    }
 
     public enum TempCategory {
         FREEZING("freezing", "zootycoon.temperature.freezing"),

@@ -902,8 +902,8 @@ public class ZooZookeeperEntity extends PathfinderMob {
             for (LivingEntity member : getAssignedFamily(sLevel)) {
                 HabitatProfile p = HabitatProfileLoader.getProfile(member);
                 if (p != null) {
-                    float effT = ZooClimate.getEffectiveTemperature(sLevel, member.blockPosition());
-                    if (effT < p.minTemperature() || effT > p.maxTemperature()) {
+                    var memberThermal = ZooClimate.evaluateThermalState(sLevel, member.blockPosition(), p);
+                    if (memberThermal.tooCold() || memberThermal.tooHot()) {
                         thermalTarget = member;
                         break;
                     }
@@ -912,9 +912,9 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
             HabitatProfile habProfile = HabitatProfileLoader.getProfile(thermalTarget);
             if (habProfile != null) {
-                float effectiveTemp = ZooClimate.getEffectiveTemperature(sLevel, thermalTarget.blockPosition());
-                boolean tooCold = effectiveTemp < habProfile.minTemperature();
-                boolean tooHot = effectiveTemp > habProfile.maxTemperature();
+                var thermalState = ZooClimate.evaluateThermalState(sLevel, thermalTarget.blockPosition(), habProfile);
+                boolean tooCold = thermalState.tooCold();
+                boolean tooHot = thermalState.tooHot();
 
                 if (tooCold) {
                     BlockPos nearestHeater = findNearestHeater(sLevel, thermalTarget.blockPosition(), 20.0D);
@@ -1319,10 +1319,10 @@ public class ZooZookeeperEntity extends PathfinderMob {
             if (this.level() instanceof ServerLevel sLevel) {
                 for (LivingEntity m : getAssignedFamily(sLevel)) {
                     HabitatProfile p = HabitatProfileLoader.getProfile(m);
-                    float t = ZooClimate.getEffectiveTemperature(m);
                     if (p != null) {
-                        if (t < p.minTemperature() && coldAnimal == null) coldAnimal = m;
-                        if (t > p.maxTemperature() && hotAnimal == null) hotAnimal = m;
+                        var memberThermal = ZooClimate.evaluateThermalState(sLevel, m.blockPosition(), p);
+                        if (memberThermal.tooCold() && coldAnimal == null) coldAnimal = m;
+                        if (memberThermal.tooHot() && hotAnimal == null) hotAnimal = m;
                     }
                     if (ZooAnimalHungerManager.getCleanliness(m) <= 60 && dirtyAnimal == null) {
                         dirtyAnimal = m;
@@ -1331,9 +1331,11 @@ public class ZooZookeeperEntity extends PathfinderMob {
             }
             if (coldAnimal == null && hotAnimal == null) {
                 HabitatProfile habProfile = HabitatProfileLoader.getProfile(animal);
-                float effectiveTemp = ZooClimate.getEffectiveTemperature(animal);
-                if (habProfile != null && effectiveTemp < habProfile.minTemperature()) coldAnimal = animal;
-                if (habProfile != null && effectiveTemp > habProfile.maxTemperature()) hotAnimal = animal;
+                if (habProfile != null) {
+                    var thermal = ZooClimate.evaluateThermalState(animal.level(), animal.blockPosition(), habProfile);
+                    if (thermal.tooCold()) coldAnimal = animal;
+                    if (thermal.tooHot()) hotAnimal = animal;
+                }
             }
 
             if (coldAnimal != null) {

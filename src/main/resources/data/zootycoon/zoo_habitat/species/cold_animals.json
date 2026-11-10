@@ -4,7 +4,12 @@
     "alexsmobs:mammoth",
     "naturalist:mammoth",
     "alexsmobs:froststalker",
-    "alexsmobs:snow_leopard"
+    "alexsmobs:snow_leopard",
+    "naturalist:penguin",
+    "wildernature:penguin",
+    "ecologics:penguin",
+    "wildernature:reindeer",
+    "wildernature:arctic_fox"
   ],
   "template": "zootycoon:snow"
 }

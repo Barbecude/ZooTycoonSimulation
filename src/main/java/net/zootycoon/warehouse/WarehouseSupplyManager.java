@@ -682,9 +682,11 @@ public class WarehouseSupplyManager {
             }
 
             var habProfile = net.zootycoon.animal.habitat.HabitatProfileLoader.getProfile(m);
-            float effectiveTemp = net.zootycoon.animal.ZooClimate.getEffectiveTemperature(sLevel, m.blockPosition());
-            boolean tooCold = habProfile != null && effectiveTemp < habProfile.minTemperature();
-            boolean tooHot = habProfile != null && effectiveTemp > habProfile.maxTemperature();
+            var thermal = habProfile != null
+                    ? net.zootycoon.animal.ZooClimate.evaluateThermalState(sLevel, m.blockPosition(), habProfile)
+                    : null;
+            boolean tooCold = thermal != null && thermal.tooCold();
+            boolean tooHot = thermal != null && thermal.tooHot();
 
             if (tooCold && !keeper.hasCoal()) {
                 StaffSupplyRequest req = new StaffSupplyRequest(

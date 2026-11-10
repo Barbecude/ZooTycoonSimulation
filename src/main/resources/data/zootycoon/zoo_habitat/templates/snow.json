@@ -4,6 +4,8 @@
   "biomes": [
     "#minecraft:spawns_snow_foxes",
     "#minecraft:spawns_white_rabbits",
+    "#c:is_snowy",
+    "#c:is_icy",
     "minecraft:snowy_plains",
     "minecraft:ice_spikes",
     "minecraft:snowy_taiga",

@@ -3,6 +3,7 @@
   "display_name": "Savana",
   "biomes": [
     "#minecraft:is_savanna",
+    "#c:is_savanna",
     "minecraft:savanna",
     "minecraft:savanna_plateau",
     "minecraft:windswept_savanna"

@@ -170,10 +170,10 @@ public class HabitatEvaluator {
         Holder<Biome> currentBiome = level.getBiome(animal.blockPosition());
         boolean biomeOk = profile.matchesBiome(currentBiome);
 
-        // 5. Check Effective Temperature & Thermal Blocks (Heater & Cooler Box only when season is unsuitable)
-        float effectiveTemp = ZooClimate.getEffectiveTemperature(level, animal.blockPosition());
-        boolean tooCold = effectiveTemp < profile.minTemperature();
-        boolean tooHot = effectiveTemp > profile.maxTemperature();
+        // 5. Check Effective Temperature & Thermal Blocks (only hot/cold biome specialists feel discomfort)
+        ZooClimate.ThermalAssessment thermal = ZooClimate.evaluateThermalState(level, animal.blockPosition(), profile);
+        boolean tooCold = thermal.tooCold();
+        boolean tooHot = thermal.tooHot();
         boolean tempOk = !tooCold && !tooHot;
 
         // 6. Companion requirement removed per user request
