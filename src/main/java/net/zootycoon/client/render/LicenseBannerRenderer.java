@@ -107,8 +107,8 @@ public class LicenseBannerRenderer extends EntityRenderer<LicenseBannerEntity> {
         if (entity.isAnimalInfoBanner()) {
             renderAnimalInfoBanner(entity, partialTick, poseStack, bufferSource, packedLight);
         } else {
-            // 1. Render 3x2 Textured Wooden Plaque with Parchment in world space with scene lighting
-            renderPlaqueQuad(poseStack, bufferSource, customTex, packedLight, 1.5F, 1.0F, 0.0F, 0.01F, true);
+            // 1. Render 3x2 Textured Wooden Plaque with light 3D outer rim & metallic corner studs
+            renderCertificationPlaque(poseStack, bufferSource, customTex, packedLight);
             // 2. Render Inscribed Certificate Text
             renderInscribedCertificateText(entity, tierLevel, poseStack, bufferSource, packedLight);
         }
@@ -230,18 +230,14 @@ public class LicenseBannerRenderer extends EntityRenderer<LicenseBannerEntity> {
         font.drawInBatch(trimmedName, 0, 0, 0xFF1F1206, false, poseStack.last().pose(), bufferSource, Font.DisplayMode.POLYGON_OFFSET, 0, light);
         poseStack.popPose();
 
-        // 2. Fun Fact Header (no license tier subtitle)
-        String funFactTitle = ZooTranslations.get("zootycoon.license.banner.fun_fact_title");
-        font.drawInBatch(funFactTitle, textStartX, -32, 0xFF7D1B1B, false, textMat, bufferSource, Font.DisplayMode.POLYGON_OFFSET, 0, light);
-
-        // 3. Wrapped Educational Fun Fact Description
+        // 2. Wrapped Educational Fun Fact Description (red heading removed per user request)
         String funFact = ZooTranslations.get("zootycoon.species." + speciesKey + ".fun_fact");
         var wrappedLines = font.split(Component.literal(funFact), textWidth);
-        int lineY = -20;
+        int lineY = -32;
         for (var formattedLine : wrappedLines) {
             font.drawInBatch(formattedLine, textStartX, lineY, 0xFF2E1B0E, false, textMat, bufferSource, Font.DisplayMode.POLYGON_OFFSET, 0, light);
             lineY += 9;
-            if (lineY > 60) break; // Keep inside board bounds
+            if (lineY > 62) break; // Keep inside board bounds
         }
 
         poseStack.popPose();
@@ -302,6 +298,61 @@ public class LicenseBannerRenderer extends EntityRenderer<LicenseBannerEntity> {
         }
     }
 
+    private void renderCertificationPlaque(PoseStack poseStack, MultiBufferSource bufferSource, ResourceLocation texture, int light) {
+        // Base 3x2 plaque body + wooden back
+        renderPlaqueQuad(poseStack, bufferSource, texture, light, 1.5F, 1.0F, 0.0F, 0.01F, true);
+
+        PoseStack.Pose pose = poseStack.last();
+        Matrix4f matrix = pose.pose();
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.entitySolid(texture));
+
+        // 4 raised 3D wooden border strips around the perimeter (z = 0.01F -> 0.036F)
+        float rimW = 0.090F;
+        float frameU0 = 0.005F, frameU1 = 0.025F, frameV0 = 0.005F, frameV1 = 0.025F;
+        addTexturedBox(vc, pose, matrix, light, -1.5F, 1.0F - rimW, 0.01F, 1.5F, 1.0F, 0.036F, frameU0, frameV0, frameU1, frameV1);
+        addTexturedBox(vc, pose, matrix, light, -1.5F, -1.0F, 0.01F, 1.5F, -1.0F + rimW, 0.036F, frameU0, frameV0, frameU1, frameV1);
+        addTexturedBox(vc, pose, matrix, light, -1.5F, -1.0F + rimW, 0.01F, -1.5F + rimW, 1.0F - rimW, 0.036F, frameU0, frameV0, frameU1, frameV1);
+        addTexturedBox(vc, pose, matrix, light, 1.5F - rimW, -1.0F + rimW, 0.01F, 1.5F, 1.0F - rimW, 0.036F, frameU0, frameV0, frameU1, frameV1);
+
+        // 4 raised 3D metallic corner studs/plates (z = 0.01F -> 0.044F), sampled from corner plate UV
+        float stud = 0.145F;
+        float studU0 = 0.042F, studU1 = 0.068F, studV0 = 0.062F, studV1 = 0.102F;
+        addTexturedBox(vc, pose, matrix, light, -1.5F, 1.0F - stud, 0.01F, -1.5F + stud, 1.0F, 0.044F, studU0, studV0, studU1, studV1);
+        addTexturedBox(vc, pose, matrix, light, 1.5F - stud, 1.0F - stud, 0.01F, 1.5F, 1.0F, 0.044F, studU0, studV0, studU1, studV1);
+        addTexturedBox(vc, pose, matrix, light, -1.5F, -1.0F, 0.01F, -1.5F + stud, -1.0F + stud, 0.044F, studU0, studV0, studU1, studV1);
+        addTexturedBox(vc, pose, matrix, light, 1.5F - stud, -1.0F, 0.01F, 1.5F, -1.0F + stud, 0.044F, studU0, studV0, studU1, studV1);
+    }
+
+    private void addTexturedBox(VertexConsumer vc, PoseStack.Pose pose, Matrix4f matrix, int light,
+                                float x0, float y0, float z0, float x1, float y1, float z1,
+                                float u0, float v0, float u1, float v1) {
+        // Front (+Z)
+        vc.addVertex(matrix, x0, y0, z1).setColor(255, 255, 255, 255).setUv(u0, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
+        vc.addVertex(matrix, x1, y0, z1).setColor(255, 255, 255, 255).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
+        vc.addVertex(matrix, x1, y1, z1).setColor(255, 255, 255, 255).setUv(u1, v0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
+        vc.addVertex(matrix, x0, y1, z1).setColor(255, 255, 255, 255).setUv(u0, v0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
+        // Top (+Y)
+        vc.addVertex(matrix, x0, y1, z1).setColor(245, 245, 245, 255).setUv(u0, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 1.0F, 0.0F);
+        vc.addVertex(matrix, x1, y1, z1).setColor(245, 245, 245, 255).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 1.0F, 0.0F);
+        vc.addVertex(matrix, x1, y1, z0).setColor(245, 245, 245, 255).setUv(u1, v0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 1.0F, 0.0F);
+        vc.addVertex(matrix, x0, y1, z0).setColor(245, 245, 245, 255).setUv(u0, v0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 1.0F, 0.0F);
+        // Bottom (-Y)
+        vc.addVertex(matrix, x0, y0, z0).setColor(220, 220, 220, 255).setUv(u0, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, -1.0F, 0.0F);
+        vc.addVertex(matrix, x1, y0, z0).setColor(220, 220, 220, 255).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, -1.0F, 0.0F);
+        vc.addVertex(matrix, x1, y0, z1).setColor(220, 220, 220, 255).setUv(u1, v0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, -1.0F, 0.0F);
+        vc.addVertex(matrix, x0, y0, z1).setColor(220, 220, 220, 255).setUv(u0, v0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, -1.0F, 0.0F);
+        // Left (-X)
+        vc.addVertex(matrix, x0, y0, z0).setColor(235, 235, 235, 255).setUv(u0, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, -1.0F, 0.0F, 0.0F);
+        vc.addVertex(matrix, x0, y0, z1).setColor(235, 235, 235, 255).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, -1.0F, 0.0F, 0.0F);
+        vc.addVertex(matrix, x0, y1, z1).setColor(235, 235, 235, 255).setUv(u1, v0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, -1.0F, 0.0F, 0.0F);
+        vc.addVertex(matrix, x0, y1, z0).setColor(235, 235, 235, 255).setUv(u0, v0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, -1.0F, 0.0F, 0.0F);
+        // Right (+X)
+        vc.addVertex(matrix, x1, y0, z1).setColor(235, 235, 235, 255).setUv(u0, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 1.0F, 0.0F, 0.0F);
+        vc.addVertex(matrix, x1, y0, z0).setColor(235, 235, 235, 255).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 1.0F, 0.0F, 0.0F);
+        vc.addVertex(matrix, x1, y1, z0).setColor(235, 235, 235, 255).setUv(u1, v0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 1.0F, 0.0F, 0.0F);
+        vc.addVertex(matrix, x1, y1, z1).setColor(235, 235, 235, 255).setUv(u0, v0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 1.0F, 0.0F, 0.0F);
+    }
+
     private void renderInscribedCertificateText(LicenseBannerEntity entity, int tierLevel, PoseStack poseStack, MultiBufferSource bufferSource, int light) {
         LicenseTier tier = LicenseTier.byLevel(tierLevel);
         Font font = Minecraft.getInstance().font;
@@ -311,30 +362,43 @@ public class LicenseBannerRenderer extends EntityRenderer<LicenseBannerEntity> {
         poseStack.translate(0.0F, 0.0F, 0.015F);
         poseStack.scale(0.0125F, -0.0125F, 0.0125F);
 
-        Matrix4f textMat = poseStack.last().pose();
+        // 1. Official Conservation Header
+        String header = ZooTranslations.get("zootycoon.license.banner.header");
+        drawScaledCentered(font, header, 0.0F, -52.0F, 0.62F, 184.0F, 0xFF7A561F, poseStack, bufferSource, light);
 
-        // 1. License Tier Title (Enlarged, cleanly centered above the medal)
-        poseStack.pushPose();
-        poseStack.translate(0.0F, -32.0F, 0.001F);
-        poseStack.scale(1.35F, 1.35F, 1.0F);
+        // 2. License Tier Title (Enlarged, cleanly centered without tier stars)
         String tierTitle = tier.getDisplayName().toUpperCase();
-        drawCenteredOffset(font, tierTitle, 0, 0, 0xFF1F1206, poseStack.last().pose(), bufferSource, light);
-        poseStack.popPose();
+        drawScaledCentered(font, tierTitle, 0.0F, -38.0F, 1.30F, 196.0F, 0xFF1F1206, poseStack, bufferSource, light);
 
-        // 2. Zoo Name / Awardee
+        // 3. Zoo Name / Awardee (sits cleanly below the central divider line)
         String awardedTo = ZooTranslations.get("zootycoon.license.banner.awarded_to", entity.getZooName());
-        drawCenteredOffset(font, awardedTo, 0, -4, 0xFF2E1B0E, textMat, bufferSource, light);
+        drawScaledCentered(font, awardedTo, 0.0F, -9.0F, 1.05F, 188.0F, 0xFF2E1B0E, poseStack, bufferSource, light);
 
-        // 3. Cumulative verified species count up through this tier
+        // 4. Cumulative verified species count up through this tier
         String speciesInfo = ZooTranslations.get("zootycoon.license.banner.species_verified", tier.getCumulativeSpeciesCount());
-        drawCenteredOffset(font, speciesInfo, 0, 14, 0xFF6A5442, textMat, bufferSource, light);
+        drawScaledCentered(font, speciesInfo, 0.0F, 8.0F, 0.90F, 176.0F, 0xFF5C4332, poseStack, bufferSource, light);
+
+        // 5. Inspector Certification & Tier Grade flanking the preserved bottom-center medal badge
+        drawScaledCentered(font, "Zoo Inspector", -62.5F, 37.5F, 0.72F, 64.0F, 0xFF3A2414, poseStack, bufferSource, light);
+        String certifiedLabel = ZooTranslations.get("zootycoon.license.banner.certified");
+        drawScaledCentered(font, certifiedLabel, -62.5F, 50.0F, 0.56F, 66.0F, 0xFF6B5340, poseStack, bufferSource, light);
+
+        drawScaledCentered(font, "Tier " + tierLevel, 62.5F, 37.5F, 0.72F, 64.0F, 0xFF3A2414, poseStack, bufferSource, light);
+        String verifiedLabel = ZooTranslations.get("zootycoon.license.banner.verified");
+        drawScaledCentered(font, verifiedLabel, 62.5F, 50.0F, 0.52F, 68.0F, 0xFF6B5340, poseStack, bufferSource, light);
 
         poseStack.popPose();
     }
 
-    private void drawCenteredOffset(Font font, String text, float centerX, float y, int color, Matrix4f matrix, MultiBufferSource buffer, int light) {
+    private void drawScaledCentered(Font font, String text, float centerX, float y, float baseScale, float maxWidth,
+                                    int color, PoseStack poseStack, MultiBufferSource buffer, int light) {
         if (text == null || text.isEmpty()) return;
-        float x = centerX - (font.width(text) / 2.0F);
-        font.drawInBatch(text, x, y, color, false, matrix, buffer, Font.DisplayMode.POLYGON_OFFSET, 0, light);
+        int rawW = font.width(text);
+        float scale = rawW > 0 ? Math.min(baseScale, maxWidth / rawW) : baseScale;
+        poseStack.pushPose();
+        poseStack.translate(centerX, y, 0.001F);
+        poseStack.scale(scale, scale, 1.0F);
+        font.drawInBatch(text, -rawW / 2.0F, 0.0F, color, false, poseStack.last().pose(), buffer, Font.DisplayMode.POLYGON_OFFSET, 0, light);
+        poseStack.popPose();
     }
 }
