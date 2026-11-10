@@ -189,6 +189,32 @@ public class ZooSecurityEntity extends PathfinderMob {
                 }
             }
 
+            if (isBeingCalled()) {
+                if (isOnStrike() && this.tickCount % 60 == 0) {
+                    sLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.ANGRY_VILLAGER, this.getX(), this.getY() + 1.2D, this.getZ(), 1, 0.1, 0.1, 0.1, 0.0);
+                }
+                var caller = sLevel.getServer().getPlayerList().getPlayer(callTargetUuid);
+                if (caller == null || !caller.isAlive()) {
+                    callTargetUuid = null;
+                    callTicks = 0;
+                } else if (this.distanceToSqr(caller) <= 9.0D) {
+                    this.getNavigation().stop();
+                    this.getLookControl().setLookAt(caller, 30.0F, 30.0F);
+                    callTargetUuid = null;
+                    callTicks = 0;
+                } else {
+                    if (this.tickCount % 10 == 0) {
+                        this.getNavigation().moveTo(caller, 1.25D);
+                    }
+                    if (this.tickCount % 20 == 0 && this.getNavigation().isDone() && callTicks < 560) {
+                        this.teleportTo(caller.getX() + 1.0, caller.getY(), caller.getZ() + 1.0);
+                        callTargetUuid = null;
+                        callTicks = 0;
+                    }
+                }
+                return;
+            }
+
             if (isOnStrike()) {
                 if (this.tickCount % 60 == 0) {
                     sLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.ANGRY_VILLAGER, this.getX(), this.getY() + 1.2D, this.getZ(), 1, 0.1, 0.1, 0.1, 0.0);

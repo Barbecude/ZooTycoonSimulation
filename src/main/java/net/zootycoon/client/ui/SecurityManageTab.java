@@ -47,7 +47,8 @@ public class SecurityManageTab {
 
     private List<ZooNetworkPayloads.SecuritySyncData> sortedSecurity() {
         List<ZooNetworkPayloads.SecuritySyncData> list = new ArrayList<>(ZooTycoonClient.clientSecurityList);
-        list.sort(Comparator.comparing(ZooNetworkPayloads.SecuritySyncData::isAggro).reversed()
+        list.sort(Comparator.comparing(ZooNetworkPayloads.SecuritySyncData::isOnStrike).reversed()
+                .thenComparing(Comparator.comparing(ZooNetworkPayloads.SecuritySyncData::isAggro).reversed())
                 .thenComparing(ZooNetworkPayloads.SecuritySyncData::name));
         return list;
     }
@@ -92,26 +93,36 @@ public class SecurityManageTab {
 
     private void drawRow(GuiGraphics graphics, Minecraft mc, ZooNetworkPayloads.SecuritySyncData s,
                          int x, int y, int w, int mouseX, int mouseY, int top, int bottom) {
+        boolean onStrike = s.isOnStrike();
+        int borderCol = onStrike ? 0xFFE06C75 : 0xFF242A38;
         graphics.fill(x, y, x + w, y + ROW_H, 0xF20F1219);
-        graphics.fill(x, y, x + w, y + 1, 0xFF242A38);
-        graphics.fill(x, y + ROW_H - 1, x + w, y + ROW_H, 0xFF242A38);
-        graphics.fill(x, y, x + 1, y + ROW_H, 0xFF242A38);
-        graphics.fill(x + w - 1, y, x + w, y + ROW_H, 0xFF242A38);
+        graphics.fill(x, y, x + w, y + 1, borderCol);
+        graphics.fill(x, y + ROW_H - 1, x + w, y + ROW_H, borderCol);
+        graphics.fill(x, y, x + 1, y + ROW_H, borderCol);
+        graphics.fill(x + w - 1, y, x + w, y + ROW_H, borderCol);
 
         boolean isCalling = s.isCalling() || pendingCalledSecurity.contains(s.uuid());
         if (!s.isCalling()) {
             pendingCalledSecurity.remove(s.uuid());
         }
 
-        graphics.drawString(mc.font, Component.literal(s.name()), x + 10, y + 5, 0xFFE6EDF3, false);
+        int nameX = x + 10;
+        if (onStrike) {
+            StaffRecruitmentTab.renderStrikeRowIcon(graphics, x + 8, y + 4);
+            nameX = x + 21;
+        }
+        graphics.drawString(mc.font, Component.literal(s.name()), nameX, y + 5, 0xFFE6EDF3, false);
         String status;
         int statusColor;
-        if (s.isAggro()) {
-            status = ZooTranslations.get("zootycoon.ui.staff.manage.security_combat");
-            statusColor = 0xFFFF5555;
-        } else if (isCalling) {
+        if (isCalling) {
             status = ZooTranslations.get("zootycoon.ui.staff.manage.calling");
             statusColor = 0xFFFFAA00;
+        } else if (onStrike) {
+            status = ZooTranslations.get("zootycoon.ui.staff.manage.on_strike");
+            statusColor = 0xFFFF5555;
+        } else if (s.isAggro()) {
+            status = ZooTranslations.get("zootycoon.ui.staff.manage.security_combat");
+            statusColor = 0xFFFF5555;
         } else {
             status = ZooTranslations.get("zootycoon.ui.staff.manage.security_patrol");
             statusColor = 0xFF55FF55;

@@ -64,7 +64,8 @@ public class ZookeeperManageTab {
 
     private List<ZooNetworkPayloads.ZookeeperSyncData> sortedKeepers() {
         List<ZooNetworkPayloads.ZookeeperSyncData> list = new ArrayList<>(ZooTycoonClient.clientZookeeperList);
-        list.sort(Comparator.comparing(ZooNetworkPayloads.ZookeeperSyncData::isAssigned)
+        list.sort(Comparator.comparing(ZooNetworkPayloads.ZookeeperSyncData::isOnStrike).reversed()
+                .thenComparing(ZooNetworkPayloads.ZookeeperSyncData::isAssigned)
                 .thenComparing(ZooNetworkPayloads.ZookeeperSyncData::name));
         return list;
     }
@@ -109,11 +110,13 @@ public class ZookeeperManageTab {
 
     private void drawRow(GuiGraphics graphics, Minecraft mc, ZooNetworkPayloads.ZookeeperSyncData zk,
                          int x, int y, int w, int mouseX, int mouseY, int top, int bottom) {
+        boolean onStrike = zk.isOnStrike();
+        int borderCol = onStrike ? 0xFFE06C75 : 0xFF242A38;
         graphics.fill(x, y, x + w, y + ROW_H, 0xF20F1219);
-        graphics.fill(x, y, x + w, y + 1, 0xFF242A38);
-        graphics.fill(x, y + ROW_H - 1, x + w, y + ROW_H, 0xFF242A38);
-        graphics.fill(x, y, x + 1, y + ROW_H, 0xFF242A38);
-        graphics.fill(x + w - 1, y, x + w, y + ROW_H, 0xFF242A38);
+        graphics.fill(x, y, x + w, y + 1, borderCol);
+        graphics.fill(x, y + ROW_H - 1, x + w, y + ROW_H, borderCol);
+        graphics.fill(x, y, x + 1, y + ROW_H, borderCol);
+        graphics.fill(x + w - 1, y, x + w, y + ROW_H, borderCol);
 
         boolean busy = zk.isAssigned();
         boolean isCalling = zk.isCalling() || pendingCalledKeepers.contains(zk.uuid());
@@ -121,15 +124,23 @@ public class ZookeeperManageTab {
             pendingCalledKeepers.remove(zk.uuid());
         }
 
-        graphics.drawString(mc.font, Component.literal(zk.name()), x + 10, y + 5, 0xFFE6EDF3, false);
+        int nameX = x + 10;
+        if (onStrike) {
+            StaffRecruitmentTab.renderStrikeRowIcon(graphics, x + 8, y + 4);
+            nameX = x + 21;
+        }
+        graphics.drawString(mc.font, Component.literal(zk.name()), nameX, y + 5, 0xFFE6EDF3, false);
         String status;
         int statusColor;
-        if (busy) {
-            status = ZooTranslations.get("zootycoon.ui.staff.manage.working");
-            statusColor = 0xFF8B949E;
-        } else if (isCalling) {
+        if (isCalling) {
             status = ZooTranslations.get("zootycoon.ui.staff.manage.calling");
             statusColor = 0xFFFFAA00;
+        } else if (onStrike) {
+            status = ZooTranslations.get("zootycoon.ui.staff.manage.on_strike");
+            statusColor = 0xFFFF5555;
+        } else if (busy) {
+            status = ZooTranslations.get("zootycoon.ui.staff.manage.working");
+            statusColor = 0xFF8B949E;
         } else {
             status = ZooTranslations.get("zootycoon.ui.staff.manage.idle");
             statusColor = 0xFF55FF55;
@@ -141,7 +152,7 @@ public class ZookeeperManageTab {
         int callX = fireX - CALL_W - 6;
 
         boolean confirming = zk.uuid().equals(confirmFireUuid) && System.currentTimeMillis() < confirmFireUntil;
-        boolean canCall = !busy && !isCalling;
+        boolean canCall = (!busy || onStrike) && !isCalling;
         drawButton(graphics, mc, callX, by, CALL_W,
                 ZooTranslations.get(isCalling ? "zootycoon.ui.staff.manage.btn_calling" : "zootycoon.ui.staff.manage.btn_call"),
                 canCall, false, mouseX, mouseY, top, bottom);
@@ -182,7 +193,7 @@ public class ZookeeperManageTab {
             if (mouseY >= by && mouseY <= by + BTN_H) {
                 if (mouseX >= callX && mouseX <= callX + CALL_W) {
                     boolean isCalling = zk.isCalling() || pendingCalledKeepers.contains(zk.uuid());
-                    if (zk.isAssigned()) {
+                    if (zk.isAssigned() && !zk.isOnStrike()) {
                         ZooHudOverlay.showToast("zootycoon.toast.title.warning", "zootycoon.staff.manage.busy", ZooHudOverlay.TOAST_WARNING);
                     } else if (isCalling) {
                         // Already called and on the way, button is disabled

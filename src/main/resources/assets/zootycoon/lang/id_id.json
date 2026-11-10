@@ -143,6 +143,8 @@
   "zootycoon.ui.staff.manage.btn_calling": "Menuju...",
   "zootycoon.ui.staff.manage.btn_fire": "Pecat",
   "zootycoon.ui.staff.manage.btn_confirm": "Yakin?",
+  "zootycoon.ui.staff.manage.on_strike": "Mogok Kerja (Belum Dibayar)",
+  "zootycoon.ui.staff.strike_tooltip": "Staf mogok kerja: %s",
   "zootycoon.ui.staff.manage.builder_summary": "Total: %s  |  Siaga: %s  |  Membangun: %s",
   "zootycoon.ui.staff.manage.builder_empty": "Belum ada kuli bangunan yang dipekerjakan",
   "zootycoon.ui.staff.manage.builder_building": "Membangun: %s",

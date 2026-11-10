@@ -184,6 +184,46 @@ public class ZooLogManager {
         }
     }
 
+    public static void recordStaffStrikeDetails(UUID ownerUuid, int totalWage, List<String> strikingStaffLabels) {
+        if (ownerUuid == null) return;
+        if (strikingStaffLabels == null || strikingStaffLabels.isEmpty()) {
+            recordSalaryPayment(ownerUuid, totalWage, 0, false);
+            return;
+        }
+        String desc = "Gaji belum terbayar (" + totalWage + " Emerald). Staf mogok: " + String.join(", ", strikingStaffLabels) + ".";
+        addLog(ownerUuid, "SALARY", "Staf Mogok Kerja (" + strikingStaffLabels.size() + ")", desc, 0, 3);
+    }
+
+    public static void recordIndividualSalaryPayment(UUID ownerUuid, String roleLabel, String staffName, int wage) {
+        if (ownerUuid == null) return;
+        String desc = wage > 0
+                ? roleLabel + " " + staffName + " dibayar " + wage + " Emerald dan kembali bekerja."
+                : roleLabel + " " + staffName + " kembali bekerja.";
+        addLog(ownerUuid, "SALARY", "Pembayaran Gaji Staf", desc, -wage, 1);
+    }
+
+    public static List<ZooNetworkPayloads.ZooLogEntryDto> withActiveStrikeSummary(
+            List<ZooNetworkPayloads.ZooLogEntryDto> baseLogs,
+            List<String> activeStrikers
+    ) {
+        List<ZooNetworkPayloads.ZooLogEntryDto> result = new ArrayList<>();
+        if (activeStrikers != null && !activeStrikers.isEmpty()) {
+            result.add(new ZooNetworkPayloads.ZooLogEntryDto(
+                    "active-strike-summary",
+                    System.currentTimeMillis(),
+                    "SALARY",
+                    "Staf Sedang Mogok Kerja (" + activeStrikers.size() + ")",
+                    "Belum dibayar: " + String.join(", ", activeStrikers) + ". Panggil di Kelola Staff lalu bayar via dialog.",
+                    0,
+                    3
+            ));
+        }
+        if (baseLogs != null) {
+            result.addAll(baseLogs);
+        }
+        return result;
+    }
+
     public static void recordStaffRequest(UUID ownerUuid, String staffType, String staffName, String detail) {
         if (ownerUuid == null) return;
         String typeLabel = "ZOOKEEPER".equalsIgnoreCase(staffType) ? "Zookeeper" : ("CASHIER".equalsIgnoreCase(staffType) ? "Kasir" : "Staff");
@@ -224,7 +264,8 @@ public class ZooLogManager {
     public static void sendSyncToPlayer(ServerPlayer player) {
         if (player == null || !(player.level() instanceof ServerLevel sLevel)) return;
         UUID ownerUuid = player.getUUID();
-        List<ZooNetworkPayloads.ZooLogEntryDto> logs = getLogsForOwner(ownerUuid);
+        List<String> activeStrikers = net.zootycoon.economy.ZooStaffManager.get(sLevel).getStrikingStaffLabels(ownerUuid);
+        List<ZooNetworkPayloads.ZooLogEntryDto> logs = withActiveStrikeSummary(getLogsForOwner(ownerUuid), activeStrikers);
         ZooNetworkPayloads.ZooStatsDto stats = getStatsForOwner(sLevel, ownerUuid);
         net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player, new ZooNetworkPayloads.SyncZooLogStatsPayload(logs, stats));
     }

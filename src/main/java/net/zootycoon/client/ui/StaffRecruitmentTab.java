@@ -16,11 +16,15 @@ import net.zootycoon.economy.ZooEconomyEngine;
 import net.zootycoon.network.ZooNetworkPayloads;
 import net.zootycoon.util.ZooTranslations;
 
+import net.minecraft.ChatFormatting;
+
+import java.util.ArrayList;
 import java.util.List;
 
 public class StaffRecruitmentTab {
     private final MainManagementScreen parent;
     public static final ItemStack VANILLA_EMERALD_ITEM = new ItemStack(Items.EMERALD);
+    public static final ResourceLocation EXCLAMATION_ICON = ZooTycoonMod.id("textures/gui/icons/exclamation_point.png");
 
     private boolean isDropdownOpen = false;
     private ZooButton dropdownBtn;
@@ -35,6 +39,7 @@ public class StaffRecruitmentTab {
 
     public void init(MainManagementScreen screen) {
         ClientPlayNetworking.send(new ZooNetworkPayloads.RequestStaffSyncPayload());
+        ClientPlayNetworking.send(new ZooNetworkPayloads.RequestAnimalSyncPayload());
         this.isDropdownOpen = false;
 
         // 1. Dropdown Button at top right
@@ -278,6 +283,34 @@ public class StaffRecruitmentTab {
         }
     }
 
+    private static List<String> getStrikingNames(String staffType) {
+        List<String> names = new ArrayList<>();
+        if (staffType == null) return names;
+        switch (staffType.toLowerCase()) {
+            case "builder" -> {
+                for (var b : ZooTycoonClient.clientBuilderList) {
+                    if (b.isOnStrike()) names.add(b.name());
+                }
+            }
+            case "zookeeper" -> {
+                for (var zk : ZooTycoonClient.clientZookeeperList) {
+                    if (zk.isOnStrike()) names.add(zk.name());
+                }
+            }
+            case "security" -> {
+                for (var s : ZooTycoonClient.clientSecurityList) {
+                    if (s.isOnStrike()) names.add(s.name());
+                }
+            }
+            case "cashier" -> {
+                for (var c : ZooTycoonClient.clientCashierList) {
+                    if (c.isOnStrike()) names.add(c.name());
+                }
+            }
+        }
+        return names;
+    }
+
     private void renderStaffCard(
             GuiGraphics graphics, Minecraft mc,
             int x, int y, int width, int height,
@@ -288,9 +321,11 @@ public class StaffRecruitmentTab {
             List<String> stats
     ) {
         boolean hovered = mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height;
+        List<String> strikingNames = getStrikingNames(staffType);
+        boolean hasStrike = !strikingNames.isEmpty();
 
         int bgColor = hovered ? 0xF8141924 : 0xF20F1219;
-        int borderColor = hovered ? 0xFFFFFFFF : 0xFF242A38;
+        int borderColor = hovered ? 0xFFFFFFFF : (hasStrike ? 0xFFE06C75 : 0xFF242A38);
 
         graphics.fill(x, y, x + width, y + height, bgColor);
 
@@ -312,6 +347,18 @@ public class StaffRecruitmentTab {
 
         graphics.blit(iconTexture, imgX, imgY, 0, 0, imgW, imgH, imgW, imgH);
 
+        if (hasStrike) {
+            int exX = x + width - 18;
+            int exY = y + 6;
+            graphics.blit(EXCLAMATION_ICON, exX, exY, 12, 12, 0, 0, 64, 64, 64, 64);
+            if (!isDropdownOpen && mouseX >= exX - 2 && mouseX <= exX + 14 && mouseY >= exY - 2 && mouseY <= exY + 14) {
+                graphics.renderTooltip(mc.font,
+                        Component.literal(ZooTranslations.get("zootycoon.ui.staff.strike_tooltip", String.join(", ", strikingNames)))
+                                .withStyle(ChatFormatting.RED),
+                        mouseX, mouseY);
+            }
+        }
+
         int titleColor = hovered ? 0xFFFFFFFF : 0xFFE6EDF3;
         int titleY = imgY + imgH + 10;
         graphics.drawCenteredString(mc.font, Component.literal(title), x + (width / 2), titleY, titleColor);
@@ -325,6 +372,11 @@ public class StaffRecruitmentTab {
             statY += 13;
         }
         renderStaffWageLine(graphics, mc, x + 18, statY, staffType, true);
+    }
+
+    /** Renders an exclamation mark icon inside an individual striking staff row. */
+    public static void renderStrikeRowIcon(GuiGraphics graphics, int x, int y) {
+        graphics.blit(EXCLAMATION_ICON, x, y, 10, 10, 0, 0, 64, 64, 64, 64);
     }
 
     /** Formats salary value text (never including the word "Emerald") for the given staff role. */

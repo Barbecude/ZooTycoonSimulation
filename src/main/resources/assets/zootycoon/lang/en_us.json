@@ -148,6 +148,8 @@
   "zootycoon.ui.staff.manage.btn_calling": "En Route...",
   "zootycoon.ui.staff.manage.btn_fire": "Fire",
   "zootycoon.ui.staff.manage.btn_confirm": "Sure?",
+  "zootycoon.ui.staff.manage.on_strike": "On Strike (Unpaid Wage)",
+  "zootycoon.ui.staff.strike_tooltip": "Staff on strike: %s",
   "zootycoon.ui.staff.manage.builder_summary": "Total: %s  |  Idle: %s  |  Building: %s",
   "zootycoon.ui.staff.manage.builder_empty": "No builders hired yet",
   "zootycoon.ui.staff.manage.builder_building": "Building: %s",

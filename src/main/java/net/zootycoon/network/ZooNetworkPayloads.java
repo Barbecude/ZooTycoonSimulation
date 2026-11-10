@@ -334,7 +334,7 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
-    public record ZookeeperSyncData(UUID uuid, String name, int entityId, boolean isAssigned, int assignedAnimalId, boolean isCalling) {
+    public record ZookeeperSyncData(UUID uuid, String name, int entityId, boolean isAssigned, int assignedAnimalId, boolean isCalling, boolean isOnStrike) {
         public static void encode(FriendlyByteBuf buf, ZookeeperSyncData data) {
             buf.writeUUID(data.uuid);
             buf.writeUtf(data.name);
@@ -342,9 +342,10 @@ public class ZooNetworkPayloads {
             buf.writeBoolean(data.isAssigned);
             buf.writeInt(data.assignedAnimalId);
             buf.writeBoolean(data.isCalling);
+            buf.writeBoolean(data.isOnStrike);
         }
         public static ZookeeperSyncData decode(FriendlyByteBuf buf) {
-            return new ZookeeperSyncData(buf.readUUID(), buf.readUtf(), buf.readInt(), buf.readBoolean(), buf.readInt(), buf.readBoolean());
+            return new ZookeeperSyncData(buf.readUUID(), buf.readUtf(), buf.readInt(), buf.readBoolean(), buf.readInt(), buf.readBoolean(), buf.readBoolean());
         }
     }
 
@@ -370,7 +371,7 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
-    public record BuilderSyncData(UUID uuid, String name, int entityId, boolean isWorking, String projectName, boolean isAwaitingPayment, boolean isCalling) {
+    public record BuilderSyncData(UUID uuid, String name, int entityId, boolean isWorking, String projectName, boolean isAwaitingPayment, boolean isCalling, boolean isOnStrike) {
         public static void encode(FriendlyByteBuf buf, BuilderSyncData data) {
             buf.writeUUID(data.uuid);
             buf.writeUtf(data.name != null ? data.name : "");
@@ -379,9 +380,10 @@ public class ZooNetworkPayloads {
             buf.writeUtf(data.projectName != null ? data.projectName : "");
             buf.writeBoolean(data.isAwaitingPayment);
             buf.writeBoolean(data.isCalling);
+            buf.writeBoolean(data.isOnStrike);
         }
         public static BuilderSyncData decode(FriendlyByteBuf buf) {
-            return new BuilderSyncData(buf.readUUID(), buf.readUtf(), buf.readInt(), buf.readBoolean(), buf.readUtf(), buf.readBoolean(), buf.readBoolean());
+            return new BuilderSyncData(buf.readUUID(), buf.readUtf(), buf.readInt(), buf.readBoolean(), buf.readUtf(), buf.readBoolean(), buf.readBoolean(), buf.readBoolean());
         }
     }
 
@@ -406,16 +408,17 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
-    public record SecuritySyncData(UUID uuid, String name, int entityId, boolean isAggro, boolean isCalling) {
+    public record SecuritySyncData(UUID uuid, String name, int entityId, boolean isAggro, boolean isCalling, boolean isOnStrike) {
         public static void encode(FriendlyByteBuf buf, SecuritySyncData data) {
             buf.writeUUID(data.uuid);
             buf.writeUtf(data.name != null ? data.name : "");
             buf.writeInt(data.entityId);
             buf.writeBoolean(data.isAggro);
             buf.writeBoolean(data.isCalling);
+            buf.writeBoolean(data.isOnStrike);
         }
         public static SecuritySyncData decode(FriendlyByteBuf buf) {
-            return new SecuritySyncData(buf.readUUID(), buf.readUtf(), buf.readInt(), buf.readBoolean(), buf.readBoolean());
+            return new SecuritySyncData(buf.readUUID(), buf.readUtf(), buf.readInt(), buf.readBoolean(), buf.readBoolean(), buf.readBoolean());
         }
     }
 
@@ -440,7 +443,7 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
-    public record CashierSyncData(UUID uuid, String name, int entityId, String role, int totalStock, boolean isCalling) {
+    public record CashierSyncData(UUID uuid, String name, int entityId, String role, int totalStock, boolean isCalling, boolean isOnStrike) {
         public static void encode(FriendlyByteBuf buf, CashierSyncData data) {
             buf.writeUUID(data.uuid);
             buf.writeUtf(data.name != null ? data.name : "");
@@ -448,9 +451,10 @@ public class ZooNetworkPayloads {
             buf.writeUtf(data.role != null ? data.role : "");
             buf.writeInt(data.totalStock);
             buf.writeBoolean(data.isCalling);
+            buf.writeBoolean(data.isOnStrike);
         }
         public static CashierSyncData decode(FriendlyByteBuf buf) {
-            return new CashierSyncData(buf.readUUID(), buf.readUtf(), buf.readInt(), buf.readUtf(), buf.readInt(), buf.readBoolean());
+            return new CashierSyncData(buf.readUUID(), buf.readUtf(), buf.readInt(), buf.readUtf(), buf.readInt(), buf.readBoolean(), buf.readBoolean());
         }
     }
 
@@ -3045,7 +3049,7 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                         }
                     }
                     boolean isCalling = zk.isBeingCalled();
-                    keepers.add(new ZookeeperSyncData(zk.getUUID(), zk.getName().getString(), zk.getId(), isAssigned, assignedAnimalId, isCalling));
+                    keepers.add(new ZookeeperSyncData(zk.getUUID(), zk.getName().getString(), zk.getId(), isAssigned, assignedAnimalId, isCalling, zk.isOnStrike()));
                 }
 
                 if (entity instanceof net.zootycoon.entity.ZooBuilderEntity b) {
@@ -3075,7 +3079,8 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                                 isWorking,
                                 projectName,
                                 isAwaitingPayment,
-                                b.isBeingCalled()
+                                b.isBeingCalled(),
+                                b.isOnStrike()
                         ));
                     }
                 }
@@ -3097,7 +3102,8 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                                 sec.getName().getString(),
                                 sec.getId(),
                                 isAggro,
-                                sec.isBeingCalled()
+                                sec.isBeingCalled(),
+                                sec.isOnStrike()
                         ));
                     }
                 }
@@ -3124,7 +3130,8 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                                 c.getId(),
                                 c.getCashierRole(),
                                 stockCount,
-                                c.isBeingCalled()
+                                c.isBeingCalled(),
+                                c.isOnStrike()
                         ));
                     }
                 }

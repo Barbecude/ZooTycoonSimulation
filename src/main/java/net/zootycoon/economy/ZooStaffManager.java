@@ -254,6 +254,29 @@ public class ZooStaffManager {
         return false;
     }
 
+    private String getStaffRoleLabel(net.minecraft.world.entity.Entity ent) {
+        if (ent instanceof net.zootycoon.entity.ZooZookeeperEntity) return "Zookeeper";
+        if (ent instanceof net.zootycoon.entity.ZooSecurityEntity) return "Security";
+        if (ent instanceof net.zootycoon.entity.ZooCashierEntity) return "Kasir";
+        if (ent instanceof net.zootycoon.entity.ZooBuilderEntity) return "Kuli";
+        return "Staff";
+    }
+
+    /** Returns formatted "Role: Name" labels for every currently loaded staff entity on strike for {@code ownerUuid}. */
+    public List<String> getStrikingStaffLabels(UUID ownerUuid) {
+        List<String> labels = new ArrayList<>();
+        if (ownerUuid == null || server == null) return labels;
+        for (ServerLevel lvl : server.getAllLevels()) {
+            for (net.minecraft.world.entity.Entity ent : lvl.getAllEntities()) {
+                if (isOwnedStaffEntity(ent, ownerUuid) && isStaffEntityOnStrike(ownerUuid, ent.getUUID())) {
+                    String name = ent.hasCustomName() ? ent.getCustomName().getString() : ent.getName().getString();
+                    labels.add(getStaffRoleLabel(ent) + ": " + name);
+                }
+            }
+        }
+        return labels;
+    }
+
     public boolean areStaffOnStrike(UUID playerUuid) {
         if (playerUuid == null) return false;
         long activeEpoch = ownerStrikeEpoch.getOrDefault(playerUuid, 0L);
@@ -346,7 +369,7 @@ public class ZooStaffManager {
                 }
             } else {
                 setStaffOnStrike(playerUuid, true);
-                net.zootycoon.log.ZooLogManager.recordSalaryPayment(playerUuid, totalWage, staffCount, false);
+                net.zootycoon.log.ZooLogManager.recordStaffStrikeDetails(playerUuid, totalWage, getStrikingStaffLabels(playerUuid));
                 if (player != null) {
                     ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.warning", "zootycoon.toast.salary.unpaid", 2);
                 }
@@ -356,6 +379,18 @@ public class ZooStaffManager {
 
     public void checkStrikeResolutionOnDeposit(UUID playerUuid, ServerPlayer player) {
         // Intentional no-op: when staff are on strike, players must visit and pay each staff member individually via dialog.
+    }
+
+    private void finishSingleStrikePayment(ServerPlayer player, UUID ownerId, net.minecraft.world.entity.Entity staffEntity, int wagePaid) {
+        UUID staffUuid = staffEntity.getUUID();
+        resolveStaffEntityStrike(ownerId, staffUuid);
+        resolveStaffEntityStrike(player.getUUID(), staffUuid);
+        String staffName = staffEntity.hasCustomName() ? staffEntity.getCustomName().getString() : staffEntity.getName().getString();
+        net.zootycoon.log.ZooLogManager.recordIndividualSalaryPayment(ownerId, getStaffRoleLabel(staffEntity), staffName, wagePaid);
+        ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.toast.salary.resolved", 1);
+        player.level().playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0f, 1.0f);
+        ZooNetworkPayloads.sendAnimalSync(player);
+        net.zootycoon.log.ZooLogManager.sendSyncToPlayer(player);
     }
 
     /** Pays the overdue daily salary for a single striking staff entity visited via dialog. */
@@ -390,19 +425,12 @@ public class ZooStaffManager {
         }
 
         if (individualWage <= 0 || player.isCreative()) {
-            resolveStaffEntityStrike(ownerId, staffUuid);
-            resolveStaffEntityStrike(player.getUUID(), staffUuid);
-            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.toast.salary.resolved", 1);
-            player.level().playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0f, 1.0f);
+            finishSingleStrikePayment(player, ownerId, staffEntity, 0);
             return true;
         }
 
         if (TransactionHelper.hasEnoughEmeralds(player, individualWage) && TransactionHelper.consumeEmeralds(player, individualWage)) {
-            resolveStaffEntityStrike(ownerId, staffUuid);
-            resolveStaffEntityStrike(player.getUUID(), staffUuid);
-            net.zootycoon.log.ZooLogManager.recordSalaryPayment(ownerId, individualWage, 1, true);
-            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.toast.salary.resolved", 1);
-            player.level().playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0f, 1.0f);
+            finishSingleStrikePayment(player, ownerId, staffEntity, individualWage);
             return true;
         } else {
             ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.warning", "zootycoon.toast.salary.unpaid", 2);
@@ -567,11 +595,11 @@ public class ZooStaffManager {
         return null;
     }
 
-    /** Returns 0 on success, 1 if not found, 2 if the zookeeper is currently working. */
+    /** Returns 0 on success, 1 if not found, 2 if the zookeeper is currently working (unless on strike). */
     public int callZookeeper(ServerPlayer player, UUID zookeeperUuid) {
         var zk = findOwnedZookeeper(player, zookeeperUuid);
         if (zk == null) return 1;
-        if (zk.hasActiveAssignedAnimal()) return 2;
+        if (zk.hasActiveAssignedAnimal() && !zk.isOnStrike()) return 2;
         zk.callToPlayer(player);
         return 0;
     }
@@ -599,7 +627,7 @@ public class ZooStaffManager {
             net.minecraft.world.entity.Entity ent = lvl.getEntity(staffUuid);
             if (ent != null && ent.isAlive()) {
                 if ("builder".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooBuilderEntity b) {
-                    if (b.hasActiveJob()) return 2;
+                    if (b.hasActiveJob() && !b.isOnStrike()) return 2;
                     b.callToPlayer(player);
                     return 0;
                 } else if ("security".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooSecurityEntity sec) {
@@ -609,7 +637,7 @@ public class ZooStaffManager {
                     c.callToPlayer(player);
                     return 0;
                 } else if ("zookeeper".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooZookeeperEntity zk) {
-                    if (zk.hasActiveAssignedAnimal()) return 2;
+                    if (zk.hasActiveAssignedAnimal() && !zk.isOnStrike()) return 2;
                     zk.callToPlayer(player);
                     return 0;
                 }

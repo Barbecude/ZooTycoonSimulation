@@ -47,7 +47,8 @@ public class BuilderManageTab {
 
     private List<ZooNetworkPayloads.BuilderSyncData> sortedBuilders() {
         List<ZooNetworkPayloads.BuilderSyncData> list = new ArrayList<>(ZooTycoonClient.clientBuilderList);
-        list.sort(Comparator.comparing(ZooNetworkPayloads.BuilderSyncData::isWorking)
+        list.sort(Comparator.comparing(ZooNetworkPayloads.BuilderSyncData::isOnStrike).reversed()
+                .thenComparing(ZooNetworkPayloads.BuilderSyncData::isWorking)
                 .thenComparing(ZooNetworkPayloads.BuilderSyncData::isAwaitingPayment)
                 .thenComparing(ZooNetworkPayloads.BuilderSyncData::name));
         return list;
@@ -93,11 +94,13 @@ public class BuilderManageTab {
 
     private void drawRow(GuiGraphics graphics, Minecraft mc, ZooNetworkPayloads.BuilderSyncData b,
                          int x, int y, int w, int mouseX, int mouseY, int top, int bottom) {
+        boolean onStrike = b.isOnStrike();
+        int borderCol = onStrike ? 0xFFE06C75 : 0xFF242A38;
         graphics.fill(x, y, x + w, y + ROW_H, 0xF20F1219);
-        graphics.fill(x, y, x + w, y + 1, 0xFF242A38);
-        graphics.fill(x, y + ROW_H - 1, x + w, y + ROW_H, 0xFF242A38);
-        graphics.fill(x, y, x + 1, y + ROW_H, 0xFF242A38);
-        graphics.fill(x + w - 1, y, x + w, y + ROW_H, 0xFF242A38);
+        graphics.fill(x, y, x + w, y + 1, borderCol);
+        graphics.fill(x, y + ROW_H - 1, x + w, y + ROW_H, borderCol);
+        graphics.fill(x, y, x + 1, y + ROW_H, borderCol);
+        graphics.fill(x + w - 1, y, x + w, y + ROW_H, borderCol);
 
         // A builder waiting for its wage has finished its job and can still be called, but not fired
         boolean busy = b.isWorking();
@@ -107,18 +110,26 @@ public class BuilderManageTab {
             pendingCalledBuilders.remove(b.uuid());
         }
 
-        graphics.drawString(mc.font, Component.literal(b.name()), x + 10, y + 5, 0xFFE6EDF3, false);
+        int nameX = x + 10;
+        if (onStrike) {
+            StaffRecruitmentTab.renderStrikeRowIcon(graphics, x + 8, y + 4);
+            nameX = x + 21;
+        }
+        graphics.drawString(mc.font, Component.literal(b.name()), nameX, y + 5, 0xFFE6EDF3, false);
         String status;
         int statusColor;
-        if (b.isAwaitingPayment()) {
+        if (isCalling) {
+            status = ZooTranslations.get("zootycoon.ui.staff.manage.calling");
+            statusColor = 0xFFFFAA00;
+        } else if (onStrike) {
+            status = ZooTranslations.get("zootycoon.ui.staff.manage.on_strike");
+            statusColor = 0xFFFF5555;
+        } else if (b.isAwaitingPayment()) {
             status = ZooTranslations.get("zootycoon.ui.staff.manage.builder_wage", b.projectName().isEmpty() ? "Proyek" : b.projectName());
             statusColor = 0xFFFFAA00;
         } else if (b.isWorking()) {
             status = ZooTranslations.get("zootycoon.ui.staff.manage.builder_building", b.projectName().isEmpty() ? "Proyek" : b.projectName());
             statusColor = 0xFF55FFFF;
-        } else if (isCalling) {
-            status = ZooTranslations.get("zootycoon.ui.staff.manage.calling");
-            statusColor = 0xFFFFAA00;
         } else {
             status = ZooTranslations.get("zootycoon.ui.staff.manage.builder_idle");
             statusColor = 0xFF55FF55;
@@ -130,7 +141,7 @@ public class BuilderManageTab {
         int callX = fireX - CALL_W - 6;
 
         boolean confirming = b.uuid().equals(confirmFireUuid) && System.currentTimeMillis() < confirmFireUntil;
-        boolean canCall = !busy && !isCalling;
+        boolean canCall = (!busy || onStrike) && !isCalling;
         drawButton(graphics, mc, callX, by, CALL_W,
                 ZooTranslations.get(isCalling ? "zootycoon.ui.staff.manage.btn_calling" : "zootycoon.ui.staff.manage.btn_call"),
                 canCall, false, mouseX, mouseY, top, bottom);
@@ -171,7 +182,7 @@ public class BuilderManageTab {
             if (mouseY >= by && mouseY <= by + BTN_H) {
                 if (mouseX >= callX && mouseX <= callX + CALL_W) {
                     boolean isCalling = b.isCalling() || pendingCalledBuilders.contains(b.uuid());
-                    if (b.isWorking()) {
+                    if (b.isWorking() && !b.isOnStrike()) {
                         ZooHudOverlay.showToast("zootycoon.toast.title.warning", "zootycoon.staff.manage.busy.builder", ZooHudOverlay.TOAST_WARNING);
                     } else if (isCalling) {
                         // In flight

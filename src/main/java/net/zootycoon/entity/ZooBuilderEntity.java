@@ -205,6 +205,14 @@ public class ZooBuilderEntity extends PathfinderMob {
             return;
         }
 
+        if (callTargetUuid != null && this.level() instanceof ServerLevel callLevel) {
+            if (isOnStrike() && this.tickCount % 60 == 0) {
+                callLevel.sendParticles(ParticleTypes.ANGRY_VILLAGER, this.getX(), this.getY() + 1.2D, this.getZ(), 1, 0.1, 0.1, 0.1, 0.0);
+            }
+            tickCall(callLevel);
+            return;
+        }
+
         if (isOnStrike()) {
             this.getNavigation().stop();
             if (this.tickCount % 60 == 0 && this.level() instanceof ServerLevel sLevel) {
@@ -219,10 +227,6 @@ public class ZooBuilderEntity extends PathfinderMob {
                 this.setItemSlot(EquipmentSlot.HEAD, ZooItems.createHardhat());
                 this.setDropChance(EquipmentSlot.HEAD, 0.0f);
             }
-        }
-
-        if (callTargetUuid != null && this.level() instanceof ServerLevel callLevel) {
-            tickCall(callLevel);
         }
 
         // ==========================================
