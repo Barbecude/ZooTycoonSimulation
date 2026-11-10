@@ -431,8 +431,7 @@ public class ZooVehicleEntity extends Entity {
     }
 
     public boolean hasHeadlightsOn() {
-        boolean isNightOrDark = this.level().isNight() || this.level().getRawBrightness(this.blockPosition(), 0) < 7;
-        return this.entityData.get(DATA_HEADLIGHTS) || this.getDriver() != null || isNightOrDark;
+        return this.getDriver() != null && this.entityData.get(DATA_HEADLIGHTS);
     }
 
     public String getVehicleType() {
@@ -664,8 +663,7 @@ public class ZooVehicleEntity extends Entity {
                 this.entityData.set(DATA_SPEED, this.currentSpeed);
                 this.entityData.set(DATA_WHEEL_SPIN, this.localWheelSpin);
                 this.entityData.set(DATA_BRAKING, false);
-                boolean isNightOrDark = this.level().isNight() || this.level().getRawBrightness(this.blockPosition(), 0) < 7;
-                this.entityData.set(DATA_HEADLIGHTS, isNightOrDark);
+                this.entityData.set(DATA_HEADLIGHTS, false);
             }
         } else {
             if (!this.isControlledByLocalInstance()) {

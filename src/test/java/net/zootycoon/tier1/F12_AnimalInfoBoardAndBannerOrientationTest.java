@@ -215,5 +215,19 @@ public class F12_AnimalInfoBoardAndBannerOrientationTest {
         assertTrue(insSrc.contains("markResultDialogOpened"));
         String mgrSrc = Files.readString(new File("src/main/java/net/zootycoon/license/ZooLicenseManager.java").toPath());
         assertTrue(mgrSrc.contains("inspector.markResultDialogOpened()"));
+
+        File ticketTex = TestHelper.getAssetFile("textures/entity/staff/cashier_ticket.png");
+        assertTrue(ticketTex.exists(), "Ticket cashier skin texture must exist");
+        TestHelper.PngDimensions ticketDims = TestHelper.getPngDimensions(ticketTex);
+        assertTrue(ticketDims.validPng());
+        assertEquals(64, ticketDims.width());
+        assertEquals(64, ticketDims.height());
+
+        String cashierRendererSrc = Files.readString(new File("src/main/java/net/zootycoon/client/render/ZooCashierRenderer.java").toPath());
+        assertTrue(cashierRendererSrc.contains("TEXTURE_TICKET"));
+        assertTrue(cashierRendererSrc.contains("\"TICKET\".equalsIgnoreCase(role)"));
+
+        String vehicleSrc = Files.readString(new File("src/main/java/net/zootycoon/entity/ZooVehicleEntity.java").toPath());
+        assertTrue(vehicleSrc.contains("return this.getDriver() != null && this.entityData.get(DATA_HEADLIGHTS);"));
     }
 }
