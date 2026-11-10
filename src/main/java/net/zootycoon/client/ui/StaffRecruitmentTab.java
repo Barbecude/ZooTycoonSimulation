@@ -12,6 +12,7 @@ import net.minecraft.world.item.Items;
 import net.zootycoon.ZooTycoonMod;
 import net.zootycoon.client.ZooTycoonClient;
 import net.zootycoon.economy.TransactionHelper;
+import net.zootycoon.economy.ZooEconomyEngine;
 import net.zootycoon.network.ZooNetworkPayloads;
 import net.zootycoon.util.ZooTranslations;
 
@@ -19,7 +20,7 @@ import java.util.List;
 
 public class StaffRecruitmentTab {
     private final MainManagementScreen parent;
-    private static final ItemStack VANILLA_EMERALD_ITEM = new ItemStack(Items.EMERALD);
+    public static final ItemStack VANILLA_EMERALD_ITEM = new ItemStack(Items.EMERALD);
 
     private boolean isDropdownOpen = false;
     private ZooButton dropdownBtn;
@@ -170,6 +171,7 @@ public class StaffRecruitmentTab {
                 startX, startY, cardWidth, cardHeight,
                 mouseX, mouseY,
                 ZooTycoonMod.id("textures/gui/staff/builder_large.png"),
+                "builder",
                 ZooTranslations.get("zootycoon.ui.staff.builder.title"),
                 List.of(
                         ZooTranslations.get("zootycoon.ui.staff.builder.stat1", ZooTycoonClient.clientBuilders),
@@ -184,6 +186,7 @@ public class StaffRecruitmentTab {
                 startX + cardWidth + cardGap, startY, cardWidth, cardHeight,
                 mouseX, mouseY,
                 ZooTycoonMod.id("textures/gui/staff/zookeeper_large.png"),
+                "zookeeper",
                 ZooTranslations.get("zootycoon.ui.staff.zookeeper.title"),
                 List.of(
                         ZooTranslations.get("zootycoon.ui.staff.zookeeper.stat1", ZooTycoonClient.clientZookeepers),
@@ -198,6 +201,7 @@ public class StaffRecruitmentTab {
                 startX + (cardWidth + cardGap) * 2, startY, cardWidth, cardHeight,
                 mouseX, mouseY,
                 ZooTycoonMod.id("textures/gui/staff/security_large.png"),
+                "security",
                 ZooTranslations.get("zootycoon.ui.staff.security.title"),
                 List.of(
                         ZooTranslations.get("zootycoon.ui.staff.security.stat1", ZooTycoonClient.clientSecurity),
@@ -212,6 +216,7 @@ public class StaffRecruitmentTab {
                 startX + (cardWidth + cardGap) * 3, startY, cardWidth, cardHeight,
                 mouseX, mouseY,
                 ZooTycoonMod.id("textures/gui/staff/cashier_large.png"),
+                "cashier",
                 ZooTranslations.get("zootycoon.ui.staff.cashier.title"),
                 List.of(
                         ZooTranslations.get("zootycoon.ui.staff.cashier.stat1", ZooTycoonClient.clientCashiers),
@@ -278,6 +283,7 @@ public class StaffRecruitmentTab {
             int x, int y, int width, int height,
             int mouseX, int mouseY,
             ResourceLocation iconTexture,
+            String staffType,
             String title,
             List<String> stats
     ) {
@@ -316,7 +322,39 @@ public class StaffRecruitmentTab {
         int statY = divY + 10;
         for (String stat : stats) {
             graphics.drawString(mc.font, Component.literal("• " + stat), x + 18, statY, 0xFFC9D1D9, false);
-            statY += 15;
+            statY += 13;
         }
+        renderStaffWageLine(graphics, mc, x + 18, statY, staffType, true);
+    }
+
+    /** Formats salary value text (never including the word "Emerald") for the given staff role. */
+    public static String getWageValueText(String staffType) {
+        int dailyWage = ZooEconomyEngine.getStaffDailyWage(staffType);
+        return dailyWage > 0
+                ? String.valueOf(dailyWage)
+                : ZooTranslations.get("zootycoon.ui.staff.wage_per_project");
+    }
+
+    /** Renders the salary label followed by an emerald item icon and numeric/project value. */
+    public static void renderStaffWageLine(GuiGraphics graphics, Minecraft mc, int x, int y, String staffType, boolean bullet) {
+        int dailyWage = ZooEconomyEngine.getStaffDailyWage(staffType);
+        String labelKey = dailyWage > 0 ? "zootycoon.ui.staff.wage_daily_label" : "zootycoon.ui.staff.wage_label";
+        String prefix = (bullet ? "• " : "") + ZooTranslations.get(labelKey) + " ";
+        String valueText = getWageValueText(staffType);
+
+        graphics.drawString(mc.font, Component.literal(prefix), x, y, 0xFFC9D1D9, false);
+        int iconX = x + mc.font.width(prefix);
+        graphics.renderItem(VANILLA_EMERALD_ITEM, iconX, y - 4);
+        graphics.drawString(mc.font, Component.literal(valueText), iconX + 17, y, 0xFF55FF55, false);
+    }
+
+    /** Right-aligns the salary line against {@code rightX} for manage sub-tab headers. */
+    public static void renderWageRightAligned(GuiGraphics graphics, Minecraft mc, int rightX, int y, String staffType) {
+        int dailyWage = ZooEconomyEngine.getStaffDailyWage(staffType);
+        String labelKey = dailyWage > 0 ? "zootycoon.ui.staff.wage_daily_label" : "zootycoon.ui.staff.wage_label";
+        String prefix = ZooTranslations.get(labelKey) + " ";
+        String valueText = getWageValueText(staffType);
+        int totalW = mc.font.width(prefix) + 17 + mc.font.width(valueText);
+        renderStaffWageLine(graphics, mc, rightX - totalW, y, staffType, false);
     }
 }

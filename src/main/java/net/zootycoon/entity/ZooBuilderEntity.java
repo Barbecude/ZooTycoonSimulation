@@ -194,7 +194,7 @@ public class ZooBuilderEntity extends PathfinderMob {
                 this.payerUuid = checkOwner;
             }
         }
-        return checkOwner != null && net.zootycoon.economy.ZooStaffManager.get(sLevel).areStaffOnStrike(checkOwner);
+        return checkOwner != null && net.zootycoon.economy.ZooStaffManager.get(sLevel).isStaffEntityOnStrike(checkOwner, this.getUUID());
     }
 
     @Override

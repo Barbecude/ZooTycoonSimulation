@@ -170,7 +170,7 @@ public class ZooSecurityEntity extends PathfinderMob {
                 this.ownerUuid = nearest.getOwnerUuid();
             }
         }
-        return this.ownerUuid != null && net.zootycoon.economy.ZooStaffManager.get(sLevel).areStaffOnStrike(this.ownerUuid);
+        return this.ownerUuid != null && net.zootycoon.economy.ZooStaffManager.get(sLevel).isStaffEntityOnStrike(this.ownerUuid, this.getUUID());
     }
 
     @Override

@@ -68,6 +68,7 @@ public class BuilderManageTab {
         long idle = builders.size() - working;
         graphics.drawString(mc.font, Component.literal(ZooTranslations.get("zootycoon.ui.staff.manage.builder_summary", builders.size(), idle, working)),
                 px, 54, 0xFFC9D1D9, false);
+        StaffRecruitmentTab.renderWageRightAligned(graphics, mc, px + pw, 54, "builder");
 
         if (builders.isEmpty()) {
             graphics.drawCenteredString(mc.font, Component.literal(ZooTranslations.get("zootycoon.ui.staff.manage.builder_empty")),

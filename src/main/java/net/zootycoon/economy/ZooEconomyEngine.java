@@ -1026,6 +1026,19 @@ public final class ZooEconomyEngine {
     }
 
     /**
+     * Mengambil besaran gaji harian staf per tipe atau role key dialog.
+     */
+    public static int getStaffDailyWage(String typeOrRoleKey) {
+        if (typeOrRoleKey == null) return 0;
+        String normalized = typeOrRoleKey.toLowerCase(Locale.ROOT);
+        if (normalized.contains("zookeeper")) return ZOOKEEPER_DAILY_WAGE;
+        if (normalized.contains("security") || normalized.contains("satpam")) return SECURITY_DAILY_WAGE;
+        if (normalized.contains("cashier") || normalized.contains("kasir")) return CASHIER_DAILY_WAGE;
+        if (normalized.contains("builder") || normalized.contains("kuli")) return BUILDER_DAILY_WAGE;
+        return 0;
+    }
+
+    /**
      * Menghitung upah tukang bangunan (kuli) berdasarkan jumlah blok yang dipasang.
      */
     public static int calculateBuilderWage(int totalBlocks) {

@@ -513,7 +513,7 @@ public class ZooCashierEntity extends PathfinderMob {
                 }
             }
             if (this.ownerUuid != null) {
-                return net.zootycoon.economy.ZooStaffManager.get(sLevel).areStaffOnStrike(this.ownerUuid);
+                return net.zootycoon.economy.ZooStaffManager.get(sLevel).isStaffEntityOnStrike(this.ownerUuid, this.getUUID());
             }
         }
         return false;

@@ -84,6 +84,7 @@ public class ZookeeperManageTab {
         long working = keepers.size() - idle;
         graphics.drawString(mc.font, Component.literal(ZooTranslations.get("zootycoon.ui.staff.manage.summary", idle, working)),
                 px, 54, 0xFFC9D1D9, false);
+        StaffRecruitmentTab.renderWageRightAligned(graphics, mc, px + pw, 54, "zookeeper");
 
         if (keepers.isEmpty()) {
             graphics.drawCenteredString(mc.font, Component.literal(ZooTranslations.get("zootycoon.ui.staff.manage.empty")),

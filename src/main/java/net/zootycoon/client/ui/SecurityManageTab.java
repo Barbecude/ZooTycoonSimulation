@@ -67,6 +67,7 @@ public class SecurityManageTab {
         long patrol = securityList.size() - combat;
         graphics.drawString(mc.font, Component.literal(ZooTranslations.get("zootycoon.ui.staff.manage.security_summary", securityList.size(), patrol, combat)),
                 px, 54, 0xFFC9D1D9, false);
+        StaffRecruitmentTab.renderWageRightAligned(graphics, mc, px + pw, 54, "security");
 
         if (securityList.isEmpty()) {
             graphics.drawCenteredString(mc.font, Component.literal(ZooTranslations.get("zootycoon.ui.staff.manage.security_empty")),

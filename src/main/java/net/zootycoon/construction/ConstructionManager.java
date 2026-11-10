@@ -355,7 +355,11 @@ public class ConstructionManager {
                 }
             }
 
-            if (site.getOwnerUuid() != null && net.zootycoon.economy.ZooStaffManager.get(level).areStaffOnStrike(site.getOwnerUuid())) {
+            boolean builderOnStrike = builder != null
+                    ? builder.isOnStrike()
+                    : (site.getOwnerUuid() != null && site.getBuilderUuid() != null
+                            && net.zootycoon.economy.ZooStaffManager.get(level).isStaffEntityOnStrike(site.getOwnerUuid(), site.getBuilderUuid()));
+            if (builderOnStrike) {
                 if (builder != null) {
                     builder.getNavigation().stop();
                 }

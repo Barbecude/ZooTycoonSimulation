@@ -6,6 +6,9 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.zootycoon.economy.ZooEconomyEngine;
 import net.zootycoon.network.ZooNetworkPayloads;
 import net.zootycoon.util.ZooTranslations;
 
@@ -13,8 +16,11 @@ import java.util.UUID;
 
 public class StaffStrikeDialogScreen extends EasyNpcDialogScreen {
 
+    private static final ItemStack VANILLA_EMERALD_ITEM = new ItemStack(Items.EMERALD);
+
     private final int entityId;
     private final UUID staffUuid;
+    private final int dailyWage;
 
     public StaffStrikeDialogScreen(int entityId, UUID staffUuid, String staffName, String roleKey) {
         super(
@@ -26,6 +32,7 @@ public class StaffStrikeDialogScreen extends EasyNpcDialogScreen {
         );
         this.entityId = entityId;
         this.staffUuid = staffUuid;
+        this.dailyWage = ZooEconomyEngine.getStaffDailyWage(roleKey);
     }
 
     private static LivingEntity resolveStaffEntity(int entityId, UUID staffUuid) {
@@ -58,14 +65,22 @@ public class StaffStrikeDialogScreen extends EasyNpcDialogScreen {
         int btnY = startY + panelHeight - 30;
         int btnW = (panelWidth - 24 - 8) / 2;
 
-        var payBtn = new ZooButton(
+        Component payLabel = this.dailyWage > 0
+                ? Component.literal(ZooTranslations.get("zootycoon.dialog.staff.btn.pay_salary") + "  " + this.dailyWage)
+                : ZooTranslations.component("zootycoon.dialog.staff.btn.pay_salary");
+        ZooButton payBtn = new ZooButton(
                 startX + 12, btnY, btnW, 22,
-                ZooTranslations.component("zootycoon.dialog.staff.btn.pay_salary"),
+                payLabel,
                 b -> {
                     ClientPlayNetworking.send(new ZooNetworkPayloads.PayStrikeSalaryPayload(this.entityId));
                     this.onClose();
                 }
-        ).asPrimary();
+        );
+        if (this.dailyWage > 0) {
+            payBtn.setItemIcon(VANILLA_EMERALD_ITEM).setIconAfter(true).asEmerald();
+        } else {
+            payBtn.asPrimary();
+        }
         this.addRenderableWidget(payBtn);
 
         var closeBtn = new ZooButton(

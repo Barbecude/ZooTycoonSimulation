@@ -2806,20 +2806,14 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
             ServerPlayer player = context.player();
             context.server().execute(() -> {
                 ServerLevel sLevel = player.serverLevel();
-                UUID targetOwner = player.getUUID();
                 if (payload.entityId() >= 0) {
                     net.minecraft.world.entity.Entity ent = sLevel.getEntity(payload.entityId());
-                    if (ent instanceof net.zootycoon.entity.ZooZookeeperEntity zk && zk.getOwnerUuid() != null) {
-                        targetOwner = zk.getOwnerUuid();
-                    } else if (ent instanceof net.zootycoon.entity.ZooSecurityEntity sec && sec.getOwnerUuid() != null) {
-                        targetOwner = sec.getOwnerUuid();
-                    } else if (ent instanceof net.zootycoon.entity.ZooCashierEntity cash && cash.getOwnerUuid() != null) {
-                        targetOwner = cash.getOwnerUuid();
-                    } else if (ent instanceof net.zootycoon.entity.ZooBuilderEntity b && b.getOwnerUuid() != null) {
-                        targetOwner = b.getOwnerUuid();
+                    if (ent != null) {
+                        net.zootycoon.economy.ZooStaffManager.get(sLevel).tryPaySingleStaffStrikeSalary(player, ent);
+                        return;
                     }
                 }
-                net.zootycoon.economy.ZooStaffManager.get(sLevel).tryPayStrikeSalary(player, targetOwner);
+                net.zootycoon.economy.ZooStaffManager.get(sLevel).tryPayStrikeSalary(player, player.getUUID());
             });
         });
 

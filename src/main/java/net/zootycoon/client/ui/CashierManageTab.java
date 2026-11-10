@@ -65,6 +65,7 @@ public class CashierManageTab {
 
         graphics.drawString(mc.font, Component.literal(ZooTranslations.get("zootycoon.ui.staff.manage.cashier_summary", cashiers.size())),
                 px, 54, 0xFFC9D1D9, false);
+        StaffRecruitmentTab.renderWageRightAligned(graphics, mc, px + pw, 54, "cashier");
 
         if (cashiers.isEmpty()) {
             graphics.drawCenteredString(mc.font, Component.literal(ZooTranslations.get("zootycoon.ui.staff.manage.cashier_empty")),
