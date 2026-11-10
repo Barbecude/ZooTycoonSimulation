@@ -995,6 +995,7 @@ public final class ZooEconomyEngine {
                 || id.contains("giraffe") || id.contains("kangaroo") || id.contains("raccoon")
                 || id.contains("bear") || id.contains("grizzly") || id.contains("panda")
                 || id.contains("anteater") || id.contains("capuchin") || id.contains("monkey")
+                || id.contains("rhino") || id.contains("gazelle") || id.contains("toucan")
                 || id.contains("wolf") || id.contains("fox")) {
             return 200;
         }

@@ -406,7 +406,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 "naturalist:giraffe",
                 "naturalist:zebra",
                 "naturalist:ostrich",
-                "naturalist:rhino", "alexsmobs:gazelle");
+                "naturalist:rhino", "alexsmobs:rhinoceros", "alexsmobs:gazelle");
 
         // Zona 2: Apex Predators (Lion, Tiger, Snow Leopard)
         HabitatProfile lionProfile = new HabitatProfile(
@@ -495,7 +495,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
         );
         registerDefaultSpecies(borealForest,
                 "naturalist:deer", "alexsmobs:moose",
-                "alexsmobs:grizzly_bear", "naturalist:bear",
+                "alexsmobs:grizzly_bear", "naturalist:bear", "naturalist:black_bear",
                 "alexsmobs:raccoon");
 
         // Zona 5: Jungle Canopy (Gorilla, Capuchin Monkey)
@@ -515,7 +515,7 @@ public class HabitatProfileLoader extends SimpleJsonResourceReloadListener imple
                 )
         );
         registerDefaultSpecies(jungleCanopy,
-                "alexsmobs:gorilla", "alexsmobs:capuchin_monkey", "alexsmobs:gelada_monkey");
+                "alexsmobs:gorilla", "alexsmobs:capuchin_monkey", "alexsmobs:gelada_monkey", "alexsmobs:toucan");
 
         // Zona 6: Walk-in Petting (Capybara, Giant Tortoise)
         HabitatProfile walkInPetting = new HabitatProfile(

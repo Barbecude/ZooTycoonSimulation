@@ -328,6 +328,8 @@ public class AnimalDietRegistry {
         registerGrazing("alexsmobs:kangaroo", "Herbivora", "Mencari Makan Sendiri (Rumput)", Set.of(Blocks.SHORT_GRASS, Blocks.TALL_GRASS, Blocks.FERN), "Rumput", Items.BONE_MEAL, 16, Items.WHEAT, Items.HAY_BLOCK, Items.CARROT, Items.APPLE);
         register("alexsmobs:moose", FeedingType.TROUGH, "Herbivora (Gandum, Daun & Apel)", Items.WHEAT, Items.OAK_LEAVES, Items.APPLE, Items.DANDELION);
         register("alexsmobs:gazelle", FeedingType.TROUGH, "Herbivora (Gandum & Rumput)", Items.WHEAT, Items.HAY_BLOCK);
+        register("alexsmobs:rhinoceros", FeedingType.TROUGH, "Herbivora (Gandum, Melon & Jerami)", Items.WHEAT, Items.MELON_SLICE, Items.HAY_BLOCK, Items.CARROT);
+        register("alexsmobs:toucan", FeedingType.TROUGH, "Frugivora (Melon, Beri, Apel & Biji)", Items.MELON_SLICE, Items.SWEET_BERRIES, Items.APPLE, Items.WHEAT_SEEDS);
         register("alexsmobs:bison", FeedingType.TROUGH, "Herbivora (Gandum & Jerami)", Items.WHEAT, Items.HAY_BLOCK);
         register("alexsmobs:gelada_monkey", FeedingType.TROUGH, "Herbivora (Rumput & Biji)", Items.WHEAT, Items.WHEAT_SEEDS);
         register("alexsmobs:emu", FeedingType.TROUGH, "Granivora (Biji-bijian, Rumput & Buah)", Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS, Items.WHEAT, Items.SWEET_BERRIES, Items.APPLE);
@@ -375,6 +377,7 @@ public class AnimalDietRegistry {
         register("naturalist:lion", FeedingType.THROWN_MEAT, "Predator Savana (Daging Segar)", true, false, Items.BEEF, Items.PORKCHOP, Items.MUTTON, Items.CHICKEN, Items.RABBIT);
         register("naturalist:tiger", FeedingType.THROWN_MEAT, "Predator Jungle (Daging Segar)", true, false, Items.BEEF, Items.PORKCHOP, Items.MUTTON, Items.CHICKEN, Items.RABBIT);
         register("naturalist:bear", FeedingType.THROWN_MEAT, "Omnivora Besar (Ikan, Madu, Beri & Daging)", true, true, Items.SALMON, Items.COD, Items.HONEY_BOTTLE, Items.SWEET_BERRIES, Items.BEEF, Items.PORKCHOP);
+        register("naturalist:black_bear", FeedingType.THROWN_MEAT, "Omnivora Besar (Ikan, Madu, Beri & Daging)", true, true, Items.SALMON, Items.COD, Items.HONEY_BOTTLE, Items.SWEET_BERRIES, Items.BEEF, Items.PORKCHOP);
         register("naturalist:wolf", FeedingType.THROWN_MEAT, "Karnivora (Daging Segar)", true, false, Items.BEEF, Items.PORKCHOP, Items.CHICKEN, Items.MUTTON, Items.RABBIT);
         register("naturalist:alligator", FeedingType.THROWN_MEAT, "Karnivora Rawa (Daging & Ikan)", true, true, Items.BEEF, Items.PORKCHOP, Items.CHICKEN, Items.SALMON, Items.COD);
         register("naturalist:crocodile", FeedingType.THROWN_MEAT, "Karnivora Sungai (Daging & Ikan)", true, true, Items.BEEF, Items.PORKCHOP, Items.CHICKEN, Items.SALMON, Items.COD);

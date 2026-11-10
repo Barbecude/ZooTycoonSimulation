@@ -20,7 +20,7 @@ public enum LicenseTier {
                     new SpeciesEntry("deer", "Deer", List.of("naturalist:deer", "wildernature:deer")),
                     new SpeciesEntry("raccoon", "Raccoon", List.of("alexsmobs:raccoon")),
                     new SpeciesEntry("capybara", "Capybara", List.of("naturalist:capybara")),
-                    new SpeciesEntry("tortoise", "Giant Tortoise", List.of("naturalist:tortoise", "minecraft:turtle")),
+                    new SpeciesEntry("tortoise", "Tortoise", List.of("naturalist:tortoise", "minecraft:turtle")),
                     new SpeciesEntry("capuchin_monkey", "Capuchin Monkey", List.of("alexsmobs:capuchin_monkey")),
                     new SpeciesEntry("kangaroo", "Kangaroo", List.of("alexsmobs:kangaroo")),
                     new SpeciesEntry("ostrich", "Ostrich", List.of("naturalist:ostrich", "alexsmobs:emu"))
@@ -36,12 +36,12 @@ public enum LicenseTier {
             List.of(
                     new SpeciesEntry("zebra", "Zebra", List.of("naturalist:zebra", "minecraft:horse")),
                     new SpeciesEntry("camel", "Camel", List.of("minecraft:camel")),
-                    new SpeciesEntry("penguin", "Penguin", List.of("naturalist:penguin", "ecologics:penguin")),
+                    new SpeciesEntry("black_bear", "Black Bear", List.of("naturalist:black_bear")),
                     new SpeciesEntry("panda", "Panda", List.of("minecraft:panda")),
                     new SpeciesEntry("giant_anteater", "Giant Anteater", List.of("alexsmobs:anteater", "alexsmobs:giant_anteater")),
-                    new SpeciesEntry("cassowary", "Cassowary", List.of("wildernature:cassowary")),
-                    new SpeciesEntry("bald_eagle", "Bald Eagle", List.of("alexsmobs:bald_eagle")),
-                    new SpeciesEntry("vulture", "Vulture", List.of("naturalist:vulture"))
+                    new SpeciesEntry("rhinoceros", "Rhinoceros", List.of("naturalist:rhino", "alexsmobs:rhinoceros")),
+                    new SpeciesEntry("toucan", "Toucan", List.of("alexsmobs:toucan")),
+                    new SpeciesEntry("gazelle", "Gazelle", List.of("alexsmobs:gazelle"))
             )
     ),
     SUAKA_MARGASATWA(
@@ -194,6 +194,19 @@ public enum LicenseTier {
 
     public List<SpeciesEntry> getRequiredSpecies() {
         return requiredSpecies;
+    }
+
+    /**
+     * Returns the cumulative required species count across Tier 1 through this tier.
+     */
+    public int getCumulativeSpeciesCount() {
+        int sum = 0;
+        for (LicenseTier t : values()) {
+            if (t.tierLevel <= this.tierLevel) {
+                sum += t.requiredSpecies.size();
+            }
+        }
+        return sum;
     }
 
     public LicenseTier nextTier() {

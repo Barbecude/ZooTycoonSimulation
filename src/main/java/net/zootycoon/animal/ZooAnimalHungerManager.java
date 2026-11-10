@@ -71,7 +71,55 @@ public class ZooAnimalHungerManager {
         String typeKey = BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).getPath();
         if (typeKey.equals("bat") || typeKey.endsWith("_bat") || typeKey.startsWith("bat_")) return false;
 
+        // Exclude multipart segment entities (e.g. alexsmobs:anaconda_part, cachalot_part, giant_squid_part)
+        if (isMultipartSegmentEntity(e)) return false;
+
         return true;
+    }
+
+    public static boolean isMultipartSegmentEntity(LivingEntity e) {
+        if (e == null) return false;
+        ResourceLocation key = BuiltInRegistries.ENTITY_TYPE.getKey(e.getType());
+        if (key != null) {
+            String path = key.getPath().toLowerCase(Locale.ROOT);
+            if (path.endsWith("_part") || path.equals("centipede_body") || path.equals("centipede_tail")) {
+                return true;
+            }
+        }
+        return e.getClass().getSimpleName().endsWith("Part");
+    }
+
+    /**
+     * Resolves multipart body segments (such as alexsmobs:anaconda_part) back to their root head LivingEntity.
+     * Returns null if a segment has no living non-part parent.
+     */
+    public static LivingEntity resolveRootAnimalEntity(LivingEntity entity) {
+        LivingEntity current = entity;
+        for (int hops = 0; current != null && isMultipartSegmentEntity(current) && hops < 24; hops++) {
+            Entity parent = null;
+            try {
+                Object res = current.getClass().getMethod("getParent").invoke(current);
+                if (res instanceof Entity pe) {
+                    parent = pe;
+                }
+            } catch (Throwable ignored) {}
+
+            if (parent == null && current.level() instanceof ServerLevel sl) {
+                try {
+                    Object uuidObj = current.getClass().getMethod("getParentId").invoke(current);
+                    if (uuidObj instanceof UUID parentUuid) {
+                        parent = sl.getEntity(parentUuid);
+                    }
+                } catch (Throwable ignored) {}
+            }
+
+            if (parent instanceof LivingEntity parentLiving && parentLiving.isAlive() && parentLiving != current) {
+                current = parentLiving;
+            } else {
+                return null;
+            }
+        }
+        return (current != null && !isMultipartSegmentEntity(current)) ? current : null;
     }
 
     public static boolean isPureAquatic(String entityTypeId) {
@@ -175,9 +223,10 @@ public class ZooAnimalHungerManager {
         return registerAnimalFromSpyglass(player, animal, true);
     }
 
-    public static boolean registerAnimalFromSpyglass(ServerPlayer player, LivingEntity animal, boolean sendToast) {
-        if (player == null || animal == null || !animal.isAlive()) return false;
-        if (!isZooAnimalCandidate(animal)) return false;
+    public static boolean registerAnimalFromSpyglass(ServerPlayer player, LivingEntity rawAnimal, boolean sendToast) {
+        if (player == null || rawAnimal == null || !rawAnimal.isAlive()) return false;
+        LivingEntity animal = resolveRootAnimalEntity(rawAnimal);
+        if (animal == null || !animal.isAlive() || !isZooAnimalCandidate(animal)) return false;
 
         if (isTagged(animal) && isOwnedBy(animal, player.getUUID())) {
             return false;
@@ -239,11 +288,15 @@ public class ZooAnimalHungerManager {
 
                 var hit = net.minecraft.world.entity.projectile.ProjectileUtil.getEntityHitResult(
                         player, eyePos, reachVec, box,
-                        e -> e instanceof LivingEntity living && isZooAnimalCandidate(living),
+                        e -> e instanceof LivingEntity living && resolveRootAnimalEntity(living) != null
+                                && isZooAnimalCandidate(resolveRootAnimalEntity(living)),
                         64.0 * 64.0
                 );
 
-                if (hit != null && hit.getEntity() instanceof LivingEntity targetAnimal) {
+                LivingEntity targetAnimal = (hit != null && hit.getEntity() instanceof LivingEntity rawHit)
+                        ? resolveRootAnimalEntity(rawHit)
+                        : null;
+                if (targetAnimal != null && isZooAnimalCandidate(targetAnimal)) {
                     UUID playerUuid = player.getUUID();
                     UUID currentTarget = SPYGLASS_TARGET_MAP.get(playerUuid);
                     if (targetAnimal.getUUID().equals(currentTarget)) {

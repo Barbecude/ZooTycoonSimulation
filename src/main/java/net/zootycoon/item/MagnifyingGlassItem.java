@@ -56,11 +56,15 @@ public class MagnifyingGlassItem extends Item {
 
         var hit = net.minecraft.world.entity.projectile.ProjectileUtil.getEntityHitResult(
                 player, eyePos, reachVec, box,
-                e -> e instanceof LivingEntity living && ZooAnimalHungerManager.isZooAnimalCandidate(living),
+                e -> e instanceof LivingEntity living && ZooAnimalHungerManager.resolveRootAnimalEntity(living) != null
+                        && ZooAnimalHungerManager.isZooAnimalCandidate(ZooAnimalHungerManager.resolveRootAnimalEntity(living)),
                 48.0 * 48.0
         );
 
-        if (hit != null && hit.getEntity() instanceof LivingEntity target) {
+        LivingEntity target = (hit != null && hit.getEntity() instanceof LivingEntity rawHit)
+                ? ZooAnimalHungerManager.resolveRootAnimalEntity(rawHit)
+                : null;
+        if (target != null && ZooAnimalHungerManager.isZooAnimalCandidate(target)) {
             scanAndRegister(player, target);
         }
     }
@@ -73,10 +77,11 @@ public class MagnifyingGlassItem extends Item {
     }
 
     @Override
-    public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
+    public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity rawTarget, InteractionHand hand) {
         player.playSound(SoundEvents.SPYGLASS_USE, 1.0F, 1.0F);
         player.startUsingItem(hand);
-        if (ZooAnimalHungerManager.isZooAnimalCandidate(target)) {
+        LivingEntity target = ZooAnimalHungerManager.resolveRootAnimalEntity(rawTarget);
+        if (target != null && ZooAnimalHungerManager.isZooAnimalCandidate(target)) {
             if (player.level().isClientSide()) {
                 net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new net.zootycoon.network.ZooNetworkPayloads.ScanAnimalPayload(target.getId()));
                 target.addTag("zoo_registered");

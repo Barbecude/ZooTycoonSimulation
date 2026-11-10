@@ -140,4 +140,40 @@ public class F12_AnimalInfoBoardAndBannerOrientationTest {
         assertTrue(newBtnIdx > 0 && catalogSource.substring(Math.max(0, newBtnIdx - 180), newBtnIdx).contains("if (isCreative)"));
         assertTrue(editBtnIdx > 0 && catalogSource.substring(Math.max(0, editBtnIdx - 180), editBtnIdx).contains("if (isCreative)"));
     }
+
+    @Test
+    @DisplayName("Cumulative certificate species counts, updated Tier 2 species, Tortoise label, and multipart segment guard")
+    void testCumulativeCountsTier2ReplacementsAndAnacondaPartFix() throws Exception {
+        assertEquals(8, LicenseTier.TAMAN_MINI.getCumulativeSpeciesCount());
+        assertEquals(16, LicenseTier.KEBUN_BINATANG.getCumulativeSpeciesCount());
+        assertEquals(24, LicenseTier.SUAKA_MARGASATWA.getCumulativeSpeciesCount());
+        assertEquals(32, LicenseTier.CAGAR_ALAM.getCumulativeSpeciesCount());
+        assertEquals(40, LicenseTier.KONSERVASI_DUNIA.getCumulativeSpeciesCount());
+
+        String rendererSrc = Files.readString(new File("src/main/java/net/zootycoon/client/render/LicenseBannerRenderer.java").toPath());
+        assertTrue(rendererSrc.contains("tier.getCumulativeSpeciesCount()"));
+
+        assertNotNull(LicenseTier.findSpeciesEntry("black_bear"));
+        assertNotNull(LicenseTier.findSpeciesEntry("naturalist:black_bear"));
+        assertNotNull(LicenseTier.findSpeciesEntry("rhinoceros"));
+        assertNotNull(LicenseTier.findSpeciesEntry("naturalist:rhino"));
+        assertNotNull(LicenseTier.findSpeciesEntry("toucan"));
+        assertNotNull(LicenseTier.findSpeciesEntry("gazelle"));
+        assertNull(LicenseTier.findSpeciesEntry("penguin"));
+        assertNull(LicenseTier.findSpeciesEntry("cassowary"));
+        assertNull(LicenseTier.findSpeciesEntry("bald_eagle"));
+        assertNull(LicenseTier.findSpeciesEntry("vulture"));
+        assertEquals("Tortoise", LicenseTier.findSpeciesEntry("tortoise").defaultName());
+
+        Map<String, String> idLang = TestHelper.getIdLang();
+        Map<String, String> enLang = TestHelper.getEnLang();
+        for (String key : new String[]{"black_bear", "rhinoceros", "toucan", "gazelle"}) {
+            assertTrue(idLang.containsKey("zootycoon.species." + key + ".fun_fact"), "Missing id fun fact for " + key);
+            assertTrue(enLang.containsKey("zootycoon.species." + key + ".fun_fact"), "Missing en fun fact for " + key);
+        }
+
+        String hungerSrc = Files.readString(new File("src/main/java/net/zootycoon/animal/ZooAnimalHungerManager.java").toPath());
+        assertTrue(hungerSrc.contains("isMultipartSegmentEntity"));
+        assertTrue(hungerSrc.contains("resolveRootAnimalEntity"));
+    }
 }

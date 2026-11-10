@@ -133,6 +133,9 @@ public final class MobBagHandler {
                 || entity instanceof ZooVehicleEntity) {
             return false;
         }
+        if (ZooAnimalHungerManager.isMultipartSegmentEntity(living)) {
+            return false;
+        }
         return entity instanceof Animal
                 || entity instanceof AmbientCreature
                 || entity instanceof WaterAnimal

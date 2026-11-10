@@ -39,7 +39,7 @@ public class F03_AnimalEnglishNamesTest {
 
         LicenseTier.SpeciesEntry tortoise = findSpecies("tortoise");
         assertNotNull(tortoise);
-        assertEquals("Giant Tortoise", tortoise.defaultName(), "Default name must be 'Giant Tortoise', not 'Kura-kura Darat'");
+        assertEquals("Tortoise", tortoise.defaultName(), "Default name must be 'Tortoise', not 'Kura-kura Darat'");
 
         LicenseTier.SpeciesEntry deer = findSpecies("deer");
         assertNotNull(deer);

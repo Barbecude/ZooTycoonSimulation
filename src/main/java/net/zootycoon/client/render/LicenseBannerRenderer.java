@@ -325,8 +325,8 @@ public class LicenseBannerRenderer extends EntityRenderer<LicenseBannerEntity> {
         String awardedTo = ZooTranslations.get("zootycoon.license.banner.awarded_to", entity.getZooName());
         drawCenteredOffset(font, awardedTo, 0, -4, 0xFF2E1B0E, textMat, bufferSource, light);
 
-        // 3. Species Verified Info
-        String speciesInfo = ZooTranslations.get("zootycoon.license.banner.species_verified", tier.getRequiredSpecies().size());
+        // 3. Cumulative verified species count up through this tier
+        String speciesInfo = ZooTranslations.get("zootycoon.license.banner.species_verified", tier.getCumulativeSpeciesCount());
         drawCenteredOffset(font, speciesInfo, 0, 14, 0xFF6A5442, textMat, bufferSource, light);
 
         poseStack.popPose();
