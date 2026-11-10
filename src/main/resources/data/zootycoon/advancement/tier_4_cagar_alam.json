@@ -1,0 +1,23 @@
+{
+  "parent": "zootycoon:tier_3_suaka_margasatwa",
+  "display": {
+    "icon": {
+      "id": "zootycoon:license_banner_tier_4"
+    },
+    "title": {
+      "translate": "advancement.zootycoon.tier_4.title"
+    },
+    "description": {
+      "translate": "advancement.zootycoon.tier_4.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "unlock": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

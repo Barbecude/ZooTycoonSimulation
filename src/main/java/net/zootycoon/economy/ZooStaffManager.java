@@ -377,6 +377,10 @@ public class ZooStaffManager {
 
         saveToFile();
         syncToPlayer(player);
+        net.zootycoon.advancement.ZooAdvancements.grant(player, net.zootycoon.advancement.ZooAdvancements.HIRE_FIRST_STAFF);
+        if (rec.builders >= 1 && rec.zookeepers >= 1 && rec.security >= 1 && rec.cashiers >= 1) {
+            net.zootycoon.advancement.ZooAdvancements.grant(player, net.zootycoon.advancement.ZooAdvancements.HIRE_ALL_STAFF_TYPES);
+        }
         return true;
     }
 

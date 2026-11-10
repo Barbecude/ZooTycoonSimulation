@@ -1,0 +1,23 @@
+{
+  "parent": "zootycoon:hire_first_staff",
+  "display": {
+    "icon": {
+      "id": "zootycoon:empty_barrel"
+    },
+    "title": {
+      "translate": "advancement.zootycoon.logistic_master.title"
+    },
+    "description": {
+      "translate": "advancement.zootycoon.logistic_master.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "unlock": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

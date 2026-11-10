@@ -100,6 +100,11 @@ public class InspectionLetterScreen extends Screen {
         return false;
     }
 
+    private void drawInkCentered(GuiGraphics graphics, String text, int centerX, int y, int color) {
+        int x = centerX - this.font.width(text) / 2;
+        graphics.drawString(this.font, text, x, y, color, false);
+    }
+
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         // 1. Semi-transparent backdrop overlay without blur
@@ -113,16 +118,17 @@ public class InspectionLetterScreen extends Screen {
             graphics.blit(BUILDER_NOTE_TEX, startX, startY, panelWidth, panelHeight, 16.0F, 4.0F, 128, 168, 256, 256);
         }
 
-        // 3. Document Header in natural sepia/walnut ink
-        graphics.drawCenteredString(this.font, ZooTranslations.get("zootycoon.license.letter.header"), startX + panelWidth / 2, startY + 14, 0xFF2A1708);
-        graphics.fill(startX + 24, startY + 25, startX + panelWidth - 24, startY + 26, 0x403A2410);
+        // 3. Document Header in crisp high-contrast ink (no dropShadow smudging)
+        graphics.fill(startX + 18, startY + 12, startX + panelWidth - 18, startY + 25, 0x227A1C1C);
+        drawInkCentered(graphics, ZooTranslations.get("zootycoon.license.letter.header"), startX + panelWidth / 2, startY + 15, 0xFF6B1414);
+        graphics.fill(startX + 24, startY + 26, startX + panelWidth - 24, startY + 27, 0x803A2410);
 
         String zooLabel = ZooTranslations.get("zootycoon.license.letter.zoo_name", zooName);
-        graphics.drawCenteredString(this.font, zooLabel, startX + panelWidth / 2, startY + 29, 0xFF3E2613);
+        drawInkCentered(graphics, zooLabel, startX + panelWidth / 2, startY + 29, 0xFF1F1206);
 
         LicenseTier tier = LicenseTier.byLevel(tierLevel);
         String tierLabel = ZooTranslations.get("zootycoon.license.letter.tier_label", tier.getDisplayName());
-        graphics.drawCenteredString(this.font, tierLabel, startX + panelWidth / 2, startY + 40, 0xFF5A3E26);
+        drawInkCentered(graphics, tierLabel, startX + panelWidth / 2, startY + 40, 0xFF2A1708);
 
         // 4. Official Double-Ruled Rubber/Wax Seal Stamp Box
         String rawStatus = ZooTranslations.get(passed ? "zootycoon.license.status.passed" : "zootycoon.license.status.failed");
@@ -137,7 +143,7 @@ public class InspectionLetterScreen extends Screen {
         graphics.fill(stampX, stampY, stampX + stampW, stampY + stampH, stampBg);
         graphics.renderOutline(stampX, stampY, stampW, stampH, stampBorder);
         graphics.renderOutline(stampX + 2, stampY + 2, stampW - 4, stampH - 4, stampBorder);
-        graphics.drawCenteredString(this.font, stampText, startX + panelWidth / 2, stampY + 4, stampBorder);
+        drawInkCentered(graphics, stampText, startX + panelWidth / 2, stampY + 4, stampBorder);
 
         graphics.fill(startX + 20, startY + 71, startX + panelWidth - 20, startY + 72, 0x403A2410);
 
@@ -156,16 +162,10 @@ public class InspectionLetterScreen extends Screen {
         graphics.fill(bodyX + spTitleW + 6, curY + 4, bodyX + bodyW, curY + 5, 0x303A2410);
         curY += 12;
 
-        if (inspectedSpecies.isEmpty()) {
-            for (LicenseTier.SpeciesEntry entry : tier.getRequiredSpecies()) {
-                graphics.drawString(this.font, "- " + entry.getDisplayName(), bodyX + 6, curY, 0xFF6B5847, false);
-                curY += 11;
-            }
-        } else {
-            for (String sp : inspectedSpecies) {
-                graphics.drawString(this.font, "✔ " + sp, bodyX + 6, curY, 0xFF1E5B26, false);
-                curY += 11;
-            }
+        for (LicenseTier.SpeciesEntry entry : tier.getRequiredSpecies()) {
+            boolean checked = inspectedSpecies.contains(entry.getDisplayName());
+            graphics.drawString(this.font, (checked ? "✔ " : "- ") + entry.getDisplayName(), bodyX + 6, curY, checked ? 0xFF1E5B26 : 0xFF6B5847, false);
+            curY += 11;
         }
 
         curY += 8;

@@ -514,6 +514,10 @@ public class ZooTycoonClient implements ClientModInitializer {
             });
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.SyncSpeciesBiomesPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> net.zootycoon.client.ui.AnimalCollectionModal.BIOME_CACHE.put(payload.speciesKey(), payload.biomes()));
+        });
+
         ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.OpenInspectorDialogPayload.TYPE, (payload, context) -> {
             context.client().execute(() -> {
                 Minecraft.getInstance().setScreen(new net.zootycoon.client.ui.InspectorDialogScreen(

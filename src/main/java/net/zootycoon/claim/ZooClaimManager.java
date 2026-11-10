@@ -230,21 +230,7 @@ public class ZooClaimManager {
     }
 
     public static void grantGrandOpeningAdvancement(ServerPlayer player) {
-        if (player == null || player.server == null) return;
-        try {
-            ResourceLocation id = ResourceLocation.fromNamespaceAndPath("zootycoon", "grand_opening");
-            net.minecraft.advancements.AdvancementHolder holder = player.server.getAdvancements().get(id);
-            if (holder != null) {
-                net.minecraft.advancements.AdvancementProgress progress = player.getAdvancements().getOrStartProgress(holder);
-                if (!progress.isDone()) {
-                    for (String criterion : progress.getRemainingCriteria()) {
-                        player.getAdvancements().award(holder, criterion);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            net.zootycoon.ZooTycoonMod.LOGGER.error("Failed to grant Grand Opening advancement to player " + player.getName().getString(), e);
-        }
+        net.zootycoon.advancement.ZooAdvancements.grant(player, net.zootycoon.advancement.ZooAdvancements.GRAND_OPENING);
     }
 
     public Collection<ZooClaim> getAllClaims() {
@@ -383,6 +369,7 @@ public class ZooClaimManager {
         claims.put(newClaim.getClaimId(), newClaim);
         saveToFile();
         syncToAll();
+        net.zootycoon.advancement.ZooAdvancements.grant(player, net.zootycoon.advancement.ZooAdvancements.FIRST_CLAIM);
 
         if (cost == 0) {
             ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.claim", "zootycoon.claim.expanded_free", 1);

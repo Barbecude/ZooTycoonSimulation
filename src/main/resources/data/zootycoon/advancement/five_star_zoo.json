@@ -1,0 +1,23 @@
+{
+  "parent": "zootycoon:grand_opening",
+  "display": {
+    "icon": {
+      "id": "minecraft:nether_star"
+    },
+    "title": {
+      "translate": "advancement.zootycoon.five_star_zoo.title"
+    },
+    "description": {
+      "translate": "advancement.zootycoon.five_star_zoo.desc"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "unlock": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

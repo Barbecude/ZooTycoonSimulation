@@ -36,6 +36,7 @@ public class LicenseBannerEntity extends HangingEntity {
 
     public LicenseBannerEntity(EntityType<? extends LicenseBannerEntity> type, Level level) {
         super(type, level);
+        this.pos = BlockPos.ZERO;
     }
 
     public LicenseBannerEntity(Level level, BlockPos pos, Direction direction, int tierLevel, String zooName) {
@@ -62,6 +63,9 @@ public class LicenseBannerEntity extends HangingEntity {
         if (direction == null || !direction.getAxis().isHorizontal()) {
             direction = Direction.SOUTH;
         }
+        if (this.pos == null) {
+            this.pos = this.blockPosition();
+        }
         this.entityData.set(DATA_DIRECTION_3D, direction.get3DDataValue());
         this.setDirection(direction);
     }
@@ -72,6 +76,9 @@ public class LicenseBannerEntity extends HangingEntity {
         if (DATA_DIRECTION_3D.equals(key)) {
             Direction dir = Direction.from3DDataValue(this.entityData.get(DATA_DIRECTION_3D));
             if (dir.getAxis().isHorizontal()) {
+                if (this.pos == null) {
+                    this.pos = this.blockPosition();
+                }
                 this.setDirection(dir);
             }
         }
@@ -107,6 +114,9 @@ public class LicenseBannerEntity extends HangingEntity {
 
     @Override
     protected AABB calculateBoundingBox(BlockPos pos, Direction direction) {
+        if (pos == null) {
+            pos = this.blockPosition();
+        }
         if (direction == null || !direction.getAxis().isHorizontal()) {
             direction = Direction.SOUTH;
         }
@@ -123,12 +133,17 @@ public class LicenseBannerEntity extends HangingEntity {
     public boolean survives() {
         Direction dir = this.getDirection();
         if (dir == null || !dir.getAxis().isHorizontal()) return false;
+        if (this.pos == null) {
+            this.pos = this.blockPosition();
+        }
         BlockPos wallBase = this.pos.relative(dir.getOpposite());
         // Verify supporting wall at the center position where the banner is mounted
-        if (!this.level().getBlockState(wallBase).isSolid()) {
+        var wallState = this.level().getBlockState(wallBase);
+        if (wallState.isAir() || (!wallState.isSolid() && wallState.getCollisionShape(this.level(), wallBase).isEmpty())) {
             return false;
         }
-        return this.level().getEntities(this, this.getBoundingBox(), HANGING_ENTITY).isEmpty();
+        return this.level().getEntities(this, this.getBoundingBox(),
+                e -> e instanceof HangingEntity he && this.pos.equals(he.getPos())).isEmpty();
     }
 
     @Override
@@ -198,6 +213,7 @@ public class LicenseBannerEntity extends HangingEntity {
 
     @Override
     public void recreateFromPacket(ClientboundAddEntityPacket packet) {
+        this.pos = BlockPos.containing(packet.getX(), packet.getY(), packet.getZ());
         super.recreateFromPacket(packet);
         Direction direction = Direction.from3DDataValue(packet.getData());
         this.setBannerDirection(direction);

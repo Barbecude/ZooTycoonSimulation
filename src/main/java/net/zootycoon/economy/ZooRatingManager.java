@@ -146,6 +146,9 @@ public class ZooRatingManager {
         ratings.put(playerUuid, (int) Math.round(newStar * 20.0D));
         saveToFile();
         syncToPlayer(player);
+        if (newStar >= 5.0D && player != null) {
+            net.zootycoon.advancement.ZooAdvancements.grant(player, net.zootycoon.advancement.ZooAdvancements.FIVE_STAR_ZOO);
+        }
     }
 
     public void setStarRating(UUID playerUuid, double starRating, ServerPlayer player) {

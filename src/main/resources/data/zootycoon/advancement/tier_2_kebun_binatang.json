@@ -1,0 +1,23 @@
+{
+  "parent": "zootycoon:tier_1_taman_mini",
+  "display": {
+    "icon": {
+      "id": "zootycoon:license_banner_tier_2"
+    },
+    "title": {
+      "translate": "advancement.zootycoon.tier_2.title"
+    },
+    "description": {
+      "translate": "advancement.zootycoon.tier_2.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "unlock": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

@@ -1364,6 +1364,7 @@ public class WarehouseSupplyManager {
                     barrel.syncToViewingPlayers(sLevel);
                     sLevel.playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.PLAYERS, 0.9F, 1.0F);
                     ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.warehouse.fulfilled", 1);
+                    net.zootycoon.advancement.ZooAdvancements.onSupplyRequestFulfilled(player);
                 }
             } else {
                 // Delivers what is ready; the request stays until every item has been delivered
@@ -1381,6 +1382,7 @@ public class WarehouseSupplyManager {
                     barrel.syncToViewingPlayers(sLevel);
                     sLevel.playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.PLAYERS, 0.9F, 1.0F);
                     ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.warehouse.fulfilled", 1);
+                    net.zootycoon.advancement.ZooAdvancements.onSupplyRequestFulfilled(player);
                 }
             }
         }

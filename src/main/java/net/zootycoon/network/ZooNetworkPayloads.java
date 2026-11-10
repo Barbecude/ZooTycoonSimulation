@@ -1484,6 +1484,52 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // 36b. Species biome lookup for the collection modal (C2S request, S2C response)
+    public record RequestSpeciesBiomesPayload(String speciesKey) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<RequestSpeciesBiomesPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("request_species_biomes"));
+        public static final StreamCodec<FriendlyByteBuf, RequestSpeciesBiomesPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> buf.writeUtf(payload.speciesKey != null ? payload.speciesKey : ""),
+                buf -> new RequestSpeciesBiomesPayload(buf.readUtf())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    public record SyncSpeciesBiomesPayload(String speciesKey, List<String> biomes) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<SyncSpeciesBiomesPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("sync_species_biomes"));
+        public static final StreamCodec<FriendlyByteBuf, SyncSpeciesBiomesPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeUtf(payload.speciesKey != null ? payload.speciesKey : "");
+                    List<String> list = payload.biomes != null ? payload.biomes : List.of();
+                    buf.writeInt(list.size());
+                    for (String s : list) {
+                        buf.writeUtf(s);
+                    }
+                },
+                buf -> {
+                    String key = buf.readUtf();
+                    int size = buf.readInt();
+                    List<String> list = new ArrayList<>(size);
+                    for (int i = 0; i < size; i++) {
+                        list.add(buf.readUtf());
+                    }
+                    return new SyncSpeciesBiomesPayload(key, list);
+                }
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 36c. Buy an animal information board from the collection modal (C2S)
+    public record BuyAnimalInfoBannerPayload(String speciesKey) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<BuyAnimalInfoBannerPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("buy_animal_info_banner"));
+        public static final StreamCodec<FriendlyByteBuf, BuyAnimalInfoBannerPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> buf.writeUtf(payload.speciesKey != null ? payload.speciesKey : ""),
+                buf -> new BuyAnimalInfoBannerPayload(buf.readUtf())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
     // 37. Open Inspector Dialog Payload (S2C)
     public record OpenInspectorDialogPayload(
             int inspectorEntityId,
@@ -1621,6 +1667,8 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
         PayloadTypeRegistry.playC2S().register(VehicleLoadAnimalPayload.TYPE, VehicleLoadAnimalPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestLicenseSyncPayload.TYPE, RequestLicenseSyncPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestZooInspectionPayload.TYPE, RequestZooInspectionPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(RequestSpeciesBiomesPayload.TYPE, RequestSpeciesBiomesPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(BuyAnimalInfoBannerPayload.TYPE, BuyAnimalInfoBannerPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(InspectorActionPayload.TYPE, InspectorActionPayload.CODEC);
 
         PayloadTypeRegistry.playS2C().register(SyncClaimsPayload.TYPE, SyncClaimsPayload.CODEC);
@@ -1648,6 +1696,7 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
         PayloadTypeRegistry.playS2C().register(RequestClientSelectionSavePayload.TYPE, RequestClientSelectionSavePayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncLicenseProgressionPayload.TYPE, SyncLicenseProgressionPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenInspectorDialogPayload.TYPE, OpenInspectorDialogPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(SyncSpeciesBiomesPayload.TYPE, SyncSpeciesBiomesPayload.CODEC);
 
         // Handler: Claim Land (Old / Direct)
         ServerPlayNetworking.registerGlobalReceiver(ClaimLandPayload.TYPE, (payload, context) -> {
@@ -2796,6 +2845,26 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
             });
         });
 
+        ServerPlayNetworking.registerGlobalReceiver(RequestSpeciesBiomesPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                if (player != null && player.level() instanceof ServerLevel sLevel) {
+                    var entry = net.zootycoon.license.LicenseTier.findSpeciesEntry(payload.speciesKey());
+                    if (entry == null) return;
+                    java.util.List<String> biomes = net.zootycoon.animal.habitat.SpeciesBiomeResolver.resolveSpawnBiomes(sLevel, entry.resolveEntityType());
+                    ServerPlayNetworking.send(player, new SyncSpeciesBiomesPayload(entry.speciesKey(), biomes));
+                }
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(BuyAnimalInfoBannerPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                if (player != null && player.level() instanceof ServerLevel sLevel) {
+                    net.zootycoon.license.ZooLicenseManager.get(sLevel).buyAnimalInfoBanner(player, payload.speciesKey());
+                }
+            });
+        });
         ServerPlayNetworking.registerGlobalReceiver(InspectorActionPayload.TYPE, (payload, context) -> {
             ServerPlayer player = context.player();
             context.server().execute(() -> {

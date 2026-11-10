@@ -1,0 +1,23 @@
+{
+  "parent": "zootycoon:grand_opening",
+  "display": {
+    "icon": {
+      "id": "zootycoon:license_banner_tier_1"
+    },
+    "title": {
+      "translate": "advancement.zootycoon.tier_1.title"
+    },
+    "description": {
+      "translate": "advancement.zootycoon.tier_1.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "unlock": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

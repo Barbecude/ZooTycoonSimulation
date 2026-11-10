@@ -263,6 +263,7 @@ public class ZooHunterEntity extends PathfinderMob {
             for (var p : sLevel.players()) {
                 if (p.distanceToSqr(this) < 48 * 48) {
                     ZooNetworkPayloads.sendToast(p, "zootycoon.toast.title.security", "zootycoon.hunter.defeated", 1);
+                    net.zootycoon.advancement.ZooAdvancements.grant(p, net.zootycoon.advancement.ZooAdvancements.DEFEAT_HUNTER);
                 }
             }
         }

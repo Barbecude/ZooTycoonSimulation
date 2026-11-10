@@ -1,0 +1,23 @@
+{
+  "parent": "zootycoon:hire_first_staff",
+  "display": {
+    "icon": {
+      "id": "minecraft:golden_helmet"
+    },
+    "title": {
+      "translate": "advancement.zootycoon.hire_all_staff_types.title"
+    },
+    "description": {
+      "translate": "advancement.zootycoon.hire_all_staff_types.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "unlock": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

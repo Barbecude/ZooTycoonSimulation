@@ -1,0 +1,23 @@
+{
+  "parent": "zootycoon:first_claim",
+  "display": {
+    "icon": {
+      "id": "minecraft:iron_shovel"
+    },
+    "title": {
+      "translate": "advancement.zootycoon.hire_first_staff.title"
+    },
+    "description": {
+      "translate": "advancement.zootycoon.hire_first_staff.desc"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "unlock": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

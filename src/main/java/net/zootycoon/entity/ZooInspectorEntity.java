@@ -243,10 +243,18 @@ public class ZooInspectorEntity extends PathfinderMob {
         pendingSpeciesKeys.clear();
         inspectedSpeciesDisplayNames.clear();
         improvementNotes.clear();
+        List<String> missingNotes = new ArrayList<>();
+        // Only species the owner really keeps in the zoo are queued for walking inspection;
+        // absent species are recorded as missing and never marked as inspected.
         for (LicenseTier.SpeciesEntry entry : tier.getRequiredSpecies()) {
-            pendingSpeciesKeys.add(entry.speciesKey());
+            if (findOwnedAnimalForSpecies(level, getOwnerUuid(), entry) != null) {
+                pendingSpeciesKeys.add(entry.speciesKey());
+            } else {
+                missingNotes.add(entry.getDisplayName() + ": " + ZooTranslations.get("zootycoon.license.issue.missing_animal"));
+            }
         }
-        setTotalCount(pendingSpeciesKeys.size());
+        improvementNotes.addAll(missingNotes);
+        setTotalCount(Math.max(1, pendingSpeciesKeys.size()));
         setInspectedCount(0);
         advanceToNextSpecies(level);
     }
@@ -332,13 +340,52 @@ public class ZooInspectorEntity extends PathfinderMob {
         if (targetAnimal != null) {
             currentTargetAnimalUuid = targetAnimal.getUUID();
             setPhase(InspectorPhase.WALKING_TO_ANIMAL);
-            BlockPos standPos = findInspectionStandPosNearAnimal(level, targetAnimal);
-            this.getNavigation().moveTo(standPos.getX() + 0.5, standPos.getY(), standPos.getZ() + 0.5, 1.05D);
+            navigateTowardAnimal(level, targetAnimal);
         } else {
-            // Animal not found in loaded chunks (e.g., Creative mode bypass or missing animal)
+            // Animal vanished since the inspection began: report it and move straight on, never idle in place
             currentTargetAnimalUuid = null;
-            setPhase(InspectorPhase.WRITING_NOTES);
+            inspectedSpeciesDisplayNames.remove(displayName);
+            improvementNotes.add(displayName + ": " + ZooTranslations.get("zootycoon.license.issue.missing_animal"));
+            pendingSpeciesKeys.remove(0);
+            setInspectedCount(getTotalCount() - pendingSpeciesKeys.size());
+            advanceToNextSpecies(level);
         }
+    }
+
+    private void navigateTowardAnimal(ServerLevel level, LivingEntity target) {
+        if (target == null) return;
+        this.getLookControl().setLookAt(target, 30.0F, 30.0F);
+        net.minecraft.world.level.pathfinder.Path path = this.getNavigation().createPath(target, 2);
+        if (path != null && path.getNodeCount() > 1) {
+            this.getNavigation().moveTo(path, 1.05D);
+            return;
+        }
+        BlockPos standPos = findInspectionStandPosNearAnimal(level, target);
+        if (!this.getNavigation().moveTo(standPos.getX() + 0.5, standPos.getY(), standPos.getZ() + 0.5, 1.05D)) {
+            this.getMoveControl().setWantedPosition(target.getX(), target.getY(), target.getZ(), 1.05D);
+        }
+    }
+
+    private boolean isBarrierBetween(ServerLevel level, LivingEntity target) {
+        Vec3 start = this.getEyePosition();
+        Vec3 end = target.getEyePosition();
+        Vec3 diff = end.subtract(start);
+        double len = diff.length();
+        if (len < 0.5D) return false;
+        Vec3 dir = diff.scale(1.0D / len);
+        double maxCheck = Math.min(len, 4.0D);
+        for (double d = 0.8D; d <= maxCheck; d += 0.6D) {
+            BlockPos checkPos = BlockPos.containing(start.add(dir.scale(d)));
+            BlockState state = level.getBlockState(checkPos);
+            if (!state.getCollisionShape(level, checkPos).isEmpty()
+                    || state.is(net.minecraft.tags.BlockTags.FENCES)
+                    || state.is(net.minecraft.tags.BlockTags.WALLS)
+                    || state.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock
+                    || state.getBlock() instanceof net.minecraft.world.level.block.IronBarsBlock) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void tickWalkingToAnimal(ServerLevel level) {
@@ -354,20 +401,26 @@ public class ZooInspectorEntity extends PathfinderMob {
             return;
         }
 
+        this.getLookControl().setLookAt(target, 30.0F, 30.0F);
         double distSq = this.distanceToSqr(target);
-        if (distSq <= 25.0D) { // Within 5 blocks of the animal/enclosure
+        boolean atEnclosureBarrier = distSq <= 49.0D && phaseTimer >= 15
+                && (isBarrierBetween(level, target) || this.getNavigation().isDone());
+        if (distSq <= 12.25D || atEnclosureBarrier) { // Within 3.5 blocks of animal, or right outside its enclosure fence
             this.getNavigation().stop();
             this.getLookControl().setLookAt(target, 30.0F, 30.0F);
             setPhase(InspectorPhase.WRITING_NOTES);
             return;
         }
 
-        if (phaseTimer % 20 == 0) {
-            BlockPos standPos = findInspectionStandPosNearAnimal(level, target);
-            this.getNavigation().moveTo(standPos.getX() + 0.5, standPos.getY(), standPos.getZ() + 0.5, 1.05D);
+        if (phaseTimer == 1 || phaseTimer % 15 == 0 || this.getNavigation().isDone()) {
+            navigateTowardAnimal(level, target);
         }
 
-        if (this.position().distanceToSqr(lastProgressPos) < 0.08D) {
+        if (this.getNavigation().isDone() || this.getDeltaMovement().horizontalDistanceSqr() < 0.0015D) {
+            this.getMoveControl().setWantedPosition(target.getX(), target.getY(), target.getZ(), 1.05D);
+        }
+
+        if (this.position().distanceToSqr(lastProgressPos) < 0.05D) {
             stuckTicks++;
         } else {
             stuckTicks = 0;
@@ -375,7 +428,7 @@ public class ZooInspectorEntity extends PathfinderMob {
         }
 
         // Safe fallback if pathfinding gets stuck or enclosure is far
-        if (stuckTicks >= 120 || phaseTimer >= 360) {
+        if (stuckTicks >= 80 || phaseTimer >= 300) {
             BlockPos standPos = findInspectionStandPosNearAnimal(level, target);
             safeTeleportNear(level, standPos, 2);
             this.getNavigation().stop();
@@ -423,45 +476,67 @@ public class ZooInspectorEntity extends PathfinderMob {
         if (speciesName.isEmpty()) {
             speciesName = "Satwa";
         }
-        inspectedSpeciesDisplayNames.add(speciesName);
-
-        UUID ownerUuid = getOwnerUuid();
-        ServerPlayer ownerPlayer = ownerUuid != null ? level.getServer().getPlayerList().getPlayer(ownerUuid) : null;
-        boolean isCreativeBypass = ownerPlayer != null && ownerPlayer.isCreative();
-
         if (animal == null || !animal.isAlive()) {
-            if (!isCreativeBypass) {
-                improvementNotes.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.missing_animal"));
-            }
+            improvementNotes.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.missing_animal"));
             return;
         }
+        inspectedSpeciesDisplayNames.add(speciesName);
 
         int hunger = ZooAnimalHungerManager.getHunger(animal);
         int thirst = ZooAnimalHungerManager.getThirst(animal);
         int clean = ZooAnimalHungerManager.getCleanliness(animal);
         float healthRatio = animal.getMaxHealth() > 0 ? (animal.getHealth() / animal.getMaxHealth()) : 1.0f;
 
+        List<String> animalIssues = new ArrayList<>();
         if (hunger <= 30) {
-            improvementNotes.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.hungry", hunger));
+            animalIssues.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.hungry", hunger));
         }
         if (thirst <= 30) {
-            improvementNotes.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.thirsty", thirst));
+            animalIssues.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.thirsty", thirst));
         }
         if (!ZooAnimalHungerManager.isPureAquatic(animal) && clean <= 30) {
-            improvementNotes.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.dirty", clean));
+            animalIssues.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.dirty", clean));
         }
         if (healthRatio <= 0.30f) {
-            improvementNotes.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.low_health"));
+            animalIssues.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.low_health"));
         }
 
         HabitatEvaluator.HabitatResult hab = HabitatEvaluator.evaluate(level, animal);
         if (hab != null && hab.status() == HabitatEvaluator.HabitatStatus.UNSUITABLE) {
-            String hint = hab.formatHint();
+            String hint = buildBiomeAwareHint(level, animal, hab);
             if (hint == null || hint.isEmpty()) {
                 hint = ZooTranslations.get("zootycoon.license.issue.habitat_generic");
             }
-            improvementNotes.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.habitat_detail", hint));
+            animalIssues.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.habitat_detail", hint));
         }
+        if (!animalIssues.isEmpty()) {
+            improvementNotes.addAll(0, animalIssues);
+        }
+    }
+
+    /** Same needs as the evaluator reports, but the biome requirement lists real English biome names. */
+    private String buildBiomeAwareHint(ServerLevel level, LivingEntity animal, HabitatEvaluator.HabitatResult hab) {
+        if (hab == null || hab.unmetNeeds() == null || hab.unmetNeeds().isEmpty()) {
+            return "";
+        }
+        List<String> parts = new ArrayList<>();
+        for (String need : hab.unmetNeeds()) {
+            if (need.startsWith("Bioma:")) {
+                List<String> biomes = net.zootycoon.animal.habitat.SpeciesBiomeResolver.resolveProfileBiomes(
+                        level, net.zootycoon.animal.habitat.HabitatProfileLoader.getProfile(animal));
+                if (biomes.isEmpty()) {
+                    parts.add(need);
+                } else {
+                    int shown = Math.min(4, biomes.size());
+                    String list = String.join(", ", biomes.subList(0, shown))
+                            + (biomes.size() > shown ? " +" + (biomes.size() - shown) : "");
+                    parts.add(ZooTranslations.get("zootycoon.license.hint.biome", list));
+                }
+            } else {
+                parts.add(need);
+            }
+        }
+        return String.join("; ", parts);
     }
 
     private void tickApproachingPlayer(ServerLevel level) {
@@ -586,6 +661,23 @@ public class ZooInspectorEntity extends PathfinderMob {
                     && ZooAnimalHungerManager.isTagged(le)
                     && ZooAnimalHungerManager.isOwnedBy(le, ownerUuid)
                     && entry.matches(le.getType())) {
+                double d = this.distanceToSqr(le);
+                if (d < bestDist) {
+                    bestDist = d;
+                    best = le;
+                }
+            }
+        }
+        if (best != null) {
+            return best;
+        }
+        // Fallback: also find matching animals residing inside the owner's claimed zoo
+        net.zootycoon.claim.ZooClaimManager claimManager = net.zootycoon.claim.ZooClaimManager.get(level);
+        for (Entity entity : level.getAllEntities()) {
+            if (entity instanceof LivingEntity le && le.isAlive()
+                    && ZooAnimalHungerManager.isZooAnimalCandidate(le)
+                    && entry.matches(le.getType())
+                    && claimManager.isClaimedBy(le.blockPosition(), ownerUuid)) {
                 double d = this.distanceToSqr(le);
                 if (d < bestDist) {
                     bestDist = d;

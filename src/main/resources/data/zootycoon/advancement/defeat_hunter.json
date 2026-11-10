@@ -1,0 +1,23 @@
+{
+  "parent": "zootycoon:hire_first_staff",
+  "display": {
+    "icon": {
+      "id": "minecraft:crossbow"
+    },
+    "title": {
+      "translate": "advancement.zootycoon.defeat_hunter.title"
+    },
+    "description": {
+      "translate": "advancement.zootycoon.defeat_hunter.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "unlock": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

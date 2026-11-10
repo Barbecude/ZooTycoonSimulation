@@ -1,0 +1,23 @@
+{
+  "parent": "zootycoon:tier_4_cagar_alam",
+  "display": {
+    "icon": {
+      "id": "zootycoon:license_banner_tier_5"
+    },
+    "title": {
+      "translate": "advancement.zootycoon.tier_5.title"
+    },
+    "description": {
+      "translate": "advancement.zootycoon.tier_5.desc"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "unlock": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

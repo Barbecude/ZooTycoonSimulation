@@ -271,6 +271,47 @@ public class ZooLicenseManager {
         }
     }
 
+    /** Price in emeralds of one animal information board sold from the collection modal. */
+    public static final int INFO_BOARD_PRICE = 10;
+
+    public void buyAnimalInfoBanner(ServerPlayer player, String speciesKey) {
+        if (player == null || !(player.level() instanceof ServerLevel level)) return;
+        LicenseTier.SpeciesEntry entry = LicenseTier.findSpeciesEntry(speciesKey);
+        if (entry == null) return;
+
+        PlayerLicenseProfile profile = getProfile(player.getUUID());
+        syncOwnedSpeciesFromWorld(level, player);
+        if (!profile.ownedSpeciesKeys.contains(entry.speciesKey())) {
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.inspector",
+                    "zootycoon.license.toast.info_board_not_owned", ZooNetworkPayloads.TOAST_WARNING, entry.getDisplayName());
+            return;
+        }
+
+        int tierLevel = 1;
+        for (LicenseTier tier : LicenseTier.values()) {
+            if (tier.getRequiredSpecies().contains(entry)) {
+                tierLevel = tier.getTierLevel();
+                break;
+            }
+        }
+
+        if (!player.isCreative()) {
+            if (!net.zootycoon.economy.TransactionHelper.hasEnoughEmeralds(player, INFO_BOARD_PRICE)
+                    || !net.zootycoon.economy.TransactionHelper.consumeEmeralds(player, INFO_BOARD_PRICE)) {
+                ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.inspector",
+                        "zootycoon.license.toast.info_board_no_funds", ZooNetworkPayloads.TOAST_WARNING, INFO_BOARD_PRICE);
+                return;
+            }
+        }
+
+        var stack = LicenseBannerItem.createAnimalInfoBannerStack(tierLevel, entry.speciesKey(), player.getName().getString() + "'s Zoo");
+        if (!player.getInventory().add(stack)) {
+            player.drop(stack, false);
+        }
+        ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.inspector",
+                "zootycoon.license.toast.info_board_bought", ZooNetworkPayloads.TOAST_SUCCESS, entry.getDisplayName());
+    }
+
     public void syncOwnedSpeciesFromWorld(ServerLevel level, ServerPlayer player) {
         if (level == null || player == null) return;
         PlayerLicenseProfile profile = getProfile(player.getUUID());
@@ -666,6 +707,7 @@ public class ZooLicenseManager {
                     tierData.licenseClaimed = true;
                     tierData.bannerClaimed = true;
                     tierData.state = LicenseProgressionState.LICENSE_UNLOCKED;
+                    net.zootycoon.advancement.ZooAdvancements.grantForLicenseTier(player, tierLevel);
 
                     // Unlock next tier
                     LicenseTier currentTier = LicenseTier.byLevel(tierLevel);

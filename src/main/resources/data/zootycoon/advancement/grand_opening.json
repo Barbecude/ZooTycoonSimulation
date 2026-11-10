@@ -1,19 +1,19 @@
 {
+  "parent": "zootycoon:first_claim",
   "display": {
     "icon": {
       "id": "minecraft:emerald"
     },
     "title": {
-      "text": "Grand Opening"
+      "translate": "advancement.zootycoon.grand_opening.title"
     },
     "description": {
-      "text": "Open your zoo to visitors for the first time!"
+      "translate": "advancement.zootycoon.grand_opening.desc"
     },
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,
-    "hidden": false,
-    "background": "minecraft:textures/gui/advancements/backgrounds/adventure.png"
+    "hidden": false
   },
   "criteria": {
     "open_zoo": {
@@ -21,4 +21,3 @@
     }
   }
 }
-

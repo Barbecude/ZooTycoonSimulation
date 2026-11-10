@@ -1,0 +1,23 @@
+{
+  "parent": "zootycoon:root",
+  "display": {
+    "icon": {
+      "id": "minecraft:stick"
+    },
+    "title": {
+      "translate": "advancement.zootycoon.first_claim.title"
+    },
+    "description": {
+      "translate": "advancement.zootycoon.first_claim.desc"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "unlock": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}
