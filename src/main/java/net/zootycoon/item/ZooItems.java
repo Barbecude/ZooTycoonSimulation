@@ -103,6 +103,44 @@ public class ZooItems {
             new Item.Properties().stacksTo(1)
     );
 
+    public static final ResourceKey<Item> INSPECTION_LETTER_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("inspection_letter")
+    );
+    public static final Item INSPECTION_LETTER = new InspectionLetterItem(
+            new Item.Properties().stacksTo(1)
+    );
+
+    public static final ResourceKey<Item> LICENSE_BANNER_TIER_1_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("license_banner_tier_1")
+    );
+    public static final Item LICENSE_BANNER_TIER_1 = new LicenseBannerItem(1, new Item.Properties().stacksTo(1));
+
+    public static final ResourceKey<Item> LICENSE_BANNER_TIER_2_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("license_banner_tier_2")
+    );
+    public static final Item LICENSE_BANNER_TIER_2 = new LicenseBannerItem(2, new Item.Properties().stacksTo(1));
+
+    public static final ResourceKey<Item> LICENSE_BANNER_TIER_3_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("license_banner_tier_3")
+    );
+    public static final Item LICENSE_BANNER_TIER_3 = new LicenseBannerItem(3, new Item.Properties().stacksTo(1));
+
+    public static final ResourceKey<Item> LICENSE_BANNER_TIER_4_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("license_banner_tier_4")
+    );
+    public static final Item LICENSE_BANNER_TIER_4 = new LicenseBannerItem(4, new Item.Properties().stacksTo(1));
+
+    public static final ResourceKey<Item> LICENSE_BANNER_TIER_5_KEY = ResourceKey.create(
+            Registries.ITEM,
+            ZooTycoonMod.id("license_banner_tier_5")
+    );
+    public static final Item LICENSE_BANNER_TIER_5 = new LicenseBannerItem(5, new Item.Properties().stacksTo(1));
+
     public static final ResourceKey<Item> COPPER_WATERING_CAN_KEY = ResourceKey.create(
             Registries.ITEM,
             ZooTycoonMod.id("copper_watering_can")
@@ -445,6 +483,12 @@ public class ZooItems {
         Registry.register(BuiltInRegistries.ITEM, MAGNIFYING_GLASS_KEY, MAGNIFYING_GLASS);
         Registry.register(BuiltInRegistries.ITEM, BROOM_KEY, BROOM);
         Registry.register(BuiltInRegistries.ITEM, BUILDER_NOTE_KEY, BUILDER_NOTE);
+        Registry.register(BuiltInRegistries.ITEM, INSPECTION_LETTER_KEY, INSPECTION_LETTER);
+        Registry.register(BuiltInRegistries.ITEM, LICENSE_BANNER_TIER_1_KEY, LICENSE_BANNER_TIER_1);
+        Registry.register(BuiltInRegistries.ITEM, LICENSE_BANNER_TIER_2_KEY, LICENSE_BANNER_TIER_2);
+        Registry.register(BuiltInRegistries.ITEM, LICENSE_BANNER_TIER_3_KEY, LICENSE_BANNER_TIER_3);
+        Registry.register(BuiltInRegistries.ITEM, LICENSE_BANNER_TIER_4_KEY, LICENSE_BANNER_TIER_4);
+        Registry.register(BuiltInRegistries.ITEM, LICENSE_BANNER_TIER_5_KEY, LICENSE_BANNER_TIER_5);
         Registry.register(BuiltInRegistries.ITEM, COPPER_WATERING_CAN_KEY, COPPER_WATERING_CAN);
         Registry.register(BuiltInRegistries.ITEM, IRON_WATERING_CAN_KEY, IRON_WATERING_CAN);
         Registry.register(BuiltInRegistries.ITEM, GOLD_WATERING_CAN_KEY, GOLD_WATERING_CAN);
@@ -518,6 +562,12 @@ public class ZooItems {
             entries.accept(MAGNIFYING_GLASS);
             entries.accept(BROOM);
             entries.accept(BUILDER_NOTE);
+            entries.accept(INSPECTION_LETTER);
+            entries.accept(LICENSE_BANNER_TIER_1);
+            entries.accept(LICENSE_BANNER_TIER_2);
+            entries.accept(LICENSE_BANNER_TIER_3);
+            entries.accept(LICENSE_BANNER_TIER_4);
+            entries.accept(LICENSE_BANNER_TIER_5);
             entries.accept(COPPER_WATERING_CAN);
             entries.accept(IRON_WATERING_CAN);
             entries.accept(GOLD_WATERING_CAN);

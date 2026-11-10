@@ -191,10 +191,12 @@ public class ZooButton extends AbstractWidget {
                     graphics.renderFakeItem(itemIcon, x + 6, iconY);
                     graphics.drawString(mc.font, msg, x + 6 + iW + 4, textY, text, false);
                 } else {
-                    int totalW = iW + 5 + textW;
+                    int totalW = textW > 0 ? (iW + 5 + textW) : iW;
                     int startX = x + (w - totalW) / 2;
                     graphics.renderFakeItem(itemIcon, startX, iconY);
-                    graphics.drawString(mc.font, msg, startX + iW + 5, textY, text, false);
+                    if (textW > 0) {
+                        graphics.drawString(mc.font, msg, startX + iW + 5, textY, text, false);
+                    }
                 }
             }
         } else if (customIcon != null) {

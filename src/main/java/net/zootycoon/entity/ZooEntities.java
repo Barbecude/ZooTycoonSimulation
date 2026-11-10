@@ -129,6 +129,36 @@ public class ZooEntities {
                     .build("zootycoon:vehicle")
     );
 
+    public static final ResourceKey<EntityType<?>> INSPECTOR_KEY = ResourceKey.create(
+            Registries.ENTITY_TYPE,
+            ZooTycoonMod.id("inspector")
+    );
+
+    public static final EntityType<ZooInspectorEntity> INSPECTOR = Registry.register(
+            BuiltInRegistries.ENTITY_TYPE,
+            ZooTycoonMod.id("inspector"),
+            EntityType.Builder.of(ZooInspectorEntity::new, MobCategory.MISC)
+                    .sized(0.6f, 1.8f)
+                    .eyeHeight(1.62f)
+                    .vehicleAttachment(Player.DEFAULT_VEHICLE_ATTACHMENT)
+                    .build("zootycoon:inspector")
+    );
+
+    public static final ResourceKey<EntityType<?>> LICENSE_BANNER_KEY = ResourceKey.create(
+            Registries.ENTITY_TYPE,
+            ZooTycoonMod.id("license_banner")
+    );
+
+    public static final EntityType<LicenseBannerEntity> LICENSE_BANNER = Registry.register(
+            BuiltInRegistries.ENTITY_TYPE,
+            ZooTycoonMod.id("license_banner"),
+            EntityType.Builder.<LicenseBannerEntity>of(LicenseBannerEntity::new, MobCategory.MISC)
+                    .sized(0.5f, 0.5f)
+                    .clientTrackingRange(10)
+                    .updateInterval(Integer.MAX_VALUE)
+                    .build("zootycoon:license_banner")
+    );
+
     public static void register() {
         FabricDefaultAttributeRegistry.register(BUILDER, ZooBuilderEntity.createAttributes());
         FabricDefaultAttributeRegistry.register(ZOOKEEPER, ZooZookeeperEntity.createAttributes());
@@ -136,6 +166,7 @@ public class ZooEntities {
         FabricDefaultAttributeRegistry.register(HUNTER, ZooHunterEntity.createAttributes());
         FabricDefaultAttributeRegistry.register(VISITOR, ZooVisitorEntity.createAttributes());
         FabricDefaultAttributeRegistry.register(CASHIER, ZooCashierEntity.createAttributes());
-        ZooTycoonMod.LOGGER.info("Registered Zoo Tycoon NPC entities: Builder, Zookeeper, Security, Hunter, Visitor, and Cashier.");
+        FabricDefaultAttributeRegistry.register(INSPECTOR, ZooInspectorEntity.createAttributes());
+        ZooTycoonMod.LOGGER.info("Registered Zoo Tycoon NPC entities: Builder, Zookeeper, Security, Hunter, Visitor, Cashier, Inspector, and LicenseBanner.");
     }
 }

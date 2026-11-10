@@ -58,6 +58,7 @@ public class ZooClaimManager {
     }
 
     public static synchronized void reset() {
+        net.zootycoon.license.ZooLicenseManager.reset();
         if (instance != null) {
             instance.claims.clear();
             instance.openZoos.clear();
@@ -103,6 +104,9 @@ public class ZooClaimManager {
             if (tag.contains("zoo_logs_stats", Tag.TAG_COMPOUND)) {
                 net.zootycoon.log.ZooLogManager.loadFromNbt(tag.getCompound("zoo_logs_stats"));
             }
+            if (tag.contains("zoo_licenses", Tag.TAG_COMPOUND)) {
+                net.zootycoon.license.ZooLicenseManager.loadAllFromNbt(tag.getCompound("zoo_licenses"));
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -133,6 +137,7 @@ public class ZooClaimManager {
             }
             tag.put("ticket_prices", priceTag);
             tag.put("zoo_logs_stats", net.zootycoon.log.ZooLogManager.saveToNbt());
+            tag.put("zoo_licenses", net.zootycoon.license.ZooLicenseManager.saveAllToNbt());
 
             NbtIo.writeCompressed(tag, path);
         } catch (IOException e) {

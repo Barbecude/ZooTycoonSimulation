@@ -910,7 +910,8 @@ public class ZooVehicleEntity extends Entity {
                     || mob instanceof ZooSecurityEntity
                     || mob instanceof ZooCashierEntity
                     || mob instanceof ZooVisitorEntity
-                    || mob instanceof ZooHunterEntity) {
+                    || mob instanceof ZooHunterEntity
+                    || mob instanceof ZooInspectorEntity) {
                 return false;
             }
             Integer cooldownUntil = dismountCooldowns.get(mob.getUUID());
@@ -934,6 +935,14 @@ public class ZooVehicleEntity extends Entity {
         for (Mob animal : nearbyMobs) {
             if (getCargoPassengers().size() >= spec.maxCargoAnimals()) {
                 break;
+            }
+            if (player instanceof ServerPlayer sp && this.level() instanceof net.minecraft.server.level.ServerLevel sLevel) {
+                if (!net.zootycoon.license.ZooLicenseManager.isSpeciesUnlockedForPlayer(sLevel, sp, animal.getType())) {
+                    net.zootycoon.license.LicenseTier reqTier = net.zootycoon.license.ZooLicenseManager.getRequiredTierForEntity(animal.getType());
+                    String tierName = reqTier != null ? reqTier.getDisplayName() : "Lisensi";
+                    ZooNetworkPayloads.sendToast(sp, "zootycoon.toast.title.warning", "zootycoon.license.toast.species_locked", 2, tierName);
+                    continue;
+                }
             }
             if (animal.isLeashed()) {
                 animal.dropLeash(true, true);

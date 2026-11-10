@@ -36,8 +36,14 @@ public class MainManagementScreen extends Screen {
     private final CashierManageTab cashierManageTab;
     private final AnimalManagementTab animalTab;
     private final ZooLogStatsModal logStatsModal;
+    private final AnimalCollectionModal animalCollectionModal;
     private boolean isLogStatsOpen = false;
+    private boolean isAnimalCollectionOpen = false;
+    private ZooButton logBtn;
+    private ZooButton collectionBtn;
+    private ZooButton inspectorBtn;
     private static final ResourceLocation LOG_HISTORY_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/log_history.png");
+    private static final ResourceLocation ANIMALS_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/animals.png");
 
     public MainManagementScreen() {
         super(ZooTranslations.component("zootycoon.ui.title"));
@@ -49,6 +55,7 @@ public class MainManagementScreen extends Screen {
         this.cashierManageTab = new CashierManageTab(this);
         this.animalTab = new AnimalManagementTab(this);
         this.logStatsModal = new ZooLogStatsModal(this);
+        this.animalCollectionModal = new AnimalCollectionModal(this);
     }
 
     public <T extends GuiEventListener & Renderable & NarratableEntry> T addWidgetPublic(T widget) {
@@ -73,11 +80,19 @@ public class MainManagementScreen extends Screen {
     protected void init() {
         super.init();
 
-        // Small icon button at top-right for Log & Statistics
-        int logBtnSize = 20;
-        int logBtnX = this.width - logBtnSize - 12;
-        int logBtnY = 10;
-        addRenderableWidget(new ZooButton(logBtnX, logBtnY, logBtnSize, logBtnSize, Component.empty(), b -> {
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+                new net.zootycoon.network.ZooNetworkPayloads.RequestLicenseSyncPayload()
+        );
+
+        // Small icon buttons at top-right: Log & Statistics, Animal Collection, and Request Zoo Inspector
+        int topBtnSize = 20;
+        int topBtnY = 10;
+        int logBtnX = this.width - topBtnSize - 12;
+        int colBtnX = logBtnX - topBtnSize - 4;
+        int insBtnX = colBtnX - topBtnSize - 4;
+
+        this.logBtn = addRenderableWidget(new ZooButton(logBtnX, topBtnY, topBtnSize, topBtnSize, Component.empty(), b -> {
+            this.isAnimalCollectionOpen = false;
             this.isLogStatsOpen = !this.isLogStatsOpen;
             if (this.isLogStatsOpen) {
                 this.logStatsModal.init();
@@ -86,6 +101,28 @@ public class MainManagementScreen extends Screen {
                 );
             }
         }).setCustomIcon(LOG_HISTORY_ICON, 12, 12, 16, 16).asPrimary());
+
+        this.collectionBtn = addRenderableWidget(new ZooButton(colBtnX, topBtnY, topBtnSize, topBtnSize, Component.empty(), b -> {
+            this.isLogStatsOpen = false;
+            this.isAnimalCollectionOpen = !this.isAnimalCollectionOpen;
+            if (this.isAnimalCollectionOpen) {
+                this.animalCollectionModal.init();
+                net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+                        new net.zootycoon.network.ZooNetworkPayloads.RequestLicenseSyncPayload()
+                );
+            }
+        }).setCustomIcon(ANIMALS_ICON, 14, 14, 32, 32).asPrimary());
+
+        this.inspectorBtn = addRenderableWidget(new ZooButton(insBtnX, topBtnY, topBtnSize, topBtnSize, Component.empty(), b -> {
+            if (!b.active) {
+                return;
+            }
+            net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+                    new net.zootycoon.network.ZooNetworkPayloads.RequestZooInspectionPayload()
+            );
+            this.onClose();
+        }).setItemIcon(new ItemStack(Items.WRITABLE_BOOK)).asGold());
+        updateInspectorButtonState();
 
         if (currentView == ViewState.ROOT_GRID) {
             int gridTotalWidth = Math.min(this.width - 40, 520);
@@ -184,9 +221,21 @@ public class MainManagementScreen extends Screen {
         // Disable 1.21 menu background blur
     }
 
+    private void updateInspectorButtonState() {
+        if (this.inspectorBtn == null) return;
+        Minecraft mc = Minecraft.getInstance();
+        boolean creative = mc.player != null && mc.player.isCreative();
+        int activeLvl = net.zootycoon.license.ZooLicenseManager.getClientActiveTierLevel();
+        var tierData = net.zootycoon.license.ZooLicenseManager.getClientTierData(activeLvl);
+        boolean pendingClaim = tierData.inspectionPassed && (!tierData.licenseClaimed || !tierData.letterClaimed);
+        int missing = net.zootycoon.license.ZooLicenseManager.getClientMissingCountForActiveTier();
+        this.inspectorBtn.active = creative || pendingClaim || missing == 0;
+    }
+
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         this.renderTransparentBackground(graphics);
+        updateInspectorButtonState();
 
         Minecraft mc = Minecraft.getInstance();
 
@@ -211,7 +260,7 @@ public class MainManagementScreen extends Screen {
                 String balanceStr = String.valueOf(emeralds);
                 int textW = font.width(balanceStr);
                 int pillW = 22 + textW + 10;
-                int pillX = this.width - pillW - 25;
+                int pillX = this.width - pillW - 86;
                 int pillY = 16;
 
                 graphics.fill(pillX, pillY - 2, pillX + pillW, pillY + 16, 0xFF171B24);
@@ -245,7 +294,41 @@ public class MainManagementScreen extends Screen {
 
         if (isLogStatsOpen) {
             logStatsModal.render(graphics, mouseX, mouseY, delta);
+        } else if (isAnimalCollectionOpen) {
+            animalCollectionModal.render(graphics, mouseX, mouseY, delta);
+        } else {
+            renderTopButtonsTooltips(graphics, mouseX, mouseY);
         }
+    }
+
+    private void renderTopButtonsTooltips(GuiGraphics graphics, int mouseX, int mouseY) {
+        if (this.collectionBtn != null && isInside(this.collectionBtn, mouseX, mouseY)) {
+            graphics.renderTooltip(this.font, ZooTranslations.component("zootycoon.license.btn.collection_tooltip"), mouseX, mouseY);
+        } else if (this.inspectorBtn != null && isInside(this.inspectorBtn, mouseX, mouseY)) {
+            int activeLvl = net.zootycoon.license.ZooLicenseManager.getClientActiveTierLevel();
+            net.zootycoon.license.LicenseTier tier = net.zootycoon.license.LicenseTier.byLevel(activeLvl);
+            int missing = net.zootycoon.license.ZooLicenseManager.getClientMissingCountForActiveTier();
+            Minecraft mc = Minecraft.getInstance();
+            boolean creative = mc.player != null && mc.player.isCreative();
+            var tierData = net.zootycoon.license.ZooLicenseManager.getClientTierData(activeLvl);
+            boolean pendingClaim = tierData.inspectionPassed && (!tierData.licenseClaimed || !tierData.letterClaimed);
+
+            java.util.List<Component> lines = new java.util.ArrayList<>();
+            lines.add(ZooTranslations.component("zootycoon.license.btn.inspector_title"));
+            if (pendingClaim || missing == 0) {
+                lines.add(Component.literal(ZooTranslations.get("zootycoon.license.btn.inspector_ready", tier.getDisplayName())).withColor(0xFF4ADE80));
+            } else if (creative) {
+                lines.add(Component.literal(ZooTranslations.get("zootycoon.license.btn.inspector_creative", tier.getDisplayName())).withColor(0xFF38BDF8));
+            } else {
+                lines.add(Component.literal(ZooTranslations.get("zootycoon.license.btn.inspector_missing", missing, tier.getDisplayName())).withColor(0xFFF87171));
+            }
+            graphics.renderComponentTooltip(this.font, lines, mouseX, mouseY);
+        }
+    }
+
+    private boolean isInside(ZooButton btn, double mouseX, double mouseY) {
+        return mouseX >= btn.getX() && mouseX <= btn.getX() + btn.getWidth()
+                && mouseY >= btn.getY() && mouseY <= btn.getY() + btn.getHeight();
     }
 
     @Override
@@ -256,6 +339,26 @@ public class MainManagementScreen extends Screen {
                 // Clicked outside modal or on close button
                 isLogStatsOpen = false;
             }
+            return true;
+        }
+        if (isAnimalCollectionOpen) {
+            boolean handled = animalCollectionModal.mouseClicked(mouseX, mouseY, button);
+            if (!handled) {
+                isAnimalCollectionOpen = false;
+            }
+            return true;
+        }
+        if (this.inspectorBtn != null && !this.inspectorBtn.active && isInside(this.inspectorBtn, mouseX, mouseY)) {
+            int activeLvl = net.zootycoon.license.ZooLicenseManager.getClientActiveTierLevel();
+            net.zootycoon.license.LicenseTier tier = net.zootycoon.license.LicenseTier.byLevel(activeLvl);
+            int missing = net.zootycoon.license.ZooLicenseManager.getClientMissingCountForActiveTier();
+            ZooHudOverlay.showToast(
+                    "zootycoon.toast.title.inspector",
+                    "zootycoon.license.toast.missing_species",
+                    ZooHudOverlay.TOAST_WARNING,
+                    missing,
+                    tier.getDisplayName()
+            );
             return true;
         }
         switch (currentView) {
@@ -289,6 +392,9 @@ public class MainManagementScreen extends Screen {
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         if (isLogStatsOpen) {
             if (logStatsModal.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) return true;
+        }
+        if (isAnimalCollectionOpen) {
+            if (animalCollectionModal.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) return true;
         }
         if (currentView == ViewState.ENCLOSURES_CATALOG) {
             if (enclosuresTab.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) return true;
@@ -332,6 +438,12 @@ public class MainManagementScreen extends Screen {
         if (isLogStatsOpen) {
             if (keyCode == 256) { // GLFW_KEY_ESCAPE
                 isLogStatsOpen = false;
+                return true;
+            }
+        }
+        if (isAnimalCollectionOpen) {
+            if (keyCode == 256) { // GLFW_KEY_ESCAPE
+                isAnimalCollectionOpen = false;
                 return true;
             }
         }

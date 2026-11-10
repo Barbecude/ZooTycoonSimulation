@@ -1430,6 +1430,138 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // 34. Request License Sync Payload (C2S)
+    public record RequestLicenseSyncPayload() implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<RequestLicenseSyncPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("request_license_sync"));
+        public static final StreamCodec<FriendlyByteBuf, RequestLicenseSyncPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {},
+                buf -> new RequestLicenseSyncPayload()
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 35. Sync License Progression Payload (S2C)
+    public record SyncLicenseProgressionPayload(
+            int activeTierLevel,
+            List<String> ownedSpeciesKeys,
+            CompoundTag tiersNbt
+    ) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<SyncLicenseProgressionPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("sync_license_progression"));
+        public static final StreamCodec<FriendlyByteBuf, SyncLicenseProgressionPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeInt(payload.activeTierLevel);
+                    List<String> keys = payload.ownedSpeciesKeys != null ? payload.ownedSpeciesKeys : List.of();
+                    buf.writeInt(keys.size());
+                    for (String k : keys) {
+                        buf.writeUtf(k != null ? k : "");
+                    }
+                    buf.writeNbt(payload.tiersNbt != null ? payload.tiersNbt : new CompoundTag());
+                },
+                buf -> {
+                    int activeTier = buf.readInt();
+                    int size = buf.readInt();
+                    List<String> keys = new ArrayList<>(size);
+                    for (int i = 0; i < size; i++) {
+                        keys.add(buf.readUtf());
+                    }
+                    CompoundTag nbt = buf.readNbt();
+                    return new SyncLicenseProgressionPayload(activeTier, keys, nbt != null ? nbt : new CompoundTag());
+                }
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 36. Request Zoo Inspection Payload (C2S)
+    public record RequestZooInspectionPayload() implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<RequestZooInspectionPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("request_zoo_inspection"));
+        public static final StreamCodec<FriendlyByteBuf, RequestZooInspectionPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {},
+                buf -> new RequestZooInspectionPayload()
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 37. Open Inspector Dialog Payload (S2C)
+    public record OpenInspectorDialogPayload(
+            int inspectorEntityId,
+            int phaseOrdinal,
+            int tierLevel,
+            String currentSpecies,
+            int inspectedCount,
+            int totalCount,
+            boolean passed,
+            boolean letterClaimed,
+            boolean licenseClaimed,
+            List<String> inspectedSpecies,
+            List<String> improvementNotes
+    ) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<OpenInspectorDialogPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("open_inspector_dialog"));
+        public static final StreamCodec<FriendlyByteBuf, OpenInspectorDialogPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeInt(payload.inspectorEntityId);
+                    buf.writeInt(payload.phaseOrdinal);
+                    buf.writeInt(payload.tierLevel);
+                    buf.writeUtf(payload.currentSpecies != null ? payload.currentSpecies : "");
+                    buf.writeInt(payload.inspectedCount);
+                    buf.writeInt(payload.totalCount);
+                    buf.writeBoolean(payload.passed);
+                    buf.writeBoolean(payload.letterClaimed);
+                    buf.writeBoolean(payload.licenseClaimed);
+                    List<String> sp = payload.inspectedSpecies != null ? payload.inspectedSpecies : List.of();
+                    buf.writeInt(sp.size());
+                    for (String s : sp) buf.writeUtf(s != null ? s : "");
+                    List<String> notes = payload.improvementNotes != null ? payload.improvementNotes : List.of();
+                    buf.writeInt(notes.size());
+                    for (String n : notes) buf.writeUtf(n != null ? n : "");
+                },
+                buf -> {
+                    int entId = buf.readInt();
+                    int phaseOrd = buf.readInt();
+                    int tierLvl = buf.readInt();
+                    String curSp = buf.readUtf();
+                    int done = buf.readInt();
+                    int total = buf.readInt();
+                    boolean passed = buf.readBoolean();
+                    boolean letterClaimed = buf.readBoolean();
+                    boolean licenseClaimed = buf.readBoolean();
+                    int spSize = buf.readInt();
+                    List<String> sp = new ArrayList<>(spSize);
+                    for (int i = 0; i < spSize; i++) sp.add(buf.readUtf());
+                    int nSize = buf.readInt();
+                    List<String> notes = new ArrayList<>(nSize);
+                    for (int i = 0; i < nSize; i++) notes.add(buf.readUtf());
+                    return new OpenInspectorDialogPayload(
+                            entId, phaseOrd, tierLvl, curSp, done, total,
+                            passed, letterClaimed, licenseClaimed, sp, notes
+                    );
+                }
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // 38. Inspector Action Payload (C2S)
+    public record InspectorActionPayload(int inspectorEntityId, String action) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<InspectorActionPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("inspector_action"));
+        public static final StreamCodec<FriendlyByteBuf, InspectorActionPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeInt(payload.inspectorEntityId);
+                    buf.writeUtf(payload.action != null ? payload.action : "");
+                },
+                buf -> new InspectorActionPayload(buf.readInt(), buf.readUtf())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    public static final int TOAST_INFO = 0;
+    public static final int TOAST_SUCCESS = 1;
+    public static final int TOAST_WARNING = 2;
+    public static final int TOAST_ERROR = 3;
+
     public static void sendToast(ServerPlayer player, String titleKey, String msgKey, int toastType, Object... args) {
         if (player == null) return;
         List<String> strArgs = new ArrayList<>();
@@ -1487,6 +1619,9 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
         PayloadTypeRegistry.playC2S().register(ManageStaffGenericPayload.TYPE, ManageStaffGenericPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(PayStrikeSalaryPayload.TYPE, PayStrikeSalaryPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(VehicleLoadAnimalPayload.TYPE, VehicleLoadAnimalPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(RequestLicenseSyncPayload.TYPE, RequestLicenseSyncPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(RequestZooInspectionPayload.TYPE, RequestZooInspectionPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(InspectorActionPayload.TYPE, InspectorActionPayload.CODEC);
 
         PayloadTypeRegistry.playS2C().register(SyncClaimsPayload.TYPE, SyncClaimsPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncStudioStatePayload.TYPE, SyncStudioStatePayload.CODEC);
@@ -1511,6 +1646,8 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
         PayloadTypeRegistry.playS2C().register(SyncAnimalWetPayload.TYPE, SyncAnimalWetPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncZooLogStatsPayload.TYPE, SyncZooLogStatsPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(RequestClientSelectionSavePayload.TYPE, RequestClientSelectionSavePayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(SyncLicenseProgressionPayload.TYPE, SyncLicenseProgressionPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(OpenInspectorDialogPayload.TYPE, OpenInspectorDialogPayload.CODEC);
 
         // Handler: Claim Land (Old / Direct)
         ServerPlayNetworking.registerGlobalReceiver(ClaimLandPayload.TYPE, (payload, context) -> {
@@ -1925,6 +2062,7 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                         animal.discard();
 
                         sendToast(player, "zootycoon.toast.title.success", "zootycoon.animal.sold", 1, animalName, price);
+                        net.zootycoon.license.ZooLicenseManager.get(sLevel).onAnimalRemovedOrUnowned(sLevel, player.getUUID());
                         sendAnimalSync(player);
                     }
                 }
@@ -2638,6 +2776,83 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                 }
             });
         });
+
+        ServerPlayNetworking.registerGlobalReceiver(RequestLicenseSyncPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                if (player != null && player.level() instanceof ServerLevel sLevel) {
+                    net.zootycoon.license.ZooLicenseManager.get(sLevel).syncOwnedSpeciesFromWorld(sLevel, player);
+                    sendLicenseSync(player);
+                }
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(RequestZooInspectionPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                if (player != null && player.level() instanceof ServerLevel sLevel) {
+                    net.zootycoon.license.ZooLicenseManager.get(sLevel).requestInspection(player);
+                }
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(InspectorActionPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                if (player != null && player.level() instanceof ServerLevel sLevel) {
+                    net.zootycoon.license.ZooLicenseManager.get(sLevel).handleInspectorAction(
+                            player,
+                            payload.inspectorEntityId(),
+                            payload.action()
+                    );
+                }
+            });
+        });
+    }
+
+    public static void sendLicenseSync(ServerPlayer player) {
+        if (player == null || !(player.level() instanceof ServerLevel sLevel)) return;
+        var manager = net.zootycoon.license.ZooLicenseManager.get(sLevel);
+        var profile = manager.getProfile(player.getUUID());
+        CompoundTag tiersTag = new CompoundTag();
+        for (var entry : profile.tierMap.entrySet()) {
+            tiersTag.put(String.valueOf(entry.getKey()), entry.getValue().toNbt());
+        }
+        ServerPlayNetworking.send(player, new SyncLicenseProgressionPayload(
+                profile.activeTierLevel,
+                new ArrayList<>(profile.ownedSpeciesKeys),
+                tiersTag
+        ));
+    }
+
+    public static void sendOpenInspectorDialog(
+            ServerPlayer player,
+            int inspectorEntityId,
+            int phaseOrdinal,
+            int tierLevel,
+            String currentSpecies,
+            int inspectedCount,
+            int totalCount,
+            boolean passed,
+            boolean letterClaimed,
+            boolean licenseClaimed,
+            List<String> inspectedSpecies,
+            List<String> improvementNotes
+    ) {
+        if (player == null) return;
+        ServerPlayNetworking.send(player, new OpenInspectorDialogPayload(
+                inspectorEntityId,
+                phaseOrdinal,
+                tierLevel,
+                currentSpecies,
+                inspectedCount,
+                totalCount,
+                passed,
+                letterClaimed,
+                licenseClaimed,
+                inspectedSpecies != null ? new ArrayList<>(inspectedSpecies) : List.of(),
+                improvementNotes != null ? new ArrayList<>(improvementNotes) : List.of()
+        ));
     }
 
     public static void sendAnimalSync(ServerPlayer player) {
@@ -2832,6 +3047,7 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
         ServerPlayNetworking.send(player, new SyncBuildersPayload(builders));
         ServerPlayNetworking.send(player, new SyncSecurityPayload(securityList));
         ServerPlayNetworking.send(player, new SyncCashiersPayload(cashiers));
+        sendLicenseSync(player);
     }
 
     private static boolean canMergeStock(ItemStack a, ItemStack b) {

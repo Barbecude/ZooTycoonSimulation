@@ -62,6 +62,7 @@ public class ZooAnimalHungerManager {
         if (e instanceof net.zootycoon.entity.ZooHunterEntity) return false;
         if (e instanceof net.zootycoon.entity.ZooVisitorEntity) return false;
         if (e instanceof net.zootycoon.entity.ZooCashierEntity) return false;
+        if (e instanceof net.zootycoon.entity.ZooInspectorEntity) return false;
         if (e.getTags().contains("zootycoon_staff")) return false;
         if (ZooClaimManager.isHostileMonster(e)) return false;
 
@@ -190,6 +191,14 @@ public class ZooAnimalHungerManager {
             }
         }
 
+        ServerLevel level = (ServerLevel) player.level();
+        if (!net.zootycoon.license.ZooLicenseManager.isSpeciesUnlockedForPlayer(level, player, animal.getType())) {
+            net.zootycoon.license.LicenseTier reqTier = net.zootycoon.license.ZooLicenseManager.getRequiredTierForEntity(animal.getType());
+            String tierName = reqTier != null ? reqTier.getDisplayName() : "Lisensi";
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.warning", "zootycoon.license.toast.species_locked", 2, tierName);
+            return false;
+        }
+
         // Register animal
         setTagged(animal, true);
         setOwner(animal, player.getUUID());
@@ -203,7 +212,6 @@ public class ZooAnimalHungerManager {
         // Auto-assign existing zookeeper of same species in the zoo, including offspring
         autoAssignSameSpeciesZookeeper(player, animal);
 
-        ServerLevel level = (ServerLevel) player.level();
         level.playSound(null, animal.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0f, 1.2f);
         level.sendParticles(ParticleTypes.HAPPY_VILLAGER, animal.getX(), animal.getY() + animal.getBbHeight() * 0.5, animal.getZ(), 20, 0.4, 0.4, 0.4, 0.05);
 
@@ -212,6 +220,7 @@ public class ZooAnimalHungerManager {
             ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.animal", "zootycoon.animal.registered", 1, animalName);
         }
 
+        net.zootycoon.license.ZooLicenseManager.get(level).onAnimalRegistered(level, player, animal);
         ZooNetworkPayloads.sendAnimalSync(player);
         return true;
     }
@@ -805,6 +814,7 @@ public class ZooAnimalHungerManager {
                     String name = animal.hasCustomName() ? animal.getCustomName().getString() : animal.getType().getDescription().getString();
                     ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.animal", "zootycoon.animal.unregistered", 2, name);
                     sLevel.playSound(null, animal.blockPosition(), SoundEvents.CHICKEN_EGG, SoundSource.PLAYERS, 1.0f, 0.8f);
+                    net.zootycoon.license.ZooLicenseManager.get(sLevel).onAnimalRemovedOrUnowned(sLevel, player.getUUID());
                     ZooNetworkPayloads.sendAnimalSync(player);
                     return true;
                 }

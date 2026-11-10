@@ -289,6 +289,20 @@ public final class MobBagHandler {
     }
 
     public static boolean tryCaptureAnimal(ServerLevel sLevel, ServerPlayer player, ItemStack bagStack, LivingEntity target) {
+        if (!net.zootycoon.license.ZooLicenseManager.isSpeciesUnlockedForPlayer(sLevel, player, target.getType())) {
+            sLevel.playSound(null, target.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 1.0F, 1.0F);
+            net.zootycoon.license.LicenseTier reqTier = net.zootycoon.license.ZooLicenseManager.getRequiredTierForEntity(target.getType());
+            String tierName = reqTier != null ? reqTier.getDisplayName() : "Lisensi";
+            ZooNetworkPayloads.sendToast(
+                    player,
+                    "zootycoon.toast.title.warning",
+                    "zootycoon.license.toast.species_locked",
+                    2,
+                    tierName
+            );
+            return false;
+        }
+
         if (!isSmallAnimal(target)) {
             sLevel.playSound(null, target.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 1.0F, 1.0F);
             ZooNetworkPayloads.sendToast(

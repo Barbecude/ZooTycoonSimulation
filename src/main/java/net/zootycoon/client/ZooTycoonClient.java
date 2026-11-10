@@ -497,6 +497,34 @@ public class ZooTycoonClient implements ClientModInitializer {
             });
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.SyncLicenseProgressionPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                net.zootycoon.license.ZooLicenseManager.updateClientCache(
+                        payload.activeTierLevel(),
+                        payload.ownedSpeciesKeys(),
+                        payload.tiersNbt()
+                );
+            });
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.OpenInspectorDialogPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                Minecraft.getInstance().setScreen(new net.zootycoon.client.ui.InspectorDialogScreen(
+                        payload.inspectorEntityId(),
+                        payload.phaseOrdinal(),
+                        payload.tierLevel(),
+                        payload.currentSpecies(),
+                        payload.inspectedCount(),
+                        payload.totalCount(),
+                        payload.passed(),
+                        payload.letterClaimed(),
+                        payload.licenseClaimed(),
+                        payload.inspectedSpecies(),
+                        payload.improvementNotes()
+                ));
+            });
+        });
+
         net.zootycoon.client.ui.EmptyBarrelChestOverlay.register();
         net.zootycoon.client.ui.CashierDialogScreen.register();
 
@@ -540,6 +568,7 @@ public class ZooTycoonClient implements ClientModInitializer {
             net.zootycoon.client.inspect.InspectionClientCache.clear();
             net.zootycoon.client.ui.EmptyBarrelChestOverlay.reset();
             net.zootycoon.client.render.EmptyBarrelHologramRenderer.reset();
+            ClientPlayNetworking.send(new ZooNetworkPayloads.RequestLicenseSyncPayload());
         });
 
         // 3b. Register Entity Renderer & Model Layer for Humanoid Builder NPC
@@ -604,6 +633,20 @@ public class ZooTycoonClient implements ClientModInitializer {
         EntityRendererRegistry.register(
                 net.zootycoon.entity.ZooEntities.VEHICLE,
                 net.zootycoon.client.render.ZooVehicleRenderer::new
+        );
+
+        // 3g2. Register Entity Renderer & Model Layer for Zoo Inspector NPC & 3x2 License Banner
+        EntityModelLayerRegistry.registerModelLayer(
+                net.zootycoon.client.model.ZooInspectorModel.LAYER_LOCATION,
+                net.zootycoon.client.model.ZooInspectorModel::createMesh
+        );
+        EntityRendererRegistry.register(
+                net.zootycoon.entity.ZooEntities.INSPECTOR,
+                net.zootycoon.client.render.ZooInspectorRenderer::new
+        );
+        EntityRendererRegistry.register(
+                net.zootycoon.entity.ZooEntities.LICENSE_BANNER,
+                net.zootycoon.client.render.LicenseBannerRenderer::new
         );
 
         // 3h. Register transparent cutout and translucent render layers for blocks (Trash, Feeding Trough, Trash Can, Gacha Machine, Heater, Cooler Box)
