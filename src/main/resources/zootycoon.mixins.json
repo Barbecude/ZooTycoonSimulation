@@ -11,14 +11,18 @@
     "AnimalBreedingMixin",
     "ItemStackMaxStackSizeMixin",
     "ItemDefaultMaxStackSizeMixin",
-    "compat.FieldGuideScanUnlockMixin"
+    "compat.FieldGuideScanUnlockMixin",
+    "ClimateRTreeFastSearchMixin",
+    "LevelChunkSectionFastBiomeMixin",
+    "MinecraftServerFastWorldGenMixin"
   ],
   "client": [
     "client.CameraMixin",
     "client.MouseHandlerMixin",
     "compat.FieldGuideScanManagerMixin",
     "client.ItemInHandRendererMixin",
-    "client.WorldOpenFlowsMixin"
+    "client.WorldOpenFlowsMixin",
+    "client.CreateWorldScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 0

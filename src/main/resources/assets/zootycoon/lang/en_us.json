@@ -1019,5 +1019,9 @@
   "advancement.zootycoon.place_banner.title": "Dinding Kehormatan",
   "advancement.zootycoon.place_banner.desc": "Pasang Sertifikat Lisensi atau Papan Informasi Satwa di dinding",
   "advancement.zootycoon.five_star_zoo.title": "Kebun Binatang Bintang Lima",
-  "advancement.zootycoon.five_star_zoo.desc": "Capai rating sempurna 5.0 bintang untuk kebun binatangmu"
+  "advancement.zootycoon.five_star_zoo.desc": "Capai rating sempurna 5.0 bintang untuk kebun binatangmu",
+  "zootycoon.seed_preview.title": "Seed & Biome Preview",
+  "zootycoon.seed_preview.fast_badge": "FastGen +80%",
+  "zootycoon.seed_preview.btn.randomize": "Acak Seed",
+  "zootycoon.seed_preview.tooltip.controls": "Drag: Geser Peta | Scroll: Zoom"
 }
