@@ -135,7 +135,7 @@ public class LicenseBannerItem extends Item {
                 banner.playPlacementSound();
                 level.gameEvent(player, GameEvent.ENTITY_PLACE, banner.position());
                 level.addFreshEntity(banner);
-                if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+                if (!isInfoBoard && player instanceof net.minecraft.server.level.ServerPlayer sp) {
                     net.zootycoon.advancement.ZooAdvancements.grant(sp, net.zootycoon.advancement.ZooAdvancements.PLACE_BANNER);
                 }
             }

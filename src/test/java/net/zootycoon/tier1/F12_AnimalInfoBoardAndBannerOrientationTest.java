@@ -108,4 +108,23 @@ public class F12_AnimalInfoBoardAndBannerOrientationTest {
         var payload = new ZooNetworkPayloads.SummonTierAnimalsPayload(3);
         assertEquals(3, payload.tierLevel());
     }
+
+    @Test
+    @DisplayName("English advancement texts and certificate-only place_banner rule match config")
+    void testAdvancementsEnglishAndCertificateOnly() throws Exception {
+        Map<String, String> idLang = TestHelper.getIdLang();
+        Map<String, String> enLang = TestHelper.getEnLang();
+
+        assertEquals("Wall of Honor", enLang.get("advancement.zootycoon.place_banner.title"));
+        assertEquals("Mount a License Certificate on the wall", enLang.get("advancement.zootycoon.place_banner.desc"));
+        assertEquals("First Plot", enLang.get("advancement.zootycoon.first_claim.title"));
+        assertEquals("Five-Star Zoo", enLang.get("advancement.zootycoon.five_star_zoo.title"));
+
+        String idPlaceDesc = idLang.get("advancement.zootycoon.place_banner.desc");
+        assertTrue(idPlaceDesc.contains("Sertifikat Lisensi"));
+        assertFalse(idPlaceDesc.contains("Papan Informasi Satwa"));
+
+        String itemSource = Files.readString(new File("src/main/java/net/zootycoon/item/LicenseBannerItem.java").toPath());
+        assertTrue(itemSource.contains("!isInfoBoard && player instanceof net.minecraft.server.level.ServerPlayer"));
+    }
 }
