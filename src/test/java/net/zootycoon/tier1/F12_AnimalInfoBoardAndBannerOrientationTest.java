@@ -132,5 +132,12 @@ public class F12_AnimalInfoBoardAndBannerOrientationTest {
         String modalSource = Files.readString(new File("src/main/java/net/zootycoon/client/ui/AnimalCollectionModal.java").toPath());
         assertTrue(modalSource.contains("Items.EMERALD"));
         assertTrue(modalSource.contains("drawSlateButtonBox"));
+
+        String catalogSource = Files.readString(new File("src/main/java/net/zootycoon/client/ui/SchematicCatalogTab.java").toPath());
+        assertTrue(catalogSource.contains("boolean isCreative = mc.player != null && mc.player.isCreative();"));
+        int newBtnIdx = catalogSource.indexOf("btn_new_studio");
+        int editBtnIdx = catalogSource.indexOf("btn_edit");
+        assertTrue(newBtnIdx > 0 && catalogSource.substring(Math.max(0, newBtnIdx - 180), newBtnIdx).contains("if (isCreative)"));
+        assertTrue(editBtnIdx > 0 && catalogSource.substring(Math.max(0, editBtnIdx - 180), editBtnIdx).contains("if (isCreative)"));
     }
 }

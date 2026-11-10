@@ -116,14 +116,19 @@ public class SchematicCatalogTab {
         fasilitasBtn.setSelected("essentials".equals(this.category));
         screen.addWidgetPublic(fasilitasBtn);
 
+        Minecraft mc = Minecraft.getInstance();
+        boolean isCreative = mc.player != null && mc.player.isCreative();
+
         int startY = catY + 24;
 
-        screen.addWidgetPublic(new ZooButton(listX, startY, listWidth, 22, ZooTranslations.component("zootycoon.ui.catalog.btn_new_studio"), b -> {
-            ClientPlayNetworking.send(new ZooNetworkPayloads.EnterStudioPayload(category));
-            screen.onClose();
-        }).setCustomIcon(ZooTycoonMod.id("textures/gui/icons/add_enclosure.png")).asPrimary());
+        if (isCreative) {
+            screen.addWidgetPublic(new ZooButton(listX, startY, listWidth, 22, ZooTranslations.component("zootycoon.ui.catalog.btn_new_studio"), b -> {
+                ClientPlayNetworking.send(new ZooNetworkPayloads.EnterStudioPayload(category));
+                screen.onClose();
+            }).setCustomIcon(ZooTycoonMod.id("textures/gui/icons/add_enclosure.png")).asPrimary());
+        }
 
-        int itemAreaY = startY + 28;
+        int itemAreaY = getItemAreaY(isCreative);
         int itemAreaH = screen.height - itemAreaY - 25;
         int totalItemsH = schematics.size() * 26;
         this.maxScroll = Math.max(0, totalItemsH - itemAreaH);
@@ -150,13 +155,19 @@ public class SchematicCatalogTab {
 
             boolean isWorldgen = "worldgen".equalsIgnoreCase(selectedSchematic.getSubcategory());
             int btnWidth1;
-            int btnWidth2;
-            int btnWidth3;
+            int btnWidth2 = 0;
+            int btnWidth3 = 0;
 
-            if (isWorldgen) {
+            if (!isCreative) {
+                if (isWorldgen) {
+                    btnWidth1 = detailWidth;
+                } else {
+                    btnWidth1 = (int) (detailWidth * 0.72);
+                    btnWidth3 = detailWidth - btnWidth1 - 4;
+                }
+            } else if (isWorldgen) {
                 btnWidth1 = (int) (detailWidth * 0.58);
                 btnWidth2 = detailWidth - btnWidth1 - 4;
-                btnWidth3 = 0;
             } else {
                 btnWidth1 = (int) (detailWidth * 0.44);
                 btnWidth2 = (int) (detailWidth * 0.34);
@@ -165,19 +176,19 @@ public class SchematicCatalogTab {
 
             screen.addWidgetPublic(new ZooButton(detailX, actionBtnY, btnWidth1, 24, ZooTranslations.component("zootycoon.ui.catalog.btn_place"), b -> {
                 PlacementPreviewRenderer.setActiveSchematic(selectedSchematic);
-                Minecraft mc = Minecraft.getInstance();
-                if (mc.player != null) {
+                Minecraft client = Minecraft.getInstance();
+                if (client.player != null) {
                     boolean hasStick = false;
                     for (int i = 0; i < 9; i++) {
-                        if (mc.player.getInventory().getItem(i).is(Items.STICK)) {
-                            mc.player.getInventory().selected = i;
+                        if (client.player.getInventory().getItem(i).is(Items.STICK)) {
+                            client.player.getInventory().selected = i;
                             hasStick = true;
                             break;
                         }
                     }
                     if (!hasStick) {
-                        for (int i = 9; i < mc.player.getInventory().getContainerSize(); i++) {
-                            if (mc.player.getInventory().getItem(i).is(Items.STICK)) {
+                        for (int i = 9; i < client.player.getInventory().getContainerSize(); i++) {
+                            if (client.player.getInventory().getItem(i).is(Items.STICK)) {
                                 hasStick = true;
                                 break;
                             }
@@ -192,19 +203,27 @@ public class SchematicCatalogTab {
                 screen.onClose();
             }).setCustomIcon(ZooTycoonMod.id("textures/gui/icons/add_green.png")).asEmerald());
 
-            screen.addWidgetPublic(new ZooButton(detailX + btnWidth1 + 4, actionBtnY, btnWidth2, 24, ZooTranslations.component("zootycoon.ui.catalog.btn_edit"), b -> {
-                ClientPlayNetworking.send(new ZooNetworkPayloads.EditStudioPayload(selectedSchematic.getId(), category));
-                screen.onClose();
-            }).setCustomIcon(ZooTycoonMod.id("textures/gui/icons/pencil.png")).asGold());
+            if (isCreative) {
+                screen.addWidgetPublic(new ZooButton(detailX + btnWidth1 + 4, actionBtnY, btnWidth2, 24, ZooTranslations.component("zootycoon.ui.catalog.btn_edit"), b -> {
+                    ClientPlayNetworking.send(new ZooNetworkPayloads.EditStudioPayload(selectedSchematic.getId(), category));
+                    screen.onClose();
+                }).setCustomIcon(ZooTycoonMod.id("textures/gui/icons/pencil.png")).asGold());
+            }
 
             if (!isWorldgen) {
-                screen.addWidgetPublic(new ZooButton(detailX + btnWidth1 + btnWidth2 + 8, actionBtnY, btnWidth3, 24, ZooTranslations.component("zootycoon.ui.catalog.btn_delete"), b -> {
+                int deleteX = isCreative ? (detailX + btnWidth1 + btnWidth2 + 8) : (detailX + btnWidth1 + 4);
+                screen.addWidgetPublic(new ZooButton(deleteX, actionBtnY, btnWidth3, 24, ZooTranslations.component("zootycoon.ui.catalog.btn_delete"), b -> {
                     ZooSchematicRegistry.deleteCustomSchematic(selectedSchematic.getId());
                     this.selectedSchematic = null;
                     screen.setView(screen.getCurrentView());
                 }).setCustomIcon(ZooTycoonMod.id("textures/gui/icons/trash_can.png")).asDanger());
             }
         }
+    }
+
+    private static int getItemAreaY(boolean isCreative) {
+        int startY = 48 + 24;
+        return startY + (isCreative ? 28 : 0);
     }
 
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
@@ -231,9 +250,11 @@ public class SchematicCatalogTab {
 
         int startY = panelStartY;
 
+        boolean isCreative = mc.player != null && mc.player.isCreative();
+
         // Scrollbar track & thumb for schematic list
         if (maxScroll > 0) {
-            int itemAreaY = panelStartY + 52;
+            int itemAreaY = getItemAreaY(isCreative);
             int itemAreaH = parent.height - itemAreaY - 25;
             int trackX = listX + listWidth - 3;
             graphics.fill(trackX, itemAreaY, trackX + 3, itemAreaY + itemAreaH, 0x40FFFFFF);
