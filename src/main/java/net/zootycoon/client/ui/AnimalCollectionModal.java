@@ -58,16 +58,16 @@ public class AnimalCollectionModal {
         int sh = parent.height;
         Font font = parent.getFont();
 
-        // Dark backdrop
-        graphics.fill(0, 0, sw, sh, 0xB805070B);
+        // Fully solid dark backdrop
+        graphics.fill(0, 0, sw, sh, 0xF505070B);
 
         int modalW = Math.min(sw - 28, 540);
         int modalH = Math.min(sh - 24, 310);
         int modalX = (sw - modalW) / 2;
         int modalY = (sh - modalH) / 2;
 
-        // Main Modal Frame
-        graphics.fill(modalX, modalY, modalX + modalW, modalY + modalH, 0xF511151E);
+        // Main Modal Frame (fully opaque)
+        graphics.fill(modalX, modalY, modalX + modalW, modalY + modalH, 0xFF11151E);
         graphics.fill(modalX, modalY, modalX + modalW, modalY + 1, 0xFF2D3648);
         graphics.fill(modalX, modalY + modalH - 1, modalX + modalW, modalY + modalH, 0xFF2D3648);
         graphics.fill(modalX, modalY, modalX + 1, modalY + modalH, 0xFF2D3648);
@@ -362,6 +362,36 @@ public class AnimalCollectionModal {
                 graphics.drawString(font, "Habitat: " + font.plainSubstrByWidth(profile.displayName(), w - 52), x + 8, infoY, 0xFF81E6D9, false);
             }
         }
+
+        // Dedicated Inspector Request Button at the bottom of the detail panel
+        int btnW = w - 16;
+        int btnH = 20;
+        int btnX = x + 8;
+        int btnY = y + h - btnH - 8;
+
+        int activeTierLvl = ZooLicenseManager.getClientActiveTierLevel();
+        LicenseTier activeTier = LicenseTier.byLevel(activeTierLvl);
+        int missing = ZooLicenseManager.getClientMissingCountForActiveTier();
+        Minecraft mc = Minecraft.getInstance();
+        boolean creative = mc.player != null && mc.player.isCreative();
+        var tierData = ZooLicenseManager.getClientTierData(activeTierLvl);
+        boolean pendingClaim = tierData.inspectionPassed && (!tierData.licenseClaimed || !tierData.letterClaimed);
+        boolean canRequest = creative || pendingClaim || missing == 0;
+
+        boolean hoverBtn = mouseX >= btnX && mouseX <= btnX + btnW && mouseY >= btnY && mouseY <= btnY + btnH;
+        int btnBg = !canRequest ? 0xFF2A2D35 : (hoverBtn ? 0xFF2563EB : 0xFF1D4ED8);
+        int borderCol = !canRequest ? 0xFF3F4450 : (hoverBtn ? 0xFF60A5FA : 0xFF3B82F6);
+        graphics.fill(btnX, btnY, btnX + btnW, btnY + btnH, btnBg);
+        graphics.fill(btnX, btnY, btnX + btnW, btnY + 1, borderCol);
+        graphics.fill(btnX, btnY + btnH - 1, btnX + btnW, btnY + btnH, borderCol);
+        graphics.fill(btnX, btnY, btnX + 1, btnY + btnH, borderCol);
+        graphics.fill(btnX + btnW - 1, btnY, btnX + btnW, btnY + btnH, borderCol);
+
+        String btnText = pendingClaim
+                ? ZooTranslations.get("zootycoon.license.btn.claim_inspector")
+                : ZooTranslations.get("zootycoon.license.btn.call_inspector");
+        int txtCol = !canRequest ? 0xFF6B7280 : 0xFFFFFFFF;
+        graphics.drawCenteredString(font, btnText, btnX + btnW / 2, btnY + 6, txtCol);
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
@@ -387,6 +417,41 @@ public class AnimalCollectionModal {
         int gridY = modalY + 34;
         int gridW = modalW - detailW - 26;
         int gridH = modalH - 42;
+
+        int detailX = modalX + modalW - detailW - 12;
+        int detailY = modalY + 34;
+        int detailH = modalH - 42;
+
+        // Check if Inspector Button clicked
+        int btnW = detailW - 16;
+        int btnH = 20;
+        int btnX = detailX + 8;
+        int btnY = detailY + detailH - btnH - 8;
+        if (mouseX >= btnX && mouseX <= btnX + btnW && mouseY >= btnY && mouseY <= btnY + btnH) {
+            int activeTierLvl = ZooLicenseManager.getClientActiveTierLevel();
+            LicenseTier activeTier = LicenseTier.byLevel(activeTierLvl);
+            int missing = ZooLicenseManager.getClientMissingCountForActiveTier();
+            Minecraft mc = Minecraft.getInstance();
+            boolean creative = mc.player != null && mc.player.isCreative();
+            var tierData = ZooLicenseManager.getClientTierData(activeTierLvl);
+            boolean pendingClaim = tierData.inspectionPassed && (!tierData.licenseClaimed || !tierData.letterClaimed);
+
+            if (creative || pendingClaim || missing == 0) {
+                net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+                        new net.zootycoon.network.ZooNetworkPayloads.RequestZooInspectionPayload()
+                );
+                parent.onClose();
+            } else {
+                ZooHudOverlay.showToast(
+                        "zootycoon.toast.title.inspector",
+                        "zootycoon.license.toast.missing_species",
+                        ZooHudOverlay.TOAST_WARNING,
+                        missing,
+                        activeTier.getDisplayName()
+                );
+            }
+            return true;
+        }
 
         if (mouseX >= gridX && mouseX <= gridX + gridW && mouseY >= gridY && mouseY <= gridY + gridH) {
             int cols = 4;

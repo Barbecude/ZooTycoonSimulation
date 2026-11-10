@@ -58,6 +58,7 @@ public class LicenseBannerItem extends Item {
         Item item = getItemForTier(tierLevel);
         ItemStack stack = new ItemStack(item);
         CompoundTag tag = new CompoundTag();
+        tag.putBoolean("AnimalInfoBanner", true);
         tag.putInt("TierLevel", Math.clamp(tierLevel, 1, 5));
         tag.putString("SpeciesKey", speciesKey != null ? speciesKey : "");
         tag.putString("ZooName", (zooName != null && !zooName.isEmpty()) ? zooName : "Player's Zoo");

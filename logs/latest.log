@@ -1,1 +1,10 @@
-[15:32:07] [Test worker/ERROR]: No data fixer registered for zootycoon:builder
+[16:24:45] [Test worker/ERROR]: No data fixer registered for zootycoon:builder
+[16:24:45] [Test worker/ERROR]: No data fixer registered for zootycoon:zookeeper
+[16:24:45] [Test worker/ERROR]: No data fixer registered for zootycoon:security
+[16:24:45] [Test worker/ERROR]: No data fixer registered for zootycoon:hunter
+[16:24:45] [Test worker/ERROR]: No data fixer registered for zootycoon:visitor
+[16:24:45] [Test worker/ERROR]: No data fixer registered for zootycoon:cashier
+[16:24:45] [Test worker/ERROR]: No data fixer registered for zootycoon:toilet_seat
+[16:24:45] [Test worker/ERROR]: No data fixer registered for zootycoon:vehicle
+[16:24:45] [Test worker/ERROR]: No data fixer registered for zootycoon:inspector
+[16:24:45] [Test worker/ERROR]: No data fixer registered for zootycoon:license_banner

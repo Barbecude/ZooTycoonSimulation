@@ -442,17 +442,23 @@ public class ZooLicenseManager {
             return;
         }
 
-        if (alreadyPassedPendingClaim) {
+        if (alreadyPassedPendingClaim || creativeBypass) {
             BlockPos spawnAndWaitPos = findInspectorGateSpawnPos(level, player, ticketCashier);
             ZooInspectorEntity inspector = ZooEntities.INSPECTOR.create(level);
             if (inspector == null) return;
 
             inspector.moveTo(spawnAndWaitPos.getX() + 0.5, spawnAndWaitPos.getY(), spawnAndWaitPos.getZ() + 0.5, player.getYRot() + 180.0F, 0.0F);
             inspector.setupInitialArrival(player.getUUID(), activeTier.getTierLevel(), spawnAndWaitPos);
-            inspector.setPhase(ZooInspectorEntity.InspectorPhase.WAITING_RESULT_CLAIM);
+            if (alreadyPassedPendingClaim) {
+                inspector.setPhase(ZooInspectorEntity.InspectorPhase.WAITING_RESULT_CLAIM);
+            } else {
+                tierData.state = LicenseProgressionState.WAITING_FOR_CONFIRMATION;
+                inspector.setPhase(ZooInspectorEntity.InspectorPhase.WAITING_CONFIRMATION);
+            }
 
             level.addFreshEntity(inspector);
             profile.activeInspectorUuid = inspector.getUUID();
+            profile.scheduledInspectorArrivalTick = -1L;
             save(level);
             ZooNetworkPayloads.sendLicenseSync(player);
 

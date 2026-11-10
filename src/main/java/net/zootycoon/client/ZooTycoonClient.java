@@ -127,13 +127,19 @@ public class ZooTycoonClient implements ClientModInitializer {
                 }
 
                 // Land selection preview cancellation / confirmation
-                if (ClaimBoundaryRenderer.isBoxReady()) {
-                    if (player.isShiftKeyDown()) {
+                if (player.isShiftKeyDown()) {
+                    if (ClaimBoundaryRenderer.isBoxReady() || ClaimBoundaryRenderer.hasSelection()) {
                         ClaimBoundaryRenderer.clearClaimPreview();
                         ZooHudOverlay.showToast("zootycoon.toast.title.claim", "zootycoon.claim.selection_cancelled", 2);
                     } else {
-                        ClaimBoundaryRenderer.confirmActiveClaim();
+                        ClaimBoundaryRenderer.clearClaimPreview();
+                        ZooHudOverlay.showToast("zootycoon.toast.title.claim", "zootycoon.claim.mode_active", ZooHudOverlay.TOAST_INFO);
                     }
+                    return InteractionResultHolder.success(stack);
+                }
+
+                if (ClaimBoundaryRenderer.isBoxReady()) {
+                    ClaimBoundaryRenderer.confirmActiveClaim();
                     return InteractionResultHolder.success(stack);
                 }
             }
@@ -157,22 +163,23 @@ public class ZooTycoonClient implements ClientModInitializer {
                     return InteractionResult.SUCCESS;
                 }
 
-                if (ClaimBoundaryRenderer.isBoxReady()) {
-                    if (player.isShiftKeyDown()) {
+                if (player.isShiftKeyDown()) {
+                    if (ClaimBoundaryRenderer.isBoxReady() || ClaimBoundaryRenderer.hasSelection()) {
                         ClaimBoundaryRenderer.clearClaimPreview();
                         ZooHudOverlay.showToast("zootycoon.toast.title.claim", "zootycoon.claim.selection_cancelled", 2);
                     } else {
-                        ClaimBoundaryRenderer.confirmActiveClaim();
+                        ClaimBoundaryRenderer.clearClaimPreview();
+                        ZooHudOverlay.showToast("zootycoon.toast.title.claim", "zootycoon.claim.mode_active", ZooHudOverlay.TOAST_INFO);
                     }
                     return InteractionResult.SUCCESS;
+                }
+
+                if (ClaimBoundaryRenderer.isBoxReady()) {
+                    ClaimBoundaryRenderer.confirmActiveClaim();
+                    return InteractionResult.SUCCESS;
                 } else if (ClaimBoundaryRenderer.hasSelection()) {
-                    if (player.isShiftKeyDown()) {
-                        ClaimBoundaryRenderer.clearClaimPreview();
-                        ZooHudOverlay.showToast("zootycoon.toast.title.claim", "zootycoon.claim.selection_cancelled", 2);
-                    } else {
-                        boolean ok = ClaimBoundaryRenderer.handleRightClickBlock(hitResult.getBlockPos());
-                        if (ok) return InteractionResult.SUCCESS;
-                    }
+                    boolean ok = ClaimBoundaryRenderer.handleRightClickBlock(hitResult.getBlockPos());
+                    if (ok) return InteractionResult.SUCCESS;
                 } else {
                     ClaimBoundaryRenderer.handleLeftClick(hitResult.getBlockPos());
                     return InteractionResult.SUCCESS;

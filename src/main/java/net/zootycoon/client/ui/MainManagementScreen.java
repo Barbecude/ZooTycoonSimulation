@@ -86,12 +86,10 @@ public class MainManagementScreen extends Screen {
                 new net.zootycoon.network.ZooNetworkPayloads.RequestLicenseSyncPayload()
         );
 
-        // Small icon buttons at top-right: Log & Statistics, Animal Collection, and Request Zoo Inspector
+        // Small icon button at top-right: Log & Statistics
         int topBtnSize = 20;
         int topBtnY = 10;
         int logBtnX = this.width - topBtnSize - 12;
-        int colBtnX = logBtnX - topBtnSize - 4;
-        int insBtnX = colBtnX - topBtnSize - 4;
 
         this.logBtn = addRenderableWidget(new ZooButton(logBtnX, topBtnY, topBtnSize, topBtnSize, Component.empty(), b -> {
             this.isAnimalCollectionOpen = false;
@@ -104,27 +102,8 @@ public class MainManagementScreen extends Screen {
             }
         }).setCustomIcon(LOG_HISTORY_ICON, 12, 12, 16, 16).asPrimary());
 
-        this.collectionBtn = addRenderableWidget(new ZooButton(colBtnX, topBtnY, topBtnSize, topBtnSize, Component.empty(), b -> {
-            this.isLogStatsOpen = false;
-            this.isAnimalCollectionOpen = !this.isAnimalCollectionOpen;
-            if (this.isAnimalCollectionOpen) {
-                this.animalCollectionModal.init();
-                net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
-                        new net.zootycoon.network.ZooNetworkPayloads.RequestLicenseSyncPayload()
-                );
-            }
-        }).setCustomIcon(ANIMAL_COLLECTION_ICON, 14, 14, 16, 16).asPrimary());
-
-        this.inspectorBtn = addRenderableWidget(new ZooButton(insBtnX, topBtnY, topBtnSize, topBtnSize, Component.empty(), b -> {
-            if (!b.active) {
-                return;
-            }
-            net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
-                    new net.zootycoon.network.ZooNetworkPayloads.RequestZooInspectionPayload()
-            );
-            this.onClose();
-        }).setCustomIcon(LICENSE_ICON, 14, 14, 16, 16).asGold());
-        updateInspectorButtonState();
+        this.collectionBtn = null;
+        this.inspectorBtn = null;
 
         if (currentView == ViewState.ROOT_GRID) {
             int gridTotalWidth = Math.min(this.width - 40, 520);
@@ -144,37 +123,19 @@ public class MainManagementScreen extends Screen {
             int row0Y = startY;
             int row1Y = startY + cardHeight + cardGapY;
 
-            // 1. Beli Tanah Card
+            // 1. Koleksi Satwa & Lisensi Card
             addRenderableWidget(new ZooGridCard(
                     col0X, row0Y, cardWidth, cardHeight,
                     ZooTranslations.get("zootycoon.ui.card.claim"),
                     card -> {
-                        Minecraft mc = Minecraft.getInstance();
-                        if (mc.player != null) {
-                            boolean hasStick = false;
-                            for (int i = 0; i < mc.player.getInventory().getContainerSize(); i++) {
-                                if (mc.player.getInventory().getItem(i).is(Items.STICK)) {
-                                    hasStick = true;
-                                    break;
-                                }
-                            }
-                            if (!hasStick) {
-                                ZooHudOverlay.showToast("zootycoon.toast.title.claim", "zootycoon.claim.need_stick", ZooHudOverlay.TOAST_WARNING);
-                                return;
-                            }
-
-                            this.onClose();
-                            for (int i = 0; i < 9; i++) {
-                                if (mc.player.getInventory().getItem(i).is(Items.STICK)) {
-                                    mc.player.getInventory().selected = i;
-                                    break;
-                                }
-                            }
-                            ClaimBoundaryRenderer.clearClaimPreview();
-                            ZooHudOverlay.showToast("zootycoon.toast.title.claim", "zootycoon.claim.mode_active", ZooHudOverlay.TOAST_INFO);
-                        }
+                        this.isLogStatsOpen = false;
+                        this.isAnimalCollectionOpen = true;
+                        this.animalCollectionModal.init();
+                        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+                                new net.zootycoon.network.ZooNetworkPayloads.RequestLicenseSyncPayload()
+                        );
                     }
-            ).withIcon(ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/claim_land.png"), 32, 32, 32, 32));
+            ).withIcon(ANIMAL_COLLECTION_ICON, 24, 24, 24, 24));
 
             // 2. Buildings Card
             addRenderableWidget(new ZooGridCard(
@@ -287,18 +248,17 @@ public class MainManagementScreen extends Screen {
             default -> {}
         }
 
-        super.render(graphics, mouseX, mouseY, delta);
-
-        // Overlays drawn after widgets so nothing renders on top of them
-        if (currentView == ViewState.STAFF_RECRUITMENT) {
-            staffTab.renderOverlay(graphics, mouseX, mouseY, delta);
-        }
-
         if (isLogStatsOpen) {
             logStatsModal.render(graphics, mouseX, mouseY, delta);
         } else if (isAnimalCollectionOpen) {
             animalCollectionModal.render(graphics, mouseX, mouseY, delta);
         } else {
+            super.render(graphics, mouseX, mouseY, delta);
+
+            // Overlays drawn after widgets so nothing renders on top of them
+            if (currentView == ViewState.STAFF_RECRUITMENT) {
+                staffTab.renderOverlay(graphics, mouseX, mouseY, delta);
+            }
             renderTopButtonsTooltips(graphics, mouseX, mouseY);
         }
     }

@@ -48,6 +48,12 @@ public class TestHelper {
                 } catch (NoSuchFieldException ignored) {}
 
                 try {
+                    java.lang.reflect.Field intrusiveField = clazz.getDeclaredField("unregisteredIntrusiveHolders");
+                    intrusiveField.setAccessible(true);
+                    intrusiveField.set(registry, new java.util.IdentityHashMap<>());
+                } catch (NoSuchFieldException ignored) {}
+
+                try {
                     java.lang.reflect.Field intrusiveField = clazz.getDeclaredField("intrusiveHolderCache");
                     intrusiveField.setAccessible(true);
                     intrusiveField.set(registry, new java.util.IdentityHashMap<>());

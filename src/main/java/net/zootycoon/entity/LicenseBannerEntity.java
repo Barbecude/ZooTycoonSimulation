@@ -110,6 +110,7 @@ public class LicenseBannerEntity extends HangingEntity {
         if (direction == null || !direction.getAxis().isHorizontal()) {
             direction = Direction.SOUTH;
         }
+        // Place banner box flush against the face of the clicked block
         Vec3 center = Vec3.atCenterOf(pos).relative(direction, -0.46875D).add(0.0D, 0.5D, 0.0D);
         Direction.Axis axis = direction.getAxis();
         double sizeX = axis == Direction.Axis.X ? 0.0625D : 3.0D;
@@ -120,20 +121,12 @@ public class LicenseBannerEntity extends HangingEntity {
 
     @Override
     public boolean survives() {
-        if (!this.level().noCollision(this)) {
-            return false;
-        }
         Direction dir = this.getDirection();
         if (dir == null || !dir.getAxis().isHorizontal()) return false;
         BlockPos wallBase = this.pos.relative(dir.getOpposite());
-        Direction right = dir.getCounterClockWise();
-        for (int w = -1; w <= 1; w++) {
-            for (int h = 0; h <= 1; h++) {
-                BlockPos supportPos = wallBase.relative(right, w).above(h);
-                if (!this.level().getBlockState(supportPos).isSolid()) {
-                    return false;
-                }
-            }
+        // Verify supporting wall at the center position where the banner is mounted
+        if (!this.level().getBlockState(wallBase).isSolid()) {
+            return false;
         }
         return this.level().getEntities(this, this.getBoundingBox(), HANGING_ENTITY).isEmpty();
     }
