@@ -86,4 +86,18 @@ public class F08_InspectorNoonArrivalTest {
         assertTrue(shouldSpawnInspector(30000L, target), "Must spawn at exact noon tick");
         assertTrue(shouldSpawnInspector(30001L, target), "Must spawn if tick passes noon");
     }
+
+    @Test
+    @DisplayName("F8-7: Creative immediate spawn bypasses scheduled tick blocker and uses normalized 20-half health scale")
+    void testCreativeImmediateInspectorSpawnAndNormalizedHearts() throws Exception {
+        String managerSrc = java.nio.file.Files.readString(
+                new java.io.File("src/main/java/net/zootycoon/license/ZooLicenseManager.java").toPath());
+        assertTrue(managerSrc.contains("!creativeBypass && profile.scheduledInspectorArrivalTick > 0"));
+        assertTrue(managerSrc.contains("findInspectorCreativeSpawnPos(level, player)"));
+
+        // 14/14 HP (100%), 40/40 HP (100%) -> 20 half-hearts (all 10 hearts filled); 20/40 HP (50%) -> 10 half-hearts
+        assertEquals(20, net.zootycoon.client.ui.AnimalManagementTab.calculateHalfUnits(14.0f, 14.0f));
+        assertEquals(20, net.zootycoon.client.ui.AnimalManagementTab.calculateHalfUnits(40.0f, 40.0f));
+        assertEquals(10, net.zootycoon.client.ui.AnimalManagementTab.calculateHalfUnits(20.0f, 40.0f));
+    }
 }

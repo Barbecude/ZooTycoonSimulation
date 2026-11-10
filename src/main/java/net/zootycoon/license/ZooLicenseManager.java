@@ -415,9 +415,30 @@ public class ZooLicenseManager {
         LicenseTier activeTier = LicenseTier.byLevel(profile.activeTierLevel);
         TierProgressData tierData = profile.getTierData(activeTier.getTierLevel());
 
+        boolean creativeBypass = player.isCreative();
+
         // Check if an inspector already exists in the world for this player
         ZooInspectorEntity existing = findActiveInspector(level, player.getUUID(), profile.activeInspectorUuid);
         if (existing != null && existing.isAlive()) {
+            boolean canRelocateIdleCreative = creativeBypass
+                    && (existing.getPhase() == ZooInspectorEntity.InspectorPhase.WAITING_CONFIRMATION
+                            || existing.getPhase() == ZooInspectorEntity.InspectorPhase.WAITING_RESULT_CLAIM)
+                    && existing.distanceToSqr(player) > 100.0D;
+            if (canRelocateIdleCreative) {
+                BlockPos nearPos = findInspectorCreativeSpawnPos(level, player);
+                existing.setGatePos(nearPos);
+                existing.moveTo(nearPos.getX() + 0.5, nearPos.getY(), nearPos.getZ() + 0.5, player.getYRot() + 180.0F, 0.0F);
+                profile.scheduledInspectorArrivalTick = -1L;
+                save(level);
+                ZooNetworkPayloads.sendLicenseSync(player);
+                ZooNetworkPayloads.sendToast(
+                        player,
+                        "zootycoon.toast.title.inspector",
+                        "zootycoon.license.toast.inspector_arrived",
+                        ZooNetworkPayloads.TOAST_INFO
+                );
+                return;
+            }
             ZooNetworkPayloads.sendToast(
                     player,
                     "zootycoon.toast.title.inspector",
@@ -427,7 +448,7 @@ public class ZooLicenseManager {
             return;
         }
 
-        if (profile.scheduledInspectorArrivalTick > 0) {
+        if (!creativeBypass && profile.scheduledInspectorArrivalTick > 0) {
             ZooNetworkPayloads.sendToast(
                     player,
                     "zootycoon.toast.title.inspector",
@@ -440,7 +461,6 @@ public class ZooLicenseManager {
         // If player already passed inspection and hasn't claimed license yet, spawn inspector right near gate/player to claim
         boolean alreadyPassedPendingClaim = tierData.inspectionPassed && (!tierData.licenseClaimed || !tierData.letterClaimed);
 
-        boolean creativeBypass = player.isCreative();
         int missingCount = getMissingSpeciesCountForActiveTier(player.getUUID());
         if (!creativeBypass && !alreadyPassedPendingClaim && missingCount > 0) {
             ZooNetworkPayloads.sendToast(
@@ -484,7 +504,9 @@ public class ZooLicenseManager {
         }
 
         if (alreadyPassedPendingClaim || creativeBypass) {
-            BlockPos spawnAndWaitPos = findInspectorGateSpawnPos(level, player, ticketCashier);
+            BlockPos spawnAndWaitPos = creativeBypass
+                    ? findInspectorCreativeSpawnPos(level, player)
+                    : findInspectorGateSpawnPos(level, player, ticketCashier);
             ZooInspectorEntity inspector = ZooEntities.INSPECTOR.create(level);
             if (inspector == null) return;
 
@@ -873,15 +895,34 @@ public class ZooLicenseManager {
             }
         }
 
-        // Creative mode fallback: 5 blocks from player
+        return findInspectorCreativeSpawnPos(level, player);
+    }
+
+    /**
+     * Spawns the Inspector directly in front of the player in Creative mode (or when no ticket gate exists),
+     * searching vertically across a wider Y range so hovering players still spawn the Inspector on solid ground.
+     */
+    private BlockPos findInspectorCreativeSpawnPos(ServerLevel level, ServerPlayer player) {
         BlockPos pPos = player.blockPosition();
         Direction lookDir = player.getDirection();
-        for (int dist = 5; dist <= 7; dist++) {
+        int[] dyOffsets = {0, -1, 1, -2, 2, -3, 3, -4, 4, -5, 5, -6, 6};
+        for (int dist = 3; dist <= 6; dist++) {
             BlockPos candidate = pPos.relative(lookDir, dist);
-            for (int dy : new int[]{0, 1, -1, 2, -2}) {
+            for (int dy : dyOffsets) {
                 BlockPos check = candidate.offset(0, dy, 0);
                 if (ZooInspectorEntity.isSafeWalkableSpot(level, check)) {
                     return check;
+                }
+            }
+        }
+        for (Direction dir : Direction.Plane.HORIZONTAL) {
+            for (int dist = 2; dist <= 4; dist++) {
+                BlockPos candidate = pPos.relative(dir, dist);
+                for (int dy : dyOffsets) {
+                    BlockPos check = candidate.offset(0, dy, 0);
+                    if (ZooInspectorEntity.isSafeWalkableSpot(level, check)) {
+                        return check;
+                    }
                 }
             }
         }

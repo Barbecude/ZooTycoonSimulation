@@ -816,23 +816,14 @@ public class AnimalManagementTab {
 
         int relY = 0;
 
-        // 1. Health (Hearts)
+        // 1. Health (Normalized 10 hearts proportional to health/maxHealth so 100% fills all 10 hearts)
         int healthY = scrollAreaY + relY - detailsScrollOffset;
-        int totalHearts = Math.max(1, (int) Math.ceil(selectedData.maxHealth() / 2.0f));
-        int heartsToDraw = Math.min(totalHearts, 10);
-
-        for (int i = 0; i < heartsToDraw; i++) {
-            int hX = infoX + i * 10;
-            graphics.blitSprite(VANILLA_HEART_CONTAINER, hX, healthY, 9, 9);
-            float hpForHeart = selectedData.health() - (i * 2.0f);
-            if (hpForHeart >= 1.5f) {
-                graphics.blitSprite(VANILLA_HEART_FULL, hX, healthY, 9, 9);
-            } else if (hpForHeart >= 0.5f) {
-                graphics.blitSprite(VANILLA_HEART_HALF, hX, healthY, 9, 9);
-            }
-        }
+        float maxHpVal = Math.max(0.1f, selectedData.maxHealth());
+        float hpRatio = selectedData.health() / maxHpVal;
+        int filledHalfHearts = calculateHalfUnits(selectedData.health(), maxHpVal);
+        drawHalfUnitIconBar(graphics, infoX, healthY, filledHalfHearts, VANILLA_HEART_CONTAINER, VANILLA_HEART_FULL, VANILLA_HEART_HALF);
         int statTextX = infoX + 104;
-        int hpPct = Math.round((selectedData.health() / Math.max(0.1f, selectedData.maxHealth())) * 100.0f);
+        int hpPct = Math.round(hpRatio * 100.0f);
         int hpColor = HologramBarRenderer.getStatusColor((float) hpPct);
         graphics.drawString(font, Component.literal(hpPct + "%"), statTextX, healthY + 1, hpColor, false);
         if (inScrollArea && mouseX >= infoX && mouseX <= infoX + 100 && mouseY >= healthY && mouseY <= healthY + 10) {
@@ -844,18 +835,8 @@ public class AnimalManagementTab {
 
         // 2. Hunger (Food shanks + percentage)
         int hungerY = scrollAreaY + relY - detailsScrollOffset;
-        int totalHalfShanks = 20;
-        int filledHalfShanks = Math.clamp(Math.round((selectedData.hunger() / 100.0f) * totalHalfShanks), 0, totalHalfShanks);
-        for (int i = 0; i < 10; i++) {
-            int sX = infoX + i * 10;
-            graphics.blitSprite(VANILLA_FOOD_EMPTY, sX, hungerY, 9, 9);
-            int halfRemaining = filledHalfShanks - (i * 2);
-            if (halfRemaining >= 2) {
-                graphics.blitSprite(VANILLA_FOOD_FULL, sX, hungerY, 9, 9);
-            } else if (halfRemaining == 1) {
-                graphics.blitSprite(VANILLA_FOOD_HALF, sX, hungerY, 9, 9);
-            }
-        }
+        int filledHalfShanks = calculateHalfUnits((float) selectedData.hunger(), 100.0f);
+        drawHalfUnitIconBar(graphics, infoX, hungerY, filledHalfShanks, VANILLA_FOOD_EMPTY, VANILLA_FOOD_FULL, VANILLA_FOOD_HALF);
         int hungerColor = HologramBarRenderer.getStatusColor((float) selectedData.hunger());
         graphics.drawString(font, Component.literal(selectedData.hunger() + "%"), statTextX, hungerY + 1, hungerColor, false);
         if (inScrollArea && mouseX >= infoX && mouseX <= infoX + 100 && mouseY >= hungerY && mouseY <= hungerY + 10) {
@@ -1050,6 +1031,35 @@ public class AnimalManagementTab {
 
         // Modal Title
         graphics.drawString(font, Component.literal("Ubah Nama Satwa").withStyle(ChatFormatting.GOLD), modalX + 14, modalY + 14, 0xFFFFFFFF, false);
+    }
+
+    /**
+     * Draws a 10-slot stat bar where each icon represents 2 half-units (0-20 total),
+     * keeping Health and Hunger bars uniformly scaled to 0-100%.
+     */
+    public static int calculateHalfUnits(float value, float maxValue) {
+        return Math.clamp(Math.round((value / Math.max(0.1f, maxValue)) * 20.0f), 0, 20);
+    }
+
+    private static void drawHalfUnitIconBar(
+            GuiGraphics graphics,
+            int startX,
+            int y,
+            int filledHalves,
+            ResourceLocation emptySprite,
+            ResourceLocation fullSprite,
+            ResourceLocation halfSprite
+    ) {
+        for (int i = 0; i < 10; i++) {
+            int iconX = startX + i * 10;
+            graphics.blitSprite(emptySprite, iconX, y, 9, 9);
+            int halfRemaining = filledHalves - (i * 2);
+            if (halfRemaining >= 2) {
+                graphics.blitSprite(fullSprite, iconX, y, 9, 9);
+            } else if (halfRemaining == 1) {
+                graphics.blitSprite(halfSprite, iconX, y, 9, 9);
+            }
+        }
     }
 
     private List<Component> getHabitatRedNeeds(LivingEntity previewEntity) {
