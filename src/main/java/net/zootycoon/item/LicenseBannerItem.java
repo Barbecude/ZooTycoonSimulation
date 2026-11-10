@@ -54,8 +54,29 @@ public class LicenseBannerItem extends Item {
         return stack;
     }
 
+    public static ItemStack createAnimalInfoBannerStack(int tierLevel, String speciesKey, String zooName) {
+        Item item = getItemForTier(tierLevel);
+        ItemStack stack = new ItemStack(item);
+        CompoundTag tag = new CompoundTag();
+        tag.putInt("TierLevel", Math.clamp(tierLevel, 1, 5));
+        tag.putString("SpeciesKey", speciesKey != null ? speciesKey : "");
+        tag.putString("ZooName", (zooName != null && !zooName.isEmpty()) ? zooName : "Player's Zoo");
+        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        return stack;
+    }
+
     @Override
     public Component getName(ItemStack stack) {
+        CustomData cd = stack.get(DataComponents.CUSTOM_DATA);
+        if (cd != null) {
+            CompoundTag tag = cd.copyTag();
+            if (tag.contains("SpeciesKey") && !tag.getString("SpeciesKey").isEmpty()) {
+                String spKey = tag.getString("SpeciesKey");
+                LicenseTier.SpeciesEntry entry = LicenseTier.findSpeciesEntry(spKey);
+                String spName = entry != null ? entry.defaultName() : spKey;
+                return Component.literal(ZooTranslations.get("item.zootycoon.animal_info_banner.prefix") + " - " + spName);
+            }
+        }
         LicenseTier tier = LicenseTier.byLevel(this.tierLevel);
         return Component.literal(ZooTranslations.get("item.zootycoon.license_banner.prefix") + " - " + tier.getDisplayName());
     }
@@ -74,15 +95,19 @@ public class LicenseBannerItem extends Item {
 
         Level level = context.getLevel();
         String zooName = player != null ? player.getName().getString() + "'s Zoo" : "Player's Zoo";
+        String speciesKey = "";
         CustomData cd = itemStack.get(DataComponents.CUSTOM_DATA);
         if (cd != null) {
             CompoundTag tag = cd.copyTag();
             if (tag.contains("ZooName") && !tag.getString("ZooName").isEmpty()) {
                 zooName = tag.getString("ZooName");
             }
+            if (tag.contains("SpeciesKey")) {
+                speciesKey = tag.getString("SpeciesKey");
+            }
         }
 
-        LicenseBannerEntity banner = new LicenseBannerEntity(level, placePos, direction, this.tierLevel, zooName);
+        LicenseBannerEntity banner = new LicenseBannerEntity(level, placePos, direction, this.tierLevel, zooName, speciesKey);
         if (banner.survives()) {
             if (!level.isClientSide) {
                 banner.playPlacementSound();
@@ -104,10 +129,26 @@ public class LicenseBannerItem extends Item {
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         LicenseTier tier = LicenseTier.byLevel(this.tierLevel);
         String zooName = "";
+        String speciesKey = "";
         CustomData cd = stack.get(DataComponents.CUSTOM_DATA);
         if (cd != null) {
             CompoundTag tag = cd.copyTag();
             zooName = tag.getString("ZooName");
+            if (tag.contains("SpeciesKey")) {
+                speciesKey = tag.getString("SpeciesKey");
+            }
+        }
+        if (!speciesKey.isEmpty()) {
+            LicenseTier.SpeciesEntry entry = LicenseTier.findSpeciesEntry(speciesKey);
+            String spName = entry != null ? entry.defaultName() : speciesKey;
+            tooltip.add(Component.literal(spName).withStyle(ChatFormatting.GOLD));
+            tooltip.add(Component.translatable("zootycoon.species.info_banner.subtitle", tier.getTierLevel()).withStyle(ChatFormatting.AQUA));
+            String funFact = ZooTranslations.get("zootycoon.species." + speciesKey + ".fun_fact");
+            if (funFact != null && !funFact.isEmpty()) {
+                tooltip.add(Component.literal(funFact).withStyle(ChatFormatting.GRAY));
+            }
+            super.appendHoverText(stack, context, tooltip, flag);
+            return;
         }
         if (!zooName.isEmpty()) {
             tooltip.add(Component.literal(zooName).withStyle(ChatFormatting.GOLD));

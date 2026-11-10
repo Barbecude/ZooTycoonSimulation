@@ -43,7 +43,9 @@ public class MainManagementScreen extends Screen {
     private ZooButton collectionBtn;
     private ZooButton inspectorBtn;
     private static final ResourceLocation LOG_HISTORY_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/log_history.png");
-    private static final ResourceLocation ANIMALS_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/animals.png");
+    private static final ResourceLocation ANIMAL_LIST_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/animal_list_cute.png");
+    private static final ResourceLocation ANIMAL_COLLECTION_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/animal_collection_cute.png");
+    private static final ResourceLocation LICENSE_ICON = ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/license_cute.png");
 
     public MainManagementScreen() {
         super(ZooTranslations.component("zootycoon.ui.title"));
@@ -111,7 +113,7 @@ public class MainManagementScreen extends Screen {
                         new net.zootycoon.network.ZooNetworkPayloads.RequestLicenseSyncPayload()
                 );
             }
-        }).setCustomIcon(ANIMALS_ICON, 14, 14, 32, 32).asPrimary());
+        }).setCustomIcon(ANIMAL_COLLECTION_ICON, 14, 14, 16, 16).asPrimary());
 
         this.inspectorBtn = addRenderableWidget(new ZooButton(insBtnX, topBtnY, topBtnSize, topBtnSize, Component.empty(), b -> {
             if (!b.active) {
@@ -121,7 +123,7 @@ public class MainManagementScreen extends Screen {
                     new net.zootycoon.network.ZooNetworkPayloads.RequestZooInspectionPayload()
             );
             this.onClose();
-        }).setItemIcon(new ItemStack(Items.WRITABLE_BOOK)).asGold());
+        }).setCustomIcon(LICENSE_ICON, 14, 14, 16, 16).asGold());
         updateInspectorButtonState();
 
         if (currentView == ViewState.ROOT_GRID) {
@@ -193,7 +195,7 @@ public class MainManagementScreen extends Screen {
                     col1X, row1Y, cardWidth, cardHeight,
                     ZooTranslations.get("zootycoon.ui.card.animals"),
                     card -> setView(ViewState.ANIMAL_MANAGEMENT)
-            ).withIcon(ResourceLocation.fromNamespaceAndPath("zootycoon", "textures/gui/icons/animals.png"), 32, 32, 32, 32));
+            ).withIcon(ANIMAL_LIST_ICON, 32, 32, 32, 32));
         } else {
             addRenderableWidget(new ZooButton(20, 14, 86, 22, ZooTranslations.component("zootycoon.ui.btn.back"), b -> {
                 boolean isStaffSub = currentView == ViewState.ZOOKEEPER_MANAGE

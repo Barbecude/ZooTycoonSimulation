@@ -97,11 +97,10 @@ public class InspectorDialogScreen extends EasyNpcDialogScreen {
                 return Component.literal(ZooTranslations.get("zootycoon.license.dialog.failed"));
             }
         } else {
-            int rem = Math.max(0, total - done);
             if (species != null && !species.isEmpty()) {
-                return Component.literal(ZooTranslations.get("zootycoon.license.dialog.progress_active", species, rem));
+                return Component.literal(ZooTranslations.get("zootycoon.license.dialog.progress_active", species));
             } else {
-                return Component.literal(ZooTranslations.get("zootycoon.license.dialog.progress_next", rem));
+                return Component.literal(ZooTranslations.get("zootycoon.license.dialog.progress_next"));
             }
         }
     }
@@ -280,8 +279,7 @@ public class InspectorDialogScreen extends EasyNpcDialogScreen {
                 : ZooTranslations.get("zootycoon.license.progress.moving");
         graphics.drawString(this.font, targetLabel, infoX, y + 21, 0xFF81E6D9, false);
 
-        int remaining = Math.max(0, totalCount - inspectedCount);
-        String remLabel = ZooTranslations.get("zootycoon.license.progress.remaining", inspectedCount, totalCount, remaining);
+        String remLabel = ZooTranslations.get("zootycoon.license.progress.remaining", inspectedCount, totalCount);
         graphics.drawString(this.font, remLabel, infoX, y + 34, 0xFFA0AEC0, false);
     }
 

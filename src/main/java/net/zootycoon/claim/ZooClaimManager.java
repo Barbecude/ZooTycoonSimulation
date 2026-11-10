@@ -167,6 +167,16 @@ public class ZooClaimManager {
         }
     }
 
+    public void clearFeedbackForPlayer(UUID playerUuid) {
+        if (playerUuid != null) {
+            dismissedFeedbackTimestamps.remove(playerUuid);
+            var compMap = net.zootycoon.entity.ZooVisitorEntity.RECENT_OWNER_COMPLAINTS.get(playerUuid);
+            if (compMap != null) {
+                compMap.clear();
+            }
+        }
+    }
+
     public UUID getOwnerAtOrNearest(BlockPos pos) {
         Optional<ZooClaim> opt = getClaimAt(pos);
         if (opt.isPresent() && opt.get().getOwnerUuid() != null) {

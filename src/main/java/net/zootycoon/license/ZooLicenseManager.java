@@ -100,6 +100,7 @@ public class ZooLicenseManager {
         public final Set<String> ownedSpeciesKeys = ConcurrentHashMap.newKeySet();
         public final Map<Integer, TierProgressData> tierMap = new ConcurrentHashMap<>();
         public UUID activeInspectorUuid = null;
+        public long scheduledInspectorArrivalTick = -1L;
 
         public PlayerLicenseProfile() {
             for (LicenseTier t : LicenseTier.values()) {
@@ -114,6 +115,7 @@ public class ZooLicenseManager {
         public CompoundTag toNbt() {
             CompoundTag tag = new CompoundTag();
             tag.putInt("ActiveTierLevel", activeTierLevel);
+            tag.putLong("ScheduledInspectorArrivalTick", scheduledInspectorArrivalTick);
             if (activeInspectorUuid != null) {
                 tag.putString("ActiveInspectorUuid", activeInspectorUuid.toString());
             }
@@ -135,6 +137,9 @@ public class ZooLicenseManager {
         public static PlayerLicenseProfile fromNbt(CompoundTag tag) {
             PlayerLicenseProfile p = new PlayerLicenseProfile();
             p.activeTierLevel = Math.clamp(tag.contains("ActiveTierLevel") ? tag.getInt("ActiveTierLevel") : 1, 1, 5);
+            p.scheduledInspectorArrivalTick = tag.contains("ScheduledInspectorArrivalTick")
+                    ? tag.getLong("ScheduledInspectorArrivalTick")
+                    : -1L;
             if (tag.contains("ActiveInspectorUuid")) {
                 try {
                     p.activeInspectorUuid = UUID.fromString(tag.getString("ActiveInspectorUuid"));
@@ -205,6 +210,22 @@ public class ZooLicenseManager {
 
     public PlayerLicenseProfile getProfile(UUID playerUuid) {
         return PROFILES.computeIfAbsent(playerUuid, k -> new PlayerLicenseProfile());
+    }
+
+    public void resetProfileForPlayer(ServerLevel level, ServerPlayer player) {
+        if (player == null) return;
+        UUID uuid = player.getUUID();
+        PlayerLicenseProfile profile = getProfile(uuid);
+        if (profile.activeInspectorUuid != null && level != null) {
+            var entity = level.getEntity(profile.activeInspectorUuid);
+            if (entity != null) {
+                entity.discard();
+            }
+        }
+        PlayerLicenseProfile freshProfile = new PlayerLicenseProfile();
+        PROFILES.put(uuid, freshProfile);
+        save(level);
+        net.zootycoon.network.ZooNetworkPayloads.sendLicenseSync(player);
     }
 
     private void save(ServerLevel level) {
@@ -365,6 +386,16 @@ public class ZooLicenseManager {
             return;
         }
 
+        if (profile.scheduledInspectorArrivalTick > 0) {
+            ZooNetworkPayloads.sendToast(
+                    player,
+                    "zootycoon.toast.title.inspector",
+                    "zootycoon.license.toast.already_scheduled",
+                    ZooNetworkPayloads.TOAST_WARNING
+            );
+            return;
+        }
+
         // If player already passed inspection and hasn't claimed license yet, spawn inspector right near gate/player to claim
         boolean alreadyPassedPendingClaim = tierData.inspectionPassed && (!tierData.licenseClaimed || !tierData.letterClaimed);
 
@@ -378,6 +409,21 @@ public class ZooLicenseManager {
                     ZooNetworkPayloads.TOAST_WARNING,
                     missingCount,
                     activeTier.getDisplayName()
+            );
+            return;
+        }
+
+        // F7: Inspector star rating guard
+        double currentStars = net.zootycoon.economy.ZooRatingManager.get(level.getServer()).getStarRating(player.getUUID());
+        double requiredStars = activeTier.getRequiredStars();
+        if (!creativeBypass && !alreadyPassedPendingClaim && currentStars < requiredStars) {
+            ZooNetworkPayloads.sendToast(
+                    player,
+                    "zootycoon.toast.title.inspector",
+                    "zootycoon.license.toast.rating_insufficient",
+                    ZooNetworkPayloads.TOAST_WARNING,
+                    String.format(java.util.Locale.ROOT, "%.1f", requiredStars),
+                    String.format(java.util.Locale.ROOT, "%.1f", currentStars)
             );
             return;
         }
@@ -396,22 +442,95 @@ public class ZooLicenseManager {
             return;
         }
 
+        if (alreadyPassedPendingClaim) {
+            BlockPos spawnAndWaitPos = findInspectorGateSpawnPos(level, player, ticketCashier);
+            ZooInspectorEntity inspector = ZooEntities.INSPECTOR.create(level);
+            if (inspector == null) return;
+
+            inspector.moveTo(spawnAndWaitPos.getX() + 0.5, spawnAndWaitPos.getY(), spawnAndWaitPos.getZ() + 0.5, player.getYRot() + 180.0F, 0.0F);
+            inspector.setupInitialArrival(player.getUUID(), activeTier.getTierLevel(), spawnAndWaitPos);
+            inspector.setPhase(ZooInspectorEntity.InspectorPhase.WAITING_RESULT_CLAIM);
+
+            level.addFreshEntity(inspector);
+            profile.activeInspectorUuid = inspector.getUUID();
+            save(level);
+            ZooNetworkPayloads.sendLicenseSync(player);
+
+            ZooNetworkPayloads.sendToast(
+                    player,
+                    "zootycoon.toast.title.inspector",
+                    "zootycoon.license.toast.inspector_arrived",
+                    ZooNetworkPayloads.TOAST_INFO
+            );
+        } else {
+            // F8: Inspector noon arrival scheduling for next day
+            long currentDay = level.getDayTime() / 24000L;
+            long targetTick = (currentDay + 1L) * 24000L + 6000L;
+            profile.scheduledInspectorArrivalTick = targetTick;
+            tierData.state = LicenseProgressionState.INSPECTOR_REQUESTED;
+            save(level);
+            ZooNetworkPayloads.sendLicenseSync(player);
+
+            ZooNetworkPayloads.sendToast(
+                    player,
+                    "zootycoon.toast.title.inspector",
+                    "zootycoon.license.toast.inspector_scheduled",
+                    ZooNetworkPayloads.TOAST_INFO
+            );
+        }
+    }
+
+    public void tickServer(ServerLevel level) {
+        if (level == null || level.getServer() == null) return;
+        long currentDayTime = level.getDayTime();
+
+        for (Map.Entry<UUID, PlayerLicenseProfile> entry : PROFILES.entrySet()) {
+            UUID playerUuid = entry.getKey();
+            PlayerLicenseProfile profile = entry.getValue();
+
+            if (profile.scheduledInspectorArrivalTick > 0 && currentDayTime >= profile.scheduledInspectorArrivalTick) {
+                ServerPlayer player = level.getServer().getPlayerList().getPlayer(playerUuid);
+                if (player != null) {
+                    spawnScheduledInspector(level, player, profile);
+                }
+            }
+        }
+    }
+
+    private void spawnScheduledInspector(ServerLevel level, ServerPlayer player, PlayerLicenseProfile profile) {
+        ZooInspectorEntity existing = findActiveInspector(level, player.getUUID(), profile.activeInspectorUuid);
+        if (existing != null && existing.isAlive()) {
+            profile.scheduledInspectorArrivalTick = -1L;
+            save(level);
+            return;
+        }
+
+        LicenseTier activeTier = LicenseTier.byLevel(profile.activeTierLevel);
+        TierProgressData tierData = profile.getTierData(activeTier.getTierLevel());
+
+        ZooClaimManager claimManager = ZooClaimManager.get(level);
+        List<ZooClaim> claims = claimManager.getPlayerClaims(player.getUUID());
+        ZooCashierEntity ticketCashier = findTicketCashierInZoo(level, claims);
+
         BlockPos spawnAndWaitPos = findInspectorGateSpawnPos(level, player, ticketCashier);
         ZooInspectorEntity inspector = ZooEntities.INSPECTOR.create(level);
         if (inspector == null) return;
 
-        inspector.moveTo(spawnAndWaitPos.getX() + 0.5, spawnAndWaitPos.getY(), spawnAndWaitPos.getZ() + 0.5, player.getYRot() + 180.0F, 0.0F);
+        inspector.moveTo(
+                spawnAndWaitPos.getX() + 0.5,
+                spawnAndWaitPos.getY(),
+                spawnAndWaitPos.getZ() + 0.5,
+                player.getYRot() + 180.0F,
+                0.0F
+        );
         inspector.setupInitialArrival(player.getUUID(), activeTier.getTierLevel(), spawnAndWaitPos);
 
-        if (alreadyPassedPendingClaim) {
-            inspector.setPhase(ZooInspectorEntity.InspectorPhase.WAITING_RESULT_CLAIM);
-        } else {
-            tierData.state = LicenseProgressionState.WAITING_FOR_CONFIRMATION;
-            inspector.setPhase(ZooInspectorEntity.InspectorPhase.WAITING_CONFIRMATION);
-        }
+        tierData.state = LicenseProgressionState.WAITING_FOR_CONFIRMATION;
+        inspector.setPhase(ZooInspectorEntity.InspectorPhase.WAITING_CONFIRMATION);
 
         level.addFreshEntity(inspector);
         profile.activeInspectorUuid = inspector.getUUID();
+        profile.scheduledInspectorArrivalTick = -1L;
         save(level);
         ZooNetworkPayloads.sendLicenseSync(player);
 
@@ -478,6 +597,7 @@ public class ZooLicenseManager {
                 ZooNetworkPayloads.sendLicenseSync(player);
             }
             case "CANCEL_INSPECTION" -> {
+                profile.scheduledInspectorArrivalTick = -1L;
                 if (inspector != null) {
                     clearActiveInspector(player.getUUID(), inspector.getUUID());
                     inspector.discard();
@@ -529,6 +649,14 @@ public class ZooLicenseManager {
                     if (!player.getInventory().add(bannerStack)) {
                         player.drop(bannerStack, false);
                     }
+
+                    // F12: Also award Animal Information Banner
+                    String awardedSpecies = getFeaturedSpeciesForTier(tierLevel, tierData.inspectedSpecies);
+                    var infoBannerStack = LicenseBannerItem.createAnimalInfoBannerStack(tierLevel, awardedSpecies, zooName);
+                    if (!player.getInventory().add(infoBannerStack)) {
+                        player.drop(infoBannerStack, false);
+                    }
+
                     tierData.licenseClaimed = true;
                     tierData.bannerClaimed = true;
                     tierData.state = LicenseProgressionState.LICENSE_UNLOCKED;
@@ -766,5 +894,25 @@ public class ZooLicenseManager {
             }
         }
         return missing;
+    }
+
+    public static String getFeaturedSpeciesForTier(int tierLevel, List<String> inspectedNames) {
+        LicenseTier tier = LicenseTier.byLevel(tierLevel);
+        if (inspectedNames != null && !inspectedNames.isEmpty()) {
+            for (LicenseTier.SpeciesEntry entry : tier.getRequiredSpecies()) {
+                for (String inspectedName : inspectedNames) {
+                    if (entry.getDisplayName().equalsIgnoreCase(inspectedName) || entry.speciesKey().equalsIgnoreCase(inspectedName)) {
+                        return entry.speciesKey();
+                    }
+                }
+            }
+        }
+        return switch (tierLevel) {
+            case 1 -> "capybara";
+            case 2 -> "zebra";
+            case 3 -> "elephant";
+            case 4 -> "lion";
+            default -> "orca";
+        };
     }
 }

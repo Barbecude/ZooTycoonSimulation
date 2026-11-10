@@ -64,6 +64,7 @@ public class ZooTycoonMod implements ModInitializer {
                 net.zootycoon.hunter.ZooHunterManager.tickServer(level);
                 net.zootycoon.visitor.ZooVisitorManager.tickServer(level);
                 net.zootycoon.economy.ZooStaffManager.get(level).processDailyWages(level);
+                net.zootycoon.license.ZooLicenseManager.get(level).tickServer(level);
             }
             net.zootycoon.animal.ZooAnimalHungerManager.tickServer(level);
             if (level.getServer() != null) {
@@ -83,6 +84,7 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.economy.ZooStaffManager.reset();
             net.zootycoon.economy.ZooEconomyManager.reset();
             net.zootycoon.economy.ZooRatingManager.reset();
+            net.zootycoon.license.ZooLicenseManager.reset();
             net.zootycoon.construction.ConstructionManager.reset();
             net.zootycoon.block.ZooFeedingTroughBlock.reset();
             net.zootycoon.block.EmptyBarrelBlock.reset();
@@ -102,6 +104,7 @@ public class ZooTycoonMod implements ModInitializer {
             net.zootycoon.economy.ZooStaffManager.reset();
             net.zootycoon.economy.ZooEconomyManager.reset();
             net.zootycoon.economy.ZooRatingManager.reset();
+            net.zootycoon.license.ZooLicenseManager.reset();
             net.zootycoon.construction.ConstructionManager.reset();
             net.zootycoon.block.ZooFeedingTroughBlock.reset();
             net.zootycoon.block.EmptyBarrelBlock.reset();

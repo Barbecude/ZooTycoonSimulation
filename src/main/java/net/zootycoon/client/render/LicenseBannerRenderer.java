@@ -7,19 +7,28 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.zootycoon.ZooTycoonMod;
-import net.zootycoon.client.inspect.HologramBarRenderer;
 import net.zootycoon.entity.LicenseBannerEntity;
 import net.zootycoon.license.LicenseTier;
 import net.zootycoon.util.ZooTranslations;
 import org.joml.Matrix4f;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 public class LicenseBannerRenderer extends EntityRenderer<LicenseBannerEntity> {
+
+    private static final Map<String, LivingEntity> DUMMY_CACHE = new ConcurrentHashMap<>();
 
     public LicenseBannerRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -46,102 +55,179 @@ public class LicenseBannerRenderer extends EntityRenderer<LicenseBannerEntity> {
             default -> 0.0F; // SOUTH
         };
 
-        // HangingEntity position is centered on its bounding box (3.0 blocks wide x 2.0 blocks tall)
         poseStack.mulPose(Axis.YP.rotationDegrees(yaw));
 
         int tierLevel = entity.getTierLevel();
         ResourceLocation customTex = getCustomBannerTexture(tierLevel);
-        boolean hasCustomAsset = Minecraft.getInstance().getResourceManager().getResource(customTex).isPresent();
 
-        if (hasCustomAsset) {
-            renderCustomTextureBanner(poseStack, bufferSource, customTex, packedLight);
+        // 1. Render 3x2 Textured Wooden Plaque with Parchment in world space with scene lighting
+        renderPlaqueQuad(poseStack, bufferSource, customTex, packedLight);
+
+        // 2. Render content: Animal Info Banner or Inscribed Certificate
+        if (entity.isAnimalInfoBanner()) {
+            renderAnimalInfoBanner(entity, tierLevel, partialTick, poseStack, bufferSource, packedLight);
         } else {
-            renderCertificatePlaceholder(entity, tierLevel, poseStack, bufferSource, packedLight);
+            renderInscribedCertificateText(entity, tierLevel, poseStack, bufferSource, packedLight);
         }
 
         poseStack.popPose();
         super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
     }
 
-    private void renderCustomTextureBanner(PoseStack poseStack, MultiBufferSource bufferSource, ResourceLocation texture, int light) {
+    private void renderAnimalInfoBanner(LicenseBannerEntity entity, int tierLevel, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int light) {
+        String speciesKey = entity.getSpeciesKey();
+        render3DAnimalEntity(speciesKey, poseStack, bufferSource, light, partialTick);
+        renderAnimalInfoText(speciesKey, tierLevel, poseStack, bufferSource, light);
+    }
+
+    private LivingEntity getOrCreateDummy(String primaryId, EntityType<?> type) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || type == null) return null;
+        return DUMMY_CACHE.computeIfAbsent(primaryId, k -> {
+            try {
+                Entity e = type.create(mc.level);
+                if (e instanceof LivingEntity le) {
+                    return le;
+                }
+            } catch (Throwable ignored) {}
+            return null;
+        });
+    }
+
+    private void render3DAnimalEntity(String speciesKey, PoseStack poseStack, MultiBufferSource bufferSource, int light, float partialTick) {
+        LicenseTier.SpeciesEntry entry = LicenseTier.findSpeciesEntry(speciesKey);
+        if (entry == null) return;
+        EntityType<?> entityType = entry.resolveEntityType();
+        if (entityType == null) return;
+
+        LivingEntity dummy = getOrCreateDummy(entry.resolvePrimaryEntityId(), entityType);
+        if (dummy == null) return;
+
+        poseStack.pushPose();
+        // Center of left pane: X = -52px * (1/64) = -0.8125F, slightly raised at Y = -0.15F, offset forward Z = 0.08F
+        poseStack.translate(-0.8125F, -0.15F, 0.08F);
+
+        // Auto-scale based on bounding box
+        float bbMax = Math.max(0.6f, Math.max(dummy.getBbHeight(), dummy.getBbWidth()));
+        float scale = Math.clamp(0.45F / bbMax, 0.15F, 0.55F);
+        poseStack.scale(scale, scale, scale);
+
+        // Subtle breathing/idle rotation
+        long gameTime = dummy.level() != null ? dummy.level().getGameTime() : 0L;
+        float rotY = 25.0F + (float) Math.sin((gameTime + partialTick) * 0.04F) * 12.0F;
+        poseStack.mulPose(Axis.YP.rotationDegrees(rotY));
+
+        // In-world lighting and shadow suppression
+        EntityRenderDispatcher dispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
+        dispatcher.setRenderShadow(false);
+        dispatcher.render(dummy, 0.0D, 0.0D, 0.0D, 0.0F, partialTick, poseStack, bufferSource, light);
+        dispatcher.setRenderShadow(true);
+
+        poseStack.popPose();
+    }
+
+    private void renderAnimalInfoText(String speciesKey, int tierLevel, PoseStack poseStack, MultiBufferSource bufferSource, int light) {
+        LicenseTier.SpeciesEntry entry = LicenseTier.findSpeciesEntry(speciesKey);
+        LicenseTier tier = LicenseTier.byLevel(tierLevel);
+        Font font = Minecraft.getInstance().font;
+
+        poseStack.pushPose();
+        // Scale 1 unit = 1/64 block
+        poseStack.translate(0.0F, 0.0F, 0.015F);
+        poseStack.scale(0.015625F, -0.015625F, 0.015625F);
+
+        Matrix4f textMat = poseStack.last().pose();
+        int textStartX = -8; // -96 + 80 + 8 = -8
+        int textWidth = 104; // Test requirement textPaneWidth
+
+        // 1. English Official Name (Enlarged)
+        String officialName = entry != null ? entry.defaultName() : speciesKey;
+        poseStack.pushPose();
+        poseStack.translate(textStartX, -48.0F, 0.0F);
+        poseStack.scale(1.25F, 1.25F, 1.0F);
+        font.drawInBatch(officialName, 0, 0, 0xFF1F1206, false, poseStack.last().pose(), bufferSource, Font.DisplayMode.POLYGON_OFFSET, 0, light);
+        poseStack.popPose();
+
+        // 2. Category / Tier Subtitle
+        String subtitle = tier.getDisplayName().toUpperCase() + " • EXHIBIT";
+        font.drawInBatch(subtitle, textStartX, -32, 0xFF5A432D, false, textMat, bufferSource, Font.DisplayMode.POLYGON_OFFSET, 0, light);
+
+        // 3. Fun Fact Header
+        String funFactTitle = ZooTranslations.get("zootycoon.license.banner.fun_fact_title");
+        font.drawInBatch(funFactTitle, textStartX, -18, 0xFF7D1B1B, false, textMat, bufferSource, Font.DisplayMode.POLYGON_OFFSET, 0, light);
+
+        // 4. Wrapped Educational Fun Fact Description
+        String funFact = ZooTranslations.get("zootycoon.species." + speciesKey + ".fun_fact");
+        var wrappedLines = font.split(Component.literal(funFact), textWidth);
+        int lineY = -6;
+        for (var formattedLine : wrappedLines) {
+            font.drawInBatch(formattedLine, textStartX, lineY, 0xFF2E1B0E, false, textMat, bufferSource, Font.DisplayMode.POLYGON_OFFSET, 0, light);
+            lineY += 9;
+            if (lineY > 56) break; // Keep inside bounds
+        }
+
+        poseStack.popPose();
+    }
+
+    private void renderPlaqueQuad(PoseStack poseStack, MultiBufferSource bufferSource, ResourceLocation texture, int light) {
         PoseStack.Pose pose = poseStack.last();
         Matrix4f matrix = pose.pose();
         VertexConsumer vc = bufferSource.getBuffer(RenderType.entitySolid(texture));
+
         float halfW = 1.5F;
         float halfH = 1.0F;
         float z = 0.01F;
 
+        // Front Face (Facing +Z into room)
         vc.addVertex(matrix, -halfW, -halfH, z).setColor(255, 255, 255, 255).setUv(0.0F, 1.0F).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
         vc.addVertex(matrix, halfW, -halfH, z).setColor(255, 255, 255, 255).setUv(1.0F, 1.0F).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
         vc.addVertex(matrix, halfW, halfH, z).setColor(255, 255, 255, 255).setUv(1.0F, 0.0F).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
         vc.addVertex(matrix, -halfW, halfH, z).setColor(255, 255, 255, 255).setUv(0.0F, 0.0F).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
     }
 
-    private void renderCertificatePlaceholder(LicenseBannerEntity entity, int tierLevel, PoseStack poseStack, MultiBufferSource bufferSource, int light) {
+    private void renderInscribedCertificateText(LicenseBannerEntity entity, int tierLevel, PoseStack poseStack, MultiBufferSource bufferSource, int light) {
         LicenseTier tier = LicenseTier.byLevel(tierLevel);
-        int accentColor = tier.getAccentColor();
-
-        // Scale to UI pixel space: 3.0 blocks = 240 units, 2.0 blocks = 160 units -> 1 unit = 1/80 block (0.0125f)
-        poseStack.scale(0.0125F, -0.0125F, 0.0125F);
-
-        float halfW = 120.0F;
-        float halfH = 80.0F;
-
-        Matrix4f mat = poseStack.last().pose();
-        VertexConsumer guiVc = bufferSource.getBuffer(RenderType.gui());
-
-        // 1. Outer Dark Wood / Plaque Frame (3x2 full span: -120..120, -80..80)
-        HologramBarRenderer.drawRect(guiVc, mat, -halfW, -halfH, halfW, halfH, 0.0F, 0xFF1A1410, light);
-
-        // 2. Metallic Gold / Tier Accent Trim Border
-        HologramBarRenderer.drawRect(guiVc, mat, -halfW + 4, -halfH + 4, halfW - 4, halfH - 4, -0.2F, accentColor, light);
-
-        // 3. Inner Certificate Parchment / Slate Background
-        HologramBarRenderer.drawRect(guiVc, mat, -halfW + 7, -halfH + 7, halfW - 7, halfH - 7, -0.4F, 0xFF0E131D, light);
-
-        // 4. Inner Subtle Gold Line & Header Ribbon
-        HologramBarRenderer.drawRect(guiVc, mat, -halfW + 12, -halfH + 12, halfW - 12, -halfH + 30, -0.6F, 0xFF192234, light);
-        HologramBarRenderer.drawRect(guiVc, mat, -halfW + 12, -halfH + 30, halfW - 12, -halfH + 31, -0.6F, accentColor, light);
-        HologramBarRenderer.drawRect(guiVc, mat, -halfW + 16, halfH - 28, halfW - 16, halfH - 27, -0.6F, 0xFF2B3548, light);
-
         Font font = Minecraft.getInstance().font;
 
         poseStack.pushPose();
-        poseStack.translate(0.0F, 0.0F, 1.0F);
+        // Translate slightly in front of plaque surface and scale: 1 unit = 1/80 block (0.0125F)
+        poseStack.translate(0.0F, 0.0F, 0.015F);
+        poseStack.scale(0.0125F, -0.0125F, 0.0125F);
+
         Matrix4f textMat = poseStack.last().pose();
 
-        // Line 1: Official Header
+        // 1. Official Header Inscription
         String header = ZooTranslations.get("zootycoon.license.banner.header");
-        drawCenteredBatch(font, header, 0, -64, 0xFFFFD700, textMat, bufferSource, light);
+        drawCenteredOffset(font, header, 0, -56, 0xFF2A1708, textMat, bufferSource, light);
 
-        // Line 2: License Tier Name (Larger Scale)
+        // 2. License Tier Title (Enlarged)
         poseStack.pushPose();
-        poseStack.translate(0.0F, -32.0F, 0.1F);
-        poseStack.scale(1.45F, 1.45F, 1.0F);
+        poseStack.translate(0.0F, -34.0F, 0.001F);
+        poseStack.scale(1.35F, 1.35F, 1.0F);
         String tierTitle = tier.getDisplayName().toUpperCase();
-        drawCenteredBatch(font, tierTitle, 0, 0, accentColor, poseStack.last().pose(), bufferSource, light);
+        drawCenteredOffset(font, tierTitle, 0, 0, 0xFF1F1206, poseStack.last().pose(), bufferSource, light);
         poseStack.popPose();
 
-        // Line 3: Tier Badge
-        String tierSub = "TIER " + tier.getTierLevel() + " - " + ZooTranslations.get("zootycoon.license.banner.certified");
-        drawCenteredBatch(font, tierSub, 0, -8, 0xFFE2E8F0, textMat, bufferSource, light);
+        // 3. Certified Status Badge
+        String tierSub = "TIER " + tier.getTierLevel() + " • " + ZooTranslations.get("zootycoon.license.banner.certified");
+        drawCenteredOffset(font, tierSub, 0, -10, 0xFF5A432D, textMat, bufferSource, light);
 
-        // Line 4: Zoo Name
+        // 4. Zoo Name / Awardee
         String awardedTo = ZooTranslations.get("zootycoon.license.banner.awarded_to", entity.getZooName());
-        drawCenteredBatch(font, awardedTo, 0, 14, 0xFF55FF55, textMat, bufferSource, light);
+        drawCenteredOffset(font, awardedTo, 0, 10, 0xFF2E1B0E, textMat, bufferSource, light);
 
-        // Line 5: Species Count Info
+        // 5. Species Verified Info
         String speciesInfo = ZooTranslations.get("zootycoon.license.banner.species_verified", tier.getRequiredSpecies().size());
-        drawCenteredBatch(font, speciesInfo, 0, 32, 0xFFA0AEC0, textMat, bufferSource, light);
+        drawCenteredOffset(font, speciesInfo, 0, 26, 0xFF6A5442, textMat, bufferSource, light);
 
-        // Line 6: Official Footer Seal
+        // 6. Seal Authority Endorsement
         String seal = ZooTranslations.get("zootycoon.license.banner.seal");
-        drawCenteredBatch(font, seal, 0, 58, 0xFFFFD700, textMat, bufferSource, light);
+        drawCenteredOffset(font, seal, 0, 56, 0xFF7D1B1B, textMat, bufferSource, light);
 
         poseStack.popPose();
     }
 
-    private void drawCenteredBatch(Font font, String text, float centerX, float y, int color, Matrix4f matrix, MultiBufferSource buffer, int light) {
+    private void drawCenteredOffset(Font font, String text, float centerX, float y, int color, Matrix4f matrix, MultiBufferSource buffer, int light) {
         if (text == null || text.isEmpty()) return;
         float x = centerX - (font.width(text) / 2.0F);
         font.drawInBatch(text, x, y, color, false, matrix, buffer, Font.DisplayMode.POLYGON_OFFSET, 0, light);

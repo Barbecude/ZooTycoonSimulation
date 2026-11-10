@@ -23,6 +23,7 @@ import net.zootycoon.animal.ZooInspectionService;
 import net.zootycoon.entity.ZooEntities;
 import net.zootycoon.entity.ZooVisitorEntity;
 import net.zootycoon.network.ZooNetworkPayloads;
+import java.util.UUID;
 
 public class ZooCommands {
 
@@ -352,25 +353,46 @@ public class ZooCommands {
     private static int executeZooStart(CommandSourceStack source) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
-            source.sendFailure(Component.literal("Perintah ini hanya dapat dijalankan oleh pemain."));
+            source.sendFailure(Component.translatable("zootycoon.command.player_only"));
             return 0;
         }
 
-        // 1. Reset rating benar-benar ke 0 (0.0 bintang, 0 review)
-        net.zootycoon.economy.ZooRatingManager.get(player.server).setStarRating(player.getUUID(), 0.0D, player);
+        ServerLevel sLevel = player.serverLevel();
+        UUID ownerUuid = player.getUUID();
 
-        // 2. Hapus semua staff milik pemain (entity di dunia & record database)
-        int removedStaff = net.zootycoon.economy.ZooStaffManager.get(player.server).removeAllStaffForPlayer(player);
+        // 1. Reset saldo emerald pemain ke 0
+        executeSetEmerald(source, 0);
 
-        source.sendSuccess(() -> Component.literal("Game Zoo Tycoon berhasil di-start ulang! Rating diatur ke 0.0 bintang dan " + removedStaff + " staf telah dihapus.")
+        // 2. Reset rating ke 0 (0.0 bintang, 0 review)
+        net.zootycoon.economy.ZooRatingManager.get(player.server).setStarRating(ownerUuid, 0.0D, player);
+
+        // 3. Masukan di kasir loket tiket kosong (harga tiket 0, keluhan/praise dibersihkan, stock dikosongkan)
+        var claimManager = net.zootycoon.claim.ZooClaimManager.get(sLevel);
+        claimManager.setTicketPrice(ownerUuid, 0);
+        claimManager.clearFeedbackForPlayer(ownerUuid);
+
+        for (var cashier : sLevel.getEntitiesOfClass(net.zootycoon.entity.ZooCashierEntity.class, player.getBoundingBox().inflate(128.0D))) {
+            if (ownerUuid.equals(cashier.getOwnerUuid())) {
+                cashier.getStockInventory().clearContent();
+                cashier.updateStockStatus();
+            }
+        }
+
+        // 4. Log kosong (reset semua transaksi, riwayat kunjungan, dan statistik)
+        net.zootycoon.log.ZooLogManager.resetLogsAndStats(sLevel, ownerUuid);
+
+        // 5. Hapus semua lisensi, tier terbuka hanya taman mini tapi belum terverifikasi (butuh panggil inspector)
+        net.zootycoon.license.ZooLicenseManager.get(sLevel).resetProfileForPlayer(sLevel, player);
+
+        source.sendSuccess(() -> Component.translatable("zootycoon.command.start.success")
                 .withStyle(ChatFormatting.GREEN), false);
         return 1;
     }
 
     private static int sendHelp(CommandSourceStack source) {
-        source.sendSuccess(() -> Component.literal("Daftar Perintah Zoo Tycoon:").withStyle(ChatFormatting.GOLD), false);
-        source.sendSuccess(() -> Component.literal("/emerald <jumlah> - Atur saldo emerald pemain").withStyle(ChatFormatting.YELLOW), false);
-        source.sendSuccess(() -> Component.literal("/zootycoon start - Reset rating ke 0 bintang dan hapus semua staf").withStyle(ChatFormatting.YELLOW), false);
+        source.sendSuccess(() -> Component.translatable("zootycoon.command.help.title").withStyle(ChatFormatting.GOLD), false);
+        source.sendSuccess(() -> Component.translatable("zootycoon.command.help.emerald").withStyle(ChatFormatting.YELLOW), false);
+        source.sendSuccess(() -> Component.translatable("zootycoon.command.help.start").withStyle(ChatFormatting.YELLOW), false);
         source.sendSuccess(() -> Component.literal("/satwa lapar [0-100] - Atur tingkat lapar satwa target / semua satwa").withStyle(ChatFormatting.YELLOW), false);
         source.sendSuccess(() -> Component.literal("/satwa haus [0-100] - Atur tingkat haus satwa target / semua satwa").withStyle(ChatFormatting.YELLOW), false);
         source.sendSuccess(() -> Component.literal("/satwa bersih [0-100] - Atur kebersihan satwa target / semua satwa").withStyle(ChatFormatting.YELLOW), false);

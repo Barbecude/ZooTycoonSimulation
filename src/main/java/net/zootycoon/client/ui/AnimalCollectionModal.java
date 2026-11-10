@@ -128,9 +128,9 @@ public class AnimalCollectionModal {
             graphics.drawString(font, tierHeader, gridX + 8, curY + 5, tierUnlocked ? 0xFFFFFFFF : 0xFF9CA3AF, false);
 
             String tierBadgeKey = !tierUnlocked ? "zootycoon.license.state.locked"
-                    : (tierData.licenseClaimed ? "zootycoon.license.state.certified" : "zootycoon.license.state.active");
+                    : (tierData.licenseClaimed ? "zootycoon.license.state.certified" : "zootycoon.license.state.unverified");
             String tierBadge = ZooTranslations.get(tierBadgeKey);
-            int badgeColor = !tierUnlocked ? 0xFFF87171 : (tierData.licenseClaimed ? 0xFF4ADE80 : 0xFF38BDF8);
+            int badgeColor = !tierUnlocked ? 0xFFF87171 : (tierData.licenseClaimed ? 0xFF4ADE80 : 0xFFFBBF24);
             graphics.drawString(font, tierBadge, gridX + gridW - 12 - font.width(tierBadge), curY + 5, badgeColor, false);
 
             curY += 22;

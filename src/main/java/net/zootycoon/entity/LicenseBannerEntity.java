@@ -31,15 +31,22 @@ public class LicenseBannerEntity extends HangingEntity {
             SynchedEntityData.defineId(LicenseBannerEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Integer> DATA_DIRECTION_3D =
             SynchedEntityData.defineId(LicenseBannerEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<String> DATA_SPECIES_KEY =
+            SynchedEntityData.defineId(LicenseBannerEntity.class, EntityDataSerializers.STRING);
 
     public LicenseBannerEntity(EntityType<? extends LicenseBannerEntity> type, Level level) {
         super(type, level);
     }
 
     public LicenseBannerEntity(Level level, BlockPos pos, Direction direction, int tierLevel, String zooName) {
+        this(level, pos, direction, tierLevel, zooName, "");
+    }
+
+    public LicenseBannerEntity(Level level, BlockPos pos, Direction direction, int tierLevel, String zooName, String speciesKey) {
         super(ZooEntities.LICENSE_BANNER, level, pos);
         this.setTierLevel(tierLevel);
         this.setZooName(zooName != null ? zooName : "Player's Zoo");
+        this.setSpeciesKey(speciesKey);
         this.setBannerDirection(direction);
     }
 
@@ -48,6 +55,7 @@ public class LicenseBannerEntity extends HangingEntity {
         builder.define(DATA_TIER_LEVEL, 1);
         builder.define(DATA_ZOO_NAME, "Player's Zoo");
         builder.define(DATA_DIRECTION_3D, Direction.SOUTH.get3DDataValue());
+        builder.define(DATA_SPECIES_KEY, "");
     }
 
     public void setBannerDirection(Direction direction) {
@@ -83,6 +91,18 @@ public class LicenseBannerEntity extends HangingEntity {
 
     public void setZooName(String zooName) {
         this.entityData.set(DATA_ZOO_NAME, zooName != null ? zooName : "Player's Zoo");
+    }
+
+    public String getSpeciesKey() {
+        return this.entityData.get(DATA_SPECIES_KEY);
+    }
+
+    public void setSpeciesKey(String key) {
+        this.entityData.set(DATA_SPECIES_KEY, key != null ? key : "");
+    }
+
+    public boolean isAnimalInfoBanner() {
+        return !getSpeciesKey().isEmpty();
     }
 
     @Override
@@ -124,6 +144,7 @@ public class LicenseBannerEntity extends HangingEntity {
         tag.putByte("Facing", (byte) this.getDirection().get2DDataValue());
         tag.putInt("TierLevel", getTierLevel());
         tag.putString("ZooName", getZooName());
+        tag.putString("SpeciesKey", getSpeciesKey());
     }
 
     @Override
@@ -134,6 +155,9 @@ public class LicenseBannerEntity extends HangingEntity {
         }
         if (tag.contains("ZooName")) {
             setZooName(tag.getString("ZooName"));
+        }
+        if (tag.contains("SpeciesKey")) {
+            setSpeciesKey(tag.getString("SpeciesKey"));
         }
         Direction dir = Direction.from2DDataValue(tag.getByte("Facing"));
         setBannerDirection(dir);
@@ -148,7 +172,9 @@ public class LicenseBannerEntity extends HangingEntity {
         if (brokenEntity instanceof Player player && player.hasInfiniteMaterials()) {
             return;
         }
-        ItemStack drop = LicenseBannerItem.createStackForTier(getTierLevel(), getZooName());
+        ItemStack drop = isAnimalInfoBanner()
+                ? LicenseBannerItem.createAnimalInfoBannerStack(getTierLevel(), getSpeciesKey(), getZooName())
+                : LicenseBannerItem.createStackForTier(getTierLevel(), getZooName());
         this.spawnAtLocation(drop);
     }
 
@@ -186,6 +212,8 @@ public class LicenseBannerEntity extends HangingEntity {
 
     @Override
     public ItemStack getPickResult() {
-        return LicenseBannerItem.createStackForTier(getTierLevel(), getZooName());
+        return isAnimalInfoBanner()
+                ? LicenseBannerItem.createAnimalInfoBannerStack(getTierLevel(), getSpeciesKey(), getZooName())
+                : LicenseBannerItem.createStackForTier(getTierLevel(), getZooName());
     }
 }

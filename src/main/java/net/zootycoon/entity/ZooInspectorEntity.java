@@ -26,6 +26,7 @@ import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -82,8 +83,18 @@ public class ZooInspectorEntity extends PathfinderMob {
         super(entityType, level);
         this.setPersistenceRequired();
         this.addTag("zootycoon_staff");
-        this.setCustomName(Component.literal("Zoo Inspector"));
-        this.setCustomNameVisible(true);
+        this.setCustomName(Component.translatable("entity.zootycoon.zoo_inspector"));
+        this.setCustomNameVisible(false);
+    }
+
+    @Override
+    public boolean shouldShowName() {
+        return false;
+    }
+
+    @Override
+    protected PathNavigation createNavigation(Level level) {
+        return new net.zootycoon.entity.ai.navigation.ZooPathNavigation(this, level);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -108,6 +119,7 @@ public class ZooInspectorEntity extends PathfinderMob {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
+        this.goalSelector.addGoal(1, new net.zootycoon.entity.ai.goal.ZooDoorAndGateInteractGoal(this));
     }
 
     @Override
@@ -332,7 +344,13 @@ public class ZooInspectorEntity extends PathfinderMob {
     private void tickWalkingToAnimal(ServerLevel level) {
         LivingEntity target = findCurrentTargetEntity(level);
         if (target == null || !target.isAlive()) {
-            setPhase(InspectorPhase.WRITING_NOTES);
+            // Animal despawned or killed mid-walk: record missing note and immediately route to next animal (F10-B5)
+            evaluateAndRecordCurrentSpecies(level, null);
+            if (!pendingSpeciesKeys.isEmpty()) {
+                pendingSpeciesKeys.remove(0);
+            }
+            setInspectedCount(getTotalCount() - pendingSpeciesKeys.size());
+            advanceToNextSpecies(level);
             return;
         }
 
@@ -357,7 +375,7 @@ public class ZooInspectorEntity extends PathfinderMob {
         }
 
         // Safe fallback if pathfinding gets stuck or enclosure is far
-        if (stuckTicks >= 80 || phaseTimer >= 240) {
+        if (stuckTicks >= 120 || phaseTimer >= 360) {
             BlockPos standPos = findInspectionStandPosNearAnimal(level, target);
             safeTeleportNear(level, standPos, 2);
             this.getNavigation().stop();
@@ -580,18 +598,26 @@ public class ZooInspectorEntity extends PathfinderMob {
 
     private BlockPos findInspectionStandPosNearAnimal(ServerLevel level, LivingEntity animal) {
         BlockPos center = animal.blockPosition();
+        BlockPos inspectorPos = this.blockPosition();
+        BlockPos bestSpot = null;
+        double bestDistSq = Double.MAX_VALUE;
+
         for (int radius = 3; radius <= 6; radius++) {
             for (Direction dir : Direction.Plane.HORIZONTAL) {
                 BlockPos candidate = center.relative(dir, radius);
                 for (int dy : new int[]{0, 1, -1, 2, -2}) {
                     BlockPos check = candidate.offset(0, dy, 0);
                     if (isSafeWalkableSpot(level, check)) {
-                        return check;
+                        double d = check.distSqr(inspectorPos);
+                        if (d < bestDistSq) {
+                            bestDistSq = d;
+                            bestSpot = check;
+                        }
                     }
                 }
             }
         }
-        return center;
+        return bestSpot != null ? bestSpot : center;
     }
 
     public void safeTeleportNear(ServerLevel level, BlockPos targetCenter, int preferredRadius) {

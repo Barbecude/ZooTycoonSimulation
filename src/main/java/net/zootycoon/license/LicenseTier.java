@@ -13,6 +13,7 @@ public enum LicenseTier {
             "taman_mini",
             "zootycoon.license.tier.1",
             "Lisensi Taman Mini",
+            0.0D,
             0xFF4ADE80,
             List.of(
                     new SpeciesEntry("mini_sheep", "Mini Sheep", List.of("wildernature:mini_sheep", "minecraft:sheep")),
@@ -30,6 +31,7 @@ public enum LicenseTier {
             "kebun_binatang",
             "zootycoon.license.tier.2",
             "Lisensi Kebun Binatang",
+            3.0D,
             0xFF38BDF8,
             List.of(
                     new SpeciesEntry("zebra", "Zebra", List.of("naturalist:zebra", "minecraft:horse")),
@@ -47,6 +49,7 @@ public enum LicenseTier {
             "suaka_margasatwa",
             "zootycoon.license.tier.3",
             "Lisensi Suaka Margasatwa",
+            3.5D,
             0xFFFBBF24,
             List.of(
                     new SpeciesEntry("giraffe", "Giraffe", List.of("naturalist:giraffe")),
@@ -64,6 +67,7 @@ public enum LicenseTier {
             "cagar_alam",
             "zootycoon.license.tier.4",
             "Lisensi Cagar Alam",
+            4.0D,
             0xFFF97316,
             List.of(
                     new SpeciesEntry("lion", "Lion", List.of("naturalist:lion", "alexsmobs:lion")),
@@ -81,6 +85,7 @@ public enum LicenseTier {
             "konservasi_dunia",
             "zootycoon.license.tier.5",
             "Lisensi Konservasi Dunia",
+            4.5D,
             0xFFA855F7,
             List.of(
                     new SpeciesEntry("orca", "Orca", List.of("alexsmobs:orca")),
@@ -96,16 +101,14 @@ public enum LicenseTier {
 
     public record SpeciesEntry(String speciesKey, String defaultName, List<String> entityTypeIds) {
         public String getDisplayName() {
-            String langKey = "zootycoon.species." + speciesKey;
-            String translated = ZooTranslations.get(langKey);
-            if (translated != null && !translated.equals(langKey) && !translated.isEmpty()) {
-                return translated;
+            if (defaultName != null && !defaultName.isEmpty()) {
+                return defaultName;
             }
             EntityType<?> resolved = resolveEntityType();
             if (resolved != null) {
                 return resolved.getDescription().getString();
             }
-            return defaultName;
+            return speciesKey;
         }
 
         public String resolvePrimaryEntityId() {
@@ -150,14 +153,16 @@ public enum LicenseTier {
     private final String id;
     private final String translationKey;
     private final String fallbackTitle;
+    private final double requiredStars;
     private final int accentColor;
     private final List<SpeciesEntry> requiredSpecies;
 
-    LicenseTier(int tierLevel, String id, String translationKey, String fallbackTitle, int accentColor, List<SpeciesEntry> requiredSpecies) {
+    LicenseTier(int tierLevel, String id, String translationKey, String fallbackTitle, double requiredStars, int accentColor, List<SpeciesEntry> requiredSpecies) {
         this.tierLevel = tierLevel;
         this.id = id;
         this.translationKey = translationKey;
         this.fallbackTitle = fallbackTitle;
+        this.requiredStars = requiredStars;
         this.accentColor = accentColor;
         this.requiredSpecies = requiredSpecies;
     }
@@ -177,6 +182,10 @@ public enum LicenseTier {
     public String getDisplayName() {
         String t = ZooTranslations.get(translationKey);
         return (t == null || t.isEmpty() || t.equals(translationKey)) ? fallbackTitle : t;
+    }
+
+    public double getRequiredStars() {
+        return requiredStars;
     }
 
     public int getAccentColor() {
