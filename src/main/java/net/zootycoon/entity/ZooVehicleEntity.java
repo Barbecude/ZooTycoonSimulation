@@ -431,7 +431,7 @@ public class ZooVehicleEntity extends Entity {
     }
 
     public boolean hasHeadlightsOn() {
-        return this.getDriver() != null && this.entityData.get(DATA_HEADLIGHTS);
+        return this.getDriver() != null && this.level().isNight() && this.entityData.get(DATA_HEADLIGHTS);
     }
 
     public String getVehicleType() {
@@ -657,7 +657,8 @@ public class ZooVehicleEntity extends Entity {
                 boolean revBrake = (fInput > 0.05f && signedMove < -0.04f) || (fInput < -0.05f && signedMove > 0.04f);
                 boolean driftBrake = Math.abs(signedMove) > 0.34f && Math.abs(sAngle) > 22.0f;
                 this.entityData.set(DATA_BRAKING, (sJump && Math.abs(signedMove) > 0.025f) || revBrake || driftBrake);
-                this.entityData.set(DATA_HEADLIGHTS, true);
+                boolean isNight = this.level().isNight();
+                this.entityData.set(DATA_HEADLIGHTS, isNight);
             } else {
                 this.entityData.set(DATA_STEER_ANGLE, this.localSteerAngle);
                 this.entityData.set(DATA_SPEED, this.currentSpeed);
