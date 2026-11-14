@@ -159,12 +159,7 @@ public class SchematicCatalogTab {
             int btnWidth3 = 0;
 
             if (!isCreative) {
-                if (isWorldgen) {
-                    btnWidth1 = detailWidth;
-                } else {
-                    btnWidth1 = (int) (detailWidth * 0.72);
-                    btnWidth3 = detailWidth - btnWidth1 - 4;
-                }
+                btnWidth1 = detailWidth;
             } else if (isWorldgen) {
                 btnWidth1 = (int) (detailWidth * 0.58);
                 btnWidth2 = detailWidth - btnWidth1 - 4;
@@ -210,8 +205,8 @@ public class SchematicCatalogTab {
                 }).setCustomIcon(ZooTycoonMod.id("textures/gui/icons/pencil.png")).asGold());
             }
 
-            if (!isWorldgen) {
-                int deleteX = isCreative ? (detailX + btnWidth1 + btnWidth2 + 8) : (detailX + btnWidth1 + 4);
+            if (isCreative && !isWorldgen) {
+                int deleteX = detailX + btnWidth1 + btnWidth2 + 8;
                 screen.addWidgetPublic(new ZooButton(deleteX, actionBtnY, btnWidth3, 24, ZooTranslations.component("zootycoon.ui.catalog.btn_delete"), b -> {
                     ZooSchematicRegistry.deleteCustomSchematic(selectedSchematic.getId());
                     this.selectedSchematic = null;
