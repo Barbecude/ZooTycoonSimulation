@@ -140,7 +140,7 @@ public class SchematicCatalogTab {
             ZooSchematic schem = schematics.get(i);
             int itemY = itemAreaY + i * 26 - scrollOffset;
             if (itemY >= itemAreaY - 2 && itemY + 22 <= itemAreaY + itemAreaH + 4) {
-                String label = (schem == selectedSchematic ? "> " : "  ") + schem.getName();
+                String label = schem.getName();
                 screen.addWidgetPublic(new ZooButton(listX, itemY, itemBtnW, 22, Component.literal(label), b -> {
                     updateSelected(schem);
                     screen.setView(screen.getCurrentView());

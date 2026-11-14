@@ -68,8 +68,3 @@ fungsi yang belum fix atau belum ada atau masih cacat (Dilarang mengerjakan semu
 22. inspector logic
 
 fungsi yg belum ada atau masih cacat (jangan eksekusi fitur ini sebelum secara eksplisit diminta) 
-
-1. feedign through & zookeper
-Zebra pindah ke Tier 1
-Jerapah pindah ke Tier 2
-Singa pindah ke Tier 1

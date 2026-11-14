@@ -513,7 +513,7 @@ public class ZooCommands {
         // 4. Log kosong (reset semua transaksi, riwayat kunjungan, dan statistik)
         net.zootycoon.log.ZooLogManager.resetLogsAndStats(sLevel, ownerUuid);
 
-        // 5. Hapus semua lisensi, tier terbuka hanya taman mini tapi belum terverifikasi (butuh panggil inspector)
+        // 5. Hapus semua lisensi, tier terbuka hanya taman mini tapi Belum terverifikasi (butuh panggil inspector)
         net.zootycoon.license.ZooLicenseManager.get(sLevel).resetProfileForPlayer(sLevel, player);
 
         source.sendSuccess(() -> Component.translatable("zootycoon.command.start.success")
