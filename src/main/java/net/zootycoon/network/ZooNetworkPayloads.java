@@ -1761,12 +1761,18 @@ public class ZooNetworkPayloads {
     }
 
     // C2S: Manual pay individual staff daily/overdue salary from Kelola Staff UI
-    public record PayStaffWagePayload(UUID staffUuid) implements CustomPacketPayload {
+    public record PayStaffWagePayload(UUID staffUuid, int daysToPay) implements CustomPacketPayload {
+        public PayStaffWagePayload(UUID staffUuid) {
+            this(staffUuid, Integer.MAX_VALUE);
+        }
         public static final CustomPacketPayload.Type<PayStaffWagePayload> TYPE =
                 new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ZooTycoonMod.MOD_ID, "pay_staff_wage"));
         public static final StreamCodec<FriendlyByteBuf, PayStaffWagePayload> CODEC = StreamCodec.of(
-                (buf, p) -> buf.writeUUID(p.staffUuid != null ? p.staffUuid : new UUID(0L, 0L)),
-                buf -> new PayStaffWagePayload(buf.readUUID())
+                (buf, p) -> {
+                    buf.writeUUID(p.staffUuid != null ? p.staffUuid : new UUID(0L, 0L));
+                    buf.writeInt(p.daysToPay);
+                },
+                buf -> new PayStaffWagePayload(buf.readUUID(), buf.readInt())
         );
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
@@ -3065,7 +3071,7 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
         ServerPlayNetworking.registerGlobalReceiver(PayStaffWagePayload.TYPE, (payload, context) -> {
             ServerPlayer player = context.player();
             context.server().execute(() -> {
-                net.zootycoon.economy.ZooStaffManager.get(player.serverLevel()).payIndividualWage(player, payload.staffUuid());
+                net.zootycoon.economy.ZooStaffManager.get(player.serverLevel()).payIndividualWage(player, payload.staffUuid(), payload.daysToPay());
             });
         });
 

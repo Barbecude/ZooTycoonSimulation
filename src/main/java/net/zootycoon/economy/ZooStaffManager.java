@@ -609,6 +609,10 @@ public class ZooStaffManager {
     }
 
     public boolean payIndividualWage(ServerPlayer player, UUID staffUuid) {
+        return payIndividualWage(player, staffUuid, Integer.MAX_VALUE);
+    }
+
+    public boolean payIndividualWage(ServerPlayer player, UUID staffUuid, int daysToPay) {
         if (player == null || staffUuid == null) return false;
         StaffWageRecord w = staffWages.get(staffUuid);
         if (w == null) {
@@ -626,8 +630,14 @@ public class ZooStaffManager {
             return true;
         }
 
-        if (owed > 0 && !player.isCreative()) {
-            if (!TransactionHelper.hasEnoughEmeralds(player, owed) || !TransactionHelper.consumeEmeralds(player, owed)) {
+        int daily = w.dailyWage > 0 ? w.dailyWage : getDefaultDailyWageForType(w.staffType);
+        int requestedDays = Math.max(1, daysToPay);
+        int payNow = (w.missedDays <= 1 || requestedDays >= w.missedDays)
+                ? owed
+                : Math.min(owed, Math.max(1, daily) * requestedDays);
+
+        if (payNow > 0 && !player.isCreative()) {
+            if (!TransactionHelper.hasEnoughEmeralds(player, payNow) || !TransactionHelper.consumeEmeralds(player, payNow)) {
                 ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.warning", "zootycoon.toast.salary.unpaid", 2);
                 player.level().playSound(null, player.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 1.0f, 1.0f);
                 return false;
@@ -637,20 +647,26 @@ public class ZooStaffManager {
         boolean wasResigned = w.resigned;
         String roleLabel = getRoleDisplayLabel(w.staffType);
         String nameLabel = (w.staffName != null && !w.staffName.isBlank()) ? w.staffName : roleLabel;
-        if (wasResigned) {
+        int daysCleared = Math.min(w.missedDays, requestedDays);
+        w.missedDays = Math.max(0, w.missedDays - daysCleared);
+        w.owedAmount = Math.max(0, owed - payNow);
+
+        boolean fullyCleared = w.owedAmount <= 0 && w.missedDays <= 0;
+        if (wasResigned && fullyCleared) {
             staffWages.remove(staffUuid);
-        } else {
-            w.missedDays = 0;
-            w.owedAmount = 0;
         }
-        resolveStaffEntityStrike(w.ownerUuid, staffUuid);
-        resolveStaffEntityStrike(player.getUUID(), staffUuid);
+        if (w.missedDays < 3) {
+            resolveStaffEntityStrike(w.ownerUuid, staffUuid);
+            resolveStaffEntityStrike(player.getUUID(), staffUuid);
+        }
         saveToFile();
 
-        net.zootycoon.log.ZooLogManager.recordIndividualSalaryPayment(w.ownerUuid, roleLabel, nameLabel, owed);
-        ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success",
-                wasResigned ? "zootycoon.toast.salary.debt_cleared" : "zootycoon.toast.salary.paid_manual",
-                1, nameLabel, String.valueOf(owed));
+        net.zootycoon.log.ZooLogManager.recordIndividualSalaryPayment(w.ownerUuid, roleLabel, nameLabel, payNow);
+        if (fullyCleared) {
+            ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success",
+                    wasResigned ? "zootycoon.toast.salary.debt_cleared" : "zootycoon.toast.salary.paid_manual",
+                    1, nameLabel, String.valueOf(payNow));
+        }
         player.level().playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0f, 1.0f);
         syncToPlayer(player);
         ZooNetworkPayloads.sendAnimalSync(player);
