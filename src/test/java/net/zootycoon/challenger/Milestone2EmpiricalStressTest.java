@@ -363,7 +363,8 @@ public class Milestone2EmpiricalStressTest {
 
         // Inspected match
         assertEquals("mini_sheep", ZooLicenseManager.getFeaturedSpeciesForTier(1, List.of("Mini Sheep")));
-        assertEquals("kangaroo", ZooLicenseManager.getFeaturedSpeciesForTier(1, List.of("kangaroo")));
+        assertEquals("lion", ZooLicenseManager.getFeaturedSpeciesForTier(1, List.of("lion")));
+        assertEquals("kangaroo", ZooLicenseManager.getFeaturedSpeciesForTier(2, List.of("kangaroo")));
         assertEquals("panda", ZooLicenseManager.getFeaturedSpeciesForTier(2, List.of("Panda")));
         assertEquals("giraffe", ZooLicenseManager.getFeaturedSpeciesForTier(3, List.of("Giraffe")));
         assertEquals("tiger", ZooLicenseManager.getFeaturedSpeciesForTier(4, List.of("Tiger")));

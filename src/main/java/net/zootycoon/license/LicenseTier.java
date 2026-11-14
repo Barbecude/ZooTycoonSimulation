@@ -22,8 +22,8 @@ public enum LicenseTier {
                     new SpeciesEntry("capybara", "Capybara", List.of("naturalist:capybara")),
                     new SpeciesEntry("tortoise", "Tortoise", List.of("naturalist:tortoise", "minecraft:turtle")),
                     new SpeciesEntry("capuchin_monkey", "Capuchin Monkey", List.of("alexsmobs:capuchin_monkey")),
-                    new SpeciesEntry("kangaroo", "Kangaroo", List.of("alexsmobs:kangaroo")),
-                    new SpeciesEntry("ostrich", "Ostrich", List.of("naturalist:ostrich", "alexsmobs:emu"))
+                    new SpeciesEntry("zebra", "Zebra", List.of("naturalist:zebra", "minecraft:horse")),
+                    new SpeciesEntry("lion", "Lion", List.of("naturalist:lion", "alexsmobs:lion"))
             )
     ),
     KEBUN_BINATANG(
@@ -34,14 +34,14 @@ public enum LicenseTier {
             3.0D,
             0xFF38BDF8,
             List.of(
-                    new SpeciesEntry("zebra", "Zebra", List.of("naturalist:zebra", "minecraft:horse")),
                     new SpeciesEntry("camel", "Camel", List.of("minecraft:camel")),
                     new SpeciesEntry("black_bear", "Black Bear", List.of("naturalist:black_bear")),
                     new SpeciesEntry("panda", "Panda", List.of("minecraft:panda")),
                     new SpeciesEntry("giant_anteater", "Giant Anteater", List.of("alexsmobs:anteater", "alexsmobs:giant_anteater")),
-                    new SpeciesEntry("rhinoceros", "Rhinoceros", List.of("naturalist:rhino", "alexsmobs:rhinoceros")),
                     new SpeciesEntry("toucan", "Toucan", List.of("alexsmobs:toucan")),
-                    new SpeciesEntry("gazelle", "Gazelle", List.of("alexsmobs:gazelle"))
+                    new SpeciesEntry("gazelle", "Gazelle", List.of("alexsmobs:gazelle")),
+                    new SpeciesEntry("kangaroo", "Kangaroo", List.of("alexsmobs:kangaroo")),
+                    new SpeciesEntry("ostrich", "Ostrich", List.of("naturalist:ostrich", "alexsmobs:emu"))
             )
     ),
     SUAKA_MARGASATWA(
@@ -70,7 +70,7 @@ public enum LicenseTier {
             4.0D,
             0xFFF97316,
             List.of(
-                    new SpeciesEntry("lion", "Lion", List.of("naturalist:lion", "alexsmobs:lion")),
+                    new SpeciesEntry("rhinoceros", "Rhinoceros", List.of("naturalist:rhino", "alexsmobs:rhinoceros")),
                     new SpeciesEntry("tiger", "Tiger", List.of("naturalist:tiger", "alexsmobs:tiger")),
                     new SpeciesEntry("grizzly_bear", "Grizzly Bear", List.of("alexsmobs:grizzly_bear", "naturalist:bear")),
                     new SpeciesEntry("snow_leopard", "Snow Leopard", List.of("alexsmobs:snow_leopard", "naturalist:leopard")),
