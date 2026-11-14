@@ -52,11 +52,48 @@ public class InspectionLetterItem extends Item {
         return stack;
     }
 
+    public static ItemStack createCustomLetterStack(String letterTitle) {
+        String cleanTitle = (letterTitle != null && !letterTitle.isBlank())
+                ? letterTitle.trim()
+                : ZooTranslations.get("zootycoon.custom_letter.default_title");
+        ItemStack stack = new ItemStack(ZooItems.INSPECTION_LETTER);
+        stack.set(DataComponents.CUSTOM_NAME, Component.literal(cleanTitle));
+
+        CompoundTag tag = new CompoundTag();
+        tag.putBoolean("CustomLetter", true);
+        tag.putBoolean("CustomLocked", false);
+        tag.putString("LetterTitle", cleanTitle);
+        tag.putString("CustomHeader", cleanTitle);
+        tag.putString("CustomSubHeader", "");
+        tag.putString("CustomStamp", "");
+        tag.putBoolean("CustomStampGreen", false);
+
+        ListTag blocks = new ListTag();
+        CompoundTag b1 = new CompoundTag();
+        b1.putString("Type", "heading");
+        b1.putString("Text", ZooTranslations.get("zootycoon.custom_letter.sample_heading"));
+        blocks.add(b1);
+
+        CompoundTag b2 = new CompoundTag();
+        b2.putString("Type", "paragraph");
+        b2.putString("Text", ZooTranslations.get("zootycoon.custom_letter.sample_paragraph"));
+        blocks.add(b2);
+        tag.put("CustomBlocks", blocks);
+
+        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        return stack;
+    }
+
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (level.isClientSide()) {
-            net.zootycoon.client.ui.InspectionLetterScreen.openFromItem(stack);
+            CustomData cd = stack.get(DataComponents.CUSTOM_DATA);
+            if (cd != null && cd.copyTag().getBoolean("CustomLetter")) {
+                net.zootycoon.client.ui.CustomLetterScreen.openFromItem(stack, hand);
+            } else {
+                net.zootycoon.client.ui.InspectionLetterScreen.openFromItem(stack);
+            }
         }
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
     }
@@ -66,6 +103,19 @@ public class InspectionLetterItem extends Item {
         CustomData cd = stack.get(DataComponents.CUSTOM_DATA);
         if (cd != null) {
             CompoundTag tag = cd.copyTag();
+            if (tag.getBoolean("CustomLetter")) {
+                String title = tag.getString("LetterTitle");
+                if (!title.isEmpty()) {
+                    tooltip.add(Component.literal(title).withStyle(ChatFormatting.GOLD));
+                }
+                boolean locked = tag.getBoolean("CustomLocked");
+                tooltip.add(Component.translatable(locked
+                                ? "zootycoon.custom_letter.tooltip.locked"
+                                : "zootycoon.custom_letter.tooltip.editable")
+                        .withStyle(locked ? ChatFormatting.GRAY : ChatFormatting.AQUA));
+                super.appendHoverText(stack, context, tooltip, flag);
+                return;
+            }
             String zooName = tag.getString("ZooName");
             int tierLevel = tag.contains("TierLevel") ? tag.getInt("TierLevel") : 1;
             boolean passed = tag.getBoolean("Passed");

@@ -1631,6 +1631,54 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // 40. Save / Lock Custom Interactive Letter Payload (C2S)
+    public record CustomLetterBlockData(String blockType, String text) {}
+
+    public record SaveCustomLetterPayload(
+            boolean offHand,
+            String header,
+            String subHeader,
+            String stampText,
+            boolean stampGreen,
+            boolean lockLetter,
+            List<CustomLetterBlockData> blocks
+    ) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<SaveCustomLetterPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("save_custom_letter"));
+        public static final StreamCodec<FriendlyByteBuf, SaveCustomLetterPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> {
+                    buf.writeBoolean(payload.offHand);
+                    buf.writeUtf(payload.header != null ? payload.header : "");
+                    buf.writeUtf(payload.subHeader != null ? payload.subHeader : "");
+                    buf.writeUtf(payload.stampText != null ? payload.stampText : "");
+                    buf.writeBoolean(payload.stampGreen);
+                    buf.writeBoolean(payload.lockLetter);
+                    int count = Math.min(64, payload.blocks != null ? payload.blocks.size() : 0);
+                    buf.writeInt(count);
+                    for (int i = 0; i < count; i++) {
+                        CustomLetterBlockData blk = payload.blocks.get(i);
+                        buf.writeUtf(blk.blockType() != null ? blk.blockType() : "paragraph");
+                        buf.writeUtf(blk.text() != null ? blk.text() : "");
+                    }
+                },
+                buf -> {
+                    boolean offHand = buf.readBoolean();
+                    String header = buf.readUtf();
+                    String subHeader = buf.readUtf();
+                    String stampText = buf.readUtf();
+                    boolean stampGreen = buf.readBoolean();
+                    boolean lockLetter = buf.readBoolean();
+                    int count = Math.clamp(buf.readInt(), 0, 64);
+                    List<CustomLetterBlockData> blocks = new ArrayList<>(count);
+                    for (int i = 0; i < count; i++) {
+                        blocks.add(new CustomLetterBlockData(buf.readUtf(), buf.readUtf()));
+                    }
+                    return new SaveCustomLetterPayload(offHand, header, subHeader, stampText, stampGreen, lockLetter, blocks);
+                }
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     public static final int TOAST_INFO = 0;
     public static final int TOAST_SUCCESS = 1;
     public static final int TOAST_WARNING = 2;
@@ -1694,6 +1742,7 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
         PayloadTypeRegistry.playC2S().register(PayStrikeSalaryPayload.TYPE, PayStrikeSalaryPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(VehicleLoadAnimalPayload.TYPE, VehicleLoadAnimalPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(VehicleToggleHeadlightsPayload.TYPE, VehicleToggleHeadlightsPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(SaveCustomLetterPayload.TYPE, SaveCustomLetterPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestLicenseSyncPayload.TYPE, RequestLicenseSyncPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestZooInspectionPayload.TYPE, RequestZooInspectionPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestSpeciesBiomesPayload.TYPE, RequestSpeciesBiomesPayload.CODEC);
@@ -2861,6 +2910,47 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                     if (isRiding || isNear) {
                         veh.toggleHeadlights(player);
                     }
+                }
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(SaveCustomLetterPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                net.minecraft.world.InteractionHand hand = payload.offHand()
+                        ? net.minecraft.world.InteractionHand.OFF_HAND
+                        : net.minecraft.world.InteractionHand.MAIN_HAND;
+                ItemStack stack = player.getItemInHand(hand);
+                if (!stack.is(net.zootycoon.item.ZooItems.INSPECTION_LETTER)) return;
+
+                var cd = stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+                net.minecraft.nbt.CompoundTag tag = cd != null ? cd.copyTag() : new net.minecraft.nbt.CompoundTag();
+                if (!tag.getBoolean("CustomLetter") || tag.getBoolean("CustomLocked")) return;
+
+                tag.putString("CustomHeader", payload.header() != null ? payload.header() : "");
+                tag.putString("CustomSubHeader", payload.subHeader() != null ? payload.subHeader() : "");
+                tag.putString("CustomStamp", payload.stampText() != null ? payload.stampText() : "");
+                tag.putBoolean("CustomStampGreen", payload.stampGreen());
+                tag.putBoolean("CustomLocked", payload.lockLetter());
+
+                net.minecraft.nbt.ListTag blocksList = new net.minecraft.nbt.ListTag();
+                if (payload.blocks() != null) {
+                    for (var blk : payload.blocks()) {
+                        net.minecraft.nbt.CompoundTag bTag = new net.minecraft.nbt.CompoundTag();
+                        bTag.putString("Type", blk.blockType() != null ? blk.blockType() : "paragraph");
+                        bTag.putString("Text", blk.text() != null ? blk.text() : "");
+                        blocksList.add(bTag);
+                    }
+                }
+                tag.put("CustomBlocks", blocksList);
+                stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                        net.minecraft.world.item.component.CustomData.of(tag));
+                player.containerMenu.broadcastChanges();
+
+                if (payload.lockLetter()) {
+                    player.serverLevel().playSound(null, player.blockPosition(),
+                            net.minecraft.sounds.SoundEvents.BOOK_PAGE_TURN,
+                            net.minecraft.sounds.SoundSource.PLAYERS, 0.9f, 1.0f);
                 }
             });
         });

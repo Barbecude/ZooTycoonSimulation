@@ -2,6 +2,7 @@ package net.zootycoon.command;
 
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.ChatFormatting;
@@ -82,6 +83,13 @@ public class ZooCommands {
                                     .then(Commands.argument("radius", IntegerArgumentType.integer(2, 64))
                                             .executes(ctx -> executeSetCareCenter(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "radius")))
                                     )
+                            )
+                    )
+                    // 8. /zootycoon surat <nama surat>
+                    .then(Commands.literal("surat")
+                            .executes(ctx -> executeGiveCustomSurat(ctx.getSource(), null))
+                            .then(Commands.argument("nama", StringArgumentType.greedyString())
+                                    .executes(ctx -> executeGiveCustomSurat(ctx.getSource(), StringArgumentType.getString(ctx, "nama")))
                             )
                     );
 
@@ -305,6 +313,23 @@ public class ZooCommands {
         );
         ZooAnimalHungerManager.registerCareCenterZone(player.serverLevel(), box);
         source.sendSuccess(() -> Component.translatable("zootycoon.command.carecenter.set", center.getX(), center.getY(), center.getZ(), radius)
+                .withStyle(ChatFormatting.GREEN), false);
+        return 1;
+    }
+
+    private static int executeGiveCustomSurat(CommandSourceStack source, String title) {
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.translatable("zootycoon.command.player_only"));
+            return 0;
+        }
+        net.minecraft.world.item.ItemStack letter = net.zootycoon.item.InspectionLetterItem.createCustomLetterStack(title);
+        String resolvedName = letter.getHoverName().getString();
+        if (!player.getInventory().add(letter)) {
+            player.drop(letter, false);
+        }
+        player.containerMenu.broadcastChanges();
+        source.sendSuccess(() -> Component.translatable("zootycoon.custom_letter.command_given", resolvedName)
                 .withStyle(ChatFormatting.GREEN), false);
         return 1;
     }
