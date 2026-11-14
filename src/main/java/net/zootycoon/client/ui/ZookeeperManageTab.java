@@ -45,19 +45,6 @@ public class ZookeeperManageTab {
         confirmFireUuid = null;
         wageDropdown.close();
         ClientPlayNetworking.send(new ZooNetworkPayloads.RequestAnimalSyncPayload());
-
-        // Recruit button in the header, left of the emerald balance pill (same spot as the staff dropdown)
-        Minecraft mc = Minecraft.getInstance();
-        int emeralds = mc.player != null ? TransactionHelper.countEmeralds(mc.player) : 0;
-        int pillW = 22 + screen.getFont().width(String.valueOf(emeralds)) + 10;
-        int pillX = screen.width - pillW - 25;
-        int btnW = 118;
-        int cost = ZooEconomyEngine.getStaffHiringCost("zookeeper");
-        Component label = Component.literal(ZooTranslations.get("zootycoon.ui.staff.manage.btn_recruit") + "  " + cost);
-        screen.addWidgetPublic(new ZooButton(pillX - btnW - 8, 14, btnW, 22, label, b ->
-                ClientPlayNetworking.send(new ZooNetworkPayloads.HireStaffPayload("zookeeper")))
-                .setItemIcon(new ItemStack(Items.EMERALD))
-                .asEmerald());
     }
 
     private int panelW() { return Math.min(parent.width - 30, 520); }
