@@ -1,7 +1,11 @@
 package net.zootycoon.client.render;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.zootycoon.ZooTycoonMod;
 import net.zootycoon.client.model.ZooZookeeperModel;
@@ -20,5 +24,36 @@ public class ZooZookeeperRenderer extends HumanoidMobRenderer<ZooZookeeperEntity
     @Override
     public ResourceLocation getTextureLocation(ZooZookeeperEntity entity) {
         return entity.isMale() ? TEXTURE_MALE : TEXTURE_FEMALE;
+    }
+
+    @Override
+    protected boolean shouldShowName(ZooZookeeperEntity entity) {
+        if (isSpectatorOrReplayCamera()) {
+            return false;
+        }
+        return super.shouldShowName(entity);
+    }
+
+    @Override
+    protected void renderNameTag(ZooZookeeperEntity entity, Component displayName, PoseStack poseStack,
+                                 MultiBufferSource bufferSource, int packedLight, float partialTick) {
+        if (isSpectatorOrReplayCamera()) {
+            return;
+        }
+        super.renderNameTag(entity, displayName, poseStack, bufferSource, packedLight, partialTick);
+    }
+
+    private static boolean isSpectatorOrReplayCamera() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) {
+            return true;
+        }
+        if (mc.player.isSpectator()) {
+            return true;
+        }
+        if (mc.getCameraEntity() != null && mc.getCameraEntity() != mc.player) {
+            return true;
+        }
+        return mc.player.getClass().getName().contains("replaymod");
     }
 }
