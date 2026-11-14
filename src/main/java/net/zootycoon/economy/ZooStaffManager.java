@@ -954,7 +954,7 @@ public class ZooStaffManager {
                 StaffRecord rec = getRecord(player.getUUID());
                 if ("builder".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooBuilderEntity b) {
                     if (b.getSiteId() != null) {
-                        net.zootycoon.construction.ConstructionManager.getSite(b.getSiteId()).ifPresent(s -> s.setBuilderUuid(null));
+                        net.zootycoon.construction.ConstructionManager.cancelAndRemoveSite(lvl, b.getSiteId());
                         b.setSiteId(null);
                     }
                     b.discard();

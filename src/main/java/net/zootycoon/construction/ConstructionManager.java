@@ -484,6 +484,16 @@ public class ConstructionManager {
         return list;
     }
 
+    /** Cancels and removes an active construction site (e.g. when its assigned builder is fired). */
+    public static void cancelAndRemoveSite(ServerLevel level, UUID siteId) {
+        if (siteId == null) return;
+        ConstructionSite removed = ACTIVE_SITES.remove(siteId);
+        if (removed != null && level != null) {
+            ConstructionTapeHelper.removePerimeterTape(level, removed.getTapePositions());
+            saveToFile(level.getServer());
+        }
+    }
+
     private static void notifyCompletion(ServerLevel level, ConstructionSite site) {
         ServerPlayer player = level.getServer().getPlayerList().getPlayer(site.getOwnerUuid());
         int totalBlocks = site.getTotalBlocks();
