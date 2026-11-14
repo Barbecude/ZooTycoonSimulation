@@ -144,11 +144,19 @@ public class ConstructionSite {
         return false;
     }
 
+    private static final net.minecraft.tags.TagKey<Item> C_FLOWERS_ITEM_TAG = net.minecraft.tags.TagKey.create(
+            net.minecraft.core.registries.Registries.ITEM,
+            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("c", "flowers")
+    );
+
     public static boolean isGrassOrFlowerItem(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
         Item item = stack.getItem();
         if (item == Items.GRASS_BLOCK || item == Items.SHORT_GRASS || item == Items.FERN || item == Items.LARGE_FERN) return true;
-        if (stack.is(net.minecraft.tags.ItemTags.FLOWERS)) return true;
+        if (stack.is(net.minecraft.tags.ItemTags.FLOWERS) || stack.is(C_FLOWERS_ITEM_TAG)) return true;
+        if (item instanceof net.minecraft.world.item.BlockItem blockItem) {
+            return net.zootycoon.schematic.SchematicScanner.isFlowerNeed(blockItem.getBlock().defaultBlockState());
+        }
         return false;
     }
 
