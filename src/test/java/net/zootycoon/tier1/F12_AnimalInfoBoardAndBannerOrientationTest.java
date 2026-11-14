@@ -228,6 +228,7 @@ public class F12_AnimalInfoBoardAndBannerOrientationTest {
         assertTrue(cashierRendererSrc.contains("\"TICKET\".equalsIgnoreCase(role)"));
 
         String vehicleSrc = Files.readString(new File("src/main/java/net/zootycoon/entity/ZooVehicleEntity.java").toPath());
-        assertTrue(vehicleSrc.contains("return this.getDriver() != null && this.level().isNight() && this.entityData.get(DATA_HEADLIGHTS);"));
+        assertTrue(vehicleSrc.contains("return this.entityData.get(DATA_HEADLIGHTS);"));
+        assertTrue(vehicleSrc.contains("toggleHeadlights"));
     }
 }

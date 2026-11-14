@@ -258,6 +258,12 @@ public class MainManagementScreen extends Screen {
             // Overlays drawn after widgets so nothing renders on top of them
             if (currentView == ViewState.STAFF_RECRUITMENT) {
                 staffTab.renderOverlay(graphics, mouseX, mouseY, delta);
+            } else if (currentView == ViewState.ZOOKEEPER_MANAGE) {
+                zookeeperManageTab.renderOverlay(graphics, mouseX, mouseY);
+            } else if (currentView == ViewState.SECURITY_MANAGE) {
+                securityManageTab.renderOverlay(graphics, mouseX, mouseY);
+            } else if (currentView == ViewState.CASHIER_MANAGE) {
+                cashierManageTab.renderOverlay(graphics, mouseX, mouseY);
             }
             renderTopButtonsTooltips(graphics, mouseX, mouseY);
         }

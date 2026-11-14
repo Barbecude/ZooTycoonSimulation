@@ -503,6 +503,14 @@ public class ZooCashierEntity extends PathfinderMob {
         return 2;
     }
 
+    private void maybeTriggerUnpaidCustomerComplaint(ServerLevel sLevel, ZooVisitorEntity customer) {
+        if (customer == null) return;
+        int delayTier = net.zootycoon.economy.ZooStaffManager.get(sLevel).getStaffDelayTier(this.getUUID());
+        if (delayTier >= 2 && sLevel.random.nextFloat() < 0.45F) {
+            customer.onServedByUnderpaidCashier(sLevel, this.ownerUuid);
+        }
+    }
+
     public boolean isOnStrike() {
         if (this.level() instanceof ServerLevel sLevel) {
             if (this.ownerUuid == null) {
@@ -702,6 +710,7 @@ public class ZooCashierEntity extends PathfinderMob {
                             sLevel.playSound(null, this.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.7F, 1.2F);
                             sLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, customer.getX(), customer.getY() + 1.2D, customer.getZ(), 6, 0.25, 0.25, 0.25, 0.02);
                             customer.onTransactionComplete(this.blockPosition(), "TICKET", ItemStack.EMPTY, false);
+                            maybeTriggerUnpaidCustomerComplaint(sLevel, customer);
                             notifyOwnerVisitorEntered(sLevel);
                             servingCustomerUuid = null;
                             serviceTicks = 0;
@@ -728,6 +737,7 @@ public class ZooCashierEntity extends PathfinderMob {
                                     customer.completeGuideReward(sLevel, "BURGER");
                                 }
                                 customer.onTransactionComplete(this.blockPosition(), "BURGER", soldBurger, false);
+                                maybeTriggerUnpaidCustomerComplaint(sLevel, customer);
                             }
                             servingCustomerUuid = null;
                             serviceTicks = 0;
@@ -754,6 +764,7 @@ public class ZooCashierEntity extends PathfinderMob {
                                     customer.completeGuideReward(sLevel, "DRINK");
                                 }
                                 customer.onTransactionComplete(this.blockPosition(), "DRINK", soldDrink, true);
+                                maybeTriggerUnpaidCustomerComplaint(sLevel, customer);
                             }
                             servingCustomerUuid = null;
                             serviceTicks = 0;
@@ -780,6 +791,7 @@ public class ZooCashierEntity extends PathfinderMob {
                                     customer.completeGuideReward(sLevel, "ICE_CREAM");
                                 }
                                 customer.onTransactionComplete(this.blockPosition(), "ICE_CREAM", soldIceCream, false);
+                                maybeTriggerUnpaidCustomerComplaint(sLevel, customer);
                             }
                             servingCustomerUuid = null;
                             serviceTicks = 0;
@@ -906,7 +918,7 @@ public class ZooCashierEntity extends PathfinderMob {
                         var comp = net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.valueOf(cName);
                         String msg = comp.getFeedback();
                         int urgency = 1;
-                        if (comp == net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.SICK_ANIMALS) urgency = 3;
+                        if (comp == net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.SICK_ANIMALS || comp == net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.RUDE_CASHIER) urgency = 3;
                         else if (comp == net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.TOILET || comp == net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.THIRSTY || comp == net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.HUNGRY || comp == net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.LITTER || comp == net.zootycoon.entity.ZooVisitorEntity.VisitorComplaint.OUT_OF_STOCK) urgency = 2;
                         feedbackDtos.add(new ZooNetworkPayloads.VisitorFeedbackItemDto(cName, msg, urgency));
                     } catch (Exception ignored) {}

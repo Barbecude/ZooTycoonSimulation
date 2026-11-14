@@ -593,6 +593,22 @@ public class ZooZookeeperEntity extends PathfinderMob {
 
         if (actionCooldown > 0) actionCooldown--;
 
+        if (this.tickCount % 20 == 0) {
+            var moveAttr = this.getAttribute(Attributes.MOVEMENT_SPEED);
+            if (moveAttr != null) {
+                var modId = net.zootycoon.ZooTycoonMod.id("unpaid_slowdown");
+                int delayTier = net.zootycoon.economy.ZooStaffManager.get(sLevel).getStaffDelayTier(this.getUUID());
+                if (delayTier >= 2 && !isOnStrike()) {
+                    if (!moveAttr.hasModifier(modId)) {
+                        moveAttr.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+                                modId, -0.25D, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+                    }
+                } else if (moveAttr.hasModifier(modId)) {
+                    moveAttr.removeModifier(modId);
+                }
+            }
+        }
+
         // Player call: walk/teleport to the player even when on strike so player can pay via dialog
         if (callTicks > 0) {
             if (isOnStrike() && this.tickCount % 60 == 0) {
@@ -751,7 +767,10 @@ public class ZooZookeeperEntity extends PathfinderMob {
                 tickPlantingDuty(sLevel);
             }
         } else if (this.tickCount % 20 == 0 && actionCooldown <= 0) {
-            handleStaffDuties(sLevel);
+            int delayTier = net.zootycoon.economy.ZooStaffManager.get(sLevel).getStaffDelayTier(this.getUUID());
+            if (delayTier < 2 || this.tickCount % 40 == 0) {
+                handleStaffDuties(sLevel);
+            }
         }
     }
 

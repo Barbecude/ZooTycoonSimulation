@@ -32,7 +32,22 @@ public class StaffStrikeDialogScreen extends EasyNpcDialogScreen {
         );
         this.entityId = entityId;
         this.staffUuid = staffUuid;
-        this.dailyWage = ZooEconomyEngine.getStaffDailyWage(roleKey);
+        this.dailyWage = resolveOwedWage(staffUuid, ZooEconomyEngine.getStaffDailyWage(roleKey));
+    }
+
+    private static int resolveOwedWage(UUID staffUuid, int fallbackDaily) {
+        if (staffUuid != null) {
+            for (var zk : net.zootycoon.client.ZooTycoonClient.clientZookeeperList) {
+                if (staffUuid.equals(zk.uuid()) && zk.owedAmount() > 0) return zk.owedAmount();
+            }
+            for (var s : net.zootycoon.client.ZooTycoonClient.clientSecurityList) {
+                if (staffUuid.equals(s.uuid()) && s.owedAmount() > 0) return s.owedAmount();
+            }
+            for (var c : net.zootycoon.client.ZooTycoonClient.clientCashierList) {
+                if (staffUuid.equals(c.uuid()) && c.owedAmount() > 0) return c.owedAmount();
+            }
+        }
+        return fallbackDaily;
     }
 
     private static LivingEntity resolveStaffEntity(int entityId, UUID staffUuid) {

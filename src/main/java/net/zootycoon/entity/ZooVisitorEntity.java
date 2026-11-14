@@ -185,7 +185,8 @@ public class ZooVisitorEntity extends PathfinderMob {
         LITTER("This zoo is filthy! There is trash everywhere."),
         SICK_ANIMALS("The animals look sick and neglected! Someone should take care of them."),
         TICKET_EXPENSIVE("The ticket price is way too expensive for what's here!"),
-        FEW_ANIMALS("There are barely any animals to see in this zoo!");
+        FEW_ANIMALS("There are barely any animals to see in this zoo!"),
+        RUDE_CASHIER("The cashier was rude and seemed upset about unpaid wages!");
 
         public final String defaultFeedback;
 
@@ -1553,6 +1554,17 @@ public class ZooVisitorEntity extends PathfinderMob {
         this.eatTimer = Math.min(duration, 30);
         this.entityData.set(IS_CONSUMING, true);
         this.entityData.set(IS_DRINKING, drink);
+    }
+
+    public void onServedByUnderpaidCashier(net.minecraft.server.level.ServerLevel sLevel, UUID ownerUuid) {
+        this.currentComplaint = VisitorComplaint.RUDE_CASHIER;
+        setMood(VisitorMood.ANGRY);
+        if (ownerUuid != null) {
+            recordComplaint(ownerUuid, VisitorComplaint.RUDE_CASHIER.name());
+        }
+        sLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.ANGRY_VILLAGER,
+                this.getX(), this.getY() + 1.4D, this.getZ(), 4, 0.2, 0.2, 0.2, 0.02);
+        this.playSound(SoundEvents.VILLAGER_NO, 0.7F, 0.9F);
     }
 
     public void onTransactionComplete(BlockPos cashierPos, String role, net.minecraft.world.item.ItemStack purchasedItem, boolean isDrink) {

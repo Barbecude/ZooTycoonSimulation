@@ -20,12 +20,13 @@ public class SecurityManageTab {
     private static final int ROW_H = 30;
     private static final int ROW_GAP = 4;
     private static final int BTN_H = 18;
-    private static final int CALL_W = 70;
-    private static final int PEEK_W = 42;
-    private static final int FIRE_W = 56;
+    private static final int CALL_W = 68;
+    private static final int PEEK_W = 40;
+    private static final int FIRE_W = 52;
     private static final long CONFIRM_MS = 3000L;
 
     private final MainManagementScreen parent;
+    private final StaffWageDropdownHelper wageDropdown = new StaffWageDropdownHelper();
     private final Set<UUID> pendingCalledSecurity = new HashSet<>();
     private float scrollOffset = 0.0f;
     private UUID confirmFireUuid = null;
@@ -38,6 +39,7 @@ public class SecurityManageTab {
     public void init(MainManagementScreen screen) {
         scrollOffset = 0.0f;
         confirmFireUuid = null;
+        wageDropdown.close();
         ClientPlayNetworking.send(new ZooNetworkPayloads.RequestAnimalSyncPayload());
     }
 
@@ -65,9 +67,10 @@ public class SecurityManageTab {
         int px = panelX();
         int pw = panelW();
 
-        long combat = securityList.stream().filter(ZooNetworkPayloads.SecuritySyncData::isAggro).count();
-        long patrol = securityList.size() - combat;
-        graphics.drawString(mc.font, Component.literal(ZooTranslations.get("zootycoon.ui.staff.manage.security_summary", securityList.size(), patrol, combat)),
+        long combat = securityList.stream().filter(s -> !s.isResigned() && s.isAggro()).count();
+        long activeCount = securityList.stream().filter(s -> !s.isResigned()).count();
+        long patrol = activeCount - combat;
+        graphics.drawString(mc.font, Component.literal(ZooTranslations.get("zootycoon.ui.staff.manage.security_summary", activeCount, patrol, combat)),
                 px, 54, 0xFFC9D1D9, false);
         StaffRecruitmentTab.renderWageRightAligned(graphics, mc, px + pw, 54, "security");
 
@@ -115,7 +118,10 @@ public class SecurityManageTab {
         graphics.drawString(mc.font, Component.literal(s.name()), nameX, y + 5, 0xFFE6EDF3, false);
         String status;
         int statusColor;
-        if (isCalling) {
+        if (s.isResigned()) {
+            status = ZooTranslations.get("zootycoon.ui.staff.manage.resigned", s.owedAmount());
+            statusColor = 0xFFFF6666;
+        } else if (isCalling) {
             status = ZooTranslations.get("zootycoon.ui.staff.manage.calling");
             statusColor = 0xFFFFAA00;
         } else if (onStrike) {
@@ -134,18 +140,27 @@ public class SecurityManageTab {
         int fireX = x + w - FIRE_W - 8;
         int peekX = fireX - PEEK_W - 4;
         int callX = peekX - CALL_W - 4;
+        int wageX = callX - StaffWageDropdownHelper.BADGE_W - 4;
 
-        boolean confirming = s.uuid().equals(confirmFireUuid) && System.currentTimeMillis() < confirmFireUntil;
-        boolean canCall = !isCalling;
+        boolean activeStaff = !s.isResigned();
+        boolean confirming = activeStaff && s.uuid().equals(confirmFireUuid) && System.currentTimeMillis() < confirmFireUntil;
+        boolean canCall = activeStaff && !isCalling;
+        wageDropdown.drawIndicatorButton(graphics, mc, s.uuid(), wageX, by,
+                s.dailyWage(), s.missedDays(), s.owedAmount(), s.isResigned(),
+                mouseX, mouseY, top, bottom);
         drawButton(graphics, mc, callX, by, CALL_W,
                 ZooTranslations.get(isCalling ? "zootycoon.ui.staff.manage.btn_calling" : "zootycoon.ui.staff.manage.btn_call"),
                 canCall, false, mouseX, mouseY, top, bottom);
         drawButton(graphics, mc, peekX, by, PEEK_W,
                 ZooTranslations.get("zootycoon.ui.staff.manage.btn_peek"),
-                true, false, mouseX, mouseY, top, bottom);
+                activeStaff, false, mouseX, mouseY, top, bottom);
         drawButton(graphics, mc, fireX, by, FIRE_W,
                 ZooTranslations.get(confirming ? "zootycoon.ui.staff.manage.btn_confirm" : "zootycoon.ui.staff.manage.btn_fire"),
-                true, true, mouseX, mouseY, top, bottom);
+                activeStaff, true, mouseX, mouseY, top, bottom);
+    }
+
+    public void renderOverlay(GuiGraphics graphics, int mouseX, int mouseY) {
+        wageDropdown.renderOverlay(graphics, mouseX, mouseY);
     }
 
     private void drawButton(GuiGraphics graphics, Minecraft mc, int x, int y, int w, String label,
@@ -165,6 +180,9 @@ public class SecurityManageTab {
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button != 0) return false;
+        if (wageDropdown.isOpen()) {
+            return wageDropdown.handleOverlayClick(mouseX, mouseY);
+        }
         List<ZooNetworkPayloads.SecuritySyncData> securityList = sortedSecurity();
         int px = panelX();
         int pw = panelW();
@@ -178,7 +196,15 @@ public class SecurityManageTab {
             int fireX = px + pw - FIRE_W - 8;
             int peekX = fireX - PEEK_W - 4;
             int callX = peekX - CALL_W - 4;
+            int wageX = callX - StaffWageDropdownHelper.BADGE_W - 4;
             if (mouseY >= by && mouseY <= by + BTN_H) {
+                if (wageDropdown.toggleIfClicked(s.uuid(), wageX, by,
+                        s.dailyWage(), s.missedDays(), s.owedAmount(), s.isResigned(), mouseX, mouseY)) {
+                    return true;
+                }
+                if (s.isResigned()) {
+                    return false;
+                }
                 if (mouseX >= callX && mouseX <= callX + CALL_W) {
                     boolean isCalling = s.isCalling() || pendingCalledSecurity.contains(s.uuid());
                     if (!isCalling) {
@@ -208,6 +234,7 @@ public class SecurityManageTab {
     }
 
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        wageDropdown.close();
         int max = maxScroll(ZooTycoonClient.clientSecurityList.size());
         if (max <= 0) return false;
         scrollOffset = Math.clamp(scrollOffset - (float) verticalAmount * 24.0f, 0.0f, (float) max);

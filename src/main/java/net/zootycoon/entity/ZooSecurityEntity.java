@@ -181,6 +181,21 @@ public class ZooSecurityEntity extends PathfinderMob {
             if (callTicks <= 0) callTargetUuid = null;
         }
         if (!level().isClientSide() && level() instanceof net.minecraft.server.level.ServerLevel sLevel) {
+            if (tickCount % 20 == 0) {
+                var moveAttr = this.getAttribute(Attributes.MOVEMENT_SPEED);
+                if (moveAttr != null) {
+                    var modId = net.zootycoon.ZooTycoonMod.id("unpaid_slowdown");
+                    int delayTier = net.zootycoon.economy.ZooStaffManager.get(sLevel).getStaffDelayTier(this.getUUID());
+                    if (delayTier >= 2 && !isOnStrike()) {
+                        if (!moveAttr.hasModifier(modId)) {
+                            moveAttr.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+                                    modId, -0.25D, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+                        }
+                    } else if (moveAttr.hasModifier(modId)) {
+                        moveAttr.removeModifier(modId);
+                    }
+                }
+            }
             net.zootycoon.claim.ZooClaimManager claimManager = net.zootycoon.claim.ZooClaimManager.get(sLevel);
             if (ownerUuid == null && tickCount % 20 == 0) {
                 net.zootycoon.claim.ZooClaim nearest = findClosestClaim(claimManager);

@@ -334,7 +334,11 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
-    public record ZookeeperSyncData(UUID uuid, String name, int entityId, boolean isAssigned, int assignedAnimalId, boolean isCalling, boolean isOnStrike) {
+    public record ZookeeperSyncData(UUID uuid, String name, int entityId, boolean isAssigned, int assignedAnimalId,
+                                    boolean isCalling, boolean isOnStrike, int dailyWage, int missedDays, int owedAmount, boolean isResigned) {
+        public ZookeeperSyncData(UUID uuid, String name, int entityId, boolean isAssigned, int assignedAnimalId, boolean isCalling, boolean isOnStrike) {
+            this(uuid, name, entityId, isAssigned, assignedAnimalId, isCalling, isOnStrike, net.zootycoon.economy.ZooEconomyEngine.ZOOKEEPER_DAILY_WAGE, 0, 0, false);
+        }
         public static void encode(FriendlyByteBuf buf, ZookeeperSyncData data) {
             buf.writeUUID(data.uuid);
             buf.writeUtf(data.name);
@@ -343,9 +347,15 @@ public class ZooNetworkPayloads {
             buf.writeInt(data.assignedAnimalId);
             buf.writeBoolean(data.isCalling);
             buf.writeBoolean(data.isOnStrike);
+            buf.writeInt(data.dailyWage);
+            buf.writeInt(data.missedDays);
+            buf.writeInt(data.owedAmount);
+            buf.writeBoolean(data.isResigned);
         }
         public static ZookeeperSyncData decode(FriendlyByteBuf buf) {
-            return new ZookeeperSyncData(buf.readUUID(), buf.readUtf(), buf.readInt(), buf.readBoolean(), buf.readInt(), buf.readBoolean(), buf.readBoolean());
+            return new ZookeeperSyncData(buf.readUUID(), buf.readUtf(), buf.readInt(), buf.readBoolean(),
+                    buf.readInt(), buf.readBoolean(), buf.readBoolean(),
+                    buf.readInt(), buf.readInt(), buf.readInt(), buf.readBoolean());
         }
     }
 
@@ -408,7 +418,11 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
-    public record SecuritySyncData(UUID uuid, String name, int entityId, boolean isAggro, boolean isCalling, boolean isOnStrike) {
+    public record SecuritySyncData(UUID uuid, String name, int entityId, boolean isAggro, boolean isCalling, boolean isOnStrike,
+                                   int dailyWage, int missedDays, int owedAmount, boolean isResigned) {
+        public SecuritySyncData(UUID uuid, String name, int entityId, boolean isAggro, boolean isCalling, boolean isOnStrike) {
+            this(uuid, name, entityId, isAggro, isCalling, isOnStrike, net.zootycoon.economy.ZooEconomyEngine.SECURITY_DAILY_WAGE, 0, 0, false);
+        }
         public static void encode(FriendlyByteBuf buf, SecuritySyncData data) {
             buf.writeUUID(data.uuid);
             buf.writeUtf(data.name != null ? data.name : "");
@@ -416,9 +430,15 @@ public class ZooNetworkPayloads {
             buf.writeBoolean(data.isAggro);
             buf.writeBoolean(data.isCalling);
             buf.writeBoolean(data.isOnStrike);
+            buf.writeInt(data.dailyWage);
+            buf.writeInt(data.missedDays);
+            buf.writeInt(data.owedAmount);
+            buf.writeBoolean(data.isResigned);
         }
         public static SecuritySyncData decode(FriendlyByteBuf buf) {
-            return new SecuritySyncData(buf.readUUID(), buf.readUtf(), buf.readInt(), buf.readBoolean(), buf.readBoolean(), buf.readBoolean());
+            return new SecuritySyncData(buf.readUUID(), buf.readUtf(), buf.readInt(), buf.readBoolean(),
+                    buf.readBoolean(), buf.readBoolean(),
+                    buf.readInt(), buf.readInt(), buf.readInt(), buf.readBoolean());
         }
     }
 
@@ -443,7 +463,11 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
-    public record CashierSyncData(UUID uuid, String name, int entityId, String role, int totalStock, boolean isCalling, boolean isOnStrike) {
+    public record CashierSyncData(UUID uuid, String name, int entityId, String role, int totalStock, boolean isCalling, boolean isOnStrike,
+                                  int dailyWage, int missedDays, int owedAmount, boolean isResigned) {
+        public CashierSyncData(UUID uuid, String name, int entityId, String role, int totalStock, boolean isCalling, boolean isOnStrike) {
+            this(uuid, name, entityId, role, totalStock, isCalling, isOnStrike, net.zootycoon.economy.ZooEconomyEngine.CASHIER_DAILY_WAGE, 0, 0, false);
+        }
         public static void encode(FriendlyByteBuf buf, CashierSyncData data) {
             buf.writeUUID(data.uuid);
             buf.writeUtf(data.name != null ? data.name : "");
@@ -452,9 +476,15 @@ public class ZooNetworkPayloads {
             buf.writeInt(data.totalStock);
             buf.writeBoolean(data.isCalling);
             buf.writeBoolean(data.isOnStrike);
+            buf.writeInt(data.dailyWage);
+            buf.writeInt(data.missedDays);
+            buf.writeInt(data.owedAmount);
+            buf.writeBoolean(data.isResigned);
         }
         public static CashierSyncData decode(FriendlyByteBuf buf) {
-            return new CashierSyncData(buf.readUUID(), buf.readUtf(), buf.readInt(), buf.readUtf(), buf.readInt(), buf.readBoolean(), buf.readBoolean());
+            return new CashierSyncData(buf.readUUID(), buf.readUtf(), buf.readInt(), buf.readUtf(),
+                    buf.readInt(), buf.readBoolean(), buf.readBoolean(),
+                    buf.readInt(), buf.readInt(), buf.readInt(), buf.readBoolean());
         }
     }
 
@@ -653,7 +683,18 @@ public class ZooNetworkPayloads {
             boolean isOffspring,
             String parentUuid,
             boolean isSick
-    ) {}
+    ) {
+        public AnimalSyncData(
+                int entityId, String uuid, String entityTypeId, String customName,
+                int hunger, int thirst, int cleanliness, float health, float maxHealth,
+                boolean hasZookeeper, String zookeeperName, String habitatStatus,
+                String habitatNeeds, String tempCategory, boolean isOffspring, String parentUuid
+        ) {
+            this(entityId, uuid, entityTypeId, customName, hunger, thirst, cleanliness,
+                    health, maxHealth, hasZookeeper, zookeeperName, habitatStatus,
+                    habitatNeeds, tempCategory, isOffspring, parentUuid, false);
+        }
+    }
 
     public record SyncAnimalsPayload(List<AnimalSyncData> animals) implements CustomPacketPayload {
         public static final CustomPacketPayload.Type<SyncAnimalsPayload> TYPE = new CustomPacketPayload.Type<>(ZooTycoonMod.id("sync_animals"));
@@ -1719,6 +1760,17 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // C2S: Manual pay individual staff daily/overdue salary from Kelola Staff UI
+    public record PayStaffWagePayload(UUID staffUuid) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<PayStaffWagePayload> TYPE =
+                new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ZooTycoonMod.MOD_ID, "pay_staff_wage"));
+        public static final StreamCodec<FriendlyByteBuf, PayStaffWagePayload> CODEC = StreamCodec.of(
+                (buf, p) -> buf.writeUUID(p.staffUuid != null ? p.staffUuid : new UUID(0L, 0L)),
+                buf -> new PayStaffWagePayload(buf.readUUID())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     public static final int TOAST_INFO = 0;
     public static final int TOAST_SUCCESS = 1;
     public static final int TOAST_WARNING = 2;
@@ -1784,6 +1836,7 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
         PayloadTypeRegistry.playC2S().register(VehicleToggleHeadlightsPayload.TYPE, VehicleToggleHeadlightsPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SaveCustomLetterPayload.TYPE, SaveCustomLetterPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(PeekStaffPayload.TYPE, PeekStaffPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(PayStaffWagePayload.TYPE, PayStaffWagePayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestLicenseSyncPayload.TYPE, RequestLicenseSyncPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestZooInspectionPayload.TYPE, RequestZooInspectionPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestSpeciesBiomesPayload.TYPE, RequestSpeciesBiomesPayload.CODEC);
@@ -3009,6 +3062,13 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
             });
         });
 
+        ServerPlayNetworking.registerGlobalReceiver(PayStaffWagePayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                net.zootycoon.economy.ZooStaffManager.get(player.serverLevel()).payIndividualWage(player, payload.staffUuid());
+            });
+        });
+
         ServerPlayNetworking.registerGlobalReceiver(RequestLicenseSyncPayload.TYPE, (payload, context) -> {
             ServerPlayer player = context.player();
             context.server().execute(() -> {
@@ -3173,6 +3233,7 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
         List<BuilderSyncData> builders = new ArrayList<>();
         List<SecuritySyncData> securityList = new ArrayList<>();
         List<CashierSyncData> cashiers = new ArrayList<>();
+        net.zootycoon.economy.ZooStaffManager staffMgr = net.zootycoon.economy.ZooStaffManager.get(player.serverLevel());
 
         for (ServerLevel sLevel : player.level().getServer().getAllLevels()) {
             for (net.minecraft.world.entity.Entity entity : sLevel.getAllEntities()) {
@@ -3222,7 +3283,12 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                         }
                     }
                     boolean isCalling = zk.isBeingCalled();
-                    keepers.add(new ZookeeperSyncData(zk.getUUID(), zk.getName().getString(), zk.getId(), isAssigned, assignedAnimalId, isCalling, zk.isOnStrike()));
+                    var wageRec = staffMgr.ensureActiveWageRecord(zk.getUUID(), player.getUUID(), "zookeeper", zk.getName().getString());
+                    int dailyW = wageRec != null ? wageRec.dailyWage : net.zootycoon.economy.ZooEconomyEngine.ZOOKEEPER_DAILY_WAGE;
+                    int missedD = wageRec != null ? wageRec.missedDays : 0;
+                    int owedA = wageRec != null ? wageRec.owedAmount : 0;
+                    keepers.add(new ZookeeperSyncData(zk.getUUID(), zk.getName().getString(), zk.getId(),
+                            isAssigned, assignedAnimalId, isCalling, zk.isOnStrike(), dailyW, missedD, owedA, false));
                 }
 
                 if (entity instanceof net.zootycoon.entity.ZooBuilderEntity b) {
@@ -3270,13 +3336,18 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                     }
                     if (isOwner) {
                         boolean isAggro = sec.getTarget() != null && sec.getTarget().isAlive();
+                        var wageRec = staffMgr.ensureActiveWageRecord(sec.getUUID(), player.getUUID(), "security", sec.getName().getString());
+                        int dailyW = wageRec != null ? wageRec.dailyWage : net.zootycoon.economy.ZooEconomyEngine.SECURITY_DAILY_WAGE;
+                        int missedD = wageRec != null ? wageRec.missedDays : 0;
+                        int owedA = wageRec != null ? wageRec.owedAmount : 0;
                         securityList.add(new SecuritySyncData(
                                 sec.getUUID(),
                                 sec.getName().getString(),
                                 sec.getId(),
                                 isAggro,
                                 sec.isBeingCalled(),
-                                sec.isOnStrike()
+                                sec.isOnStrike(),
+                                dailyW, missedD, owedA, false
                         ));
                     }
                 }
@@ -3297,6 +3368,10 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                             ItemStack st = c.getStockInventory().getItem(i);
                             if (!st.isEmpty()) stockCount += st.getCount();
                         }
+                        var wageRec = staffMgr.ensureActiveWageRecord(c.getUUID(), player.getUUID(), "cashier", c.getName().getString());
+                        int dailyW = wageRec != null ? wageRec.dailyWage : net.zootycoon.economy.ZooEconomyEngine.CASHIER_DAILY_WAGE;
+                        int missedD = wageRec != null ? wageRec.missedDays : 0;
+                        int owedA = wageRec != null ? wageRec.owedAmount : 0;
                         cashiers.add(new CashierSyncData(
                                 c.getUUID(),
                                 c.getName().getString(),
@@ -3304,7 +3379,8 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                                 c.getCashierRole(),
                                 stockCount,
                                 c.isBeingCalled(),
-                                c.isOnStrike()
+                                c.isOnStrike(),
+                                dailyW, missedD, owedA, false
                         ));
                     }
                 }
@@ -3355,6 +3431,19 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                     ));
                 }
             }
+        }
+
+        for (var r : staffMgr.getResignedWageRecords(player.getUUID(), "zookeeper")) {
+            keepers.add(new ZookeeperSyncData(r.staffUuid, r.staffName, -1, false, -1, false, false,
+                    r.dailyWage, r.missedDays, r.owedAmount, true));
+        }
+        for (var r : staffMgr.getResignedWageRecords(player.getUUID(), "security")) {
+            securityList.add(new SecuritySyncData(r.staffUuid, r.staffName, -1, false, false, false,
+                    r.dailyWage, r.missedDays, r.owedAmount, true));
+        }
+        for (var r : staffMgr.getResignedWageRecords(player.getUUID(), "cashier")) {
+            cashiers.add(new CashierSyncData(r.staffUuid, r.staffName, -1, "", 0, false, false,
+                    r.dailyWage, r.missedDays, r.owedAmount, true));
         }
 
         ServerPlayNetworking.send(player, new SyncAnimalsPayload(list));

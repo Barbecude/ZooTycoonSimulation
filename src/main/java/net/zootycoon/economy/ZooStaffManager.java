@@ -43,6 +43,29 @@ public class ZooStaffManager {
         }
     }
 
+    public static class StaffWageRecord {
+        public UUID staffUuid;
+        public UUID ownerUuid;
+        public String staffType;
+        public String staffName;
+        public int dailyWage;
+        public int missedDays;
+        public int owedAmount;
+        public boolean resigned;
+
+        public StaffWageRecord(UUID staffUuid, UUID ownerUuid, String staffType, String staffName,
+                               int dailyWage, int missedDays, int owedAmount, boolean resigned) {
+            this.staffUuid = staffUuid;
+            this.ownerUuid = ownerUuid;
+            this.staffType = staffType;
+            this.staffName = staffName;
+            this.dailyWage = dailyWage;
+            this.missedDays = missedDays;
+            this.owedAmount = owedAmount;
+            this.resigned = resigned;
+        }
+    }
+
     public static int ZOOKEEPER_DAILY_WAGE = ZooEconomyEngine.ZOOKEEPER_DAILY_WAGE;
     public static int SECURITY_DAILY_WAGE = ZooEconomyEngine.SECURITY_DAILY_WAGE;
     public static int CASHIER_DAILY_WAGE = ZooEconomyEngine.CASHIER_DAILY_WAGE;
@@ -55,6 +78,7 @@ public class ZooStaffManager {
     private final Map<UUID, Long> staffResolvedEpoch = new ConcurrentHashMap<>();
     private long strikeEpochCounter = 0L;
     private final Map<UUID, Long> lastSalaryDayMap = new ConcurrentHashMap<>();
+    private final Map<UUID, StaffWageRecord> staffWages = new ConcurrentHashMap<>();
     private final Map<UUID, PeekSession> activePeeks = new ConcurrentHashMap<>();
     private MinecraftServer server;
 
@@ -86,6 +110,7 @@ public class ZooStaffManager {
             instance.staffResolvedEpoch.clear();
             instance.strikeEpochCounter = 0L;
             instance.lastSalaryDayMap.clear();
+            instance.staffWages.clear();
             instance.activePeeks.clear();
             instance.server = null;
             instance = null;
@@ -156,6 +181,24 @@ public class ZooStaffManager {
                     }
                 }
             }
+            staffWages.clear();
+            if (root.contains("staff_wages", Tag.TAG_LIST)) {
+                ListTag wageList = root.getList("staff_wages", Tag.TAG_COMPOUND);
+                for (int i = 0; i < wageList.size(); i++) {
+                    CompoundTag wt = wageList.getCompound(i);
+                    if (wt.hasUUID("staff_uuid") && wt.hasUUID("owner_uuid")) {
+                        UUID sId = wt.getUUID("staff_uuid");
+                        UUID oId = wt.getUUID("owner_uuid");
+                        String st = wt.getString("staff_type");
+                        String sn = wt.getString("staff_name");
+                        int dw = wt.contains("daily_wage") ? wt.getInt("daily_wage") : getDefaultDailyWageForType(st);
+                        int md = wt.getInt("missed_days");
+                        int oa = wt.getInt("owed_amount");
+                        boolean res = wt.getBoolean("resigned");
+                        staffWages.put(sId, new StaffWageRecord(sId, oId, st, sn, dw, md, oa, res));
+                    }
+                }
+            }
             ZooTycoonMod.LOGGER.info("Loaded {} staff records from file.", staffMap.size());
         } catch (Exception e) {
             ZooTycoonMod.LOGGER.error("Failed to load staff records", e);
@@ -206,6 +249,21 @@ public class ZooStaffManager {
             }
             root.put("staff_resolved_epochs", resList);
 
+            ListTag wageList = new ListTag();
+            for (StaffWageRecord w : staffWages.values()) {
+                CompoundTag wt = new CompoundTag();
+                wt.putUUID("staff_uuid", w.staffUuid);
+                wt.putUUID("owner_uuid", w.ownerUuid);
+                wt.putString("staff_type", w.staffType != null ? w.staffType : "");
+                wt.putString("staff_name", w.staffName != null ? w.staffName : "");
+                wt.putInt("daily_wage", w.dailyWage);
+                wt.putInt("missed_days", w.missedDays);
+                wt.putInt("owed_amount", w.owedAmount);
+                wt.putBoolean("resigned", w.resigned);
+                wageList.add(wt);
+            }
+            root.put("staff_wages", wageList);
+
             NbtIo.writeCompressed(root, path);
         } catch (Exception e) {
             ZooTycoonMod.LOGGER.error("Failed to save staff records", e);
@@ -214,12 +272,68 @@ public class ZooStaffManager {
 
     /** Returns true if this specific staff entity has an unresolved wage strike for its owner. */
     public boolean isStaffEntityOnStrike(UUID ownerUuid, UUID staffUuid) {
-        if (ownerUuid == null || staffUuid == null) return false;
+        if (staffUuid == null) return false;
+        StaffWageRecord w = staffWages.get(staffUuid);
+        if (w != null && !w.resigned && w.missedDays >= 3) {
+            return true;
+        }
+        if (ownerUuid == null) return false;
         long activeEpoch = ownerStrikeEpoch.getOrDefault(ownerUuid, 0L);
         if (activeEpoch <= 0L) {
             return staffOnStrike.contains(ownerUuid);
         }
         return staffResolvedEpoch.getOrDefault(staffUuid, 0L) < activeEpoch;
+    }
+
+    public int getDefaultDailyWageForType(String staffType) {
+        if (staffType == null) return 0;
+        return switch (staffType.toLowerCase(java.util.Locale.ROOT)) {
+            case "zookeeper" -> ZooEconomyEngine.ZOOKEEPER_DAILY_WAGE;
+            case "security", "satpam" -> ZooEconomyEngine.SECURITY_DAILY_WAGE;
+            case "cashier", "kasir" -> ZooEconomyEngine.CASHIER_DAILY_WAGE;
+            default -> 0;
+        };
+    }
+
+    public StaffWageRecord ensureActiveWageRecord(UUID staffUuid, UUID ownerUuid, String staffType, String staffName) {
+        if (staffUuid == null || ownerUuid == null) return null;
+        int wage = getDefaultDailyWageForType(staffType);
+        StaffWageRecord rec = staffWages.computeIfAbsent(staffUuid, id -> new StaffWageRecord(
+                id, ownerUuid, staffType, staffName != null ? staffName : "", wage, 0, 0, false
+        ));
+        if (!rec.resigned) {
+            rec.ownerUuid = ownerUuid;
+            rec.staffType = staffType;
+            if (staffName != null && !staffName.isBlank()) {
+                rec.staffName = staffName;
+            }
+            if (rec.dailyWage <= 0 && wage > 0) {
+                rec.dailyWage = wage;
+            }
+        }
+        return rec;
+    }
+
+    public StaffWageRecord getWageRecord(UUID staffUuid) {
+        return staffUuid != null ? staffWages.get(staffUuid) : null;
+    }
+
+    public int getStaffDelayTier(UUID staffUuid) {
+        StaffWageRecord w = getWageRecord(staffUuid);
+        return w != null ? Math.max(0, w.missedDays) : 0;
+    }
+
+    public List<StaffWageRecord> getResignedWageRecords(UUID ownerUuid, String staffType) {
+        List<StaffWageRecord> result = new ArrayList<>();
+        if (ownerUuid == null) return result;
+        for (StaffWageRecord w : staffWages.values()) {
+            if (w.resigned && w.owedAmount > 0 && ownerUuid.equals(w.ownerUuid)) {
+                if (staffType == null || staffType.equalsIgnoreCase(w.staffType)) {
+                    result.add(w);
+                }
+            }
+        }
+        return result;
     }
 
     /** Marks a single staff entity as having its strike wage paid via dialog. */
@@ -293,6 +407,11 @@ public class ZooStaffManager {
 
     public boolean areStaffOnStrike(UUID playerUuid) {
         if (playerUuid == null) return false;
+        for (StaffWageRecord w : staffWages.values()) {
+            if (!w.resigned && w.missedDays >= 3 && playerUuid.equals(w.ownerUuid)) {
+                return true;
+            }
+        }
         long activeEpoch = ownerStrikeEpoch.getOrDefault(playerUuid, 0L);
         if (activeEpoch <= 0L) {
             return staffOnStrike.contains(playerUuid);
@@ -346,7 +465,8 @@ public class ZooStaffManager {
         }
 
         long currentDay = level.getDayTime() / 24000L;
-        ZooEconomyManager eco = ZooEconomyManager.get(level.getServer());
+        MinecraftServer srv = level.getServer();
+        syncLoadedStaffWageRecords(srv);
 
         for (var entry : staffMap.entrySet()) {
             UUID playerUuid = entry.getKey();
@@ -356,39 +476,178 @@ public class ZooStaffManager {
             }
             lastSalaryDayMap.put(playerUuid, currentDay);
 
-            int totalWage = calculateDailyWage(playerUuid);
-            int staffCount = getTotalStaffCount(playerUuid);
-            if (totalWage <= 0) {
-                setStaffOnStrike(playerUuid, false);
+            int pendingDailyTotal = 0;
+            int newlyStruck = 0;
+            int newlyTier2 = 0;
+            List<String> newlyResignedNames = new ArrayList<>();
+            List<String> newlyStruckLabels = new ArrayList<>();
+
+            for (StaffWageRecord w : new ArrayList<>(staffWages.values())) {
+                if (!playerUuid.equals(w.ownerUuid) || w.resigned) {
+                    continue;
+                }
+                int wage = w.dailyWage > 0 ? w.dailyWage : getDefaultDailyWageForType(w.staffType);
+                if (wage <= 0) continue;
+
+                w.dailyWage = wage;
+                w.missedDays += 1;
+                w.owedAmount += wage;
+                pendingDailyTotal += wage;
+
+                if (w.missedDays >= 5) {
+                    handleStaffResignation(srv, playerUuid, w);
+                    newlyResignedNames.add((w.staffName != null && !w.staffName.isBlank()) ? w.staffName : getRoleDisplayLabel(w.staffType));
+                } else if (w.missedDays == 3) {
+                    newlyStruck++;
+                    newlyStruckLabels.add(getRoleDisplayLabel(w.staffType) + ": " + w.staffName);
+                } else if (w.missedDays == 2) {
+                    newlyTier2++;
+                }
+            }
+
+            if (pendingDailyTotal <= 0 && newlyResignedNames.isEmpty()) {
                 continue;
             }
 
-            ServerPlayer player = level.getServer().getPlayerList().getPlayer(playerUuid);
-            if (areStaffOnStrike(playerUuid)) {
-                // Active strikes must be settled in person via each striking staff member's dialog
+            saveToFile();
+            ServerPlayer player = srv.getPlayerList().getPlayer(playerUuid);
+
+            if (!newlyResignedNames.isEmpty()) {
                 if (player != null) {
-                    ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.warning", "zootycoon.toast.salary.unpaid", 2);
+                    ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.warning", "zootycoon.toast.salary.resigned", 3,
+                            String.join(", ", newlyResignedNames));
                 }
-                continue;
+                net.zootycoon.log.ZooLogManager.addLog(playerUuid, "SALARY", "Staff Resign (Gaji 5x Tertunda)",
+                        "Staff resign & keluar karena gaji tertunda 5 hari: " + String.join(", ", newlyResignedNames) + ". Hutang tetap wajib dilunasi.",
+                        0, 3);
+            }
+            if (newlyStruck > 0) {
+                net.zootycoon.log.ZooLogManager.recordStaffStrikeDetails(playerUuid, pendingDailyTotal, newlyStruckLabels);
+                if (player != null) {
+                    ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.warning", "zootycoon.toast.salary.strike_3x", 3,
+                            String.valueOf(newlyStruck));
+                }
+            } else if (newlyTier2 > 0 && player != null) {
+                ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.warning", "zootycoon.toast.salary.delayed_2x", 2,
+                        String.valueOf(newlyTier2));
+            } else if (pendingDailyTotal > 0 && player != null) {
+                ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.info", "zootycoon.toast.salary.due_manual", 0,
+                        String.valueOf(pendingDailyTotal));
             }
 
-            int currentBal = eco.getBalance(playerUuid);
+            if (player != null) {
+                syncToPlayer(player);
+                ZooNetworkPayloads.sendAnimalSync(player);
+                net.zootycoon.log.ZooLogManager.sendSyncToPlayer(player);
+            }
+        }
+    }
 
-            if (currentBal >= totalWage) {
-                eco.deductBalance(playerUuid, totalWage, player);
-                setStaffOnStrike(playerUuid, false);
-                net.zootycoon.log.ZooLogManager.recordSalaryPayment(playerUuid, totalWage, staffCount, true);
-                if (player != null) {
-                    ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.info", "zootycoon.toast.salary.paid", 0, String.valueOf(totalWage), String.valueOf(staffCount));
-                }
-            } else {
-                setStaffOnStrike(playerUuid, true);
-                net.zootycoon.log.ZooLogManager.recordStaffStrikeDetails(playerUuid, totalWage, getStrikingStaffLabels(playerUuid));
-                if (player != null) {
-                    ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.warning", "zootycoon.toast.salary.unpaid", 2);
+    private void syncLoadedStaffWageRecords(MinecraftServer srv) {
+        if (srv == null) return;
+        for (ServerLevel lvl : srv.getAllLevels()) {
+            for (net.minecraft.world.entity.Entity ent : lvl.getAllEntities()) {
+                if (ent == null || !ent.isAlive()) continue;
+                if (ent instanceof net.zootycoon.entity.ZooZookeeperEntity zk && zk.getOwnerUuid() != null) {
+                    ensureActiveWageRecord(zk.getUUID(), zk.getOwnerUuid(), "zookeeper", zk.getName().getString());
+                } else if (ent instanceof net.zootycoon.entity.ZooSecurityEntity sec && sec.getOwnerUuid() != null) {
+                    ensureActiveWageRecord(sec.getUUID(), sec.getOwnerUuid(), "security", sec.getName().getString());
+                } else if (ent instanceof net.zootycoon.entity.ZooCashierEntity c && c.getOwnerUuid() != null) {
+                    ensureActiveWageRecord(c.getUUID(), c.getOwnerUuid(), "cashier", c.getName().getString());
                 }
             }
         }
+    }
+
+    private void handleStaffResignation(MinecraftServer srv, UUID ownerUuid, StaffWageRecord w) {
+        w.resigned = true;
+        StaffRecord ownerRec = getRecord(ownerUuid);
+        String st = w.staffType != null ? w.staffType.toLowerCase(java.util.Locale.ROOT) : "";
+        switch (st) {
+            case "zookeeper" -> ownerRec.zookeepers = Math.max(0, ownerRec.zookeepers - 1);
+            case "security" -> ownerRec.security = Math.max(0, ownerRec.security - 1);
+            case "cashier" -> ownerRec.cashiers = Math.max(0, ownerRec.cashiers - 1);
+            default -> {}
+        }
+
+        if (srv == null) return;
+        for (ServerLevel lvl : srv.getAllLevels()) {
+            net.minecraft.world.entity.Entity ent = lvl.getEntity(w.staffUuid);
+            if (ent == null || !ent.isAlive()) continue;
+            if (ent instanceof net.zootycoon.entity.ZooZookeeperEntity zk) {
+                zk.setAssignedAnimalUuid(null);
+                zk.dismiss(lvl);
+            } else if (ent instanceof net.zootycoon.entity.ZooCashierEntity c) {
+                net.minecraft.world.Containers.dropContents(lvl, c.blockPosition(), c.getStockInventory());
+                lvl.sendParticles(ParticleTypes.POOF, c.getX(), c.getY() + 1.0D, c.getZ(), 12, 0.3, 0.5, 0.3, 0.02);
+                c.discard();
+            } else {
+                lvl.sendParticles(ParticleTypes.POOF, ent.getX(), ent.getY() + 1.0D, ent.getZ(), 12, 0.3, 0.5, 0.3, 0.02);
+                ent.discard();
+            }
+            break;
+        }
+    }
+
+    private String getRoleDisplayLabel(String staffType) {
+        if (staffType == null) return "Staff";
+        return switch (staffType.toLowerCase(java.util.Locale.ROOT)) {
+            case "zookeeper" -> "Zookeeper";
+            case "security" -> "Security";
+            case "cashier" -> "Kasir";
+            case "builder" -> "Kuli";
+            default -> "Staff";
+        };
+    }
+
+    public boolean payIndividualWage(ServerPlayer player, UUID staffUuid) {
+        if (player == null || staffUuid == null) return false;
+        StaffWageRecord w = staffWages.get(staffUuid);
+        if (w == null) {
+            // Fallback for legacy entity strike payment if no record yet
+            for (ServerLevel lvl : player.server.getAllLevels()) {
+                net.minecraft.world.entity.Entity ent = lvl.getEntity(staffUuid);
+                if (ent != null && ent.isAlive()) {
+                    return tryPaySingleStaffStrikeSalary(player, ent);
+                }
+            }
+            return false;
+        }
+        int owed = Math.max(0, w.owedAmount);
+        if (owed <= 0 && w.missedDays <= 0) {
+            return true;
+        }
+
+        if (owed > 0 && !player.isCreative()) {
+            if (!TransactionHelper.hasEnoughEmeralds(player, owed) || !TransactionHelper.consumeEmeralds(player, owed)) {
+                ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.warning", "zootycoon.toast.salary.unpaid", 2);
+                player.level().playSound(null, player.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 1.0f, 1.0f);
+                return false;
+            }
+        }
+
+        boolean wasResigned = w.resigned;
+        String roleLabel = getRoleDisplayLabel(w.staffType);
+        String nameLabel = (w.staffName != null && !w.staffName.isBlank()) ? w.staffName : roleLabel;
+        if (wasResigned) {
+            staffWages.remove(staffUuid);
+        } else {
+            w.missedDays = 0;
+            w.owedAmount = 0;
+        }
+        resolveStaffEntityStrike(w.ownerUuid, staffUuid);
+        resolveStaffEntityStrike(player.getUUID(), staffUuid);
+        saveToFile();
+
+        net.zootycoon.log.ZooLogManager.recordIndividualSalaryPayment(w.ownerUuid, roleLabel, nameLabel, owed);
+        ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success",
+                wasResigned ? "zootycoon.toast.salary.debt_cleared" : "zootycoon.toast.salary.paid_manual",
+                1, nameLabel, String.valueOf(owed));
+        player.level().playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0f, 1.0f);
+        syncToPlayer(player);
+        ZooNetworkPayloads.sendAnimalSync(player);
+        net.zootycoon.log.ZooLogManager.sendSyncToPlayer(player);
+        return true;
     }
 
     public void checkStrikeResolutionOnDeposit(UUID playerUuid, ServerPlayer player) {
@@ -397,17 +656,27 @@ public class ZooStaffManager {
 
     private void finishSingleStrikePayment(ServerPlayer player, UUID ownerId, net.minecraft.world.entity.Entity staffEntity, int wagePaid) {
         UUID staffUuid = staffEntity.getUUID();
+        StaffWageRecord wageRec = staffWages.get(staffUuid);
+        if (wageRec != null) {
+            if (wageRec.resigned) {
+                staffWages.remove(staffUuid);
+            } else {
+                wageRec.missedDays = 0;
+                wageRec.owedAmount = 0;
+            }
+        }
         resolveStaffEntityStrike(ownerId, staffUuid);
         resolveStaffEntityStrike(player.getUUID(), staffUuid);
         String staffName = staffEntity.hasCustomName() ? staffEntity.getCustomName().getString() : staffEntity.getName().getString();
         net.zootycoon.log.ZooLogManager.recordIndividualSalaryPayment(ownerId, getStaffRoleLabel(staffEntity), staffName, wagePaid);
         ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.success", "zootycoon.toast.salary.resolved", 1);
         player.level().playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0f, 1.0f);
+        syncToPlayer(player);
         ZooNetworkPayloads.sendAnimalSync(player);
         net.zootycoon.log.ZooLogManager.sendSyncToPlayer(player);
     }
 
-    /** Pays the overdue daily salary for a single striking staff entity visited via dialog. */
+    /** Pays the overdue salary for a single striking staff entity visited via dialog. */
     public boolean tryPaySingleStaffStrikeSalary(ServerPlayer player, net.minecraft.world.entity.Entity staffEntity) {
         if (player == null) return false;
         if (staffEntity == null) {
@@ -436,6 +705,11 @@ public class ZooStaffManager {
         UUID staffUuid = staffEntity.getUUID();
         if (!isStaffEntityOnStrike(ownerId, staffUuid) && !isStaffEntityOnStrike(player.getUUID(), staffUuid)) {
             return true;
+        }
+
+        StaffWageRecord rec = staffWages.get(staffUuid);
+        if (rec != null && rec.owedAmount > 0) {
+            individualWage = rec.owedAmount;
         }
 
         if (individualWage <= 0 || player.isCreative()) {
@@ -546,6 +820,7 @@ public class ZooStaffManager {
                     zk.setPos(player.getX() + 0.5, player.getY(), player.getZ() + 0.5);
                     zk.setOwnerUuid(player.getUUID());
                     markNewlyHiredStaffResolved(player.getUUID(), zk.getUUID());
+                    ensureActiveWageRecord(zk.getUUID(), player.getUUID(), "zookeeper", zk.getName().getString());
                     sLevel.addFreshEntity(zk);
                     sLevel.sendParticles(
                             ParticleTypes.HAPPY_VILLAGER,
@@ -561,6 +836,7 @@ public class ZooStaffManager {
                     sec.setPos(player.getX() + 0.5, player.getY(), player.getZ() + 0.5);
                     sec.setOwnerUuid(player.getUUID());
                     markNewlyHiredStaffResolved(player.getUUID(), sec.getUUID());
+                    ensureActiveWageRecord(sec.getUUID(), player.getUUID(), "security", sec.getName().getString());
                     sLevel.addFreshEntity(sec);
                     sLevel.sendParticles(
                             ParticleTypes.HAPPY_VILLAGER,
@@ -577,6 +853,7 @@ public class ZooStaffManager {
                     cashier.setOwnerUuid(player.getUUID());
                     cashier.setFacingDirection(player.getDirection().getOpposite());
                     markNewlyHiredStaffResolved(player.getUUID(), cashier.getUUID());
+                    ensureActiveWageRecord(cashier.getUUID(), player.getUUID(), "cashier", cashier.getName().getString());
                     sLevel.addFreshEntity(cashier);
                     sLevel.sendParticles(
                             ParticleTypes.HAPPY_VILLAGER,
@@ -630,6 +907,7 @@ public class ZooStaffManager {
         }
         StaffRecord rec = getRecord(player.getUUID());
         rec.zookeepers = Math.max(0, rec.zookeepers - 1);
+        cleanupWageOnManualFire(zookeeperUuid);
         saveToFile();
         syncToPlayer(player);
         return 0;
@@ -680,6 +958,7 @@ public class ZooStaffManager {
                 } else if ("security".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooSecurityEntity sec) {
                     sec.discard();
                     rec.security = Math.max(0, rec.security - 1);
+                    cleanupWageOnManualFire(staffUuid);
                     saveToFile();
                     syncToPlayer(player);
                     ZooNetworkPayloads.sendAnimalSync(player);
@@ -688,6 +967,7 @@ public class ZooStaffManager {
                     net.minecraft.world.Containers.dropContents(lvl, c.blockPosition(), c.getStockInventory());
                     c.discard();
                     rec.cashiers = Math.max(0, rec.cashiers - 1);
+                    cleanupWageOnManualFire(staffUuid);
                     saveToFile();
                     syncToPlayer(player);
                     ZooNetworkPayloads.sendAnimalSync(player);
@@ -749,12 +1029,24 @@ public class ZooStaffManager {
         rec.cashiers = 0;
         staffOnStrike.remove(playerUuid);
         ownerStrikeEpoch.remove(playerUuid);
+        staffWages.values().removeIf(w -> playerUuid.equals(w.ownerUuid));
 
         saveToFile();
         syncToPlayer(player);
         ZooNetworkPayloads.sendAnimalSync(player);
 
         return removedCount;
+    }
+
+    private void cleanupWageOnManualFire(UUID staffUuid) {
+        if (staffUuid == null) return;
+        StaffWageRecord w = staffWages.get(staffUuid);
+        if (w == null) return;
+        if (w.owedAmount > 0) {
+            w.resigned = true;
+        } else {
+            staffWages.remove(staffUuid);
+        }
     }
 
     public void syncToPlayer(ServerPlayer player) {
