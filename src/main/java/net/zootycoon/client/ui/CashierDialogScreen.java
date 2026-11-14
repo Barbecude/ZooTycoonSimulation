@@ -72,7 +72,7 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
             graphics.drawString(font, priceLabel, x, y + 14, 0xFF55FF55, true);
             int labelW = font.width(priceLabel);
 
-            graphics.pose().translate(x + labelW + 3, y + 10, 0.0f);
+            graphics.pose().translate(x + labelW, y + 10, 0.0f);
             graphics.pose().scale(0.75f, 0.75f, 1.0f);
             graphics.renderFakeItem(EMERALD_ICON, 0, 0);
             graphics.pose().popPose();
@@ -668,7 +668,7 @@ public class CashierDialogScreen extends EasyNpcDialogScreen {
             graphics.drawString(this.font, priceStr, priceLabelX, stockStartY + 6, 0xFF55FF55, false);
             int textW = this.font.width(priceStr);
             graphics.pose().pushPose();
-            graphics.pose().translate(priceLabelX + textW + 2, stockStartY + 2, 0.0f);
+            graphics.pose().translate(priceLabelX + textW, stockStartY + 2, 0.0f);
             graphics.pose().scale(0.75f, 0.75f, 1.0f);
             graphics.renderFakeItem(EMERALD_ITEM_ICON, 0, 0);
             graphics.pose().popPose();

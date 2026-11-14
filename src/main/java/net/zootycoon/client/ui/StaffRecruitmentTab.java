@@ -290,22 +290,22 @@ public class StaffRecruitmentTab {
     public static void renderStaffWageLine(GuiGraphics graphics, Minecraft mc, int x, int y, String staffType, boolean bullet) {
         int dailyWage = ZooEconomyEngine.getStaffDailyWage(staffType);
         String labelKey = dailyWage > 0 ? "zootycoon.ui.staff.wage_daily_label" : "zootycoon.ui.staff.wage_label";
-        String prefix = (bullet ? "• " : "") + ZooTranslations.get(labelKey) + " ";
+        String prefix = (bullet ? "• " : "") + ZooTranslations.get(labelKey);
         String valueText = getWageValueText(staffType);
 
         graphics.drawString(mc.font, Component.literal(prefix), x, y, 0xFFC9D1D9, false);
-        int iconX = x + mc.font.width(prefix);
+        int iconX = x + mc.font.width(prefix) - 1;
         graphics.renderItem(VANILLA_EMERALD_ITEM, iconX, y - 4);
-        graphics.drawString(mc.font, Component.literal(valueText), iconX + 17, y, 0xFF55FF55, false);
+        graphics.drawString(mc.font, Component.literal(valueText), iconX + 14, y, 0xFF55FF55, false);
     }
 
     /** Right-aligns the salary line against {@code rightX} for manage sub-tab headers. */
     public static void renderWageRightAligned(GuiGraphics graphics, Minecraft mc, int rightX, int y, String staffType) {
         int dailyWage = ZooEconomyEngine.getStaffDailyWage(staffType);
         String labelKey = dailyWage > 0 ? "zootycoon.ui.staff.wage_daily_label" : "zootycoon.ui.staff.wage_label";
-        String prefix = ZooTranslations.get(labelKey) + " ";
+        String prefix = ZooTranslations.get(labelKey);
         String valueText = getWageValueText(staffType);
-        int totalW = mc.font.width(prefix) + 17 + mc.font.width(valueText);
+        int totalW = mc.font.width(prefix) + 13 + mc.font.width(valueText);
         renderStaffWageLine(graphics, mc, rightX - totalW, y, staffType, false);
     }
 }

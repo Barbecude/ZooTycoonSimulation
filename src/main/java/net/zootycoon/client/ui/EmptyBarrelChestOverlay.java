@@ -107,7 +107,7 @@ public class EmptyBarrelChestOverlay {
             int costW = font.width(costStr);
 
             graphics.pose().pushPose();
-            graphics.pose().translate(x + costW + 3, y + 10, 400.0f);
+            graphics.pose().translate(x + costW, y + 10, 400.0f);
             graphics.pose().scale(0.75f, 0.75f, 1.0f);
             graphics.renderFakeItem(EMERALD_STACK, 0, 0);
             graphics.pose().popPose();
@@ -164,7 +164,7 @@ public class EmptyBarrelChestOverlay {
             int pW = font.width(priceStr);
 
             graphics.pose().pushPose();
-            graphics.pose().translate(x + pW + 3, y + 10, 400.0f);
+            graphics.pose().translate(x + pW, y + 10, 400.0f);
             graphics.pose().scale(0.75f, 0.75f, 1.0f);
             graphics.renderFakeItem(EMERALD_ICON, 0, 0);
             graphics.pose().popPose();
@@ -246,7 +246,7 @@ public class EmptyBarrelChestOverlay {
                 graphics.pose().popPose();
 
                 int costValW = font.width(costStr);
-                int costEmX = x + costPrefixW + costValW + 2;
+                int costEmX = x + costPrefixW + costValW;
                 graphics.pose().pushPose();
                 graphics.pose().translate(costEmX, line2Y - 2, 400.0f);
                 graphics.pose().scale(0.75f, 0.75f, 1.0f);
@@ -265,7 +265,7 @@ public class EmptyBarrelChestOverlay {
                 graphics.pose().popPose();
 
                 int rewardW = font.width(rewardStr);
-                int emX = x + prefixW + rewardW + 2;
+                int emX = x + prefixW + rewardW;
                 graphics.pose().pushPose();
                 graphics.pose().translate(emX, line3Y - 2, 400.0f);
                 graphics.pose().scale(0.75f, 0.75f, 1.0f);

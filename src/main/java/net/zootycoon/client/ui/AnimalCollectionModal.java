@@ -524,9 +524,9 @@ public class AnimalCollectionModal {
             graphics.drawCenteredString(font, font.plainSubstrByWidth(text, b[2] - 6), b[0] + b[2] / 2, b[1] + 6, textColor);
         } else {
             String priceStr = String.valueOf(ZooLicenseManager.INFO_BOARD_PRICE);
-            int iconW = 16;
-            int gapAfterText = 3;
-            int gapAfterIcon = 1;
+            int iconW = 14;
+            int gapAfterText = 0;
+            int gapAfterIcon = 0;
             int priceW = font.width(priceStr);
             int maxLabelW = Math.max(20, b[2] - 8 - gapAfterText - iconW - gapAfterIcon - priceW);
             String label = font.plainSubstrByWidth(ZooTranslations.get("zootycoon.license.btn.buy_info_board"), maxLabelW);

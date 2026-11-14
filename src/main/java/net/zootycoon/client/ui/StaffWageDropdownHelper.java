@@ -25,12 +25,13 @@ public class StaffWageDropdownHelper {
     private static final ItemStack EMERALD_ICON = new ItemStack(Items.EMERALD);
     public static final String EMERALD_TOKEN = "[E]";
     private static final Pattern NUMBER_EMERALD_PATTERN = Pattern.compile("(?i)(?<=\\d)\\s*(?:Emeralds?|Em)\\b");
-    private static final Pattern TAG_EMERALD_PATTERN = Pattern.compile("(?i)\\[(?:icon\\s+)?emerald\\]");
+    private static final Pattern TAG_EMERALD_PATTERN = Pattern.compile("(?i)\\s*\\[(?:icon\\s+)?emerald\\]");
 
     public static String normalizeEmeraldTokens(String text) {
         if (text == null || text.isEmpty()) return "";
-        String s = NUMBER_EMERALD_PATTERN.matcher(text).replaceAll(" " + EMERALD_TOKEN);
-        return TAG_EMERALD_PATTERN.matcher(s).replaceAll(EMERALD_TOKEN);
+        String s = NUMBER_EMERALD_PATTERN.matcher(text).replaceAll(EMERALD_TOKEN);
+        s = TAG_EMERALD_PATTERN.matcher(s).replaceAll(EMERALD_TOKEN);
+        return s.replace(" " + EMERALD_TOKEN, EMERALD_TOKEN);
     }
 
     public static String charSequenceToString(FormattedCharSequence seq) {
@@ -61,15 +62,22 @@ public class StaffWageDropdownHelper {
             }
             if (match > idx) {
                 String seg = text.substring(idx, match);
-                graphics.drawString(font, Component.literal(seg), curX, y, color, shadow);
-                curX += font.width(seg);
+                if (seg.endsWith(" ") && seg.length() > 1) {
+                    seg = seg.substring(0, seg.length() - 1);
+                }
+                if (!seg.isEmpty()) {
+                    graphics.drawString(font, Component.literal(seg), curX, y, color, shadow);
+                    curX += font.width(seg);
+                }
             }
             graphics.pose().pushPose();
-            graphics.pose().translate(curX + 1.0F, y - 1.5F, 0.0F);
+            graphics.pose().translate(curX - 0.5F, y - 1.5F, 0.0F);
             graphics.pose().scale(0.65F, 0.65F, 1.0F);
             graphics.renderFakeItem(EMERALD_ICON, 0, 0);
             graphics.pose().popPose();
-            curX += 12;
+            boolean nextIsSpace = (match + EMERALD_TOKEN.length() < text.length())
+                    && text.charAt(match + EMERALD_TOKEN.length()) == ' ';
+            curX += nextIsSpace ? 8 : 10;
             idx = match + EMERALD_TOKEN.length();
         }
     }
@@ -141,13 +149,13 @@ public class StaffWageDropdownHelper {
         String label = owedAmount > 0
                 ? missedDays + "x " + owedAmount
                 : "0";
-        String display = trimToFit(mc, label, BADGE_W - 24);
+        String display = trimToFit(mc, label, BADGE_W - 22);
         int textW = mc.font.width(display);
-        int totalW = textW + 2 + 16;
+        int totalW = textW + 13;
         int startX = x + Math.max(4, (BADGE_W - totalW) / 2);
         graphics.drawString(mc.font, Component.literal(display),
                 startX, y + (BTN_H - 8) / 2, textCol, false);
-        graphics.renderFakeItem(EMERALD_ICON, startX + textW + 2, y + (BTN_H - 16) / 2);
+        graphics.renderFakeItem(EMERALD_ICON, startX + textW - 1, y + (BTN_H - 16) / 2);
     }
 
     public boolean toggleIfClicked(
@@ -193,12 +201,12 @@ public class StaffWageDropdownHelper {
         // Header line 1: Gaji Harian: <amount> [emerald]
         String dailyPrefix = "Gaji Harian: " + openDailyWage;
         graphics.drawString(mc.font, Component.literal(dailyPrefix), mx + 8, my + 7, 0xFFD0D7DE, false);
-        graphics.renderFakeItem(EMERALD_ICON, mx + 8 + mc.font.width(dailyPrefix) + 2, my + 3);
+        graphics.renderFakeItem(EMERALD_ICON, mx + 8 + mc.font.width(dailyPrefix) - 1, my + 3);
 
         // Header line 2: Tertunda: Nx (<total> [emerald])
-        String arrearsPrefix = "Tertunda: " + openMissedDays + "x  " + openOwedAmount;
+        String arrearsPrefix = "Tertunda: " + openMissedDays + "x " + openOwedAmount;
         graphics.drawString(mc.font, Component.literal(arrearsPrefix), mx + 8, my + 20, 0xFFE6EDF3, false);
-        graphics.renderFakeItem(EMERALD_ICON, mx + 8 + mc.font.width(arrearsPrefix) + 2, my + 16);
+        graphics.renderFakeItem(EMERALD_ICON, mx + 8 + mc.font.width(arrearsPrefix) - 1, my + 16);
 
         // Header line 3: Tier description
         String tierLine = getTierDescription(openMissedDays, openIsResigned);
@@ -229,9 +237,9 @@ public class StaffWageDropdownHelper {
 
                 String payLabel = "Bayar " + dayWage;
                 int lw = mc.font.width(payLabel);
-                int sx = payX + Math.max(4, (payW - (lw + 2 + 16)) / 2);
+                int sx = payX + Math.max(4, (payW - (lw + 13)) / 2);
                 graphics.drawString(mc.font, Component.literal(payLabel), sx, payY + 5, 0xFFFFFFFF, false);
-                graphics.renderFakeItem(EMERALD_ICON, sx + lw + 2, payY + 1);
+                graphics.renderFakeItem(EMERALD_ICON, sx + lw - 1, payY + 1);
             }
         } else {
             int okX = mx + 8;

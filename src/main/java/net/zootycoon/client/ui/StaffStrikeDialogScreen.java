@@ -81,7 +81,7 @@ public class StaffStrikeDialogScreen extends EasyNpcDialogScreen {
         int btnW = (panelWidth - 24 - 8) / 2;
 
         Component payLabel = this.dailyWage > 0
-                ? Component.literal(ZooTranslations.get("zootycoon.dialog.staff.btn.pay_salary") + "  " + this.dailyWage)
+                ? Component.literal(ZooTranslations.get("zootycoon.dialog.staff.btn.pay_salary") + " " + this.dailyWage)
                 : ZooTranslations.component("zootycoon.dialog.staff.btn.pay_salary");
         ZooButton payBtn = new ZooButton(
                 startX + 12, btnY, btnW, 22,

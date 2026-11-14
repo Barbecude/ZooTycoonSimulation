@@ -180,12 +180,12 @@ public class ZooButton extends AbstractWidget {
             int iconY = y + (h - iH) / 2;
             int textW = mc.font.width(msg);
             if (iconAfter) {
-                int totalW = textW > 0 ? (textW + 2 + iW) : iW;
+                int totalW = textW > 0 ? (textW + 13) : iW;
                 int startX = leftAligned ? (x + 6) : (x + (w - totalW) / 2);
                 if (textW > 0) {
                     graphics.drawString(mc.font, msg, startX, textY, text, false);
                 }
-                graphics.renderFakeItem(itemIcon, startX + textW + 2, iconY);
+                graphics.renderFakeItem(itemIcon, startX + textW - 1, iconY);
             } else {
                 if (leftAligned) {
                     graphics.renderFakeItem(itemIcon, x + 6, iconY);
