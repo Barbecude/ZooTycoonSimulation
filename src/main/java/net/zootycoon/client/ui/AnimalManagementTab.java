@@ -78,6 +78,14 @@ public class AnimalManagementTab {
     private int zkDropdownH = 0;
     private int zkScrollOffset = 0;
 
+    private boolean contextMenuOpen = false;
+    private int contextMenuTargetId = -1;
+    private int contextMenuX = 0;
+    private int contextMenuY = 0;
+    private static final int CONTEXT_BTN_W = 100;
+    private static final int CONTEXT_BTN_H = 18;
+    private static final int CONTEXT_PAD = 3;
+
     private ZooButton sellButton;
     private final Set<String> expandedParents = new HashSet<>();
     // Expand arrow x per animal uuid from the last frame, so clicks hit exactly where the arrow is drawn
@@ -191,37 +199,23 @@ public class AnimalManagementTab {
         m.zkBtnH = 18;
 
         m.btnRowY = m.contentY + 62;
-        m.removeBtnH = 18;
+        m.removeBtnX = m.infoX;
+        m.removeBtnY = m.btnRowY;
+        m.removeBtnW = 0;
+        m.removeBtnH = 0;
         m.sellBtnH = 18;
         m.sellVisible = hasSell;
 
         if (hasSell) {
-            if (m.infoW >= 170) {
-                int btnGap = 4;
-                m.removeBtnW = Math.max(68, Math.min(90, (int) ((m.infoW - btnGap) * 0.42f)));
-                m.sellBtnW = m.infoW - m.removeBtnW - btnGap;
-                m.removeBtnX = m.infoX;
-                m.removeBtnY = m.btnRowY;
-                m.sellBtnX = m.infoX + m.removeBtnW + btnGap;
-                m.sellBtnY = m.btnRowY;
-                m.scrollAreaY = m.contentY + 84;
-            } else {
-                m.removeBtnX = m.infoX;
-                m.removeBtnY = m.btnRowY;
-                m.removeBtnW = m.infoW;
-                m.sellBtnX = m.infoX;
-                m.sellBtnY = m.btnRowY + 20;
-                m.sellBtnW = m.infoW;
-                m.scrollAreaY = m.contentY + 104;
-            }
+            m.sellBtnX = m.infoX;
+            m.sellBtnY = m.btnRowY;
+            m.sellBtnW = Math.min(110, m.infoW);
+            m.scrollAreaY = m.contentY + 84;
         } else {
-            m.removeBtnX = m.infoX;
-            m.removeBtnY = m.btnRowY;
-            m.removeBtnW = Math.min(110, m.infoW);
             m.sellBtnX = m.infoX;
             m.sellBtnY = m.btnRowY;
             m.sellBtnW = 0;
-            m.scrollAreaY = m.contentY + 84;
+            m.scrollAreaY = m.contentY + 63;
         }
 
         m.scrollAreaX = m.infoX;
@@ -333,6 +327,8 @@ public class AnimalManagementTab {
 
         renameModalOpen = false;
         zookeeperDropdownOpen = false;
+        contextMenuOpen = false;
+        contextMenuTargetId = -1;
 
         int width = screen.width;
         int height = screen.height;
@@ -347,19 +343,25 @@ public class AnimalManagementTab {
         searchInput.setResponder(q -> {
             this.searchQuery = q != null ? q : "";
             this.scrollOffset = 0;
+            this.contextMenuOpen = false;
+            this.contextMenuTargetId = -1;
         });
         screen.addWidgetPublic(searchInput);
 
-        removeButton = new ZooButton(m.removeBtnX, m.removeBtnY, m.removeBtnW, m.removeBtnH, ZooTranslations.component("zootycoon.ui.animals.btn_remove"), b -> {
-            if (selectedData != null) {
-                int idToRemove = selectedData.entityId();
+        removeButton = new ZooButton(0, 0, CONTEXT_BTN_W, CONTEXT_BTN_H, ZooTranslations.component("zootycoon.ui.animals.btn_remove"), b -> {
+            if (contextMenuTargetId != -1) {
+                int idToRemove = contextMenuTargetId;
                 ClientPlayNetworking.send(new ZooNetworkPayloads.UnregisterAnimalPayload(idToRemove));
                 ZooTycoonClient.clientAnimals.removeIf(a -> a.entityId() == idToRemove);
-                selectedData = null;
+                if (selectedData != null && selectedData.entityId() == idToRemove) {
+                    selectedData = null;
+                }
+                contextMenuOpen = false;
+                contextMenuTargetId = -1;
                 updateSelectedData(true);
             }
         }).setCustomIcon(TRASH_ICON, 12, 12).asDanger();
-        screen.addWidgetPublic(removeButton);
+        removeButton.visible = false;
 
         sellButton = new ZooButton(m.sellBtnX, m.sellBtnY, m.sellBtnW, m.sellBtnH, ZooTranslations.component("zootycoon.ui.animals.btn_sell"), b -> {
             if (selectedData != null && selectedData.isOffspring()) {
@@ -420,6 +422,8 @@ public class AnimalManagementTab {
         if (selectedData == null) return;
         this.renameModalOpen = true;
         this.zookeeperDropdownOpen = false;
+        this.contextMenuOpen = false;
+        this.contextMenuTargetId = -1;
         if (modalNameInput != null) {
             modalNameInput.setValue(selectedData.customName());
             modalNameInput.setVisible(true);
@@ -440,7 +444,6 @@ public class AnimalManagementTab {
         }
         if (modalSaveButton != null) modalSaveButton.visible = false;
         if (modalCancelButton != null) modalCancelButton.visible = false;
-        if (removeButton != null) removeButton.visible = (selectedData != null);
         if (sellButton != null) {
             sellButton.visible = (selectedData != null && selectedData.isOffspring());
         }
@@ -462,6 +465,10 @@ public class AnimalManagementTab {
 
     private void updateSelectedData(boolean forceTextReset) {
         List<ZooNetworkPayloads.AnimalSyncData> animals = getValidAnimals();
+        if (contextMenuOpen && animals.stream().noneMatch(a -> a.entityId() == contextMenuTargetId)) {
+            contextMenuOpen = false;
+            contextMenuTargetId = -1;
+        }
         if (selectedData == null && !animals.isEmpty()) {
             selectedData = animals.get(0);
             forceTextReset = true;
@@ -484,9 +491,6 @@ public class AnimalManagementTab {
         }
 
         if (selectedData != null) {
-            if (removeButton != null && !renameModalOpen) {
-                removeButton.visible = true;
-            }
             if (sellButton != null && !renameModalOpen) {
                 if (selectedData.isOffspring()) {
                     int price = net.zootycoon.economy.ZooEconomyEngine.getAnimalSellPrice(selectedData.entityTypeId());
@@ -502,6 +506,8 @@ public class AnimalManagementTab {
                 showAllFoods = false;
             }
         } else {
+            contextMenuOpen = false;
+            contextMenuTargetId = -1;
             if (removeButton != null) {
                 removeButton.visible = false;
             }
@@ -532,13 +538,6 @@ public class AnimalManagementTab {
         }
 
         // Dynamically update action buttons position and visibility
-        if (removeButton != null) {
-            removeButton.setX(m.removeBtnX);
-            removeButton.setY(m.removeBtnY);
-            removeButton.setWidth(m.removeBtnW);
-            removeButton.setHeight(m.removeBtnH);
-            removeButton.visible = (selectedData != null && !renameModalOpen);
-        }
         if (sellButton != null) {
             sellButton.setX(m.sellBtnX);
             sellButton.setY(m.sellBtnY);
@@ -691,7 +690,7 @@ public class AnimalManagementTab {
 
         graphics.disableScissor();
 
-        if (hoveredSidebarProblems != null && !renameModalOpen && !zookeeperDropdownOpen) {
+        if (hoveredSidebarProblems != null && !renameModalOpen && !zookeeperDropdownOpen && !contextMenuOpen) {
             graphics.renderComponentTooltip(font, hoveredSidebarProblems, mouseX, mouseY);
         }
 
@@ -1034,9 +1033,9 @@ public class AnimalManagementTab {
             graphics.fill(sbX, thumbY, sbX + sbW, thumbY + thumbH, thumbColor);
         }
 
-        if (!hoveredFoodStack.isEmpty() && !renameModalOpen && !zookeeperDropdownOpen) {
+        if (!hoveredFoodStack.isEmpty() && !renameModalOpen && !zookeeperDropdownOpen && !contextMenuOpen) {
             graphics.renderTooltip(font, hoveredFoodStack.getHoverName(), mouseX, mouseY);
-        } else if (hoveredStatTooltip != null && !zookeeperDropdownOpen && !renameModalOpen) {
+        } else if (hoveredStatTooltip != null && !zookeeperDropdownOpen && !renameModalOpen && !contextMenuOpen) {
             graphics.renderTooltip(font, hoveredStatTooltip, mouseX, mouseY);
         }
 
@@ -1044,9 +1043,36 @@ public class AnimalManagementTab {
             renderZookeeperDropdown(graphics, mouseX, mouseY, font);
         }
 
+        if (contextMenuOpen && contextMenuTargetId != -1 && !renameModalOpen) {
+            renderContextMenuDropdown(graphics, mouseX, mouseY, partialTick);
+        }
+
         if (renameModalOpen) {
             renderRenameModal(graphics, mouseX, mouseY, font, width, height);
         }
+    }
+
+    private void renderContextMenuDropdown(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        if (removeButton == null) return;
+        int boxW = CONTEXT_BTN_W + CONTEXT_PAD * 2;
+        int boxH = CONTEXT_BTN_H + CONTEXT_PAD * 2;
+        int dx = Math.clamp(contextMenuX, 6, Math.max(6, screen.width - boxW - 6));
+        int dy = Math.clamp(contextMenuY, 6, Math.max(6, screen.height - boxH - 6));
+
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, 500);
+
+        graphics.fill(dx - 1, dy - 1, dx + boxW + 1, dy + boxH + 1, 0xFF354157);
+        graphics.fill(dx, dy, dx + boxW, dy + boxH, 0xF5141720);
+
+        removeButton.setX(dx + CONTEXT_PAD);
+        removeButton.setY(dy + CONTEXT_PAD);
+        removeButton.setWidth(CONTEXT_BTN_W);
+        removeButton.setHeight(CONTEXT_BTN_H);
+        removeButton.visible = true;
+        removeButton.render(graphics, mouseX, mouseY, partialTick);
+
+        graphics.pose().popPose();
     }
 
     private void renderRenameModal(GuiGraphics graphics, int mouseX, int mouseY, Font font, int width, int height) {
@@ -1340,6 +1366,22 @@ public class AnimalManagementTab {
         boolean hasSell = (selectedData != null && selectedData.isOffspring());
         LayoutMetrics m = computeLayout(width, height, hasSell);
 
+        if (contextMenuOpen && contextMenuTargetId != -1) {
+            int boxW = CONTEXT_BTN_W + CONTEXT_PAD * 2;
+            int boxH = CONTEXT_BTN_H + CONTEXT_PAD * 2;
+            int dx = Math.clamp(contextMenuX, 6, Math.max(6, screen.width - boxW - 6));
+            int dy = Math.clamp(contextMenuY, 6, Math.max(6, screen.height - boxH - 6));
+            if (button == 0 && removeButton != null && removeButton.visible && removeButton.mouseClicked(mouseX, mouseY, button)) {
+                return true;
+            }
+            if (mouseX >= dx - 1 && mouseX <= dx + boxW + 1 && mouseY >= dy - 1 && mouseY <= dy + boxH + 1) {
+                return true;
+            }
+            contextMenuOpen = false;
+            contextMenuTargetId = -1;
+            if (removeButton != null) removeButton.visible = false;
+        }
+
         if (searchInput != null && searchInput.visible) {
             if (searchInput.mouseClicked(mouseX, mouseY, button)) {
                 screen.setFocused(searchInput);
@@ -1460,6 +1502,19 @@ public class AnimalManagementTab {
                 int clickedIdx = (int) (relativeY / ITEM_HEIGHT);
                 if (clickedIdx >= 0 && clickedIdx < displayItems.size()) {
                     var item = displayItems.get(clickedIdx);
+                    if (button == 1) {
+                        this.selectedData = item.data;
+                        this.lastSelectedEntityId = selectedData.entityId();
+                        this.detailsScrollOffset = 0;
+                        this.zookeeperDropdownOpen = false;
+                        this.contextMenuOpen = true;
+                        this.contextMenuTargetId = item.data.entityId();
+                        this.contextMenuX = (int) mouseX;
+                        this.contextMenuY = (int) mouseY;
+                        closeRenameModal();
+                        Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                        return true;
+                    }
                     Integer arrowX = renderedArrowX.get(item.data.uuid());
 
                     // If clicked on dropdown arrow area of parent (any tree level)
@@ -1596,6 +1651,9 @@ public class AnimalManagementTab {
         }
 
         if (mouseX >= m.sidebarX && mouseX <= m.sidebarX + m.sidebarW && mouseY >= m.sidebarY && mouseY <= m.sidebarY + m.sidebarH) {
+            contextMenuOpen = false;
+            contextMenuTargetId = -1;
+            if (removeButton != null) removeButton.visible = false;
             List<AnimalListItem> displayItems = buildDisplayItems();
             int totalContentH = displayItems.size() * ITEM_HEIGHT + 8;
             int maxScroll = Math.max(0, totalContentH - m.sidebarH);
@@ -1685,6 +1743,12 @@ public class AnimalManagementTab {
                 return true;
             }
             return true; // Block other inputs while modal is active
+        }
+        if (contextMenuOpen && keyCode == 256) { // GLFW_KEY_ESCAPE
+            contextMenuOpen = false;
+            contextMenuTargetId = -1;
+            if (removeButton != null) removeButton.visible = false;
+            return true;
         }
         if (searchInput != null && searchInput.isFocused()) {
             if (keyCode == 256) { // GLFW_KEY_ESCAPE
