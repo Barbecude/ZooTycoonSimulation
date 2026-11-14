@@ -257,15 +257,59 @@ public enum LicenseTier {
         return key != null ? findTierForEntity(key.toString()) : null;
     }
 
+    private static final Set<String> MATE_REQUIRED_SPECIES = Set.of(
+            "mini_sheep", "deer", "capybara", "capuchin_monkey", "kangaroo", "ostrich",
+            "zebra", "camel", "toucan", "gazelle",
+            "giraffe", "hippo", "gorilla", "elephant",
+            "lion", "mammoth", "froststalker",
+            "flutter"
+    );
+
+    private static final Set<String> LARGE_CARGO_SPECIES = Set.of(
+            "elephant", "giraffe", "hippo", "rhinoceros", "mammoth", "camel",
+            "orca", "cachalot_whale", "great_white_shark", "giant_squid"
+    );
+
     public static SpeciesEntry findSpeciesEntry(String speciesKeyOrEntityId) {
         if (speciesKeyOrEntityId == null) return null;
         for (LicenseTier tier : values()) {
             for (SpeciesEntry entry : tier.requiredSpecies) {
-                if (entry.speciesKey().equalsIgnoreCase(speciesKeyOrEntityId) || entry.matches(speciesKeyOrEntityId)) {
+                if (entry.speciesKey().equalsIgnoreCase(speciesKeyOrEntityId)
+                        || (!entry.entityTypeIds().isEmpty() && entry.entityTypeIds().get(0).equalsIgnoreCase(speciesKeyOrEntityId))) {
+                    return entry;
+                }
+            }
+        }
+        for (LicenseTier tier : values()) {
+            for (SpeciesEntry entry : tier.requiredSpecies) {
+                if (entry.matches(speciesKeyOrEntityId)) {
                     return entry;
                 }
             }
         }
         return null;
+    }
+
+    public static SpeciesEntry findSpeciesEntry(EntityType<?> type) {
+        if (type == null) return null;
+        ResourceLocation key = BuiltInRegistries.ENTITY_TYPE.getKey(type);
+        return key != null ? findSpeciesEntry(key.toString()) : null;
+    }
+
+    /** Returns true if adults of this species require manual breeding to satisfy pair/mate welfare. */
+    public static boolean requiresMate(String speciesKey) {
+        return speciesKey != null && MATE_REQUIRED_SPECIES.contains(speciesKey.toLowerCase(Locale.ROOT));
+    }
+
+    /** Returns true if adults of this EntityType require manual breeding to satisfy pair/mate welfare. */
+    public static boolean requiresMateEntity(EntityType<?> type) {
+        SpeciesEntry entry = findSpeciesEntry(type);
+        return entry != null && requiresMate(entry.speciesKey());
+    }
+
+    /** Returns true if this EntityType belongs to a large species occupying 2 vehicle cargo slots. */
+    public static boolean isLargeCargoSpecies(EntityType<?> type) {
+        SpeciesEntry entry = findSpeciesEntry(type);
+        return entry != null && LARGE_CARGO_SPECIES.contains(entry.speciesKey().toLowerCase(Locale.ROOT));
     }
 }

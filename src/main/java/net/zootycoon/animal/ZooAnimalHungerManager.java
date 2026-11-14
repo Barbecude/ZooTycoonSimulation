@@ -12,6 +12,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.Container;
+import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -209,9 +210,64 @@ public class ZooAnimalHungerManager {
         }
     }
 
+    public static final String TAG_PAIRED = "zoo_paired";
+
     public static boolean isOffspring(Entity entity) {
         if (entity == null) return false;
         return entity.getTags().contains("zoo_offspring");
+    }
+
+    public static boolean isPaired(Entity entity) {
+        if (entity == null) return false;
+        return entity.getTags().contains(TAG_PAIRED);
+    }
+
+    public static void setPaired(Entity entity, boolean paired) {
+        if (entity == null) return;
+        if (paired) {
+            entity.addTag(TAG_PAIRED);
+        } else {
+            entity.removeTag(TAG_PAIRED);
+        }
+    }
+
+    /**
+     * Marks both parents as having bred/paired manually when breeding occurs under an owner's zoo.
+     */
+    public static void markParentsPaired(Animal parentA, Animal parentB) {
+        if (parentA == null && parentB == null) return;
+        UUID ownerUuid = getOwnerUuid(parentA);
+        if (ownerUuid == null && parentB != null) {
+            ownerUuid = getOwnerUuid(parentB);
+        }
+        if (ownerUuid == null) return;
+
+        if (parentA != null) {
+            setPaired(parentA, true);
+            ZooInspectionService.notifyAnimalUpdated(parentA);
+        }
+        if (parentB != null) {
+            setPaired(parentB, true);
+            ZooInspectionService.notifyAnimalUpdated(parentB);
+        }
+        if (parentA != null && parentA.level() instanceof ServerLevel sLevel) {
+            ServerPlayer ownerPlayer = sLevel.getServer().getPlayerList().getPlayer(ownerUuid);
+            if (ownerPlayer != null) {
+                ZooNetworkPayloads.sendAnimalSync(ownerPlayer);
+            }
+        }
+    }
+
+    /**
+     * Offspring and solitary/non-breedable species never require manual breeding.
+     * Unpaired adults of social breedable species fail until bred at least once.
+     */
+    public static boolean needsMateRequirement(Entity entity) {
+        if (entity == null) return false;
+        if (isOffspring(entity)) return false;
+        if (entity instanceof AgeableMob ageable && ageable.isBaby()) return false;
+        if (isPaired(entity)) return false;
+        return net.zootycoon.license.LicenseTier.requiresMateEntity(entity.getType());
     }
 
     public static String getParentUuidString(Entity entity) {

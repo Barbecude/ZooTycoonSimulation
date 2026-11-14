@@ -16,6 +16,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
@@ -496,6 +497,31 @@ public class ZooVehicleEntity extends Entity {
         return list;
     }
 
+    /**
+     * Large species (Elephant, Giraffe, Hippo, Rhino, Mammoth, Camel, giant sea animals, or oversized hitboxes)
+     * consume 2 cargo slots so a 2-slot truck can carry at most 1 large animal, and 1-slot cars cannot load them.
+     */
+    public static int getAnimalCargoSlots(Entity entity) {
+        if (entity == null) {
+            return 1;
+        }
+        boolean isBaby = entity instanceof AgeableMob ageable && ageable.isBaby();
+        if (!isBaby && (net.zootycoon.license.LicenseTier.isLargeCargoSpecies(entity.getType())
+                || entity.getBbWidth() >= 1.8f
+                || entity.getBbHeight() >= 2.2f)) {
+            return 2;
+        }
+        return 1;
+    }
+
+    public int getUsedCargoSlots() {
+        int used = 0;
+        for (Entity passenger : getCargoPassengers()) {
+            used += getAnimalCargoSlots(passenger);
+        }
+        return used;
+    }
+
     @Override
     public LivingEntity getControllingPassenger() {
         return getDriver();
@@ -507,7 +533,7 @@ public class ZooVehicleEntity extends Entity {
             return getDriver() == null;
         }
         VehicleSpec spec = getSpec();
-        return spec.hasTrunk() && getCargoPassengers().size() < spec.maxCargoAnimals();
+        return spec.hasTrunk() && (getUsedCargoSlots() + getAnimalCargoSlots(passenger)) <= spec.maxCargoAnimals();
     }
 
     @Override
@@ -904,7 +930,7 @@ public class ZooVehicleEntity extends Entity {
             }
             return false;
         }
-        if (getCargoPassengers().size() >= spec.maxCargoAnimals()) {
+        if (getUsedCargoSlots() >= spec.maxCargoAnimals()) {
             if (player instanceof ServerPlayer sp) {
                 ZooNetworkPayloads.sendToast(sp, "zootycoon.toast.title.warning", "zootycoon.vehicle.trunk_full", 2);
             }
@@ -945,8 +971,10 @@ public class ZooVehicleEntity extends Entity {
         }
 
         boolean loadedAny = false;
+        boolean rejectedTooLarge = false;
+        boolean rejectedInsufficientSpace = false;
         for (Mob animal : nearbyMobs) {
-            if (getCargoPassengers().size() >= spec.maxCargoAnimals()) {
+            if (getUsedCargoSlots() >= spec.maxCargoAnimals()) {
                 break;
             }
             if (player instanceof ServerPlayer sp && this.level() instanceof net.minecraft.server.level.ServerLevel sLevel) {
@@ -956,6 +984,15 @@ public class ZooVehicleEntity extends Entity {
                     ZooNetworkPayloads.sendToast(sp, "zootycoon.toast.title.warning", "zootycoon.license.toast.species_locked", 2, tierName);
                     continue;
                 }
+            }
+            int neededSlots = getAnimalCargoSlots(animal);
+            if (neededSlots > spec.maxCargoAnimals()) {
+                rejectedTooLarge = true;
+                continue;
+            }
+            if (getUsedCargoSlots() + neededSlots > spec.maxCargoAnimals()) {
+                rejectedInsufficientSpace = true;
+                continue;
             }
             if (animal.isLeashed()) {
                 animal.dropLeash(true, true);
@@ -973,6 +1010,13 @@ public class ZooVehicleEntity extends Entity {
                             animal.getDisplayName().getString()
                     );
                 }
+            }
+        }
+        if (!loadedAny && player instanceof ServerPlayer sp) {
+            if (rejectedTooLarge) {
+                ZooNetworkPayloads.sendToast(sp, "zootycoon.toast.title.warning", "zootycoon.vehicle.animal_too_large", 2);
+            } else if (rejectedInsufficientSpace) {
+                ZooNetworkPayloads.sendToast(sp, "zootycoon.toast.title.warning", "zootycoon.vehicle.trunk_full_large", 2);
             }
         }
         return loadedAny;
@@ -1032,9 +1076,14 @@ public class ZooVehicleEntity extends Entity {
             List<Entity> cargo = getCargoPassengers();
             int idx = Math.max(0, cargo.indexOf(passenger));
             List<Vec3> offsets = spec.cargoSeatOffsets();
-            Vec3 localCargo = offsets.isEmpty()
-                    ? new Vec3(0.0, 0.6, -1.5)
-                    : offsets.get(Math.min(idx, offsets.size() - 1));
+            Vec3 localCargo;
+            if (offsets.isEmpty()) {
+                localCargo = new Vec3(0.0, 0.6, -1.5);
+            } else if (cargo.size() == 1 && getAnimalCargoSlots(passenger) >= 2 && offsets.size() >= 2) {
+                localCargo = offsets.get(0).add(offsets.get(1)).scale(0.5);
+            } else {
+                localCargo = offsets.get(Math.min(idx, offsets.size() - 1));
+            }
             Vec3 rotated = rotateLocalOffset(new Vec3(localCargo.x, 0.0, localCargo.z), this.getYRot());
             callback.accept(
                     passenger,

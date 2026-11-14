@@ -176,9 +176,9 @@ public class HabitatEvaluator {
         boolean tooHot = thermal.tooHot();
         boolean tempOk = !tooCold && !tooHot;
 
-        // 6. Companion requirement removed per user request
-        boolean companionRequired = false;
-        boolean hasCompanion = true;
+        // 6. Manual breeding / mate requirement (only unpaired adults of social breedable species)
+        boolean companionRequired = net.zootycoon.animal.ZooAnimalHungerManager.needsMateRequirement(animal);
+        boolean hasCompanion = !companionRequired;
 
         // 7. Check Required Blocks (Trees, Bamboo, Snow, Sand, etc.)
         boolean extraBlocksOk = true;
@@ -318,7 +318,11 @@ public class HabitatEvaluator {
             }
         }
 
-        boolean isSuitable = biomeOk && tempOk && groundOk && waterOk && extraBlocksOk && predatorSafe;
+        if (companionRequired) {
+            unmet.add(net.zootycoon.util.ZooTranslations.get("zootycoon.habitat.need_mate"));
+        }
+
+        boolean isSuitable = biomeOk && tempOk && groundOk && waterOk && extraBlocksOk && predatorSafe && hasCompanion;
         HabitatStatus status = isSuitable ? HabitatStatus.SUITABLE : HabitatStatus.UNSUITABLE;
 
         return new HabitatResult(status, profile.displayName(), biomeOk, waterRequired, waterOk, tempOk, tooCold, groundOk, companionRequired, hasCompanion, unmet);

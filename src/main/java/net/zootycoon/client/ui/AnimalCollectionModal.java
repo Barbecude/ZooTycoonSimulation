@@ -420,6 +420,17 @@ public class AnimalCollectionModal {
         graphics.drawCenteredString(font, statusStr, x + w / 2, infoY, statusCol);
         infoY += 15;
 
+        if (LicenseTier.requiresMate(selectedEntry.speciesKey())) {
+            graphics.drawCenteredString(
+                    font,
+                    ZooTranslations.get("zootycoon.license.collection.requires_mate"),
+                    x + w / 2,
+                    infoY - 2,
+                    0xFFFBBF24
+            );
+            infoY += 12;
+        }
+
         graphics.fill(x + 8, infoY - 3, x + w - 8, infoY - 2, 0xFF252E40);
         infoY += 3;
 

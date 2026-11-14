@@ -32,6 +32,8 @@ public abstract class AnimalBreedingMixin {
             return;
         }
 
+        ZooAnimalHungerManager.markParentsPaired(parentA, parentB);
+
         List<AgeableMob> babies = serverLevel.getEntitiesOfClass(
                 AgeableMob.class,
                 parentA.getBoundingBox().inflate(3.5D),

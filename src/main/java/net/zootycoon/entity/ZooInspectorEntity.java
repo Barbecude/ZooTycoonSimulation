@@ -18,6 +18,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -487,42 +488,121 @@ public class ZooInspectorEntity extends PathfinderMob {
         if (speciesName.isEmpty()) {
             speciesName = "Satwa";
         }
-        if (animal == null || !animal.isAlive()) {
+        String currentKey = pendingSpeciesKeys.isEmpty() ? speciesName : pendingSpeciesKeys.get(0);
+        LicenseTier.SpeciesEntry entry = LicenseTier.findSpeciesEntry(currentKey);
+        List<LivingEntity> allIndividuals = entry != null
+                ? findAllOwnedAnimalsForSpecies(level, getOwnerUuid(), entry)
+                : ((animal != null && animal.isAlive()) ? List.of(animal) : List.of());
+
+        if (allIndividuals.isEmpty()) {
             improvementNotes.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.missing_animal"));
             return;
         }
         inspectedSpeciesDisplayNames.add(speciesName);
 
-        int hunger = ZooAnimalHungerManager.getHunger(animal);
-        int thirst = ZooAnimalHungerManager.getThirst(animal);
-        int clean = ZooAnimalHungerManager.getCleanliness(animal);
-        float healthRatio = animal.getMaxHealth() > 0 ? (animal.getHealth() / animal.getMaxHealth()) : 1.0f;
-
-        List<String> animalIssues = new ArrayList<>();
-        if (hunger <= 30) {
-            animalIssues.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.hungry", hunger));
-        }
-        if (thirst <= 30) {
-            animalIssues.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.thirsty", thirst));
-        }
-        if (!ZooAnimalHungerManager.isPureAquatic(animal) && clean <= 30) {
-            animalIssues.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.dirty", clean));
-        }
-        if (healthRatio <= 0.30f) {
-            animalIssues.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.low_health"));
-        }
-
-        HabitatEvaluator.HabitatResult hab = HabitatEvaluator.evaluate(level, animal);
-        if (hab != null && hab.status() == HabitatEvaluator.HabitatStatus.UNSUITABLE) {
-            String hint = buildBiomeAwareHint(level, animal, hab);
-            if (hint == null || hint.isEmpty()) {
-                hint = ZooTranslations.get("zootycoon.license.issue.habitat_generic");
+        List<LivingEntity> adults = new ArrayList<>();
+        List<LivingEntity> offspring = new ArrayList<>();
+        for (LivingEntity candidate : allIndividuals) {
+            if (isOffspringOrBaby(candidate)) {
+                offspring.add(candidate);
+            } else {
+                adults.add(candidate);
             }
-            animalIssues.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.habitat_detail", hint));
         }
-        if (!animalIssues.isEmpty()) {
-            improvementNotes.addAll(0, animalIssues);
+
+        // Deduplicated adult/parent issues for this species so letter stays clean without duplicates
+        Set<String> adultIssues = new LinkedHashSet<>();
+        for (LivingEntity adult : adults) {
+            if (ZooAnimalHungerManager.needsMateRequirement(adult)) {
+                adultIssues.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.needs_mate"));
+            }
+            int hunger = ZooAnimalHungerManager.getHunger(adult);
+            int thirst = ZooAnimalHungerManager.getThirst(adult);
+            int clean = ZooAnimalHungerManager.getCleanliness(adult);
+            float healthRatio = adult.getMaxHealth() > 0 ? (adult.getHealth() / adult.getMaxHealth()) : 1.0f;
+
+            if (hunger <= 30) {
+                adultIssues.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.hungry", hunger));
+            }
+            if (thirst <= 30) {
+                adultIssues.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.thirsty", thirst));
+            }
+            if (!ZooAnimalHungerManager.isPureAquatic(adult) && clean <= 30) {
+                adultIssues.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.dirty", clean));
+            }
+            if (healthRatio <= 0.30f) {
+                adultIssues.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.low_health"));
+            }
+            if (ZooAnimalHungerManager.isSick(adult)) {
+                adultIssues.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.sick"));
+            }
+
+            HabitatEvaluator.HabitatResult hab = HabitatEvaluator.evaluate(level, adult);
+            if (hab != null && hab.status() == HabitatEvaluator.HabitatStatus.UNSUITABLE) {
+                String hint = buildBiomeAwareHint(level, adult, hab);
+                if (hint != null && !hint.isEmpty()) {
+                    adultIssues.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.habitat_detail", hint));
+                } else if (!ZooAnimalHungerManager.needsMateRequirement(adult)) {
+                    adultIssues.add(speciesName + ": " + ZooTranslations.get("zootycoon.license.issue.habitat_detail", ZooTranslations.get("zootycoon.license.issue.habitat_generic")));
+                }
+            }
         }
+
+        List<String> combinedIssues = new ArrayList<>(adultIssues);
+
+        // Check ALL offspring of this species (exempt from mate requirement, report each deficient child as 1 combined line)
+        for (int i = 0; i < offspring.size(); i++) {
+            LivingEntity child = offspring.get(i);
+            int childIndex = i + 1;
+            List<String> childDeficiencies = new ArrayList<>();
+
+            int hunger = ZooAnimalHungerManager.getHunger(child);
+            int thirst = ZooAnimalHungerManager.getThirst(child);
+            int clean = ZooAnimalHungerManager.getCleanliness(child);
+            float healthRatio = child.getMaxHealth() > 0 ? (child.getHealth() / child.getMaxHealth()) : 1.0f;
+
+            if (hunger <= 30) {
+                childDeficiencies.add(ZooTranslations.get("zootycoon.license.issue.short.hungry", hunger));
+            }
+            if (thirst <= 30) {
+                childDeficiencies.add(ZooTranslations.get("zootycoon.license.issue.short.thirsty", thirst));
+            }
+            if (!ZooAnimalHungerManager.isPureAquatic(child) && clean <= 30) {
+                childDeficiencies.add(ZooTranslations.get("zootycoon.license.issue.short.dirty", clean));
+            }
+            if (healthRatio <= 0.30f) {
+                childDeficiencies.add(ZooTranslations.get("zootycoon.license.issue.short.low_health"));
+            }
+            if (ZooAnimalHungerManager.isSick(child)) {
+                childDeficiencies.add(ZooTranslations.get("zootycoon.license.issue.short.sick"));
+            }
+
+            HabitatEvaluator.HabitatResult hab = HabitatEvaluator.evaluate(level, child);
+            if (hab != null && hab.status() == HabitatEvaluator.HabitatStatus.UNSUITABLE) {
+                String hint = buildBiomeAwareHint(level, child, hab);
+                if (hint == null || hint.isEmpty()) {
+                    hint = ZooTranslations.get("zootycoon.license.issue.habitat_generic");
+                }
+                childDeficiencies.add(ZooTranslations.get("zootycoon.license.issue.short.habitat", hint));
+            }
+
+            if (!childDeficiencies.isEmpty()) {
+                combinedIssues.add(ZooTranslations.get(
+                        "zootycoon.license.issue.offspring_line",
+                        childIndex,
+                        speciesName,
+                        String.join(", ", childDeficiencies)
+                ));
+            }
+        }
+
+        if (!combinedIssues.isEmpty()) {
+            improvementNotes.addAll(0, combinedIssues);
+        }
+    }
+
+    private static boolean isOffspringOrBaby(LivingEntity entity) {
+        return ZooAnimalHungerManager.isOffspring(entity) || (entity instanceof AgeableMob ageable && ageable.isBaby());
     }
 
     /** Same needs as the evaluator reports, but the biome requirement lists real English biome names. */
@@ -530,8 +610,12 @@ public class ZooInspectorEntity extends PathfinderMob {
         if (hab == null || hab.unmetNeeds() == null || hab.unmetNeeds().isEmpty()) {
             return "";
         }
+        String mateNeedLabel = ZooTranslations.get("zootycoon.habitat.need_mate");
         List<String> parts = new ArrayList<>();
         for (String need : hab.unmetNeeds()) {
+            if (need.equalsIgnoreCase(mateNeedLabel)) {
+                continue; // Mate requirement is reported explicitly via zootycoon.license.issue.needs_mate
+            }
             if (need.startsWith("Bioma:")) {
                 List<String> biomes = net.zootycoon.animal.habitat.SpeciesBiomeResolver.resolveProfileBiomes(
                         level, net.zootycoon.animal.habitat.HabitatProfileLoader.getProfile(animal));
@@ -693,40 +777,69 @@ public class ZooInspectorEntity extends PathfinderMob {
         return (e instanceof LivingEntity le && le.isAlive()) ? le : null;
     }
 
-    private LivingEntity findOwnedAnimalForSpecies(ServerLevel level, UUID ownerUuid, LicenseTier.SpeciesEntry entry) {
-        if (ownerUuid == null || entry == null) return null;
-        LivingEntity best = null;
-        double bestDist = Double.MAX_VALUE;
+    private List<LivingEntity> findAllOwnedAnimalsForSpecies(ServerLevel level, UUID ownerUuid, LicenseTier.SpeciesEntry entry) {
+        if (ownerUuid == null || entry == null) return Collections.emptyList();
+        List<LivingEntity> tagged = new ArrayList<>();
+        Set<UUID> seenUuids = new HashSet<>();
         for (Entity entity : level.getAllEntities()) {
             if (entity instanceof LivingEntity le && le.isAlive()
                     && ZooAnimalHungerManager.isTagged(le)
                     && ZooAnimalHungerManager.isOwnedBy(le, ownerUuid)
                     && entry.matches(le.getType())) {
-                double d = this.distanceToSqr(le);
-                if (d < bestDist) {
-                    bestDist = d;
-                    best = le;
-                }
+                tagged.add(le);
+                seenUuids.add(le.getUUID());
             }
         }
-        if (best != null) {
-            return best;
+        net.zootycoon.claim.ZooClaimManager claimManager = net.zootycoon.claim.ZooClaimManager.get(level);
+        if (!tagged.isEmpty()) {
+            // Also include any untagged babies (e.g. egg-hatched Naturalist Ostriches) living in owner's zoo claim
+            for (Entity entity : level.getAllEntities()) {
+                if (entity instanceof LivingEntity le && le.isAlive()
+                        && !seenUuids.contains(le.getUUID())
+                        && isOffspringOrBaby(le)
+                        && ZooAnimalHungerManager.isZooAnimalCandidate(le)
+                        && entry.matches(le.getType())
+                        && claimManager.isClaimedBy(le.blockPosition(), ownerUuid)) {
+                    tagged.add(le);
+                    seenUuids.add(le.getUUID());
+                }
+            }
+            tagged.sort(Comparator.comparing(e -> e.getUUID().toString()));
+            return tagged;
         }
         // Fallback: also find matching animals residing inside the owner's claimed zoo
-        net.zootycoon.claim.ZooClaimManager claimManager = net.zootycoon.claim.ZooClaimManager.get(level);
+        List<LivingEntity> claimed = new ArrayList<>();
         for (Entity entity : level.getAllEntities()) {
             if (entity instanceof LivingEntity le && le.isAlive()
                     && ZooAnimalHungerManager.isZooAnimalCandidate(le)
                     && entry.matches(le.getType())
                     && claimManager.isClaimedBy(le.blockPosition(), ownerUuid)) {
-                double d = this.distanceToSqr(le);
-                if (d < bestDist) {
-                    bestDist = d;
-                    best = le;
-                }
+                claimed.add(le);
             }
         }
-        return best;
+        claimed.sort(Comparator.comparing(e -> e.getUUID().toString()));
+        return claimed;
+    }
+
+    private LivingEntity findOwnedAnimalForSpecies(ServerLevel level, UUID ownerUuid, LicenseTier.SpeciesEntry entry) {
+        List<LivingEntity> all = findAllOwnedAnimalsForSpecies(level, ownerUuid, entry);
+        if (all.isEmpty()) return null;
+        LivingEntity bestAdult = null;
+        double bestAdultDist = Double.MAX_VALUE;
+        LivingEntity bestAny = null;
+        double bestAnyDist = Double.MAX_VALUE;
+        for (LivingEntity le : all) {
+            double d = this.distanceToSqr(le);
+            if (!isOffspringOrBaby(le) && d < bestAdultDist) {
+                bestAdultDist = d;
+                bestAdult = le;
+            }
+            if (d < bestAnyDist) {
+                bestAnyDist = d;
+                bestAny = le;
+            }
+        }
+        return bestAdult != null ? bestAdult : bestAny;
     }
 
     private BlockPos findInspectionStandPosNearAnimal(ServerLevel level, LivingEntity animal) {
