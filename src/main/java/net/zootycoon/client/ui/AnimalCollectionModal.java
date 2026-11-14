@@ -29,6 +29,7 @@ public class AnimalCollectionModal {
     public static final Map<String, List<String>> BIOME_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
     private static final java.util.Set<String> REQUESTED_BIOMES = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private static final ItemStack EMERALD_ICON = new ItemStack(Items.EMERALD);
+    private static final ItemStack MAGNIFYING_GLASS_ICON = new ItemStack(net.zootycoon.item.ZooItems.MAGNIFYING_GLASS);
     private static final net.minecraft.resources.ResourceLocation STAR_FILLED =
             net.zootycoon.ZooTycoonMod.id("textures/gui/icons/star_filled.png");
     private static final net.minecraft.resources.ResourceLocation STAR_HALF =
@@ -73,7 +74,7 @@ public class AnimalCollectionModal {
     private int[] inspectorButtonRect(Font font, int modalX, int modalY, int modalW) {
         InspectorState st = inspectorState();
         String text = ZooTranslations.get(st.pendingClaim() ? "zootycoon.license.btn.claim_inspector" : "zootycoon.license.btn.call_inspector");
-        int w = font.width(text) + 14;
+        int w = font.width(text) + 28;
         int closeX = modalX + modalW - 24;
         return new int[]{closeX - 6 - w, modalY + 5, w, 18};
     }
@@ -135,7 +136,15 @@ public class AnimalCollectionModal {
         boolean hoverInspector = mouseX >= ib[0] && mouseX <= ib[0] + ib[2] && mouseY >= ib[1] && mouseY <= ib[1] + ib[3];
         drawSlateButtonBox(graphics, ib[0], ib[1], ib[2], ib[3], inspector.canRequest(), hoverInspector);
         String ibText = ZooTranslations.get(inspector.pendingClaim() ? "zootycoon.license.btn.claim_inspector" : "zootycoon.license.btn.call_inspector");
-        graphics.drawCenteredString(font, ibText, ib[0] + ib[2] / 2, ib[1] + 5, inspector.canRequest() ? 0xFFF1F5F9 : 0xFF64748B);
+        int iconSize = 12;
+        int totalContentW = iconSize + 4 + font.width(ibText);
+        int contentStartX = ib[0] + (ib[2] - totalContentW) / 2;
+        graphics.pose().pushPose();
+        graphics.pose().translate(contentStartX, ib[1] + 3, 0);
+        graphics.pose().scale(0.75f, 0.75f, 1.0f);
+        graphics.renderFakeItem(MAGNIFYING_GLASS_ICON, 0, 0);
+        graphics.pose().popPose();
+        graphics.drawString(font, ibText, contentStartX + iconSize + 4, ib[1] + 5, inspector.canRequest() ? 0xFFF1F5F9 : 0xFF64748B, false);
 
         // Left Grid Area vs Right Detail Panel
         int detailW = 152;
@@ -184,7 +193,7 @@ public class AnimalCollectionModal {
             String tierBadgeKey = !tierUnlocked ? "zootycoon.license.state.locked"
                     : (tierData.licenseClaimed ? "zootycoon.license.state.certified" : "zootycoon.license.state.unverified");
             String tierBadge = ZooTranslations.get(tierBadgeKey);
-            int badgeColor = !tierUnlocked ? 0xFF64748B : (tierData.licenseClaimed ? 0xFF6EE7B7 : 0xFFCBD5E1);
+            int badgeColor = !tierUnlocked ? 0xFFFF5555 : (tierData.licenseClaimed ? 0xFF6EE7B7 : 0xFFFF5555);
             int badgeX = gridX + gridW - 12 - font.width(tierBadge);
             graphics.drawString(font, tierBadge, badgeX, curY + 5, badgeColor, false);
 
