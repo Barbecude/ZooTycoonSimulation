@@ -263,6 +263,7 @@ public class ZooTycoonMod implements ModInitializer {
         // 6d. Tick server inspection service
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> {
             net.zootycoon.animal.ZooInspectionService.tickServer(server);
+            net.zootycoon.economy.ZooStaffManager.get(server).tickPeekUpdates(server);
         });
 
         // 7. Player Onboarding: First-join Starter Pack

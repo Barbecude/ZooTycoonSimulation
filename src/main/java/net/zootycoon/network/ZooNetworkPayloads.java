@@ -1679,6 +1679,46 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // C2S: Peek staff from Kelola Staff UI (or stop peeking)
+    public record PeekStaffPayload(String staffType, UUID staffUuid, boolean stop) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<PeekStaffPayload> TYPE =
+                new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ZooTycoonMod.MOD_ID, "peek_staff"));
+        public static final StreamCodec<FriendlyByteBuf, PeekStaffPayload> CODEC = StreamCodec.of(
+                (buf, p) -> {
+                    buf.writeUtf(p.staffType != null ? p.staffType : "");
+                    buf.writeUUID(p.staffUuid != null ? p.staffUuid : new UUID(0L, 0L));
+                    buf.writeBoolean(p.stop);
+                },
+                buf -> new PeekStaffPayload(buf.readUtf(), buf.readUUID(), buf.readBoolean())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // S2C: Live staff target position update for peek camera
+    public record SyncPeekStaffPayload(boolean active, int entityId, double x, double y, double z, String staffName) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<SyncPeekStaffPayload> TYPE =
+                new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ZooTycoonMod.MOD_ID, "sync_peek_staff"));
+        public static final StreamCodec<FriendlyByteBuf, SyncPeekStaffPayload> CODEC = StreamCodec.of(
+                (buf, p) -> {
+                    buf.writeBoolean(p.active);
+                    buf.writeInt(p.entityId);
+                    buf.writeDouble(p.x);
+                    buf.writeDouble(p.y);
+                    buf.writeDouble(p.z);
+                    buf.writeUtf(p.staffName != null ? p.staffName : "");
+                },
+                buf -> new SyncPeekStaffPayload(
+                        buf.readBoolean(),
+                        buf.readInt(),
+                        buf.readDouble(),
+                        buf.readDouble(),
+                        buf.readDouble(),
+                        buf.readUtf()
+                )
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     public static final int TOAST_INFO = 0;
     public static final int TOAST_SUCCESS = 1;
     public static final int TOAST_WARNING = 2;
@@ -1743,6 +1783,7 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
         PayloadTypeRegistry.playC2S().register(VehicleLoadAnimalPayload.TYPE, VehicleLoadAnimalPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(VehicleToggleHeadlightsPayload.TYPE, VehicleToggleHeadlightsPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SaveCustomLetterPayload.TYPE, SaveCustomLetterPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(PeekStaffPayload.TYPE, PeekStaffPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestLicenseSyncPayload.TYPE, RequestLicenseSyncPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestZooInspectionPayload.TYPE, RequestZooInspectionPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestSpeciesBiomesPayload.TYPE, RequestSpeciesBiomesPayload.CODEC);
@@ -1776,6 +1817,7 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
         PayloadTypeRegistry.playS2C().register(SyncLicenseProgressionPayload.TYPE, SyncLicenseProgressionPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenInspectorDialogPayload.TYPE, OpenInspectorDialogPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncSpeciesBiomesPayload.TYPE, SyncSpeciesBiomesPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(SyncPeekStaffPayload.TYPE, SyncPeekStaffPayload.CODEC);
 
         // Handler: Claim Land (Old / Direct)
         ServerPlayNetworking.registerGlobalReceiver(ClaimLandPayload.TYPE, (payload, context) -> {
@@ -2951,6 +2993,18 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                     player.serverLevel().playSound(null, player.blockPosition(),
                             net.minecraft.sounds.SoundEvents.BOOK_PAGE_TURN,
                             net.minecraft.sounds.SoundSource.PLAYERS, 0.9f, 1.0f);
+                }
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(PeekStaffPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                net.zootycoon.economy.ZooStaffManager manager = net.zootycoon.economy.ZooStaffManager.get(player.serverLevel());
+                if (payload.stop()) {
+                    manager.stopPeek(player.getUUID());
+                } else {
+                    manager.startPeek(player, payload.staffType(), payload.staffUuid());
                 }
             });
         });

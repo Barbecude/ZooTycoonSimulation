@@ -1067,5 +1067,8 @@
   "zootycoon.custom_letter.type.heading": "Tipe: Heading",
   "zootycoon.custom_letter.type.list": "Tipe: List",
   "zootycoon.custom_letter.type.paragraph": "Tipe: Paragraf",
-  "zootycoon.custom_letter.btn.done": "Done"
+  "zootycoon.custom_letter.btn.done": "Done",
+  "zootycoon.ui.staff.manage.btn_peek": "Intip",
+  "zootycoon.staff.peek.unavailable": "Lokasi staff tidak tersedia atau sudah keluar.",
+  "zootycoon.staff.peek.hud": "Mengintip %s | Ctrl+Scroll: Zoom (%s) | Shift: Keluar"
 }

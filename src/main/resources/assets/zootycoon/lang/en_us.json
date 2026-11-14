@@ -1065,5 +1065,8 @@
   "zootycoon.custom_letter.type.heading": "Type: Heading",
   "zootycoon.custom_letter.type.list": "Type: List",
   "zootycoon.custom_letter.type.paragraph": "Type: Paragraph",
-  "zootycoon.custom_letter.btn.done": "Done"
+  "zootycoon.custom_letter.btn.done": "Done",
+  "zootycoon.ui.staff.manage.btn_peek": "Peek",
+  "zootycoon.staff.peek.unavailable": "Staff location unavailable or no longer active.",
+  "zootycoon.staff.peek.hud": "Peeking %s | Ctrl+Scroll: Zoom (%s) | Shift: Exit"
 }

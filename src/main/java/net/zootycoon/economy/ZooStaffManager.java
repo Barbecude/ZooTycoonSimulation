@@ -55,7 +55,10 @@ public class ZooStaffManager {
     private final Map<UUID, Long> staffResolvedEpoch = new ConcurrentHashMap<>();
     private long strikeEpochCounter = 0L;
     private final Map<UUID, Long> lastSalaryDayMap = new ConcurrentHashMap<>();
+    private final Map<UUID, PeekSession> activePeeks = new ConcurrentHashMap<>();
     private MinecraftServer server;
+
+    private record PeekSession(String staffType, UUID staffUuid) {}
 
     public static synchronized ZooStaffManager get(ServerLevel level) {
         if (instance == null || instance.server != level.getServer()) {
@@ -83,6 +86,7 @@ public class ZooStaffManager {
             instance.staffResolvedEpoch.clear();
             instance.strikeEpochCounter = 0L;
             instance.lastSalaryDayMap.clear();
+            instance.activePeeks.clear();
             instance.server = null;
             instance = null;
         }
@@ -759,5 +763,79 @@ public class ZooStaffManager {
         ServerPlayNetworking.send(player, new ZooNetworkPayloads.SyncStaffPayload(
                 rec.builders, activeBuilders, rec.zookeepers, rec.security, rec.cashiers
         ));
+    }
+
+    public void startPeek(ServerPlayer player, String staffType, UUID staffUuid) {
+        if (player == null || staffUuid == null || server == null) return;
+        net.minecraft.world.entity.Entity target = findPeekableStaff(player, staffType, staffUuid);
+        if (target == null) {
+            activePeeks.remove(player.getUUID());
+            ServerPlayNetworking.send(player, new ZooNetworkPayloads.SyncPeekStaffPayload(false, -1, 0, 0, 0, ""));
+            player.displayClientMessage(net.minecraft.network.chat.Component.translatable("zootycoon.staff.peek.unavailable"), true);
+            return;
+        }
+        activePeeks.put(player.getUUID(), new PeekSession(staffType, staffUuid));
+        ServerPlayNetworking.send(player, new ZooNetworkPayloads.SyncPeekStaffPayload(
+                true,
+                target.getId(),
+                target.getX(),
+                target.getY() + target.getEyeHeight() * 0.85,
+                target.getZ(),
+                target.getDisplayName().getString()
+        ));
+    }
+
+    public void stopPeek(UUID playerUuid) {
+        if (playerUuid == null) return;
+        activePeeks.remove(playerUuid);
+    }
+
+    public void tickPeekUpdates(MinecraftServer srv) {
+        if (srv == null || activePeeks.isEmpty()) return;
+        if ((srv.getTickCount() & 1) != 0) return;
+
+        var it = activePeeks.entrySet().iterator();
+        while (it.hasNext()) {
+            var entry = it.next();
+            ServerPlayer player = srv.getPlayerList().getPlayer(entry.getKey());
+            if (player == null || !player.isAlive()) {
+                it.remove();
+                continue;
+            }
+            PeekSession session = entry.getValue();
+            net.minecraft.world.entity.Entity target = findPeekableStaff(player, session.staffType(), session.staffUuid());
+            if (target == null) {
+                it.remove();
+                ServerPlayNetworking.send(player, new ZooNetworkPayloads.SyncPeekStaffPayload(false, -1, 0, 0, 0, ""));
+                continue;
+            }
+            ServerPlayNetworking.send(player, new ZooNetworkPayloads.SyncPeekStaffPayload(
+                    true,
+                    target.getId(),
+                    target.getX(),
+                    target.getY() + target.getEyeHeight() * 0.85,
+                    target.getZ(),
+                    target.getDisplayName().getString()
+            ));
+        }
+    }
+
+    private net.minecraft.world.entity.Entity findPeekableStaff(ServerPlayer player, String staffType, UUID staffUuid) {
+        if (player == null || staffUuid == null || server == null) return null;
+        UUID ownerUuid = player.getUUID();
+        for (ServerLevel lvl : server.getAllLevels()) {
+            net.minecraft.world.entity.Entity ent = lvl.getEntity(staffUuid);
+            if (ent == null || !ent.isAlive() || ent.isRemoved() || ent.level() != player.level()) continue;
+            if ("builder".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooBuilderEntity b) {
+                if (b.getOwnerUuid() == null || b.getOwnerUuid().equals(ownerUuid)) return b;
+            } else if ("zookeeper".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooZookeeperEntity zk) {
+                if (zk.getOwnerUuid() == null || zk.getOwnerUuid().equals(ownerUuid)) return zk;
+            } else if ("security".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooSecurityEntity sec) {
+                if (sec.getOwnerUuid() == null || sec.getOwnerUuid().equals(ownerUuid)) return sec;
+            } else if ("cashier".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooCashierEntity c) {
+                if (c.getOwnerUuid() == null || c.getOwnerUuid().equals(ownerUuid)) return c;
+            }
+        }
+        return null;
     }
 }

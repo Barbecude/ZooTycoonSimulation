@@ -26,6 +26,13 @@ public class MouseHandlerMixin {
         boolean ctrl = InputConstants.isKeyDown(window, InputConstants.KEY_LCONTROL)
                 || InputConstants.isKeyDown(window, InputConstants.KEY_RCONTROL);
 
+        // Staff peek camera zoom adjustment via Ctrl + Scroll
+        if (ctrl && net.zootycoon.client.camera.StaffPeekCameraManager.isPeeking()) {
+            net.zootycoon.client.camera.StaffPeekCameraManager.onScroll(vertical);
+            ci.cancel();
+            return;
+        }
+
         // Vehicle third-person back camera zoom adjustment via Ctrl + Scroll
         if (ctrl && net.zootycoon.client.camera.ZooVehicleCameraManager.isVehicleThirdPersonBack(mc)) {
             net.zootycoon.client.camera.ZooVehicleCameraManager.onScroll(vertical);

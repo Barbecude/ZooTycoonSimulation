@@ -21,7 +21,8 @@ public class SecurityManageTab {
     private static final int ROW_GAP = 4;
     private static final int BTN_H = 18;
     private static final int CALL_W = 70;
-    private static final int FIRE_W = 64;
+    private static final int PEEK_W = 42;
+    private static final int FIRE_W = 56;
     private static final long CONFIRM_MS = 3000L;
 
     private final MainManagementScreen parent;
@@ -131,13 +132,17 @@ public class SecurityManageTab {
 
         int by = y + (ROW_H - BTN_H) / 2;
         int fireX = x + w - FIRE_W - 8;
-        int callX = fireX - CALL_W - 6;
+        int peekX = fireX - PEEK_W - 4;
+        int callX = peekX - CALL_W - 4;
 
         boolean confirming = s.uuid().equals(confirmFireUuid) && System.currentTimeMillis() < confirmFireUntil;
         boolean canCall = !isCalling;
         drawButton(graphics, mc, callX, by, CALL_W,
                 ZooTranslations.get(isCalling ? "zootycoon.ui.staff.manage.btn_calling" : "zootycoon.ui.staff.manage.btn_call"),
                 canCall, false, mouseX, mouseY, top, bottom);
+        drawButton(graphics, mc, peekX, by, PEEK_W,
+                ZooTranslations.get("zootycoon.ui.staff.manage.btn_peek"),
+                true, false, mouseX, mouseY, top, bottom);
         drawButton(graphics, mc, fireX, by, FIRE_W,
                 ZooTranslations.get(confirming ? "zootycoon.ui.staff.manage.btn_confirm" : "zootycoon.ui.staff.manage.btn_fire"),
                 true, true, mouseX, mouseY, top, bottom);
@@ -171,7 +176,8 @@ public class SecurityManageTab {
         for (var s : securityList) {
             int by = y + (ROW_H - BTN_H) / 2;
             int fireX = px + pw - FIRE_W - 8;
-            int callX = fireX - CALL_W - 6;
+            int peekX = fireX - PEEK_W - 4;
+            int callX = peekX - CALL_W - 4;
             if (mouseY >= by && mouseY <= by + BTN_H) {
                 if (mouseX >= callX && mouseX <= callX + CALL_W) {
                     boolean isCalling = s.isCalling() || pendingCalledSecurity.contains(s.uuid());
@@ -179,6 +185,10 @@ public class SecurityManageTab {
                         pendingCalledSecurity.add(s.uuid());
                         ClientPlayNetworking.send(new ZooNetworkPayloads.ManageStaffGenericPayload("security", s.uuid(), 0));
                     }
+                    return true;
+                }
+                if (mouseX >= peekX && mouseX <= peekX + PEEK_W) {
+                    net.zootycoon.client.camera.StaffPeekCameraManager.startRequest("security", s.uuid());
                     return true;
                 }
                 if (mouseX >= fireX && mouseX <= fireX + FIRE_W) {

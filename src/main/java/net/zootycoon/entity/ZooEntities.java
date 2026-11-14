@@ -22,6 +22,7 @@ public class ZooEntities {
             EntityType.Builder.of(ZooBuilderEntity::new, MobCategory.MISC)
                     .sized(0.6f, 1.8f)
                     .eyeHeight(1.62f)
+                    .clientTrackingRange(12)
                     .vehicleAttachment(Player.DEFAULT_VEHICLE_ATTACHMENT)
                     .build("zootycoon:builder")
     );
@@ -37,6 +38,7 @@ public class ZooEntities {
             EntityType.Builder.of(ZooZookeeperEntity::new, MobCategory.MISC)
                     .sized(0.6f, 1.8f)
                     .eyeHeight(1.62f)
+                    .clientTrackingRange(12)
                     .vehicleAttachment(Player.DEFAULT_VEHICLE_ATTACHMENT)
                     .build("zootycoon:zookeeper")
     );
@@ -52,6 +54,7 @@ public class ZooEntities {
             EntityType.Builder.of(ZooSecurityEntity::new, MobCategory.MISC)
                     .sized(0.6f, 1.8f)
                     .eyeHeight(1.62f)
+                    .clientTrackingRange(12)
                     .vehicleAttachment(Player.DEFAULT_VEHICLE_ATTACHMENT)
                     .build("zootycoon:security")
     );
@@ -97,6 +100,7 @@ public class ZooEntities {
             EntityType.Builder.of(ZooCashierEntity::new, MobCategory.MISC)
                     .sized(0.6f, 1.8f)
                     .eyeHeight(1.62f)
+                    .clientTrackingRange(12)
                     .vehicleAttachment(Player.DEFAULT_VEHICLE_ATTACHMENT)
                     .build("zootycoon:cashier")
     );

@@ -524,6 +524,12 @@ public class ZooTycoonClient implements ClientModInitializer {
             context.client().execute(() -> net.zootycoon.client.ui.AnimalCollectionModal.BIOME_CACHE.put(payload.speciesKey(), payload.biomes()));
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.SyncPeekStaffPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> net.zootycoon.client.camera.StaffPeekCameraManager.onServerSync(
+                    payload.active(), payload.entityId(), payload.x(), payload.y(), payload.z(), payload.staffName()
+            ));
+        });
+
         ClientPlayNetworking.registerGlobalReceiver(ZooNetworkPayloads.OpenInspectorDialogPayload.TYPE, (payload, context) -> {
             context.client().execute(() -> {
                 Minecraft.getInstance().setScreen(new net.zootycoon.client.ui.InspectorDialogScreen(
@@ -569,6 +575,7 @@ public class ZooTycoonClient implements ClientModInitializer {
             net.zootycoon.client.inspect.InspectionClientCache.clear();
             net.zootycoon.client.ui.EmptyBarrelChestOverlay.reset();
             net.zootycoon.client.render.EmptyBarrelHologramRenderer.reset();
+            net.zootycoon.client.camera.StaffPeekCameraManager.stopLocal();
         });
 
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
@@ -585,6 +592,7 @@ public class ZooTycoonClient implements ClientModInitializer {
             net.zootycoon.client.inspect.InspectionClientCache.clear();
             net.zootycoon.client.ui.EmptyBarrelChestOverlay.reset();
             net.zootycoon.client.render.EmptyBarrelHologramRenderer.reset();
+            net.zootycoon.client.camera.StaffPeekCameraManager.stopLocal();
             ClientPlayNetworking.send(new ZooNetworkPayloads.RequestLicenseSyncPayload());
         });
 
@@ -746,6 +754,8 @@ public class ZooTycoonClient implements ClientModInitializer {
                     }
                 }
             }
+
+            net.zootycoon.client.camera.StaffPeekCameraManager.tick(client);
 
             // Client-side Spyglass & Field Guide long-range animal registration
             if (client.player != null && client.level != null) {
