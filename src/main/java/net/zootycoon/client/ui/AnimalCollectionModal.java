@@ -29,6 +29,12 @@ public class AnimalCollectionModal {
     public static final Map<String, List<String>> BIOME_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
     private static final java.util.Set<String> REQUESTED_BIOMES = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private static final ItemStack EMERALD_ICON = new ItemStack(Items.EMERALD);
+    private static final net.minecraft.resources.ResourceLocation STAR_FILLED =
+            net.zootycoon.ZooTycoonMod.id("textures/gui/icons/star_filled.png");
+    private static final net.minecraft.resources.ResourceLocation STAR_HALF =
+            net.zootycoon.ZooTycoonMod.id("textures/gui/icons/star_half.png");
+    private static final net.minecraft.resources.ResourceLocation STAR_EMPTY =
+            net.zootycoon.ZooTycoonMod.id("textures/gui/icons/star_empty.png");
 
     private final MainManagementScreen parent;
     private final Map<String, LivingEntity> dummyEntityCache = new HashMap<>();
@@ -156,6 +162,24 @@ public class AnimalCollectionModal {
 
             String tierHeader = tier.getDisplayName();
             graphics.drawString(font, tierHeader, gridX + 8, curY + 5, tierUnlocked ? 0xFFF1F5F9 : 0xFF94A3B8, false);
+
+            double reqStars = tier.getRequiredStars();
+            int starStartX = gridX + 8 + font.width(tierHeader) + 6;
+            int starY = curY + 5;
+            for (int si = 0; si < 5; si++) {
+                int sx = starStartX + si * 9;
+                net.minecraft.resources.ResourceLocation starTex;
+                if (reqStars >= si + 0.75D) {
+                    starTex = STAR_FILLED;
+                } else if (reqStars >= si + 0.25D) {
+                    starTex = STAR_HALF;
+                } else {
+                    starTex = STAR_EMPTY;
+                }
+                graphics.blit(starTex, sx, starY, 8, 8, 0.0f, 0.0f, 16, 16, 16, 16);
+            }
+            String ratingStr = String.format(java.util.Locale.ROOT, "%.1f", reqStars);
+            graphics.drawString(font, ratingStr, starStartX + 5 * 9 + 3, curY + 5, 0xFFF1C40F, false);
 
             String tierBadgeKey = !tierUnlocked ? "zootycoon.license.state.locked"
                     : (tierData.licenseClaimed ? "zootycoon.license.state.certified" : "zootycoon.license.state.unverified");
