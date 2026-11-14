@@ -39,6 +39,8 @@ public class ConstructionSite {
     private int builderSkinVariant = -1;
     private final int totalBlocks;
     private int placedBlocksCount = 0;
+    private final int initialBoneMealBudget;
+    private int consumedBoneMealCount = 0;
     private boolean completed = false;
     private int cooldown = 0;
     private net.minecraft.world.level.block.Rotation rotation = net.minecraft.world.level.block.Rotation.NONE;
@@ -60,6 +62,7 @@ public class ConstructionSite {
         this.dimension = dimension;
         this.schematic = schematic;
         this.initialRequiredMaterials.putAll(required);
+        this.initialBoneMealBudget = required.getOrDefault(Items.BONE_MEAL, 0);
         this.pendingBlocks.addAll(blocks);
         this.totalBlocks = blocks.size();
 
@@ -410,6 +413,16 @@ public class ConstructionSite {
                 remaining.put(item, remaining.getOrDefault(item, 0) + 1);
             }
         }
+        if (remaining.containsKey(Items.BONE_MEAL)) {
+            int rawRemainingBoneMeal = remaining.get(Items.BONE_MEAL);
+            int remainingCappedBudget = Math.max(0, initialBoneMealBudget - consumedBoneMealCount);
+            int effectiveNeeded = Math.min(rawRemainingBoneMeal, remainingCappedBudget);
+            if (effectiveNeeded > 0) {
+                remaining.put(Items.BONE_MEAL, effectiveNeeded);
+            } else {
+                remaining.remove(Items.BONE_MEAL);
+            }
+        }
         return remaining;
     }
 
@@ -483,15 +496,24 @@ public class ConstructionSite {
     public synchronized boolean hasAvailableItemFor(StructureTemplate.StructureBlockInfo blockInfo) {
         Item item = net.zootycoon.schematic.SchematicScanner.getRequiredItemForState(blockInfo.state());
         if (item == Items.AIR) return true;
+        if (item == Items.BONE_MEAL && consumedBoneMealCount >= initialBoneMealBudget) {
+            return true;
+        }
         return deliveredMaterials.getOrDefault(item, 0) > 0;
     }
 
     public synchronized boolean consumeItemFor(StructureTemplate.StructureBlockInfo blockInfo) {
         Item item = net.zootycoon.schematic.SchematicScanner.getRequiredItemForState(blockInfo.state());
         if (item == Items.AIR) return true;
+        if (item == Items.BONE_MEAL && consumedBoneMealCount >= initialBoneMealBudget) {
+            return true;
+        }
         int count = deliveredMaterials.getOrDefault(item, 0);
         if (count > 0) {
             deliveredMaterials.put(item, count - 1);
+            if (item == Items.BONE_MEAL) {
+                consumedBoneMealCount++;
+            }
             return true;
         }
         return false;
@@ -580,6 +602,7 @@ public class ConstructionSite {
             tag.putInt("BuilderSkinVariant", builderSkinVariant);
         }
         tag.putInt("PlacedBlocksCount", placedBlocksCount);
+        tag.putInt("ConsumedBoneMealCount", consumedBoneMealCount);
         tag.putBoolean("Completed", completed);
         tag.putInt("Cooldown", cooldown);
         tag.putInt("BreakProgress", breakProgress);
@@ -657,6 +680,7 @@ public class ConstructionSite {
             }
             site.setCooldown(tag.getInt("Cooldown"));
             site.breakProgress = tag.getInt("BreakProgress");
+            site.consumedBoneMealCount = tag.getInt("ConsumedBoneMealCount");
             site.completed = tag.getBoolean("Completed");
 
             site.needsShovel = tag.getBoolean("NeedsShovel");

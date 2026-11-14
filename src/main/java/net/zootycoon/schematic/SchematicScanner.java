@@ -95,6 +95,7 @@ public class SchematicScanner {
         }
 
         List<StructureTemplate.StructureBlockInfo> rawList = getRawTemplateBlocks(template);
+        long signature = 1469598103934665603L;
         for (StructureTemplate.StructureBlockInfo raw : rawList) {
             BlockState state = raw.state();
             if (state.isAir() || state.is(Blocks.BEDROCK) || state.is(Blocks.BARRIER)) {
@@ -110,6 +111,15 @@ public class SchematicScanner {
             if (item != Items.AIR) {
                 materialCounts.put(item, materialCounts.getOrDefault(item, 0) + 1);
             }
+            signature ^= raw.pos().asLong();
+            signature *= 1099511628211L;
+            signature ^= Block.getId(state);
+            signature *= 1099511628211L;
+        }
+
+        int rawBoneMeal = materialCounts.getOrDefault(Items.BONE_MEAL, 0);
+        if (rawBoneMeal >= 200) {
+            materialCounts.put(Items.BONE_MEAL, capBoneMealRequirement(rawBoneMeal, signature));
         }
 
         // Sort bottom-up: lowest Y first, then X and Z
@@ -236,6 +246,33 @@ public class SchematicScanner {
         if (state.is(Blocks.SHORT_GRASS) || state.is(Blocks.TALL_GRASS)) return true;
         if (state.is(Blocks.FERN) || state.is(Blocks.LARGE_FERN)) return true;
         return isFlowerNeed(state);
+    }
+
+    private static final List<Integer> CAPPED_BONE_MEAL_POOL = buildCappedBoneMealPool();
+
+    private static List<Integer> buildCappedBoneMealPool() {
+        List<Integer> pool = new ArrayList<>();
+        for (int n = 101; n <= 199; n++) {
+            if (n % 5 != 0) {
+                pool.add(n);
+            }
+        }
+        return List.copyOf(pool);
+    }
+
+    /**
+     * Caps large Bone Meal requirements (>= 200) to a non-round value in [101, 199] (never ending in 0 or 5).
+     */
+    public static int capBoneMealRequirement(int rawCount, long signature) {
+        if (rawCount < 200) {
+            return rawCount;
+        }
+        long mixed = signature ^ (rawCount * 0x9E3779B97F4A7C15L);
+        mixed ^= (mixed >>> 33);
+        mixed *= 0xff51afd7ed558ccdL;
+        mixed ^= (mixed >>> 33);
+        int idx = Math.floorMod((int) mixed, CAPPED_BONE_MEAL_POOL.size());
+        return CAPPED_BONE_MEAL_POOL.get(idx);
     }
 
     public static Item getRequiredItemForState(BlockState state) {
