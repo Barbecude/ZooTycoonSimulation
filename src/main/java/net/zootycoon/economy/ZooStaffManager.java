@@ -459,11 +459,6 @@ public class ZooStaffManager {
     }
 
     public void processDailyWages(ServerLevel level) {
-        long dayTime = level.getDayTime() % 24000L;
-        if (dayTime < 1000L || dayTime > 1050L) {
-            return;
-        }
-
         long currentDay = level.getDayTime() / 24000L;
         MinecraftServer srv = level.getServer();
         syncLoadedStaffWageRecords(srv);
@@ -471,11 +466,23 @@ public class ZooStaffManager {
         for (var entry : staffMap.entrySet()) {
             UUID playerUuid = entry.getKey();
             Long lastDay = lastSalaryDayMap.get(playerUuid);
-            if (lastDay != null && lastDay == currentDay) {
+            if (lastDay == null) {
+                lastSalaryDayMap.put(playerUuid, currentDay);
+                saveToFile();
+                continue;
+            }
+            if (currentDay < lastDay) {
+                lastSalaryDayMap.put(playerUuid, currentDay);
+                saveToFile();
+                continue;
+            }
+            long daysElapsed = currentDay - lastDay;
+            if (daysElapsed <= 0L) {
                 continue;
             }
             lastSalaryDayMap.put(playerUuid, currentDay);
 
+            int addDays = (int) Math.min(daysElapsed, 365L);
             int pendingDailyTotal = 0;
             int newlyStruck = 0;
             int newlyTier2 = 0;
@@ -489,18 +496,19 @@ public class ZooStaffManager {
                 int wage = w.dailyWage > 0 ? w.dailyWage : getDefaultDailyWageForType(w.staffType);
                 if (wage <= 0) continue;
 
+                int prevMissed = w.missedDays;
                 w.dailyWage = wage;
-                w.missedDays += 1;
-                w.owedAmount += wage;
-                pendingDailyTotal += wage;
+                w.missedDays += addDays;
+                w.owedAmount += wage * addDays;
+                pendingDailyTotal += wage * addDays;
 
                 if (w.missedDays >= 5) {
                     handleStaffResignation(srv, playerUuid, w);
                     newlyResignedNames.add((w.staffName != null && !w.staffName.isBlank()) ? w.staffName : getRoleDisplayLabel(w.staffType));
-                } else if (w.missedDays == 3) {
+                } else if (prevMissed < 3 && w.missedDays >= 3) {
                     newlyStruck++;
                     newlyStruckLabels.add(getRoleDisplayLabel(w.staffType) + ": " + w.staffName);
-                } else if (w.missedDays == 2) {
+                } else if (prevMissed < 2 && w.missedDays == 2) {
                     newlyTier2++;
                 }
             }

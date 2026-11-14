@@ -4,6 +4,8 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.zootycoon.network.ZooNetworkPayloads;
 import net.zootycoon.util.ZooTranslations;
 
@@ -15,6 +17,7 @@ public class StaffWageDropdownHelper {
     private static final int BTN_H = 18;
     private static final int MENU_W = 196;
     private static final int MENU_H = 74;
+    private static final ItemStack EMERALD_ICON = new ItemStack(Items.EMERALD);
 
     private UUID openStaffUuid = null;
     private int anchorX;
@@ -81,11 +84,15 @@ public class StaffWageDropdownHelper {
         graphics.fill(x + BADGE_W - 1, y, x + BADGE_W, y + BTN_H, border);
 
         String label = owedAmount > 0
-                ? missedDays + "x " + owedAmount + " Em"
-                : ZooTranslations.get("zootycoon.ui.staff.wage.badge_paid");
-        String display = trimToFit(mc, label, BADGE_W - 6);
+                ? missedDays + "x " + owedAmount
+                : "0";
+        String display = trimToFit(mc, label, BADGE_W - 24);
+        int textW = mc.font.width(display);
+        int totalW = textW + 2 + 16;
+        int startX = x + Math.max(4, (BADGE_W - totalW) / 2);
         graphics.drawString(mc.font, Component.literal(display),
-                x + (BADGE_W - mc.font.width(display)) / 2, y + (BTN_H - 8) / 2, textCol, false);
+                startX, y + (BTN_H - 8) / 2, textCol, false);
+        graphics.renderFakeItem(EMERALD_ICON, startX + textW + 2, y + (BTN_H - 16) / 2);
     }
 
     public boolean toggleIfClicked(

@@ -26,13 +26,6 @@ public class StaffRecruitmentTab {
     public static final ItemStack VANILLA_EMERALD_ITEM = new ItemStack(Items.EMERALD);
     public static final ResourceLocation EXCLAMATION_ICON = ZooTycoonMod.id("textures/gui/icons/exclamation_point.png");
 
-    private boolean isDropdownOpen = false;
-    private ZooButton dropdownBtn;
-    private int dropdownX;
-    private int dropdownY;
-    private int dropdownW;
-    private int dropdownH;
-
     public StaffRecruitmentTab(MainManagementScreen parent) {
         this.parent = parent;
     }
@@ -40,27 +33,8 @@ public class StaffRecruitmentTab {
     public void init(MainManagementScreen screen) {
         ClientPlayNetworking.send(new ZooNetworkPayloads.RequestStaffSyncPayload());
         ClientPlayNetworking.send(new ZooNetworkPayloads.RequestAnimalSyncPayload());
-        this.isDropdownOpen = false;
 
-        // 1. Dropdown Button at top right
-        int emeralds = Minecraft.getInstance().player != null ? TransactionHelper.countEmeralds(Minecraft.getInstance().player) : 0;
-        String balanceStr = String.valueOf(emeralds);
-        int textW = screen.getFont().width(balanceStr);
-        int pillW = 22 + textW + 10;
-        int pillX = screen.width - pillW - 25;
-
-        this.dropdownW = 118;
-        this.dropdownH = 22;
-        this.dropdownX = pillX - dropdownW - 8;
-        this.dropdownY = 14;
-
-        this.dropdownBtn = new ZooButton(dropdownX, dropdownY, dropdownW, dropdownH,
-                ZooTranslations.component("zootycoon.ui.staff.btn_recruit_dropdown"), b -> {
-            isDropdownOpen = !isDropdownOpen;
-        }).asEmerald();
-        screen.addWidgetPublic(this.dropdownBtn);
-
-        // 2. 4 Staff Management Cards
+        // 1. 4 Staff Management Cards
         int totalWidth = Math.min(screen.width - 30, 840);
         int cardGap = 10;
         int cardWidth = (totalWidth - (cardGap * 3)) / 4;
@@ -132,31 +106,6 @@ public class StaffRecruitmentTab {
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (isDropdownOpen && button == 0) {
-            int itemH = 26;
-            int menuW = 156;
-            int menuH = 4 * itemH + 8;
-            int menuX = dropdownX;
-            int menuY = dropdownY + dropdownH + 4;
-
-            if (mouseX >= menuX && mouseX <= menuX + menuW && mouseY >= menuY && mouseY <= menuY + menuH) {
-                String[] roles = {"builder", "zookeeper", "security", "cashier"};
-                int clickedIdx = (int) ((mouseY - (menuY + 4)) / itemH);
-                if (clickedIdx >= 0 && clickedIdx < roles.length) {
-                    Minecraft mc = Minecraft.getInstance();
-                    mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
-                    ClientPlayNetworking.send(new ZooNetworkPayloads.HireStaffPayload(roles[clickedIdx]));
-                    isDropdownOpen = false;
-                    return true;
-                }
-            } else if (dropdownBtn != null && dropdownBtn.isMouseOver(mouseX, mouseY)) {
-                return false;
-            } else {
-                // Consume the closing click so it does not reach widgets under the menu
-                isDropdownOpen = false;
-                return true;
-            }
-        }
         return false;
     }
 
@@ -233,54 +182,6 @@ public class StaffRecruitmentTab {
 
     // Called by MainManagementScreen after widgets are drawn
     public void renderOverlay(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        if (isDropdownOpen) {
-            graphics.pose().pushPose();
-            graphics.pose().translate(0, 0, 400);
-            renderDropdownMenu(graphics, Minecraft.getInstance(), mouseX, mouseY);
-            graphics.pose().popPose();
-        }
-    }
-
-    private void renderDropdownMenu(GuiGraphics graphics, Minecraft mc, int mouseX, int mouseY) {
-        int itemH = 26;
-        int menuW = 156;
-        int menuH = 4 * itemH + 8;
-        int menuX = dropdownX;
-        int menuY = dropdownY + dropdownH + 4;
-
-        graphics.fill(menuX, menuY, menuX + menuW, menuY + menuH, 0xF80F1219);
-        graphics.fill(menuX, menuY, menuX + menuW, menuY + 1, 0xFF3A4456);
-        graphics.fill(menuX, menuY + menuH - 1, menuX + menuW, menuY + menuH, 0xFF3A4456);
-        graphics.fill(menuX, menuY, menuX + 1, menuY + menuH, 0xFF3A4456);
-        graphics.fill(menuX + menuW - 1, menuY, menuX + menuW, menuY + menuH, 0xFF3A4456);
-
-        String[] roles = {"builder", "zookeeper", "security", "cashier"};
-        String[] titles = {
-                ZooTranslations.get("zootycoon.ui.staff.builder.title"),
-                ZooTranslations.get("zootycoon.ui.staff.zookeeper.title"),
-                ZooTranslations.get("zootycoon.ui.staff.security.title"),
-                ZooTranslations.get("zootycoon.ui.staff.cashier.title")
-        };
-
-        for (int i = 0; i < roles.length; i++) {
-            int iy = menuY + 4 + i * itemH;
-            boolean hovered = mouseX >= menuX && mouseX <= menuX + menuW && mouseY >= iy && mouseY < iy + itemH;
-            if (hovered) {
-                graphics.fill(menuX + 2, iy, menuX + menuW - 2, iy + itemH, 0xFF242C3D);
-            }
-
-            // Staff title
-            graphics.drawString(mc.font, Component.literal(titles[i]), menuX + 8, iy + (itemH - 8) / 2, hovered ? 0xFFFFFFFF : 0xFFE6EDF3, false);
-
-            // Emerald icon + Cost
-            int cost = net.zootycoon.economy.ZooEconomyEngine.getStaffHiringCost(roles[i]);
-            String costStr = String.valueOf(cost);
-            int costW = mc.font.width(costStr);
-            int costX = menuX + menuW - 8 - costW;
-            int iconX = costX - 18;
-            graphics.renderItem(VANILLA_EMERALD_ITEM, iconX, iy + (itemH - 16) / 2);
-            graphics.drawString(mc.font, Component.literal(costStr), costX, iy + (itemH - 8) / 2, 0xFF55FF55, true);
-        }
     }
 
     private static List<String> getStrikingNames(String staffType) {
@@ -349,7 +250,7 @@ public class StaffRecruitmentTab {
             int exX = x + width - 18;
             int exY = y + 6;
             graphics.blit(EXCLAMATION_ICON, exX, exY, 12, 12, 0, 0, 64, 64, 64, 64);
-            if (!isDropdownOpen && mouseX >= exX - 2 && mouseX <= exX + 14 && mouseY >= exY - 2 && mouseY <= exY + 14) {
+            if (mouseX >= exX - 2 && mouseX <= exX + 14 && mouseY >= exY - 2 && mouseY <= exY + 14) {
                 graphics.renderTooltip(mc.font,
                         Component.literal(ZooTranslations.get("zootycoon.ui.staff.strike_tooltip", String.join(", ", strikingNames)))
                                 .withStyle(ChatFormatting.RED),

@@ -104,15 +104,6 @@ public class InspectionLetterItem extends Item {
         if (cd != null) {
             CompoundTag tag = cd.copyTag();
             if (tag.getBoolean("CustomLetter")) {
-                String title = tag.getString("LetterTitle");
-                if (!title.isEmpty()) {
-                    tooltip.add(Component.literal(title).withStyle(ChatFormatting.GOLD));
-                }
-                boolean locked = tag.getBoolean("CustomLocked");
-                tooltip.add(Component.translatable(locked
-                                ? "zootycoon.custom_letter.tooltip.locked"
-                                : "zootycoon.custom_letter.tooltip.editable")
-                        .withStyle(locked ? ChatFormatting.GRAY : ChatFormatting.AQUA));
                 super.appendHoverText(stack, context, tooltip, flag);
                 return;
             }
