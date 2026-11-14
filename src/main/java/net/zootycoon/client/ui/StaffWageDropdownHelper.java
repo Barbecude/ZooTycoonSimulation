@@ -2,14 +2,17 @@ package net.zootycoon.client.ui;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.zootycoon.network.ZooNetworkPayloads;
 import net.zootycoon.util.ZooTranslations;
 
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /** Shared UI helper for individual staff salary indicator buttons and floating z-index per-day payment dropdown. */
 public class StaffWageDropdownHelper {
@@ -20,6 +23,56 @@ public class StaffWageDropdownHelper {
     private static final int DAY_ROW_H = 21;
     private static final int MAX_VISIBLE_ROWS = 5;
     private static final ItemStack EMERALD_ICON = new ItemStack(Items.EMERALD);
+    public static final String EMERALD_TOKEN = "[E]";
+    private static final Pattern NUMBER_EMERALD_PATTERN = Pattern.compile("(?i)(?<=\\d)\\s*(?:Emeralds?|Em)\\b");
+    private static final Pattern TAG_EMERALD_PATTERN = Pattern.compile("(?i)\\[(?:icon\\s+)?emerald\\]");
+
+    public static String normalizeEmeraldTokens(String text) {
+        if (text == null || text.isEmpty()) return "";
+        String s = NUMBER_EMERALD_PATTERN.matcher(text).replaceAll(" " + EMERALD_TOKEN);
+        return TAG_EMERALD_PATTERN.matcher(s).replaceAll(EMERALD_TOKEN);
+    }
+
+    public static String charSequenceToString(FormattedCharSequence seq) {
+        StringBuilder sb = new StringBuilder();
+        seq.accept((idx, style, codePoint) -> {
+            sb.appendCodePoint(codePoint);
+            return true;
+        });
+        return sb.toString();
+    }
+
+    public static void drawTextWithEmeraldIcons(GuiGraphics graphics, Font font, String rawText, int x, int y, int color, boolean shadow) {
+        String text = normalizeEmeraldTokens(rawText);
+        if (!text.contains(EMERALD_TOKEN)) {
+            graphics.drawString(font, Component.literal(text), x, y, color, shadow);
+            return;
+        }
+        int curX = x;
+        int idx = 0;
+        while (idx < text.length()) {
+            int match = text.indexOf(EMERALD_TOKEN, idx);
+            if (match < 0) {
+                String tail = text.substring(idx);
+                if (!tail.isEmpty()) {
+                    graphics.drawString(font, Component.literal(tail), curX, y, color, shadow);
+                }
+                break;
+            }
+            if (match > idx) {
+                String seg = text.substring(idx, match);
+                graphics.drawString(font, Component.literal(seg), curX, y, color, shadow);
+                curX += font.width(seg);
+            }
+            graphics.pose().pushPose();
+            graphics.pose().translate(curX + 1.0F, y - 1.5F, 0.0F);
+            graphics.pose().scale(0.65F, 0.65F, 1.0F);
+            graphics.renderFakeItem(EMERALD_ICON, 0, 0);
+            graphics.pose().popPose();
+            curX += 12;
+            idx = match + EMERALD_TOKEN.length();
+        }
+    }
 
     private UUID openStaffUuid = null;
     private int anchorX;

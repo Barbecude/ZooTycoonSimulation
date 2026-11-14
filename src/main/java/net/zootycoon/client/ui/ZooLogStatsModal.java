@@ -178,7 +178,7 @@ public class ZooLogStatsModal {
             LocalDateTime localTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(log.timestamp()), ZoneId.systemDefault());
             String timeStr = localTime.format(DATE_FORMATTER);
 
-            var descLines = font.split(Component.literal(log.description()), textW);
+            var descLines = font.split(Component.literal(StaffWageDropdownHelper.normalizeEmeraldTokens(log.description())), textW);
             int cardH = 26 + descLines.size() * 10;
 
             if (curY + cardH >= listY && curY <= listY + listH) {
@@ -209,7 +209,7 @@ public class ZooLogStatsModal {
                 // Description lines
                 int dy = curY + 18;
                 for (var line : descLines) {
-                    graphics.drawString(font, line, listX + 8, dy, 0xFFC9D1D9, false);
+                    StaffWageDropdownHelper.drawTextWithEmeraldIcons(graphics, font, StaffWageDropdownHelper.charSequenceToString(line), listX + 8, dy, 0xFFC9D1D9, false);
                     dy += 10;
                 }
             }
@@ -251,7 +251,7 @@ public class ZooLogStatsModal {
 
         renderMetricBox(graphics, font, listX, curY, metricBoxW, metricBoxH, "Pengunjung Hari Ini", String.valueOf(stats.totalVisitorsToday()), "Orang Masuk", 0xFF58A6FF);
         renderMetricBox(graphics, font, listX + metricBoxW + 4, curY, metricBoxW, metricBoxH, "Tiket Terjual", String.valueOf(stats.ticketsSoldToday()), stats.freeVisitorsToday() > 0 ? ("+" + stats.freeVisitorsToday() + " Tiket Gratis") : "Tiket Loket", 0xFF98C379);
-        renderMetricBox(graphics, font, listX + (metricBoxW + 4) * 2, curY, metricBoxW, metricBoxH, "Pendapatan Tiket", "+" + stats.ticketRevenueToday(), "Emerald", 0xFFE5C07B);
+        renderMetricBox(graphics, font, listX + (metricBoxW + 4) * 2, curY, metricBoxW, metricBoxH, "Pendapatan Tiket", "+" + stats.ticketRevenueToday() + " [E]", "Hari Ini", 0xFFE5C07B);
 
         curY += metricBoxH + 10;
 
@@ -318,7 +318,7 @@ public class ZooLogStatsModal {
         graphics.renderOutline(x, y, w, h, 0xFF252D3C);
 
         graphics.drawString(font, Component.literal(title), x + 8, y + 6, 0xFF8B949E, false);
-        graphics.drawString(font, Component.literal(value), x + 8, y + 18, valColor, false);
+        StaffWageDropdownHelper.drawTextWithEmeraldIcons(graphics, font, value, x + 8, y + 18, valColor, false);
         graphics.drawString(font, Component.literal(sub), x + 8, y + 32, 0xFF6E7681, false);
     }
 

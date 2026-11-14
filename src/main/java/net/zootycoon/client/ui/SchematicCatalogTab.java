@@ -269,7 +269,7 @@ public class SchematicCatalogTab {
             var dim = selectedSchematic.getDimensions();
             graphics.drawString(mc.font, ZooTranslations.component("zootycoon.ui.catalog.dimensions", dim.getX(), dim.getY(), dim.getZ(), (dim.getX() * dim.getY() * dim.getZ())), detailX + 15, startY + 30, 0xFF8B949E, false);
 
-            graphics.drawString(mc.font, ZooTranslations.component("zootycoon.ui.catalog.builder_cost", selectedSchematic.getBuilderHiringCost()), detailX + 15, startY + 44, 0xFFD0D7DE, true);
+            StaffWageDropdownHelper.drawTextWithEmeraldIcons(graphics, mc.font, ZooTranslations.get("zootycoon.ui.catalog.builder_cost", selectedSchematic.getBuilderHiringCost()), detailX + 15, startY + 44, 0xFFD0D7DE, true);
 
             graphics.fill(detailX + 15, startY + 62, detailX + detailWidth - 15, startY + 63, 0xFF2A2E37);
 

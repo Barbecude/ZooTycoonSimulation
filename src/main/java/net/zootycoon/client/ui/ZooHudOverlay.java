@@ -147,7 +147,7 @@ public class ZooHudOverlay {
                 slideFactor = t * t * t;
             }
 
-            List<FormattedCharSequence> lines = font.split(Component.literal(toast.message), toastW - 22);
+            List<FormattedCharSequence> lines = font.split(Component.literal(StaffWageDropdownHelper.normalizeEmeraldTokens(toast.message)), toastW - 22);
             int toastH = 22 + (lines.size() * 10);
 
             int baseX = screenW - toastW - 12;
@@ -177,7 +177,7 @@ public class ZooHudOverlay {
             // Wrapped Message Lines
             int lineY = y + 18;
             for (FormattedCharSequence line : lines) {
-                graphics.drawString(font, line, x + 9, lineY, 0xFFC9D1D9, false);
+                StaffWageDropdownHelper.drawTextWithEmeraldIcons(graphics, font, StaffWageDropdownHelper.charSequenceToString(line), x + 9, lineY, 0xFFC9D1D9, false);
                 lineY += 10;
             }
 
@@ -357,7 +357,7 @@ public class ZooHudOverlay {
                     ? ZooTranslations.component("zootycoon.hud.claim.cost_free")
                     : ZooTranslations.component("zootycoon.hud.claim.cost_emerald", info.cost(), info.newBlocks());
             int costCol = (info.cost() == 0) ? 0xFF55FF55 : (info.canAfford() ? 0xFF00E5FF : 0xFFFF5555);
-            graphics.drawString(font, costComp, x + 8, y + 58, costCol, true);
+            StaffWageDropdownHelper.drawTextWithEmeraldIcons(graphics, font, costComp.getString(), x + 8, y + 58, costCol, true);
 
             if (info.conflictOther()) {
                 graphics.drawString(font, ZooTranslations.component("zootycoon.hud.claim.conflict"), x + 8, y + 70, 0xFFFF2222, true);

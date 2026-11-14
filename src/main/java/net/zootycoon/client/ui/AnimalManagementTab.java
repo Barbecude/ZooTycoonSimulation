@@ -338,7 +338,7 @@ public class AnimalManagementTab {
                 selectedData = null;
                 updateSelectedData(true);
             }
-        }).asEmerald();
+        }).setItemIcon(StaffRecruitmentTab.VANILLA_EMERALD_ITEM).setIconAfter(true).asEmerald();
         sellButton.visible = hasSell;
         screen.addWidgetPublic(sellButton);
 
@@ -459,7 +459,7 @@ public class AnimalManagementTab {
             if (sellButton != null && !renameModalOpen) {
                 if (selectedData.isOffspring()) {
                     int price = net.zootycoon.economy.ZooEconomyEngine.getAnimalSellPrice(selectedData.entityTypeId());
-                    sellButton.setMessage(Component.literal("Jual (" + price + " Emerald)"));
+                    sellButton.setMessage(Component.literal("Jual " + price));
                     sellButton.visible = true;
                 } else {
                     sellButton.visible = false;

@@ -138,7 +138,7 @@ public class ZookeeperManageTab {
             status = ZooTranslations.get("zootycoon.ui.staff.manage.idle");
             statusColor = 0xFF55FF55;
         }
-        graphics.drawString(mc.font, Component.literal(status), x + 10, y + 17, statusColor, false);
+        StaffWageDropdownHelper.drawTextWithEmeraldIcons(graphics, mc.font, status, x + 10, y + 17, statusColor, false);
 
         int by = y + (ROW_H - BTN_H) / 2;
         int fireX = x + w - FIRE_W - 8;

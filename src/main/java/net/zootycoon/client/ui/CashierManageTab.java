@@ -141,7 +141,7 @@ public class CashierManageTab {
             stockInfo = "Stok: -";
             stockColor = 0xFF8B949E;
         }
-        graphics.drawString(mc.font, Component.literal(stockInfo), x + 10, y + 17, stockColor, false);
+        StaffWageDropdownHelper.drawTextWithEmeraldIcons(graphics, mc.font, stockInfo, x + 10, y + 17, stockColor, false);
 
         int by = y + (ROW_H - BTN_H) / 2;
         int fireX = x + w - FIRE_W - 8;
