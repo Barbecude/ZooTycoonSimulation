@@ -78,4 +78,34 @@ public class F13_CommandStartPreserveStaffTest {
         assertEquals(2, staffRecords.get(playerA).builders);
         assertEquals(4, staffRecords.get(playerB).builders);
     }
+
+    @Test
+    @DisplayName("F13-6: Builder roster 1-builder-1-task assignment and release lifecycle")
+    void testBuilderRosterOneBuilderOneTaskLifecycle() {
+        ZooStaffManager.reset();
+        ZooStaffManager mgr = ZooStaffManager.get((net.minecraft.server.MinecraftServer) null);
+        UUID playerUuid = UUID.randomUUID();
+        ZooStaffManager.StaffRecord rec = mgr.getRecord(playerUuid);
+        rec.builders = 1;
+        mgr.reconcileBuilderRosterCount(rec);
+
+        assertEquals(1, rec.builderRoster.size());
+        String originalName = rec.builderRoster.get(0).name;
+        UUID originalRosterId = rec.builderRoster.get(0).uuid;
+
+        // Assign builder to site 1
+        ZooStaffManager.BuilderRosterEntry available1 = mgr.findAvailableBuilderRoster(playerUuid);
+        assertNotNull(available1);
+        assertEquals(originalName, available1.name);
+        UUID site1 = UUID.randomUUID();
+        available1.assignedSiteId = site1;
+
+        // Release after job completes -> same builder is available again with same name & UUID
+        mgr.releaseBuilderAfterJob(playerUuid, originalRosterId, site1);
+        ZooStaffManager.BuilderRosterEntry availableAfterRelease = mgr.findAvailableBuilderRoster(playerUuid);
+        assertNotNull(availableAfterRelease);
+        assertEquals(originalRosterId, availableAfterRelease.uuid);
+        assertEquals(originalName, availableAfterRelease.name);
+        assertNull(availableAfterRelease.assignedSiteId);
+    }
 }

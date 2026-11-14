@@ -27,11 +27,26 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ZooStaffManager {
+    public static class BuilderRosterEntry {
+        public UUID uuid;
+        public String name;
+        public int skinVariant;
+        public UUID assignedSiteId;
+
+        public BuilderRosterEntry(UUID uuid, String name, int skinVariant, UUID assignedSiteId) {
+            this.uuid = uuid != null ? uuid : UUID.randomUUID();
+            this.name = (name != null && !name.isEmpty()) ? name : "Budi Santoso";
+            this.skinVariant = Math.floorMod(skinVariant, 4);
+            this.assignedSiteId = assignedSiteId;
+        }
+    }
+
     public static class StaffRecord {
         public int builders = 0; 
         public int zookeepers = 0;
         public int security = 0;
         public int cashiers = 0;
+        public final List<BuilderRosterEntry> builderRoster = new ArrayList<>();
 
         public StaffRecord() {}
 
@@ -137,11 +152,28 @@ public class ZooStaffManager {
                     if (!uStr.isEmpty()) {
                         try {
                             UUID uuid = UUID.fromString(uStr);
-                            int b = tag.contains("builders") ? tag.getInt("builders") : 1;
+                            int b = tag.contains("builders") ? Math.max(0, tag.getInt("builders")) : 1;
                             int z = tag.getInt("zookeepers");
                             int s = tag.contains("security") ? tag.getInt("security") : (tag.contains("veterinarians") ? tag.getInt("veterinarians") : 0);
                             int c = tag.getInt("cashiers");
-                            staffMap.put(uuid, new StaffRecord(b, z, s, c));
+                            StaffRecord rec = new StaffRecord();
+                            rec.builders = b;
+                            rec.zookeepers = Math.max(0, z);
+                            rec.security = Math.max(0, s);
+                            rec.cashiers = Math.max(0, c);
+                            if (tag.contains("builder_roster", Tag.TAG_LIST)) {
+                                ListTag bList = tag.getList("builder_roster", Tag.TAG_COMPOUND);
+                                for (int j = 0; j < bList.size(); j++) {
+                                    CompoundTag bt = bList.getCompound(j);
+                                    UUID rId = bt.hasUUID("uuid") ? bt.getUUID("uuid") : UUID.randomUUID();
+                                    String rName = bt.getString("name");
+                                    int rSkin = bt.contains("skin") ? bt.getInt("skin") : j;
+                                    UUID sId = bt.hasUUID("site_id") ? bt.getUUID("site_id") : null;
+                                    rec.builderRoster.add(new BuilderRosterEntry(rId, rName, rSkin, sId));
+                                }
+                            }
+                            reconcileBuilderRosterCount(rec);
+                            staffMap.put(uuid, rec);
                         } catch (Exception ignored) {}
                     }
                 }
@@ -212,12 +244,26 @@ public class ZooStaffManager {
             CompoundTag root = new CompoundTag();
             ListTag list = new ListTag();
             for (var entry : staffMap.entrySet()) {
+                StaffRecord rec = entry.getValue();
+                reconcileBuilderRosterCount(rec);
                 CompoundTag tag = new CompoundTag();
                 tag.putString("player_uuid", entry.getKey().toString());
-                tag.putInt("builders", entry.getValue().builders);
-                tag.putInt("zookeepers", entry.getValue().zookeepers);
-                tag.putInt("security", entry.getValue().security);
-                tag.putInt("cashiers", entry.getValue().cashiers);
+                tag.putInt("builders", rec.builders);
+                tag.putInt("zookeepers", rec.zookeepers);
+                tag.putInt("security", rec.security);
+                tag.putInt("cashiers", rec.cashiers);
+                ListTag bList = new ListTag();
+                for (BuilderRosterEntry bre : rec.builderRoster) {
+                    CompoundTag bt = new CompoundTag();
+                    bt.putUUID("uuid", bre.uuid);
+                    bt.putString("name", bre.name != null ? bre.name : "");
+                    bt.putInt("skin", bre.skinVariant);
+                    if (bre.assignedSiteId != null) {
+                        bt.putUUID("site_id", bre.assignedSiteId);
+                    }
+                    bList.add(bt);
+                }
+                tag.put("builder_roster", bList);
                 list.add(tag);
             }
             root.put("staff_records", list);
@@ -784,7 +830,123 @@ public class ZooStaffManager {
     }
 
     public StaffRecord getRecord(UUID playerUuid) {
-        return staffMap.computeIfAbsent(playerUuid, u -> new StaffRecord());
+        StaffRecord rec = staffMap.computeIfAbsent(playerUuid, u -> new StaffRecord());
+        reconcileBuilderRosterCount(rec);
+        return rec;
+    }
+
+    public void reconcileBuilderRosterCount(StaffRecord rec) {
+        if (rec == null) return;
+        while (rec.builderRoster.size() < rec.builders) {
+            String chosenName = pickUniqueBuilderName(rec);
+            int skin = rec.builderRoster.size() % 4;
+            rec.builderRoster.add(new BuilderRosterEntry(UUID.randomUUID(), chosenName, skin, null));
+        }
+        while (rec.builderRoster.size() > Math.max(0, rec.builders)) {
+            int removeIdx = rec.builderRoster.size() - 1;
+            for (int i = rec.builderRoster.size() - 1; i >= 0; i--) {
+                if (rec.builderRoster.get(i).assignedSiteId == null) {
+                    removeIdx = i;
+                    break;
+                }
+            }
+            rec.builderRoster.remove(removeIdx);
+        }
+    }
+
+    private String pickUniqueBuilderName(StaffRecord rec) {
+        for (int i = 0; i < 24; i++) {
+            String candidate = net.zootycoon.entity.ZooBuilderEntity.pickBuilderNameByIndex(i);
+            boolean used = false;
+            for (BuilderRosterEntry bre : rec.builderRoster) {
+                if (candidate.equalsIgnoreCase(bre.name)) {
+                    used = true;
+                    break;
+                }
+            }
+            if (!used) return candidate;
+        }
+        return net.zootycoon.entity.ZooBuilderEntity.pickBuilderNameByIndex(rec.builderRoster.size());
+    }
+
+    public List<BuilderRosterEntry> getBuilderRoster(UUID playerUuid) {
+        StaffRecord rec = getRecord(playerUuid);
+        for (BuilderRosterEntry bre : rec.builderRoster) {
+            if (bre.assignedSiteId != null) {
+                var siteOpt = ConstructionManager.getSite(bre.assignedSiteId);
+                if (siteOpt.isEmpty() || siteOpt.get().isCompleted()) {
+                    if (!isBuilderAwaitingPaymentInWorld(playerUuid, bre.uuid, bre.assignedSiteId)) {
+                        bre.assignedSiteId = null;
+                    }
+                }
+            }
+        }
+        return rec.builderRoster;
+    }
+
+    public boolean isBuilderAwaitingPaymentInWorld(UUID ownerUuid, UUID rosterUuid, UUID siteId) {
+        if (server == null) return false;
+        for (ServerLevel lvl : server.getAllLevels()) {
+            for (net.minecraft.world.entity.Entity ent : lvl.getAllEntities()) {
+                if (ent instanceof net.zootycoon.entity.ZooBuilderEntity b && b.isAlive() && !b.isRemoved() && b.isAwaitingPayment()) {
+                    if (rosterUuid != null && rosterUuid.equals(b.getRosterUuid())) return true;
+                    if (siteId != null && siteId.equals(b.getSiteId())) return true;
+                    if (rosterUuid != null && rosterUuid.equals(b.getUUID())) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public net.zootycoon.entity.ZooBuilderEntity findLiveBuilderForRoster(UUID ownerUuid, BuilderRosterEntry bre) {
+        if (bre == null || server == null) return null;
+        for (ServerLevel lvl : server.getAllLevels()) {
+            for (net.minecraft.world.entity.Entity ent : lvl.getAllEntities()) {
+                if (ent instanceof net.zootycoon.entity.ZooBuilderEntity b && b.isAlive() && !b.isRemoved()) {
+                    if (bre.uuid.equals(b.getRosterUuid()) || bre.uuid.equals(b.getUUID())) {
+                        return b;
+                    }
+                    if (bre.assignedSiteId != null && bre.assignedSiteId.equals(b.getSiteId())) {
+                        return b;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    public BuilderRosterEntry findAvailableBuilderRoster(UUID playerUuid) {
+        List<BuilderRosterEntry> roster = getBuilderRoster(playerUuid);
+        for (BuilderRosterEntry bre : roster) {
+            if (bre.assignedSiteId != null) {
+                var siteOpt = ConstructionManager.getSite(bre.assignedSiteId);
+                if (siteOpt.isPresent() && !siteOpt.get().isCompleted()) {
+                    continue;
+                }
+            }
+            net.zootycoon.entity.ZooBuilderEntity live = findLiveBuilderForRoster(playerUuid, bre);
+            if (live != null && (live.hasActiveJob() || live.isAwaitingPayment())) {
+                continue;
+            }
+            return bre;
+        }
+        return null;
+    }
+
+    public void releaseBuilderAfterJob(UUID ownerUuid, UUID rosterUuid, UUID siteId) {
+        if (ownerUuid == null) return;
+        StaffRecord rec = getRecord(ownerUuid);
+        boolean changed = false;
+        for (BuilderRosterEntry bre : rec.builderRoster) {
+            if ((rosterUuid != null && rosterUuid.equals(bre.uuid))
+                    || (siteId != null && siteId.equals(bre.assignedSiteId))) {
+                bre.assignedSiteId = null;
+                changed = true;
+            }
+        }
+        if (changed) {
+            saveToFile();
+        }
     }
 
     public int getBuilderCount(UUID playerUuid) {
@@ -822,19 +984,17 @@ public class ZooStaffManager {
         switch (type.toLowerCase()) {
             case "builder", "kuli" -> {
                 rec.builders++;
-                var b = ZooEntities.BUILDER.create(sLevel);
-                if (b != null) {
-                    b.setPos(player.getX() + 0.5, player.getY(), player.getZ() + 0.5);
-                    b.setPayerUuid(player.getUUID());
-                    b.setPersistenceRequired();
-                    markNewlyHiredStaffResolved(player.getUUID(), b.getUUID());
-                    sLevel.addFreshEntity(b);
-                    sLevel.sendParticles(
-                            ParticleTypes.HAPPY_VILLAGER,
-                            b.getX(), b.getY() + 1.0, b.getZ(), 15, 0.4, 0.5, 0.4, 0.02
-                    );
-                    sLevel.playSound(null, b.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0f, 1.0f);
-                }
+                String chosenName = pickUniqueBuilderName(rec);
+                int skin = (rec.builderRoster.size()) % 4;
+                UUID rosterId = UUID.randomUUID();
+                BuilderRosterEntry bre = new BuilderRosterEntry(rosterId, chosenName, skin, null);
+                rec.builderRoster.add(bre);
+                markNewlyHiredStaffResolved(player.getUUID(), rosterId);
+                sLevel.sendParticles(
+                        ParticleTypes.HAPPY_VILLAGER,
+                        player.getX(), player.getY() + 1.0, player.getZ(), 15, 0.4, 0.5, 0.4, 0.02
+                );
+                sLevel.playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0f, 1.0f);
             }
             case "zookeeper" -> {
                 rec.zookeepers++;
@@ -939,14 +1099,51 @@ public class ZooStaffManager {
 
     public int callStaff(ServerPlayer player, String staffType, UUID staffUuid) {
         if (staffUuid == null || server == null) return 1;
+        if ("builder".equalsIgnoreCase(staffType)) {
+            StaffRecord rec = getRecord(player.getUUID());
+            BuilderRosterEntry matchedRoster = null;
+            for (BuilderRosterEntry bre : rec.builderRoster) {
+                if (staffUuid.equals(bre.uuid)) {
+                    matchedRoster = bre;
+                    break;
+                }
+            }
+            for (ServerLevel lvl : server.getAllLevels()) {
+                for (net.minecraft.world.entity.Entity ent : lvl.getAllEntities()) {
+                    if (ent instanceof net.zootycoon.entity.ZooBuilderEntity b && b.isAlive() && !b.isRemoved()) {
+                        if (staffUuid.equals(b.getUUID()) || staffUuid.equals(b.getRosterUuid())
+                                || (matchedRoster != null && matchedRoster.assignedSiteId != null && matchedRoster.assignedSiteId.equals(b.getSiteId()))) {
+                            if (b.hasActiveJob() && !b.isOnStrike()) return 2;
+                            b.callToPlayer(player);
+                            return 0;
+                        }
+                    }
+                }
+            }
+            if (matchedRoster != null) {
+                if (matchedRoster.assignedSiteId != null) {
+                    var sOpt = ConstructionManager.getSite(matchedRoster.assignedSiteId);
+                    if (sOpt.isPresent() && !sOpt.get().isCompleted()) {
+                        return 2;
+                    }
+                }
+                ServerLevel sLevel = (ServerLevel) player.level();
+                var b = ZooEntities.BUILDER.create(sLevel);
+                if (b != null) {
+                    b.setPos(player.getX() + 1.5, player.getY(), player.getZ() + 1.5);
+                    b.applyRosterIdentity(matchedRoster.uuid, matchedRoster.name, matchedRoster.skinVariant, player.getUUID());
+                    b.setPersistenceRequired();
+                    sLevel.addFreshEntity(b);
+                    b.callToPlayer(player);
+                    return 0;
+                }
+            }
+            return 1;
+        }
         for (ServerLevel lvl : server.getAllLevels()) {
             net.minecraft.world.entity.Entity ent = lvl.getEntity(staffUuid);
             if (ent != null && ent.isAlive()) {
-                if ("builder".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooBuilderEntity b) {
-                    if (b.hasActiveJob() && !b.isOnStrike()) return 2;
-                    b.callToPlayer(player);
-                    return 0;
-                } else if ("security".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooSecurityEntity sec) {
+                if ("security".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooSecurityEntity sec) {
                     sec.callToPlayer(player);
                     return 0;
                 } else if ("cashier".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooCashierEntity c) {
@@ -964,22 +1161,67 @@ public class ZooStaffManager {
 
     public int fireStaff(ServerPlayer player, String staffType, UUID staffUuid) {
         if (staffUuid == null || server == null) return 1;
+        if ("builder".equalsIgnoreCase(staffType)) {
+            StaffRecord rec = getRecord(player.getUUID());
+            BuilderRosterEntry matchedRoster = null;
+            for (BuilderRosterEntry bre : rec.builderRoster) {
+                if (staffUuid.equals(bre.uuid)) {
+                    matchedRoster = bre;
+                    break;
+                }
+            }
+            boolean foundAny = matchedRoster != null;
+            UUID siteToCancel = matchedRoster != null ? matchedRoster.assignedSiteId : null;
+            for (ServerLevel lvl : server.getAllLevels()) {
+                List<net.zootycoon.entity.ZooBuilderEntity> toDiscard = new ArrayList<>();
+                for (net.minecraft.world.entity.Entity ent : lvl.getAllEntities()) {
+                    if (ent instanceof net.zootycoon.entity.ZooBuilderEntity b && b.isAlive() && !b.isRemoved()) {
+                        boolean match = staffUuid.equals(b.getUUID())
+                                || staffUuid.equals(b.getRosterUuid())
+                                || (matchedRoster != null && matchedRoster.uuid.equals(b.getRosterUuid()))
+                                || (siteToCancel != null && siteToCancel.equals(b.getSiteId()));
+                        if (match) {
+                            foundAny = true;
+                            if (b.getSiteId() != null) {
+                                siteToCancel = b.getSiteId();
+                            }
+                            if (matchedRoster == null && b.getRosterUuid() != null) {
+                                for (BuilderRosterEntry bre : rec.builderRoster) {
+                                    if (b.getRosterUuid().equals(bre.uuid)) {
+                                        matchedRoster = bre;
+                                        break;
+                                    }
+                                }
+                            }
+                            toDiscard.add(b);
+                        }
+                    }
+                }
+                if (siteToCancel != null) {
+                    net.zootycoon.construction.ConstructionManager.cancelAndRemoveSite(lvl, siteToCancel);
+                }
+                for (var b : toDiscard) {
+                    b.setSiteId(null);
+                    b.discard();
+                }
+            }
+            if (!foundAny) return 1;
+            if (matchedRoster != null) {
+                rec.builderRoster.remove(matchedRoster);
+            } else if (!rec.builderRoster.isEmpty()) {
+                rec.builderRoster.remove(rec.builderRoster.size() - 1);
+            }
+            rec.builders = Math.max(0, rec.builderRoster.size());
+            saveToFile();
+            syncToPlayer(player);
+            ZooNetworkPayloads.sendAnimalSync(player);
+            return 0;
+        }
         for (ServerLevel lvl : server.getAllLevels()) {
             net.minecraft.world.entity.Entity ent = lvl.getEntity(staffUuid);
             if (ent != null && ent.isAlive()) {
                 StaffRecord rec = getRecord(player.getUUID());
-                if ("builder".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooBuilderEntity b) {
-                    if (b.getSiteId() != null) {
-                        net.zootycoon.construction.ConstructionManager.cancelAndRemoveSite(lvl, b.getSiteId());
-                        b.setSiteId(null);
-                    }
-                    b.discard();
-                    rec.builders = Math.max(0, rec.builders - 1);
-                    saveToFile();
-                    syncToPlayer(player);
-                    ZooNetworkPayloads.sendAnimalSync(player);
-                    return 0;
-                } else if ("security".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooSecurityEntity sec) {
+                if ("security".equalsIgnoreCase(staffType) && ent instanceof net.zootycoon.entity.ZooSecurityEntity sec) {
                     sec.discard();
                     rec.security = Math.max(0, rec.security - 1);
                     cleanupWageOnManualFire(staffUuid);
@@ -1048,6 +1290,7 @@ public class ZooStaffManager {
 
         StaffRecord rec = getRecord(playerUuid);
         rec.builders = 0;
+        rec.builderRoster.clear();
         rec.zookeepers = 0;
         rec.security = 0;
         rec.cashiers = 0;
@@ -1073,9 +1316,26 @@ public class ZooStaffManager {
         }
     }
 
+    public int getBusyBuilderCount(UUID playerUuid) {
+        int busy = 0;
+        for (BuilderRosterEntry bre : getBuilderRoster(playerUuid)) {
+            boolean workingSite = false;
+            if (bre.assignedSiteId != null) {
+                var siteOpt = ConstructionManager.getSite(bre.assignedSiteId);
+                workingSite = siteOpt.isPresent() && !siteOpt.get().isCompleted();
+            }
+            var live = findLiveBuilderForRoster(playerUuid, bre);
+            boolean busyLive = live != null && (live.hasActiveJob() || live.isAwaitingPayment());
+            if (workingSite || busyLive) {
+                busy++;
+            }
+        }
+        return busy;
+    }
+
     public void syncToPlayer(ServerPlayer player) {
         StaffRecord rec = getRecord(player.getUUID());
-        int activeBuilders = ConstructionManager.getActiveSitesForPlayer(player.getUUID()).size();
+        int activeBuilders = getBusyBuilderCount(player.getUUID());
         ServerPlayNetworking.send(player, new ZooNetworkPayloads.SyncStaffPayload(
                 rec.builders, activeBuilders, rec.zookeepers, rec.security, rec.cashiers
         ));
@@ -1139,6 +1399,19 @@ public class ZooStaffManager {
     private net.minecraft.world.entity.Entity findPeekableStaff(ServerPlayer player, String staffType, UUID staffUuid) {
         if (player == null || staffUuid == null || server == null) return null;
         UUID ownerUuid = player.getUUID();
+        if ("builder".equalsIgnoreCase(staffType)) {
+            for (ServerLevel lvl : server.getAllLevels()) {
+                if (lvl != player.level()) continue;
+                for (net.minecraft.world.entity.Entity ent : lvl.getAllEntities()) {
+                    if (ent instanceof net.zootycoon.entity.ZooBuilderEntity b && b.isAlive() && !b.isRemoved()) {
+                        if (staffUuid.equals(b.getUUID()) || staffUuid.equals(b.getRosterUuid())) {
+                            if (b.getOwnerUuid() == null || b.getOwnerUuid().equals(ownerUuid)) return b;
+                        }
+                    }
+                }
+            }
+            return null;
+        }
         for (ServerLevel lvl : server.getAllLevels()) {
             net.minecraft.world.entity.Entity ent = lvl.getEntity(staffUuid);
             if (ent == null || !ent.isAlive() || ent.isRemoved() || ent.level() != player.level()) continue;

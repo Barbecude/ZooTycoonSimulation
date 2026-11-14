@@ -3307,26 +3307,15 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                             isOwner = true;
                         }
                     }
-                    if (isOwner) {
-                        boolean isWorking = b.hasActiveJob();
-                        boolean isAwaitingPayment = b.isAwaitingPayment();
-                        String projectName = "";
-                        if (isAwaitingPayment) {
-                            projectName = b.getFinishedProjectName();
-                        } else if (isWorking) {
-                            var site = net.zootycoon.construction.ConstructionManager.getSite(b.getSiteId()).orElse(null);
-                            projectName = (site != null && site.getSchematic() != null) ? site.getSchematic().getName() : "";
+                    if (isOwner && b.getRosterUuid() == null) {
+                        var roster = staffMgr.getBuilderRoster(player.getUUID());
+                        for (var bre : roster) {
+                            if ((b.getSiteId() != null && b.getSiteId().equals(bre.assignedSiteId))
+                                    || b.getName().getString().equalsIgnoreCase(bre.name)) {
+                                b.setRosterUuid(bre.uuid);
+                                break;
+                            }
                         }
-                        builders.add(new BuilderSyncData(
-                                b.getUUID(),
-                                b.getName().getString(),
-                                b.getId(),
-                                isWorking,
-                                projectName,
-                                isAwaitingPayment,
-                                b.isBeingCalled(),
-                                b.isOnStrike()
-                        ));
                     }
                 }
 
@@ -3437,6 +3426,45 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                     ));
                 }
             }
+        }
+
+        for (var bre : staffMgr.getBuilderRoster(player.getUUID())) {
+            var live = staffMgr.findLiveBuilderForRoster(player.getUUID(), bre);
+            boolean isWorking = false;
+            boolean isAwaitingPayment = false;
+            String projectName = "";
+            int entId = -1;
+            boolean isCalling = false;
+            boolean isOnStrike = false;
+            if (live != null) {
+                entId = live.getId();
+                isWorking = live.hasActiveJob();
+                isAwaitingPayment = live.isAwaitingPayment();
+                isCalling = live.isBeingCalled();
+                isOnStrike = live.isOnStrike();
+                if (isAwaitingPayment) {
+                    projectName = live.getFinishedProjectName();
+                } else if (isWorking) {
+                    var site = net.zootycoon.construction.ConstructionManager.getSite(live.getSiteId()).orElse(null);
+                    projectName = (site != null && site.getSchematic() != null) ? site.getSchematic().getName() : "";
+                }
+            } else if (bre.assignedSiteId != null) {
+                var site = net.zootycoon.construction.ConstructionManager.getSite(bre.assignedSiteId).orElse(null);
+                if (site != null && !site.isCompleted()) {
+                    isWorking = true;
+                    projectName = site.getSchematic() != null ? site.getSchematic().getName() : "";
+                }
+            }
+            builders.add(new BuilderSyncData(
+                    bre.uuid,
+                    bre.name,
+                    entId,
+                    isWorking,
+                    projectName,
+                    isAwaitingPayment,
+                    isCalling,
+                    isOnStrike
+            ));
         }
 
         for (var r : staffMgr.getResignedWageRecords(player.getUUID(), "zookeeper")) {

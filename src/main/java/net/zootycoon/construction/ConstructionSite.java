@@ -34,6 +34,9 @@ public class ConstructionSite {
     private final List<StructureTemplate.StructureBlockInfo> pendingBlocks = new ArrayList<>();
     private final Set<BlockPos> tapePositions = new HashSet<>();
     private UUID builderUuid = null;
+    private UUID builderRosterUuid = null;
+    private String builderName = "";
+    private int builderSkinVariant = -1;
     private final int totalBlocks;
     private int placedBlocksCount = 0;
     private boolean completed = false;
@@ -362,6 +365,30 @@ public class ConstructionSite {
         this.builderUuid = id;
     }
 
+    public UUID getBuilderRosterUuid() {
+        return builderRosterUuid;
+    }
+
+    public void setBuilderRosterUuid(UUID id) {
+        this.builderRosterUuid = id;
+    }
+
+    public String getBuilderName() {
+        return builderName != null ? builderName : "";
+    }
+
+    public void setBuilderName(String name) {
+        this.builderName = name != null ? name : "";
+    }
+
+    public int getBuilderSkinVariant() {
+        return builderSkinVariant;
+    }
+
+    public void setBuilderSkinVariant(int variant) {
+        this.builderSkinVariant = variant;
+    }
+
     public float getProgressPercentage() {
         if (totalBlocks == 0) return 100.0f;
         return ((float) placedBlocksCount / totalBlocks) * 100.0f;
@@ -535,6 +562,15 @@ public class ConstructionSite {
         if (builderUuid != null) {
             tag.putUUID("BuilderUuid", builderUuid);
         }
+        if (builderRosterUuid != null) {
+            tag.putUUID("BuilderRosterUuid", builderRosterUuid);
+        }
+        if (builderName != null && !builderName.isEmpty()) {
+            tag.putString("BuilderName", builderName);
+        }
+        if (builderSkinVariant >= 0) {
+            tag.putInt("BuilderSkinVariant", builderSkinVariant);
+        }
         tag.putInt("PlacedBlocksCount", placedBlocksCount);
         tag.putBoolean("Completed", completed);
         tag.putInt("Cooldown", cooldown);
@@ -601,6 +637,15 @@ public class ConstructionSite {
             site.setRotation(rot);
             if (tag.hasUUID("BuilderUuid")) {
                 site.setBuilderUuid(tag.getUUID("BuilderUuid"));
+            }
+            if (tag.hasUUID("BuilderRosterUuid")) {
+                site.setBuilderRosterUuid(tag.getUUID("BuilderRosterUuid"));
+            }
+            if (tag.contains("BuilderName")) {
+                site.setBuilderName(tag.getString("BuilderName"));
+            }
+            if (tag.contains("BuilderSkinVariant")) {
+                site.setBuilderSkinVariant(tag.getInt("BuilderSkinVariant"));
             }
             site.setCooldown(tag.getInt("Cooldown"));
             site.breakProgress = tag.getInt("BreakProgress");

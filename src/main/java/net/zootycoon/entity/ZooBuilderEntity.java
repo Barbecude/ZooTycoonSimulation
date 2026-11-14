@@ -54,8 +54,17 @@ public class ZooBuilderEntity extends PathfinderMob {
     };
 
     private UUID siteId = null;
+    private UUID rosterUuid = null;
     private UUID callTargetUuid = null;
     private int callTicks = 0;
+
+    public static String pickRandomBuilderName(net.minecraft.util.RandomSource random) {
+        return INDONESIAN_NAMES[random.nextInt(INDONESIAN_NAMES.length)];
+    }
+
+    public static String pickBuilderNameByIndex(int idx) {
+        return INDONESIAN_NAMES[Math.floorMod(idx, INDONESIAN_NAMES.length)];
+    }
 
     // Post-construction wage payment state
     private boolean awaitingPayment = false;
@@ -144,22 +153,57 @@ public class ZooBuilderEntity extends PathfinderMob {
         }
     }
 
+    private boolean isSiteOwnedByAnotherAliveBuilder(ConstructionSite s) {
+        if (s == null || s.getBuilderUuid() == null || this.getUUID().equals(s.getBuilderUuid())) {
+            return false;
+        }
+        if (this.level() instanceof ServerLevel sl) {
+            var other = sl.getEntity(s.getBuilderUuid());
+            if (other instanceof ZooBuilderEntity ob && ob != this && ob.isAlive() && !ob.isRemoved()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private ConstructionSite resolveSite() {
         if (siteId != null) {
             var opt = ConstructionManager.getSite(siteId);
             if (opt.isPresent()) {
                 ConstructionSite s = opt.get();
+                if (isSiteOwnedByAnotherAliveBuilder(s)) {
+                    return null;
+                }
                 if (s.getBuilderUuid() == null || !this.getUUID().equals(s.getBuilderUuid())) {
                     s.setBuilderUuid(this.getUUID());
+                }
+                if (s.getBuilderRosterUuid() != null && this.rosterUuid == null) {
+                    this.rosterUuid = s.getBuilderRosterUuid();
+                }
+                if (s.getBuilderName() != null && !s.getBuilderName().isEmpty()) {
+                    if (this.getCustomName() == null || !s.getBuilderName().equals(this.getCustomName().getString())) {
+                        this.setCustomName(Component.literal(s.getBuilderName()));
+                        this.setCustomNameVisible(true);
+                    }
+                }
+                if (s.getBuilderSkinVariant() >= 0 && this.getSkinVariant() != s.getBuilderSkinVariant()) {
+                    this.setSkinVariant(s.getBuilderSkinVariant());
                 }
                 return s;
             }
         }
         for (var s : ConstructionManager.getActiveSites()) {
-            if (this.getUUID().equals(s.getBuilderUuid()) || (siteId != null && siteId.equals(s.getSiteId()))) {
+            if (this.getUUID().equals(s.getBuilderUuid()) || (siteId != null && siteId.equals(s.getSiteId()))
+                    || (rosterUuid != null && rosterUuid.equals(s.getBuilderRosterUuid()))) {
+                if (isSiteOwnedByAnotherAliveBuilder(s)) {
+                    continue;
+                }
                 this.siteId = s.getSiteId();
                 if (s.getBuilderUuid() == null || !this.getUUID().equals(s.getBuilderUuid())) {
                     s.setBuilderUuid(this.getUUID());
+                }
+                if (s.getBuilderRosterUuid() != null && this.rosterUuid == null) {
+                    this.rosterUuid = s.getBuilderRosterUuid();
                 }
                 return s;
             }
@@ -265,17 +309,26 @@ public class ZooBuilderEntity extends PathfinderMob {
         }
 
         // Kuli builder disappears from the world if there is no active project
-        if (this.tickCount % 20 == 0 && this.tickCount > 100) {
+        if (this.tickCount % 20 == 0 && !isBeingCalled()) {
             if (!ConstructionManager.isLoaded()) {
                 return;
             }
-            ConstructionSite site = resolveSite();
-            boolean hasActiveSite = site != null && !site.isCompleted();
-            if (!hasActiveSite) {
-                if (this.level() instanceof ServerLevel sl) {
-                    sl.sendParticles(ParticleTypes.POOF, this.getX(), this.getY() + 1.0, this.getZ(), 15, 0.3, 0.5, 0.3, 0.05);
+            if (this.siteId != null) {
+                var siteOpt = ConstructionManager.getSite(this.siteId);
+                if (siteOpt.isPresent() && isSiteOwnedByAnotherAliveBuilder(siteOpt.get())) {
+                    this.discard();
+                    return;
                 }
-                this.discard();
+            }
+            if (this.tickCount > 100) {
+                ConstructionSite site = resolveSite();
+                boolean hasActiveSite = site != null && !site.isCompleted();
+                if (!hasActiveSite) {
+                    if (this.level() instanceof ServerLevel sl) {
+                        sl.sendParticles(ParticleTypes.POOF, this.getX(), this.getY() + 1.0, this.getZ(), 15, 0.3, 0.5, 0.3, 0.05);
+                    }
+                    this.discard();
+                }
             }
         }
     }
@@ -306,6 +359,28 @@ public class ZooBuilderEntity extends PathfinderMob {
             this.addTag("zootycoon_builder");
         }
         updateNeedsIndicator();
+    }
+
+    public UUID getRosterUuid() {
+        return rosterUuid;
+    }
+
+    public void setRosterUuid(UUID rosterUuid) {
+        this.rosterUuid = rosterUuid;
+    }
+
+    public void applyRosterIdentity(UUID rosterUuid, String fixedName, int skinVariant, UUID ownerUuid) {
+        this.rosterUuid = rosterUuid;
+        if (fixedName != null && !fixedName.isEmpty()) {
+            this.setCustomName(Component.literal(fixedName));
+            this.setCustomNameVisible(true);
+        }
+        if (skinVariant >= 0) {
+            this.setSkinVariant(skinVariant);
+        }
+        if (ownerUuid != null) {
+            this.payerUuid = ownerUuid;
+        }
     }
 
     public UUID getPayerUuid() {
@@ -529,9 +604,13 @@ public class ZooBuilderEntity extends PathfinderMob {
             sl.playSound(null, this.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.PLAYERS, 1.0f, 1.0f);
             sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, this.getX(), this.getY() + 1.2, this.getZ(), 20, 0.4, 0.4, 0.4, 0.05);
 
+            UUID ownerId = this.payerUuid != null ? this.payerUuid : (player != null ? player.getUUID() : null);
+            net.zootycoon.economy.ZooStaffManager.get(sl).releaseBuilderAfterJob(ownerId, this.rosterUuid, this.siteId);
+
             if (player instanceof ServerPlayer sp) {
                 ZooNetworkPayloads.sendToast(sp, "zootycoon.toast.title.success", "zootycoon.builder.wage_paid_farewell", 1, builderName, this.wageDue);
                 net.zootycoon.economy.ZooStaffManager.get(sl).syncToPlayer(sp);
+                ZooNetworkPayloads.sendAnimalSync(sp);
             }
 
             this.setNeedsSomething(false);
@@ -545,6 +624,9 @@ public class ZooBuilderEntity extends PathfinderMob {
         super.addAdditionalSaveData(tag);
         if (siteId != null) {
             tag.putString("SiteId", siteId.toString());
+        }
+        if (rosterUuid != null) {
+            tag.putString("RosterUuid", rosterUuid.toString());
         }
         tag.putInt("SkinVariant", getSkinVariant());
         tag.putBoolean("AwaitingPayment", awaitingPayment);
@@ -566,6 +648,12 @@ public class ZooBuilderEntity extends PathfinderMob {
         if (!idStr.isEmpty()) {
             try {
                 this.siteId = UUID.fromString(idStr);
+            } catch (Exception ignored) {}
+        }
+        String rStr = tag.getString("RosterUuid");
+        if (!rStr.isEmpty()) {
+            try {
+                this.rosterUuid = UUID.fromString(rStr);
             } catch (Exception ignored) {}
         }
         setSkinVariant(tag.getInt("SkinVariant"));

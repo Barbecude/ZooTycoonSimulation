@@ -55,6 +55,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ConstructionManager {
     private static final Map<UUID, ConstructionSite> ACTIVE_SITES = new ConcurrentHashMap<>();
+    private static final Map<String, Integer> LEVEL_TICK_AGE = new ConcurrentHashMap<>();
     private static MinecraftServer currentServer = null;
     private static boolean isLoaded = false;
 
@@ -68,6 +69,7 @@ public class ConstructionManager {
 
     public static synchronized void reset() {
         ACTIVE_SITES.clear();
+        LEVEL_TICK_AGE.clear();
         currentServer = null;
         isLoaded = false;
     }
@@ -75,6 +77,7 @@ public class ConstructionManager {
     public static synchronized void loadFromFile(MinecraftServer server) {
         if (server == null) return;
         currentServer = server;
+        LEVEL_TICK_AGE.clear();
         Path path = getSavePath(server);
         if (!Files.exists(path)) {
             isLoaded = true;
@@ -212,10 +215,16 @@ public class ConstructionManager {
             return Optional.empty();
         }
 
-        // Survival Mode: Check 1 Builder per Building limit
-        int hiredBuilders = net.zootycoon.economy.ZooStaffManager.get(level).getBuilderCount(player.getUUID());
-        int activeSites = getActiveSitesForPlayer(player.getUUID()).size();
-        if (!player.isCreative() && activeSites >= hiredBuilders) {
+        // Check 1 Builder per Building limit & Roster Availability
+        var staffMgr = net.zootycoon.economy.ZooStaffManager.get(level);
+        int hiredBuilders = staffMgr.getBuilderCount(player.getUUID());
+        var availableRoster = staffMgr.findAvailableBuilderRoster(player.getUUID());
+        if (!player.isCreative()) {
+            if (hiredBuilders <= 0 || availableRoster == null) {
+                ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.construction", "zootycoon.construction.all_builders_busy", 2, hiredBuilders);
+                return Optional.empty();
+            }
+        } else if (availableRoster == null && hiredBuilders > 0) {
             ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.construction", "zootycoon.construction.all_builders_busy", 2, hiredBuilders);
             return Optional.empty();
         }
@@ -262,7 +271,7 @@ public class ConstructionManager {
         // Apply schematic biomes immediately so player sees visual transformation right away!
         net.zootycoon.biome.ZooBiomeApplier.applySchematicBiomes(level, origin, bb, schematic, rotation);
 
-        // 2. Spawn dedicated Humanoid Builder NPC at the entrance
+        // 2. Assign and spawn (or reuse) the registered Roster Builder NPC at the entrance
         BlockPos entrance = new BlockPos(bb.minX() + bb.getXSpan() / 2, origin.getY(), bb.minZ() - 1);
         for (int dy = 3; dy >= -8; dy--) {
             BlockPos check = entrance.offset(0, dy, 0);
@@ -272,20 +281,41 @@ public class ConstructionManager {
             }
         }
 
-        net.zootycoon.entity.ZooBuilderEntity builder = net.zootycoon.entity.ZooEntities.BUILDER.create(level);
-        String builderName = ZooTranslations.get("zootycoon.dialog.builder.default_name");
-        if (builder != null) {
-            builder.setPos(entrance.getX() + 0.5, entrance.getY(), entrance.getZ() + 0.5);
+        UUID assignedRosterUuid = availableRoster != null ? availableRoster.uuid : UUID.randomUUID();
+        String assignedName = availableRoster != null ? availableRoster.name : net.zootycoon.entity.ZooBuilderEntity.pickBuilderNameByIndex(0);
+        int assignedSkin = availableRoster != null ? availableRoster.skinVariant : 0;
+        if (availableRoster != null) {
+            availableRoster.assignedSiteId = siteId;
+            staffMgr.saveToFile();
+        }
+        site.setBuilderRosterUuid(assignedRosterUuid);
+        site.setBuilderName(assignedName);
+        site.setBuilderSkinVariant(assignedSkin);
+
+        net.zootycoon.entity.ZooBuilderEntity builder = availableRoster != null ? staffMgr.findLiveBuilderForRoster(player.getUUID(), availableRoster) : null;
+        if (builder != null && builder.level() == level) {
+            builder.teleportTo(entrance.getX() + 0.5, entrance.getY(), entrance.getZ() + 0.5);
+            builder.applyRosterIdentity(assignedRosterUuid, assignedName, assignedSkin, player.getUUID());
             builder.setSiteId(siteId);
             builder.setPersistenceRequired();
-            builder.addTag("zootycoon_builder");
-            builder.addTag(siteId.toString());
-            level.addFreshEntity(builder);
             site.setBuilderUuid(builder.getUUID());
-            if (builder.getCustomName() != null) {
-                builderName = builder.getCustomName().getString();
+        } else {
+            if (builder != null) {
+                builder.discard();
+            }
+            builder = net.zootycoon.entity.ZooEntities.BUILDER.create(level);
+            if (builder != null) {
+                builder.setPos(entrance.getX() + 0.5, entrance.getY(), entrance.getZ() + 0.5);
+                builder.applyRosterIdentity(assignedRosterUuid, assignedName, assignedSkin, player.getUUID());
+                builder.setSiteId(siteId);
+                builder.setPersistenceRequired();
+                builder.addTag("zootycoon_builder");
+                builder.addTag(siteId.toString());
+                level.addFreshEntity(builder);
+                site.setBuilderUuid(builder.getUUID());
             }
         }
+        String builderName = assignedName;
 
         if (builder != null) {
             builder.updateNeedsIndicator();
@@ -296,12 +326,15 @@ public class ConstructionManager {
         level.playSound(null, origin, SoundEvents.VILLAGER_WORK_MASON, SoundSource.BLOCKS, 1.0f, 1.0f);
         ZooNetworkPayloads.sendToast(player, "zootycoon.toast.title.construction", "zootycoon.construction.project_started", 1, schematic.getName(), builderName, site.getTotalBlocks());
 
-        net.zootycoon.economy.ZooStaffManager.get(level).syncToPlayer(player);
+        staffMgr.syncToPlayer(player);
+        ZooNetworkPayloads.sendAnimalSync(player);
         ZooTycoonMod.LOGGER.info("Started construction site {} for player {} ({} blocks)", siteId, player.getName().getString(), site.getTotalBlocks());
         return Optional.of(site);
     }
 
     private static void onWorldTick(ServerLevel level) {
+        String dimKey = level.dimension().location().toString();
+        int levelTicks = LEVEL_TICK_AGE.merge(dimKey, 1, Integer::sum);
         List<UUID> toRemove = new ArrayList<>();
 
         for (ConstructionSite site : ACTIVE_SITES.values()) {
@@ -322,36 +355,85 @@ public class ConstructionManager {
             boolean isOwnerCreative = owner != null && owner.isCreative();
 
             Entity ent = site.getBuilderUuid() != null ? level.getEntity(site.getBuilderUuid()) : null;
-            net.zootycoon.entity.ZooBuilderEntity builder = (ent instanceof net.zootycoon.entity.ZooBuilderEntity b) ? b : null;
-            if (builder == null && level.isLoaded(site.getOrigin())) {
-                var nearbyBuilders = level.getEntitiesOfClass(
-                        net.zootycoon.entity.ZooBuilderEntity.class,
-                        net.minecraft.world.phys.AABB.of(site.getBounds()).inflate(16.0),
-                        b -> site.getSiteId().equals(b.getSiteId())
-                );
-                if (!nearbyBuilders.isEmpty()) {
-                    builder = nearbyBuilders.get(0);
-                    site.setBuilderUuid(builder.getUUID());
-                } else if (level.getGameTime() % 60 == 0) {
-                    BlockPos entrance = new BlockPos(site.getBounds().minX() + site.getBounds().getXSpan() / 2, site.getOrigin().getY(), site.getBounds().minZ() - 1);
-                    for (int dy = 3; dy >= -8; dy--) {
-                        BlockPos check = entrance.offset(0, dy, 0);
-                        if (level.getBlockState(check).isSolid()) {
-                            entrance = check.above();
+            net.zootycoon.entity.ZooBuilderEntity builder = (ent instanceof net.zootycoon.entity.ZooBuilderEntity b && b.isAlive() && !b.isRemoved()) ? b : null;
+
+            // Search all entities in level to locate existing builder and eliminate any duplicate builder for this site
+            if (levelTicks % 20 == 0 || builder == null) {
+                List<net.zootycoon.entity.ZooBuilderEntity> matchedForSite = new ArrayList<>();
+                for (Entity e : level.getAllEntities()) {
+                    if (e instanceof net.zootycoon.entity.ZooBuilderEntity b && b.isAlive() && !b.isRemoved()) {
+                        boolean match = (site.getBuilderUuid() != null && site.getBuilderUuid().equals(b.getUUID()))
+                                || site.getSiteId().equals(b.getSiteId())
+                                || b.getTags().contains(site.getSiteId().toString())
+                                || (site.getBuilderRosterUuid() != null && site.getBuilderRosterUuid().equals(b.getRosterUuid()));
+                        if (match) {
+                            matchedForSite.add(b);
+                        }
+                    }
+                }
+                if (!matchedForSite.isEmpty()) {
+                    net.zootycoon.entity.ZooBuilderEntity chosen = null;
+                    for (var cand : matchedForSite) {
+                        if (site.getBuilderUuid() != null && site.getBuilderUuid().equals(cand.getUUID())) {
+                            chosen = cand;
                             break;
                         }
                     }
-                    builder = net.zootycoon.entity.ZooEntities.BUILDER.create(level);
-                    if (builder != null) {
-                        builder.setPos(entrance.getX() + 0.5, entrance.getY(), entrance.getZ() + 0.5);
-                        builder.setSiteId(site.getSiteId());
-                        builder.setPersistenceRequired();
-                        builder.addTag("zootycoon_builder");
-                        builder.addTag(site.getSiteId().toString());
-                        level.addFreshEntity(builder);
-                        site.setBuilderUuid(builder.getUUID());
-                        builder.updateNeedsIndicator();
+                    if (chosen == null) {
+                        chosen = matchedForSite.get(0);
                     }
+                    builder = chosen;
+                    site.setBuilderUuid(builder.getUUID());
+                    if (site.getBuilderName() != null && !site.getBuilderName().isEmpty()) {
+                        builder.applyRosterIdentity(site.getBuilderRosterUuid(), site.getBuilderName(), site.getBuilderSkinVariant(), site.getOwnerUuid());
+                    } else if (builder.getCustomName() != null) {
+                        site.setBuilderName(builder.getCustomName().getString());
+                        site.setBuilderSkinVariant(builder.getSkinVariant());
+                    }
+                    builder.setSiteId(site.getSiteId());
+                    for (var cand : matchedForSite) {
+                        if (cand != chosen) {
+                            cand.setSiteId(null);
+                            cand.discard();
+                        }
+                    }
+                }
+            }
+
+            if (builder == null && levelTicks > 100 && level.isLoaded(site.getOrigin()) && level.getGameTime() % 60 == 0) {
+                BlockPos entrance = new BlockPos(site.getBounds().minX() + site.getBounds().getXSpan() / 2, site.getOrigin().getY(), site.getBounds().minZ() - 1);
+                for (int dy = 3; dy >= -8; dy--) {
+                    BlockPos check = entrance.offset(0, dy, 0);
+                    if (level.getBlockState(check).isSolid()) {
+                        entrance = check.above();
+                        break;
+                    }
+                }
+                builder = net.zootycoon.entity.ZooEntities.BUILDER.create(level);
+                if (builder != null) {
+                    String fixedName = site.getBuilderName();
+                    int fixedSkin = site.getBuilderSkinVariant();
+                    UUID rosterId = site.getBuilderRosterUuid();
+                    if (fixedName == null || fixedName.isEmpty()) {
+                        var roster = net.zootycoon.economy.ZooStaffManager.get(level).getBuilderRoster(site.getOwnerUuid());
+                        for (var bre : roster) {
+                            if (site.getSiteId().equals(bre.assignedSiteId) || (rosterId != null && rosterId.equals(bre.uuid))) {
+                                fixedName = bre.name;
+                                fixedSkin = bre.skinVariant;
+                                rosterId = bre.uuid;
+                                break;
+                            }
+                        }
+                    }
+                    builder.setPos(entrance.getX() + 0.5, entrance.getY(), entrance.getZ() + 0.5);
+                    builder.applyRosterIdentity(rosterId, fixedName, fixedSkin, site.getOwnerUuid());
+                    builder.setSiteId(site.getSiteId());
+                    builder.setPersistenceRequired();
+                    builder.addTag("zootycoon_builder");
+                    builder.addTag(site.getSiteId().toString());
+                    level.addFreshEntity(builder);
+                    site.setBuilderUuid(builder.getUUID());
+                    builder.updateNeedsIndicator();
                 }
             }
 
@@ -490,6 +572,7 @@ public class ConstructionManager {
         ConstructionSite removed = ACTIVE_SITES.remove(siteId);
         if (removed != null && level != null) {
             ConstructionTapeHelper.removePerimeterTape(level, removed.getTapePositions());
+            net.zootycoon.economy.ZooStaffManager.get(level).releaseBuilderAfterJob(removed.getOwnerUuid(), removed.getBuilderRosterUuid(), siteId);
             saveToFile(level.getServer());
         }
     }
