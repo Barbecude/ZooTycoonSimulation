@@ -1,7 +1,8 @@
 ---
-trigger: model_decision
+trigger: always_on
 description: When i working on zooTycoonSimulation minecraft mod
 ---
+
 use C:\Users\Zevaldo\Documents\my mods\zooTycoonSimulation\.agents\skills\explore-index
 
 commit & push Setiap fitur baru commit layaknya profesional
@@ -9,6 +10,12 @@ no bold font, no emoji. jangan over info jangan terlalu banyak info duplikats di
 Wajib membaca docs/hologram/RULES.md dan docs/hologram/PROGRESS.md sebelum mengerjakan fitur hologram.
 
 C:\Users\Zevaldo\AppData\Roaming\ModrinthApp\profiles\Fresh & Smooth\mods pindah mod ke sini kalo sudah beres build akhir
+
+jika ada penulisan harga atau bayaran pake icon emerald
+contoh yang benar:
+100 [icon emerald]
+contoh yang salah:
+100 emerald
 
 mod source yg dipakai untuk mencari tau isi kode atau mixin:
 https://github.com/Codx-org/AlexsMobsContinued
@@ -63,3 +70,6 @@ fungsi yang belum fix atau belum ada atau masih cacat (Dilarang mengerjakan semu
 fungsi yg belum ada atau masih cacat (jangan eksekusi fitur ini sebelum secara eksplisit diminta) 
 
 1. feedign through & zookeper
+Zebra pindah ke Tier 1
+Jerapah pindah ke Tier 2
+Singa pindah ke Tier 1

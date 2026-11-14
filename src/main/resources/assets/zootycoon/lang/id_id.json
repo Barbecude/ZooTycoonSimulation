@@ -1079,7 +1079,7 @@
   "zootycoon.ui.staff.wage.tier_due": "1x tertunda: Masih kerja normal",
   "zootycoon.ui.staff.wage.tier_degraded": "2x tertunda: Layanan/kinerja turun",
   "zootycoon.ui.staff.wage.tier_strike": "3x+ tertunda: Mogok kerja",
-  "zootycoon.ui.staff.wage.tier_resigned": "5x tertunda: Resign (Despawn)",
+  "zootycoon.ui.staff.wage.tier_resigned": "5x tertunda: Resign",
   "zootycoon.ui.staff.wage.btn_pay": "Bayar Gaji (%d Em)",
   "zootycoon.ui.staff.wage.btn_settle_resigned": "Lunasi Hutang (%d Em)",
   "zootycoon.ui.staff.wage.btn_paid_ok": "Lunas",
