@@ -737,6 +737,7 @@ public class ZooLicenseManager {
                     tierData.licenseClaimed = true;
                     tierData.bannerClaimed = true;
                     tierData.state = LicenseProgressionState.LICENSE_UNLOCKED;
+                    net.zootycoon.economy.TransactionHelper.giveEmeralds(player, 500);
                     net.zootycoon.advancement.ZooAdvancements.grantForLicenseTier(player, tierLevel);
 
                     // Unlock next tier
