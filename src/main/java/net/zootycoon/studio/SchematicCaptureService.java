@@ -47,19 +47,48 @@ public class SchematicCaptureService {
 
             int radius = StudioDimensionManager.PLOT_RADIUS;
             int floorY = center.getY();
+            int boundMinX = center.getX() - radius;
+            int boundMaxX = center.getX() + radius;
+            int boundMinZ = center.getZ() - radius;
+            int boundMaxZ = center.getZ() + radius;
+            int boundMinY = floorY + 1;
+            int boundMaxY = floorY + StudioDimensionManager.MAX_BUILD_HEIGHT;
 
-            for (int dx = -radius; dx <= radius; dx++) {
-                for (int dz = -radius; dz <= radius; dz++) {
-                    for (int dy = 1; dy <= StudioDimensionManager.MAX_BUILD_HEIGHT; dy++) {
-                        BlockPos checkPos = new BlockPos(center.getX() + dx, floorY + dy, center.getZ() + dz);
-                        if (!level.getBlockState(checkPos).isAir()) {
-                            foundAny = true;
-                            minX = Math.min(minX, checkPos.getX());
-                            maxX = Math.max(maxX, checkPos.getX());
-                            minY = Math.min(minY, checkPos.getY());
-                            maxY = Math.max(maxY, checkPos.getY());
-                            minZ = Math.min(minZ, checkPos.getZ());
-                            maxZ = Math.max(maxZ, checkPos.getZ());
+            BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+            for (int cx = boundMinX >> 4; cx <= (boundMaxX >> 4); cx++) {
+                int xStart = Math.max(boundMinX, cx << 4);
+                int xEnd = Math.min(boundMaxX, (cx << 4) + 15);
+                for (int cz = boundMinZ >> 4; cz <= (boundMaxZ >> 4); cz++) {
+                    int zStart = Math.max(boundMinZ, cz << 4);
+                    int zEnd = Math.min(boundMaxZ, (cz << 4) + 15);
+                    var chunk = level.getChunkSource().getChunkNow(cx, cz);
+                    if (chunk == null) {
+                        continue;
+                    }
+                    int minSec = chunk.getSectionIndex(boundMinY);
+                    int maxSec = chunk.getSectionIndex(boundMaxY);
+                    for (int secIdx = minSec; secIdx <= maxSec; secIdx++) {
+                        var section = chunk.getSection(secIdx);
+                        if (section.hasOnlyAir()) {
+                            continue;
+                        }
+                        int secMinY = Math.max(boundMinY, chunk.getSectionYFromSectionIndex(secIdx) << 4);
+                        int secMaxY = Math.min(boundMaxY, (chunk.getSectionYFromSectionIndex(secIdx) << 4) + 15);
+                        for (int y = secMinY; y <= secMaxY; y++) {
+                            for (int x = xStart; x <= xEnd; x++) {
+                                for (int z = zStart; z <= zEnd; z++) {
+                                    cursor.set(x, y, z);
+                                    if (!level.getBlockState(cursor).isAir()) {
+                                        foundAny = true;
+                                        minX = Math.min(minX, x);
+                                        maxX = Math.max(maxX, x);
+                                        minY = Math.min(minY, y);
+                                        maxY = Math.max(maxY, y);
+                                        minZ = Math.min(minZ, z);
+                                        maxZ = Math.max(maxZ, z);
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -93,10 +122,13 @@ public class SchematicCaptureService {
             // If player selected two ground corners (shallow Y span), scan upward to capture full building & entities
             if (maxY - minY < 4) {
                 int highestY = maxY;
+                int scanTop = minY + StudioDimensionManager.MAX_BUILD_HEIGHT;
+                BlockPos.MutableBlockPos scanCursor = new BlockPos.MutableBlockPos();
                 for (int x = minX; x <= maxX; x++) {
                     for (int z = minZ; z <= maxZ; z++) {
-                        for (int y = minY; y <= minY + 40; y++) {
-                            if (!level.getBlockState(new BlockPos(x, y, z)).isAir()) {
+                        for (int y = minY; y <= scanTop; y++) {
+                            scanCursor.set(x, y, z);
+                            if (!level.getBlockState(scanCursor).isAir()) {
                                 highestY = Math.max(highestY, y);
                             }
                         }
@@ -104,7 +136,7 @@ public class SchematicCaptureService {
                 }
                 List<Entity> ents = level.getEntitiesOfClass(
                         Entity.class,
-                        new AABB(minX, minY, minZ, maxX + 1, minY + 40, maxZ + 1),
+                        new AABB(minX, minY, minZ, maxX + 1, scanTop, maxZ + 1),
                         e -> !(e instanceof Player)
                 );
                 for (Entity e : ents) {

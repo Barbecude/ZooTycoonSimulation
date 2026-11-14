@@ -45,8 +45,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class StudioDimensionManager {
 
     public static final int STUDIO_Y = 200;
-    public static final int PLOT_RADIUS = 24; // 49x49 building platform
-    public static final int MAX_BUILD_HEIGHT = 35; // y=201 to y=235
+    public static final int PLOT_RADIUS = 256; // 513x513 building platform (512x512 buildable area + border)
+    public static final int MAX_BUILD_HEIGHT = 64; // y=201 to y=264
+    private static final int PLAYER_PLOT_STRIDE = 1024; // Must stay > 2 * PLOT_RADIUS so player plots never overlap
 
     public record PlayerSurvivalSnapshot(
             ServerLevel originLevel,
@@ -317,6 +318,11 @@ public class StudioDimensionManager {
         return snapshot != null && snapshot.targetCategory() != null ? snapshot.targetCategory() : "enclosures";
     }
 
+    public static BlockPos computePlotCenter(UUID playerUuid) {
+        int plotOffset = (Math.abs(playerUuid.hashCode()) % 500) * PLAYER_PLOT_STRIDE + 10000;
+        return new BlockPos(plotOffset, STUDIO_Y, plotOffset);
+    }
+
     public static void clearStudioPlot(ServerLevel level, BlockPos center) {
         // 0. Discard any non-player entities on the studio plot
         List<Entity> plotEntities = level.getEntitiesOfClass(
@@ -329,42 +335,90 @@ public class StudioDimensionManager {
             ent.discard();
         }
 
-        // 1. Clear any blocks above the floor up to MAX_BUILD_HEIGHT
-        for (int dx = -PLOT_RADIUS; dx <= PLOT_RADIUS; dx++) {
-            for (int dz = -PLOT_RADIUS; dz <= PLOT_RADIUS; dz++) {
-                for (int dy = 1; dy <= MAX_BUILD_HEIGHT; dy++) {
-                    BlockPos p = center.offset(dx, dy, dz);
-                    if (!level.getBlockState(p).isAir()) {
-                        level.setBlock(p, Blocks.AIR.defaultBlockState(), 2);
+        int minX = center.getX() - PLOT_RADIUS;
+        int maxX = center.getX() + PLOT_RADIUS;
+        int minZ = center.getZ() - PLOT_RADIUS;
+        int maxZ = center.getZ() + PLOT_RADIUS;
+        int minY = STUDIO_Y + 1;
+        int maxY = STUDIO_Y + MAX_BUILD_HEIGHT;
+
+        int minCx = minX >> 4;
+        int maxCx = maxX >> 4;
+        int minCz = minZ >> 4;
+        int maxCz = maxZ >> 4;
+
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        var air = Blocks.AIR.defaultBlockState();
+        var smoothStone = Blocks.SMOOTH_STONE.defaultBlockState();
+        var bedrock = Blocks.BEDROCK.defaultBlockState();
+        var blackstone = Blocks.POLISHED_BLACKSTONE.defaultBlockState();
+        var seaLantern = Blocks.SEA_LANTERN.defaultBlockState();
+        var goldBlock = Blocks.GOLD_BLOCK.defaultBlockState();
+        var glowstone = Blocks.GLOWSTONE.defaultBlockState();
+
+        for (int cx = minCx; cx <= maxCx; cx++) {
+            int xStart = Math.max(minX, cx << 4);
+            int xEnd = Math.min(maxX, (cx << 4) + 15);
+            for (int cz = minCz; cz <= maxCz; cz++) {
+                int zStart = Math.max(minZ, cz << 4);
+                int zEnd = Math.min(maxZ, (cz << 4) + 15);
+                var chunk = level.getChunk(cx, cz);
+
+                // 1. Clear non-empty sections above floor up to MAX_BUILD_HEIGHT
+                int minSec = chunk.getSectionIndex(minY);
+                int maxSec = chunk.getSectionIndex(maxY);
+                for (int secIdx = minSec; secIdx <= maxSec; secIdx++) {
+                    var section = chunk.getSection(secIdx);
+                    if (section.hasOnlyAir()) {
+                        continue;
+                    }
+                    int secMinY = Math.max(minY, chunk.getSectionYFromSectionIndex(secIdx) << 4);
+                    int secMaxY = Math.min(maxY, ((chunk.getSectionYFromSectionIndex(secIdx) << 4) + 15));
+                    for (int y = secMinY; y <= secMaxY; y++) {
+                        for (int x = xStart; x <= xEnd; x++) {
+                            for (int z = zStart; z <= zEnd; z++) {
+                                cursor.set(x, y, z);
+                                if (!level.getBlockState(cursor).isAir()) {
+                                    level.setBlock(cursor, air, 2);
+                                }
+                            }
+                        }
                     }
                 }
-            }
-        }
 
-        // 2. Rebuild clean platform floor at STUDIO_Y
-        for (int dx = -PLOT_RADIUS; dx <= PLOT_RADIUS; dx++) {
-            for (int dz = -PLOT_RADIUS; dz <= PLOT_RADIUS; dz++) {
-                BlockPos floorPos = center.offset(dx, 0, dz);
-                if (dx == 0 && dz == 0) {
-                    level.setBlock(floorPos, Blocks.GLOWSTONE.defaultBlockState(), 2);
-                } else if (Math.abs(dx) <= 2 && Math.abs(dz) <= 2) {
-                    level.setBlock(floorPos, Blocks.GOLD_BLOCK.defaultBlockState(), 2);
-                } else if (Math.abs(dx) == PLOT_RADIUS && Math.abs(dz) == PLOT_RADIUS) {
-                    level.setBlock(floorPos, Blocks.SEA_LANTERN.defaultBlockState(), 2);
-                } else if (Math.abs(dx) == PLOT_RADIUS || Math.abs(dz) == PLOT_RADIUS) {
-                    level.setBlock(floorPos, Blocks.POLISHED_BLACKSTONE.defaultBlockState(), 2);
-                } else {
-                    level.setBlock(floorPos, Blocks.SMOOTH_STONE.defaultBlockState(), 2);
+                // 2. Rebuild clean platform floor at STUDIO_Y without redundant writes
+                for (int x = xStart; x <= xEnd; x++) {
+                    int dx = x - center.getX();
+                    for (int z = zStart; z <= zEnd; z++) {
+                        int dz = z - center.getZ();
+                        var targetFloor = smoothStone;
+                        if (dx == 0 && dz == 0) {
+                            targetFloor = glowstone;
+                        } else if (Math.abs(dx) <= 2 && Math.abs(dz) <= 2) {
+                            targetFloor = goldBlock;
+                        } else if (Math.abs(dx) == PLOT_RADIUS && Math.abs(dz) == PLOT_RADIUS) {
+                            targetFloor = seaLantern;
+                        } else if (Math.abs(dx) == PLOT_RADIUS || Math.abs(dz) == PLOT_RADIUS) {
+                            targetFloor = blackstone;
+                        }
+
+                        cursor.set(x, STUDIO_Y, z);
+                        if (level.getBlockState(cursor) != targetFloor) {
+                            level.setBlock(cursor, targetFloor, 2);
+                        }
+                        cursor.set(x, STUDIO_Y - 1, z);
+                        if (level.getBlockState(cursor) != bedrock) {
+                            level.setBlock(cursor, bedrock, 2);
+                        }
+                    }
                 }
-                level.setBlock(floorPos.below(), Blocks.BEDROCK.defaultBlockState(), 2);
             }
         }
     }
 
     public static boolean enterStudio(ServerPlayer player, String targetCategory) {
         ServerLevel level = (ServerLevel) player.level();
-        int plotOffset = (Math.abs(player.getUUID().hashCode()) % 500) * 200 + 10000;
-        BlockPos center = new BlockPos(plotOffset, STUDIO_Y, plotOffset);
+        BlockPos center = computePlotCenter(player.getUUID());
 
         // If player already in session, re-synchronize and teleport to plot center
         if (isInStudio(player.getUUID())) {
@@ -403,8 +457,7 @@ public class StudioDimensionManager {
 
     public static boolean editInStudio(ServerPlayer player, String schematicId, String targetCategory) {
         ServerLevel level = (ServerLevel) player.level();
-        int plotOffset = (Math.abs(player.getUUID().hashCode()) % 500) * 200 + 10000;
-        BlockPos center = new BlockPos(plotOffset, STUDIO_Y, plotOffset);
+        BlockPos center = computePlotCenter(player.getUUID());
 
         if (isInStudio(player.getUUID())) {
             exitStudio(player);
