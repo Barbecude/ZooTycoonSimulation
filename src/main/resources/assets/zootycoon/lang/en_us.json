@@ -794,6 +794,7 @@
   "zootycoon.mob_bag.too_large": "This animal is too large for the Mob Bag! Mob Bag can only carry small animals.",
   "key.categories.zootycoon": "Zoo Tycoon",
   "key.zootycoon.vehicle_load_animal": "Load Animal to Vehicle",
+  "key.zootycoon.vehicle_headlights": "Toggle Vehicle Headlights",
   "zootycoon.vehicle.no_animal_near_trunk": "No animals near the vehicle trunk.",
   "zootycoon.vehicle.no_trunk": "This vehicle does not have a trunk to carry animals.",
   "zootycoon.vehicle.trunk_full": "Vehicle trunk is already full!",

@@ -431,7 +431,24 @@ public class ZooVehicleEntity extends Entity {
     }
 
     public boolean hasHeadlightsOn() {
-        return this.getDriver() != null && this.level().isNight() && this.entityData.get(DATA_HEADLIGHTS);
+        return this.entityData.get(DATA_HEADLIGHTS);
+    }
+
+    public void setHeadlightsOn(boolean on) {
+        this.entityData.set(DATA_HEADLIGHTS, on);
+    }
+
+    public void toggleHeadlights(ServerPlayer player) {
+        boolean next = !this.entityData.get(DATA_HEADLIGHTS);
+        this.entityData.set(DATA_HEADLIGHTS, next);
+        this.level().playSound(
+                null,
+                this.blockPosition(),
+                SoundEvents.LEVER_CLICK,
+                SoundSource.PLAYERS,
+                0.7f,
+                next ? 1.2f : 0.8f
+        );
     }
 
     public String getVehicleType() {
@@ -657,14 +674,11 @@ public class ZooVehicleEntity extends Entity {
                 boolean revBrake = (fInput > 0.05f && signedMove < -0.04f) || (fInput < -0.05f && signedMove > 0.04f);
                 boolean driftBrake = Math.abs(signedMove) > 0.34f && Math.abs(sAngle) > 22.0f;
                 this.entityData.set(DATA_BRAKING, (sJump && Math.abs(signedMove) > 0.025f) || revBrake || driftBrake);
-                boolean isNight = this.level().isNight();
-                this.entityData.set(DATA_HEADLIGHTS, isNight);
             } else {
                 this.entityData.set(DATA_STEER_ANGLE, this.localSteerAngle);
                 this.entityData.set(DATA_SPEED, this.currentSpeed);
                 this.entityData.set(DATA_WHEEL_SPIN, this.localWheelSpin);
                 this.entityData.set(DATA_BRAKING, false);
-                this.entityData.set(DATA_HEADLIGHTS, false);
             }
         } else {
             if (!this.isControlledByLocalInstance()) {
@@ -1133,11 +1147,15 @@ public class ZooVehicleEntity extends Entity {
         if (tag.contains("VehicleType")) {
             setVehicleType(tag.getString("VehicleType"));
         }
+        if (tag.contains("HeadlightsOn")) {
+            setHeadlightsOn(tag.getBoolean("HeadlightsOn"));
+        }
     }
 
     @Override
     protected void addAdditionalSaveData(CompoundTag tag) {
         tag.putString("VehicleType", getVehicleType());
+        tag.putBoolean("HeadlightsOn", hasHeadlightsOn());
     }
 
     @Override

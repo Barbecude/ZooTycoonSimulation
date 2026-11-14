@@ -49,6 +49,12 @@ public class ZooTycoonClient implements ClientModInitializer {
             InputConstants.KEY_G,
             "key.categories.zootycoon"
     ));
+    public static final KeyMapping VEHICLE_HEADLIGHTS_KEY = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+            "key.zootycoon.vehicle_headlights",
+            InputConstants.Type.KEYSYM,
+            InputConstants.KEY_H,
+            "key.categories.zootycoon"
+    ));
     private static boolean lastRShiftDown = false;
 
     public static boolean inStudio = false;
@@ -731,6 +737,16 @@ public class ZooTycoonClient implements ClientModInitializer {
                 }
             }
 
+            // Toggle vehicle headlights when pressing 'H' (configurable keybind)
+            while (VEHICLE_HEADLIGHTS_KEY.consumeClick()) {
+                if (client.player != null && client.level != null && client.screen == null) {
+                    net.zootycoon.entity.ZooVehicleEntity targetVehicle = findTargetVehicle(client);
+                    if (targetVehicle != null) {
+                        ClientPlayNetworking.send(new ZooNetworkPayloads.VehicleToggleHeadlightsPayload(targetVehicle.getId()));
+                    }
+                }
+            }
+
             // Client-side Spyglass & Field Guide long-range animal registration
             if (client.player != null && client.level != null) {
                 if (clientSpyglassCooldown > 0) {
@@ -799,6 +815,27 @@ public class ZooTycoonClient implements ClientModInitializer {
         });
 
         ZooTycoonMod.LOGGER.info("Zoo Tycoon Client initialized successfully.");
+    }
+
+    private static net.zootycoon.entity.ZooVehicleEntity findTargetVehicle(Minecraft client) {
+        if (client.player == null || client.level == null) return null;
+        if (client.player.getVehicle() instanceof net.zootycoon.entity.ZooVehicleEntity ridingVeh) {
+            return ridingVeh;
+        }
+        var nearbyVehicles = client.level.getEntitiesOfClass(
+                net.zootycoon.entity.ZooVehicleEntity.class,
+                client.player.getBoundingBox().inflate(5.5D)
+        );
+        net.zootycoon.entity.ZooVehicleEntity closest = null;
+        double closestDist = Double.MAX_VALUE;
+        for (net.zootycoon.entity.ZooVehicleEntity veh : nearbyVehicles) {
+            double dist = client.player.distanceToSqr(veh);
+            if (dist < closestDist) {
+                closestDist = dist;
+                closest = veh;
+            }
+        }
+        return closest;
     }
 
     private static void pollFieldGuideScanTarget() {

@@ -1434,6 +1434,17 @@ public class ZooNetworkPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // 33b. Vehicle Toggle Headlights (C2S)
+    public record VehicleToggleHeadlightsPayload(int vehicleEntityId) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<VehicleToggleHeadlightsPayload> TYPE =
+                new CustomPacketPayload.Type<>(ZooTycoonMod.id("vehicle_toggle_headlights"));
+        public static final StreamCodec<FriendlyByteBuf, VehicleToggleHeadlightsPayload> CODEC = CustomPacketPayload.codec(
+                (payload, buf) -> buf.writeInt(payload.vehicleEntityId),
+                buf -> new VehicleToggleHeadlightsPayload(buf.readInt())
+        );
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     // 34. Request License Sync Payload (C2S)
     public record RequestLicenseSyncPayload() implements CustomPacketPayload {
         public static final CustomPacketPayload.Type<RequestLicenseSyncPayload> TYPE =
@@ -1680,6 +1691,7 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
         PayloadTypeRegistry.playC2S().register(ManageStaffGenericPayload.TYPE, ManageStaffGenericPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(PayStrikeSalaryPayload.TYPE, PayStrikeSalaryPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(VehicleLoadAnimalPayload.TYPE, VehicleLoadAnimalPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(VehicleToggleHeadlightsPayload.TYPE, VehicleToggleHeadlightsPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestLicenseSyncPayload.TYPE, RequestLicenseSyncPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestZooInspectionPayload.TYPE, RequestZooInspectionPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(RequestSpeciesBiomesPayload.TYPE, RequestSpeciesBiomesPayload.CODEC);
@@ -2831,6 +2843,21 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                     boolean isNear = player.distanceToSqr(veh) <= 49.0D;
                     if (isRiding || isNear) {
                         veh.tryLoadNearbyAnimal(player);
+                    }
+                }
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(VehicleToggleHeadlightsPayload.TYPE, (payload, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                ServerLevel sLevel = player.serverLevel();
+                net.minecraft.world.entity.Entity ent = sLevel.getEntity(payload.vehicleEntityId());
+                if (ent instanceof net.zootycoon.entity.ZooVehicleEntity veh) {
+                    boolean isRiding = player.getVehicle() == veh;
+                    boolean isNear = player.distanceToSqr(veh) <= 49.0D;
+                    if (isRiding || isNear) {
+                        veh.toggleHeadlights(player);
                     }
                 }
             });
