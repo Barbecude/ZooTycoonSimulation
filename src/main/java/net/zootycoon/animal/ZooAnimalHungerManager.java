@@ -52,6 +52,11 @@ public class ZooAnimalHungerManager {
     private static final Map<UUID, UUID> ZOOKEEPER_MAP = new ConcurrentHashMap<>();
     private static final Map<UUID, UUID> SPYGLASS_TARGET_MAP = new ConcurrentHashMap<>();
     private static final Map<UUID, Integer> SPYGLASS_TICKS_MAP = new ConcurrentHashMap<>();
+    private static final Map<UUID, Integer> SICK_CARE_TICKS = new ConcurrentHashMap<>();
+    private static final List<net.minecraft.world.level.levelgen.structure.BoundingBox> CARE_CENTERS = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private static net.minecraft.server.MinecraftServer loadedCareServer = null;
+
+    private static final String SICK_TAG = "zoo_sick";
 
     public static boolean isZooAnimalCandidate(LivingEntity e) {
         if (e == null || !e.isAlive()) return false;
@@ -407,6 +412,13 @@ public class ZooAnimalHungerManager {
             // Universal Negative Minecraft Effects when stats drop to 0 or environment is uncomfortable
             applyNegativeStatEffects(level, animal, currentHunger, currentThirst, currentClean);
 
+            // Handle sick status recovery when treated with potion effects or kept inside Animal Care Center
+            if (isSick(animal)) {
+                tickSickRecovery(level, animal);
+            } else {
+                SICK_CARE_TICKS.remove(animal.getUUID());
+            }
+
             // Overcrowding detection & subtle stress particles
             if (isAnimalOvercrowded(animal)) {
                 if (level.getGameTime() % 40 == 0) {
@@ -579,6 +591,7 @@ public class ZooAnimalHungerManager {
 
     public static void handleUniversalAnimalNeeds(ServerLevel level, Mob mob) {
         if (!isTagged(mob)) return; // Strictly only registered zoo animals!
+        if (isSick(mob)) return; // Sick animals stop eating and drinking until recovered
 
         // 0. Immediate proximity food pickup: if a valid food item is near mob feet, consume it instantly
         List<ItemEntity> touching = level.getEntitiesOfClass(ItemEntity.class, mob.getBoundingBox().inflate(1.6D, 1.0D, 1.6D));
@@ -870,11 +883,12 @@ public class ZooAnimalHungerManager {
                     setTagged(animal, false);
                     setOwner(animal, null);
                     setAssignedZookeeper(animal, null);
-                    animal.getTags().removeIf(t -> t.contains("registered") || t.contains("owner_") || t.contains("hunger_") || t.contains("thirst_") || t.contains("cleanliness_") || t.contains("zoo_zk_"));
+                    animal.getTags().removeIf(t -> t.contains("registered") || t.contains("owner_") || t.contains("hunger_") || t.contains("thirst_") || t.contains("cleanliness_") || t.contains("zoo_zk_") || t.equals(SICK_TAG));
                     HUNGER_MAP.remove(animal.getUUID());
                     THIRST_MAP.remove(animal.getUUID());
                     CLEANLINESS_MAP.remove(animal.getUUID());
                     ZOOKEEPER_MAP.remove(animal.getUUID());
+                    SICK_CARE_TICKS.remove(animal.getUUID());
                     SPYGLASS_TARGET_MAP.remove(player.getUUID());
                     SPYGLASS_TICKS_MAP.remove(player.getUUID());
 
@@ -969,6 +983,119 @@ public class ZooAnimalHungerManager {
 
         entity.getTags().removeIf(t -> t.startsWith("zoo_cleanliness_"));
         entity.addTag("zoo_cleanliness_" + clamped);
+    }
+
+    public static boolean isSick(Entity entity) {
+        return entity != null && entity.getTags().contains(SICK_TAG);
+    }
+
+    public static void setSick(Entity entity, boolean sick) {
+        if (entity == null) return;
+        if (sick) {
+            entity.addTag(SICK_TAG);
+        } else {
+            entity.removeTag(SICK_TAG);
+            SICK_CARE_TICKS.remove(entity.getUUID());
+        }
+        if (entity instanceof LivingEntity living && !living.level().isClientSide) {
+            net.zootycoon.animal.ZooInspectionService.notifyAnimalUpdated(living);
+        }
+    }
+
+    private static void ensureCareCentersLoaded(net.minecraft.server.MinecraftServer server) {
+        if (server == null || loadedCareServer == server) return;
+        loadedCareServer = server;
+        CARE_CENTERS.clear();
+        java.nio.file.Path path = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).resolve("zoo_care_centers.dat");
+        if (!java.nio.file.Files.exists(path)) return;
+        try {
+            net.minecraft.nbt.CompoundTag root = net.minecraft.nbt.NbtIo.readCompressed(path, net.minecraft.nbt.NbtAccounter.unlimitedHeap());
+            net.minecraft.nbt.ListTag list = root.getList("zones", net.minecraft.nbt.Tag.TAG_COMPOUND);
+            for (int i = 0; i < list.size(); i++) {
+                net.minecraft.nbt.CompoundTag z = list.getCompound(i);
+                CARE_CENTERS.add(new net.minecraft.world.level.levelgen.structure.BoundingBox(
+                        z.getInt("minX"), z.getInt("minY"), z.getInt("minZ"),
+                        z.getInt("maxX"), z.getInt("maxY"), z.getInt("maxZ")
+                ));
+            }
+        } catch (Exception ignored) {}
+    }
+
+    private static void saveCareCenters(net.minecraft.server.MinecraftServer server) {
+        if (server == null) return;
+        java.nio.file.Path path = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).resolve("zoo_care_centers.dat");
+        try {
+            net.minecraft.nbt.CompoundTag root = new net.minecraft.nbt.CompoundTag();
+            net.minecraft.nbt.ListTag list = new net.minecraft.nbt.ListTag();
+            for (var bb : CARE_CENTERS) {
+                net.minecraft.nbt.CompoundTag z = new net.minecraft.nbt.CompoundTag();
+                z.putInt("minX", bb.minX());
+                z.putInt("minY", bb.minY());
+                z.putInt("minZ", bb.minZ());
+                z.putInt("maxX", bb.maxX());
+                z.putInt("maxY", bb.maxY());
+                z.putInt("maxZ", bb.maxZ());
+                list.add(z);
+            }
+            root.put("zones", list);
+            net.minecraft.nbt.NbtIo.writeCompressed(root, path);
+        } catch (Exception ignored) {}
+    }
+
+    public static void registerCareCenterZone(ServerLevel level, net.minecraft.world.level.levelgen.structure.BoundingBox box) {
+        if (level == null || box == null) return;
+        ensureCareCentersLoaded(level.getServer());
+        for (var existing : CARE_CENTERS) {
+            if (existing.equals(box)) return;
+        }
+        CARE_CENTERS.add(box);
+        saveCareCenters(level.getServer());
+    }
+
+    public static boolean isInsideCareCenter(ServerLevel level, BlockPos pos) {
+        if (level == null || pos == null) return false;
+        ensureCareCentersLoaded(level.getServer());
+        for (var bb : CARE_CENTERS) {
+            if (bb.isInside(pos)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void tickSickRecovery(ServerLevel level, LivingEntity animal) {
+        boolean curedByPotion = animal.hasEffect(MobEffects.REGENERATION) || animal.hasEffect(MobEffects.HEAL);
+        boolean curedByCenter = false;
+        if (!curedByPotion && isInsideCareCenter(level, animal.blockPosition())) {
+            int ticks = SICK_CARE_TICKS.getOrDefault(animal.getUUID(), 0) + 1;
+            if (ticks >= 100) {
+                curedByCenter = true;
+            } else {
+                SICK_CARE_TICKS.put(animal.getUUID(), ticks);
+            }
+        } else if (!curedByPotion) {
+            SICK_CARE_TICKS.remove(animal.getUUID());
+        }
+
+        if (curedByPotion || curedByCenter) {
+            setSick(animal, false);
+            animal.setHealth(animal.getMaxHealth());
+            level.playSound(null, animal.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 1.0f, 1.1f);
+            level.sendParticles(ParticleTypes.HAPPY_VILLAGER, animal.getX(), animal.getY() + animal.getBbHeight() * 0.6, animal.getZ(), 12, 0.35, 0.25, 0.35, 0.05);
+            level.sendParticles(ParticleTypes.HEART, animal.getX(), animal.getY() + animal.getBbHeight() + 0.2, animal.getZ(), 6, 0.3, 0.2, 0.3, 0.02);
+
+            UUID ownerUuid = getOwnerUuid(animal);
+            if (ownerUuid != null && level.getServer() != null) {
+                ServerPlayer owner = level.getServer().getPlayerList().getPlayer(ownerUuid);
+                String name = animal.hasCustomName() ? animal.getCustomName().getString() : animal.getType().getDescription().getString();
+                if (owner != null) {
+                    ZooNetworkPayloads.sendToast(owner, "zootycoon.toast.title.success", "zootycoon.animal.recovered_toast", 1, name);
+                }
+                for (ServerPlayer sp : level.getServer().getPlayerList().getPlayers()) {
+                    ZooNetworkPayloads.sendAnimalSync(sp);
+                }
+            }
+        }
     }
 
     public static boolean cleanAnimal(LivingEntity animal, Player player) {
@@ -1132,6 +1259,7 @@ public class ZooAnimalHungerManager {
 
     public static boolean feedAnimal(LivingEntity animal, ItemStack foodStack, Player feeder) {
         if (animal == null || foodStack.isEmpty()) return false;
+        if (isSick(animal)) return false;
         if (!AnimalDietRegistry.isFoodValid(animal, foodStack)) return false;
 
         int current = getHunger(animal);

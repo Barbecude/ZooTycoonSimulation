@@ -41,6 +41,7 @@ public class AnimalDrinkWaterGoal extends MoveToBlockGoal {
     public boolean canUse() {
         if (!mob.isAlive()) return false;
         if (!ZooAnimalHungerManager.isTagged(mob)) return false;
+        if (ZooAnimalHungerManager.isSick(mob)) return false;
 
         if (this.cooldownTicks > 0) {
             this.cooldownTicks--;
@@ -61,6 +62,7 @@ public class AnimalDrinkWaterGoal extends MoveToBlockGoal {
     @Override
     public boolean canContinueToUse() {
         if (!mob.isAlive()) return false;
+        if (ZooAnimalHungerManager.isSick(mob)) return false;
         if (this.finishedDrinking) return false;
         // Navigation timeout: if unreachable within 10 seconds (200 ticks), abort so mob never gets stuck
         if (this.tryTicks > 200) return false;

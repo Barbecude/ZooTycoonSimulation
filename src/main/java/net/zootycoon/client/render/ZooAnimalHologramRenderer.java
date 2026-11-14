@@ -46,6 +46,7 @@ public class ZooAnimalHologramRenderer {
     private static final Component THIRST_LABEL = Component.literal("Haus:");
     private static final Component CLEAN_LABEL = Component.literal("Kebersihan:");
     private static final Component TEMP_LABEL = Component.literal("Suhu:");
+    private static final Component SICK_STATUS_TEXT = Component.translatable("zootycoon.hologram.sick_status");
 
     private static final String HABITAT_OK_TEXT = "Kebutuhan Habitat: Terpenuhi";
     private static final String HABITAT_HEADER_TEXT = "Kebutuhan Habitat:";
@@ -69,6 +70,7 @@ public class ZooAnimalHologramRenderer {
         public final int thirst;
         public final int cleanliness;
         public final boolean isWet;
+        public final boolean isSick;
         public final String rawNeeds;
         public final String rawStatus;
         public final String tempCategory;
@@ -136,6 +138,7 @@ public class ZooAnimalHologramRenderer {
                 int thirst,
                 int cleanliness,
                 boolean isWet,
+                boolean isSick,
                 String rawNeeds,
                 String rawStatus,
                 String tempCategory,
@@ -192,6 +195,7 @@ public class ZooAnimalHologramRenderer {
             this.thirst = thirst;
             this.cleanliness = cleanliness;
             this.isWet = isWet;
+            this.isSick = isSick;
             this.rawNeeds = rawNeeds;
             this.rawStatus = rawStatus;
             this.tempCategory = tempCategory;
@@ -250,6 +254,7 @@ public class ZooAnimalHologramRenderer {
                 int thirst,
                 int cleanliness,
                 boolean isWet,
+                boolean isSick,
                 String rawNeeds,
                 String rawStatus,
                 String tempCategory
@@ -407,6 +412,7 @@ public class ZooAnimalHologramRenderer {
                         -1,
                         -1,
                         false,
+                        isSick,
                         "",
                         "",
                         "temperate",
@@ -458,16 +464,19 @@ public class ZooAnimalHologramRenderer {
 
             float statRowWidth = maxLabelWidth + GAP_LABEL_TO_ICON + maxValueWidth;
 
+            float sickStatusWidth = isSick ? font.width(SICK_STATUS_TEXT) : 0.0f;
             float boxWidth = Math.max(statRowWidth + 16.0f,
                     Math.max(scaledTitleWidth + 16.0f,
                     Math.max(dietSubtitleWidth + 16.0f,
-                    Math.max(foodsRowWidth + 16.0f, maxHabTextWidth + 18.0f))));
+                    Math.max(sickStatusWidth + 16.0f,
+                    Math.max(foodsRowWidth + 16.0f, maxHabTextWidth + 18.0f)))));
 
             float foodSectionHeight = (foodCount > 0) ? 16.0f : 0.0f;
             float statsSectionHeight = isPureAquatic ? (4.0f * ROW_HEIGHT) : (5.0f * ROW_HEIGHT);
+            float sickSectionHeight = isSick ? ROW_HEIGHT : 0.0f;
             float habitatSectionHeight = redNeeds.isEmpty() ? 12.0f : (12.0f + (redNeeds.size() * 10.0f));
 
-            float contentHeight = HEADER_HEIGHT + foodSectionHeight + statsSectionHeight + 4.0f + habitatSectionHeight;
+            float contentHeight = HEADER_HEIGHT + foodSectionHeight + statsSectionHeight + sickSectionHeight + 4.0f + habitatSectionHeight;
             float totalBoxHeight = contentHeight + 10.0f; // 5px padding top & bottom
 
             float minX = -boxWidth / 2.0f;
@@ -485,6 +494,7 @@ public class ZooAnimalHologramRenderer {
                     thirst,
                     cleanliness,
                     isWet,
+                    isSick,
                     rawNeeds,
                     rawStatus,
                     tempCategory,
@@ -756,6 +766,7 @@ public class ZooAnimalHologramRenderer {
         int cleanliness = (snapshot != null) ? snapshot.cleanliness() : -1;
         long snapshotTimestamp = (snapshot != null) ? snapshot.timestamp() : -1L;
         boolean isWet = isRegistered && InspectionPayloads.isAnimalWet(entity.getId());
+        boolean isSick = (snapshot != null && snapshot.isSick()) || InspectionPayloads.isAnimalSick(entity.getId());
 
         // 3. Climate & Habitat cached snapshot data
         InspectionPayloads.HabitatData habitatData = InspectionPayloads.getLatestHabitat(entity.getId());
@@ -773,6 +784,7 @@ public class ZooAnimalHologramRenderer {
                 || cached.thirst != thirst
                 || cached.cleanliness != cleanliness
                 || cached.isWet != isWet
+                || cached.isSick != isSick
                 || !Objects.equals(cached.titleComp.getString(), entity.getDisplayName().getString())
                 || !Objects.equals(cached.rawNeeds, rawNeeds)
                 || !Objects.equals(cached.rawStatus, rawStatus)
@@ -788,6 +800,7 @@ public class ZooAnimalHologramRenderer {
                     thirst,
                     cleanliness,
                     isWet,
+                    isSick,
                     rawNeeds,
                     rawStatus,
                     tempCategory
@@ -902,6 +915,12 @@ public class ZooAnimalHologramRenderer {
                     font.drawInBatch(cached.tempBaseText, tempValX, r4Y + 1.0f, HologramBarRenderer.applyAlpha(0xFFFFFFFF, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
                     float statusX = tempValX + cached.tempBaseTextWidth;
                     font.drawInBatch(cached.tempStatusLabel, statusX, r4Y + 1.0f, HologramBarRenderer.applyAlpha(cached.tempStatusColor, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+                }
+
+                // Render sick indicator row when animal is sick
+                if (cached.isSick) {
+                    font.drawInBatch(SICK_STATUS_TEXT, leftX, curY - 1.0f, HologramBarRenderer.applyAlpha(0xFFFF5555, fadeAlpha), false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+                    curY += ROW_HEIGHT;
                 }
 
                 // 5. Habitat Needs Section: ONLY RED ITEMS SHOWN (Left-aligned with fadeAlpha)

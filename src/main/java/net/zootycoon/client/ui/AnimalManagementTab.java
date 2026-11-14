@@ -378,7 +378,7 @@ public class AnimalManagementTab {
                     selectedData.hunger(), selectedData.thirst(), selectedData.cleanliness(), selectedData.health(), selectedData.maxHealth(),
                     selectedData.hasZookeeper(), selectedData.zookeeperName(),
                     selectedData.habitatStatus(), selectedData.habitatNeeds(), selectedData.tempCategory(),
-                    selectedData.isOffspring(), selectedData.parentUuid()
+                    selectedData.isOffspring(), selectedData.parentUuid(), selectedData.isSick()
             );
             closeRenameModal();
             requestSync();

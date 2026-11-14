@@ -153,6 +153,7 @@ public class ZooInspectionService {
         }
 
         long timestamp = System.currentTimeMillis();
+        boolean isSick = ZooAnimalHungerManager.isSick(animal);
         InspectionPayloads.InspectionSnapshotPayload payload = new InspectionPayloads.InspectionSnapshotPayload(
                 animal.getId(),
                 registered,
@@ -160,6 +161,7 @@ public class ZooInspectionService {
                 thirst,
                 cleanliness,
                 isWet,
+                isSick,
                 season,
                 tempCat,
                 habitatStatus,

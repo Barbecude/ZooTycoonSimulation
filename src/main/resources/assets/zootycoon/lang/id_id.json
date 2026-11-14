@@ -1036,5 +1036,12 @@
   "zootycoon.seed_preview.title": "Seed & Biome Preview",
   "zootycoon.seed_preview.fast_badge": "FastGen +80%",
   "zootycoon.seed_preview.btn.randomize": "Acak Seed",
-  "zootycoon.seed_preview.tooltip.controls": "Drag: Geser Peta | Scroll: Zoom"
+  "zootycoon.seed_preview.tooltip.controls": "Drag: Geser Peta | Scroll: Zoom",
+  "zootycoon.hologram.sick_status": "Kondisi: Sakit",
+  "zootycoon.animal.recovered_toast": "%s sudah sembuh setelah dirawat di Animal Care Center.",
+  "zootycoon.command.satwa.state_sick": "Sakit",
+  "zootycoon.command.satwa.state_healthy": "Sehat",
+  "zootycoon.command.satwa.sick_set": "Status satwa %s diatur menjadi %s.",
+  "zootycoon.command.satwa.sick_all": "Berhasil mengubah status %d satwa zoo menjadi %s.",
+  "zootycoon.command.carecenter.set": "Zona perawatan Animal Care Center didaftarkan di (%d, %d, %d) radius %d."
 }

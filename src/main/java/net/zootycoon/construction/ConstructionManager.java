@@ -504,6 +504,12 @@ public class ConstructionManager {
         // 1. Re-verify and ensure biomes are fully set upon completion
         net.zootycoon.biome.ZooBiomeApplier.applySchematicBiomes(level, site.getOrigin(), site.getBounds(), site.getSchematic(), site.getRotation());
 
+        String schemMeta = (site.getSchematic().getId() + " " + site.getSchematic().getName() + " " + site.getSchematic().getCategory()).toLowerCase(Locale.ROOT);
+        if (schemMeta.contains("care") || schemMeta.contains("clinic") || schemMeta.contains("klinik")
+                || schemMeta.contains("vet") || schemMeta.contains("medis") || schemMeta.contains("kesehatan")) {
+            ZooAnimalHungerManager.registerCareCenterZone(level, site.getBounds());
+        }
+
         // 2. Spawn entities (NPCs, Cashiers, Visitors, Animals) saved inside the StructureTemplate!
         StructureTemplate template = ZooSchematicRegistry.loadTemplate(level.getServer(), site.getSchematic());
         if (template != null) {

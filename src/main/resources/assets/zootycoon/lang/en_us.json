@@ -1034,5 +1034,12 @@
   "zootycoon.seed_preview.title": "Seed & Biome Preview",
   "zootycoon.seed_preview.fast_badge": "FastGen +80%",
   "zootycoon.seed_preview.btn.randomize": "Acak Seed",
-  "zootycoon.seed_preview.tooltip.controls": "Drag: Geser Peta | Scroll: Zoom"
+  "zootycoon.seed_preview.tooltip.controls": "Drag: Geser Peta | Scroll: Zoom",
+  "zootycoon.hologram.sick_status": "Condition: Sick",
+  "zootycoon.animal.recovered_toast": "%s has recovered after treatment at the Animal Care Center.",
+  "zootycoon.command.satwa.state_sick": "Sick",
+  "zootycoon.command.satwa.state_healthy": "Healthy",
+  "zootycoon.command.satwa.sick_set": "Animal %s status set to %s.",
+  "zootycoon.command.satwa.sick_all": "Updated %d zoo animal(s) status to %s.",
+  "zootycoon.command.carecenter.set": "Animal Care Center recovery zone registered at (%d, %d, %d) with radius %d."
 }

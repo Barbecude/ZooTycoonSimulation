@@ -651,7 +651,8 @@ public class ZooNetworkPayloads {
             String habitatNeeds,
             String tempCategory,
             boolean isOffspring,
-            String parentUuid
+            String parentUuid,
+            boolean isSick
     ) {}
 
     public record SyncAnimalsPayload(List<AnimalSyncData> animals) implements CustomPacketPayload {
@@ -676,6 +677,7 @@ public class ZooNetworkPayloads {
                         buf.writeUtf(d.tempCategory() != null ? d.tempCategory() : "");
                         buf.writeBoolean(d.isOffspring());
                         buf.writeUtf(d.parentUuid() != null ? d.parentUuid() : "");
+                        buf.writeBoolean(d.isSick());
                     }
                 },
                 buf -> {
@@ -687,7 +689,7 @@ public class ZooNetworkPayloads {
                                 buf.readFloat(), buf.readFloat(),
                                 buf.readBoolean(), buf.readUtf(),
                                 buf.readUtf(), buf.readUtf(), buf.readUtf(),
-                                buf.readBoolean(), buf.readUtf()
+                                buf.readBoolean(), buf.readUtf(), buf.readBoolean()
                         ));
                     }
                     return new SyncAnimalsPayload(list);
@@ -3201,10 +3203,11 @@ PayloadTypeRegistry.playC2S().register(SetTicketPricePayload.TYPE, SetTicketPric
                     boolean isOffspring = net.zootycoon.animal.ZooAnimalHungerManager.isOffspring(animal);
                     String parentUuid = net.zootycoon.animal.ZooAnimalHungerManager.getParentUuidString(animal);
                     String animalUuid = animal.getStringUUID();
+                    boolean isSick = net.zootycoon.animal.ZooAnimalHungerManager.isSick(animal);
 
                     list.add(new AnimalSyncData(
                             animal.getId(), animalUuid, typeId, name, hunger, thirst, cleanliness, health, maxHealth,
-                            hasZk, zkName, habitatStatus, habitatNeeds, tempCategory, isOffspring, parentUuid
+                            hasZk, zkName, habitatStatus, habitatNeeds, tempCategory, isOffspring, parentUuid, isSick
                     ));
                 }
             }

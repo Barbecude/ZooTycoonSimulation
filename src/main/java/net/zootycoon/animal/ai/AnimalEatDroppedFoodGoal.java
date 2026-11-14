@@ -34,6 +34,7 @@ public class AnimalEatDroppedFoodGoal extends Goal {
     public boolean canUse() {
         if (!this.mob.isAlive()) return false;
         if (!ZooAnimalHungerManager.isTagged(this.mob)) return false;
+        if (ZooAnimalHungerManager.isSick(this.mob)) return false;
 
         if (this.eatCooldown > 0) {
             this.eatCooldown--;
@@ -77,6 +78,7 @@ public class AnimalEatDroppedFoodGoal extends Goal {
     @Override
     public boolean canContinueToUse() {
         if (!this.mob.isAlive()) return false;
+        if (ZooAnimalHungerManager.isSick(this.mob)) return false;
         if (this.targetItem == null || !this.targetItem.isAlive() || this.targetItem.getItem().isEmpty()) return false;
         if (this.mob.distanceToSqr(this.targetItem) > 256.0D) return false;
         if (this.tryTicks > 200) return false; // 10-second timeout if blocked

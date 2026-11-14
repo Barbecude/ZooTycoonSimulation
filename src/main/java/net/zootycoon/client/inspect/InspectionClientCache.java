@@ -14,6 +14,7 @@ public class InspectionClientCache {
             int hunger,
             int thirst,
             int cleanliness,
+            boolean isSick,
             long timestamp,
             long receiveGameTime
     ) {
@@ -37,6 +38,7 @@ public class InspectionClientCache {
                 payload.hunger(),
                 payload.thirst(),
                 payload.cleanliness(),
+                payload.isSick(),
                 payload.timestamp(),
                 gameTime
         ));

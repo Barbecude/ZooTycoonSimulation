@@ -325,6 +325,14 @@
 ## Blocker
 - Tidak ada blocker.
 
+- Status Satwa Sakit (2026-11-14):
+  1. Flag Status Sakit (`zoo_sick`):
+     - `ZooAnimalHungerManager.isSick` / `setSick` menyimpan tag persisten `zoo_sick` dan zona Animal Care Center (`zoo_care_centers.dat`).
+     - Satwa sakit menghentikan AI makan & minum (`AnimalEatFromTroughGoal`, `AnimalDrinkWaterGoal`, `AnimalEatDroppedFoodGoal`, `AnimalGrazeNaturalBlockGoal`, `handleUniversalAnimalNeeds`, `feedAnimal`, serta `ZooZookeeperEntity` feeding) hingga sembuh melalui efek Regeneration/Instant Health atau dirawat di dalam zona Animal Care Center.
+  2. Hologram & Indikator Overhead:
+     - `InspectionPayloads.InspectionSnapshotPayload`, `ZooInspectionService`, dan `InspectionClientCache` membawa field `isSick` ke `ZooAnimalHologramRenderer` untuk menampilkan status merah "Kondisi: Sakit" di bawah baris statistik.
+     - `ZooNetworkPayloads.AnimalSyncData` & `ZooWorldIndicatorRenderer` menampilkan ikon kecil (`textures/gui/icons/sick.png`) di atas satwa sakit.
+
 ## File yang diubah
 - src/main/java/net/zootycoon/animal/AnimalDietRegistry.java
 - src/main/java/net/zootycoon/client/render/ZooAnimalHologramRenderer.java

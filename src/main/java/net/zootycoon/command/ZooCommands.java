@@ -1,5 +1,6 @@
 package net.zootycoon.command;
 
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -73,6 +74,15 @@ public class ZooCommands {
                     // 6. /zootycoon start
                     .then(Commands.literal("start")
                             .executes(ctx -> executeZooStart(ctx.getSource()))
+                    )
+                    // 7. /zootycoon carecenter [radius]
+                    .then(Commands.literal("carecenter")
+                            .then(Commands.literal("set")
+                                    .executes(ctx -> executeSetCareCenter(ctx.getSource(), 8))
+                                    .then(Commands.argument("radius", IntegerArgumentType.integer(2, 64))
+                                            .executes(ctx -> executeSetCareCenter(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "radius")))
+                                    )
+                            )
                     );
 
             dispatcher.register(root);
@@ -108,6 +118,22 @@ public class ZooCommands {
                 // darah / health
                 .then(createStatNode("darah", AnimalStat.HEALTH, 2, 1, 1000, false))
                 .then(createStatNode("health", AnimalStat.HEALTH, 2, 1, 1000, false))
+                // sakit / sembuh (toggle or set sick status)
+                .then(Commands.literal("sakit")
+                        .executes(ctx -> modifyAnimalSick(ctx.getSource(), null, false))
+                        .then(Commands.argument("status", BoolArgumentType.bool())
+                                .executes(ctx -> modifyAnimalSick(ctx.getSource(), BoolArgumentType.getBool(ctx, "status"), false))
+                        )
+                )
+                .then(Commands.literal("sick")
+                        .executes(ctx -> modifyAnimalSick(ctx.getSource(), null, false))
+                        .then(Commands.argument("status", BoolArgumentType.bool())
+                                .executes(ctx -> modifyAnimalSick(ctx.getSource(), BoolArgumentType.getBool(ctx, "status"), false))
+                        )
+                )
+                .then(Commands.literal("sembuh")
+                        .executes(ctx -> modifyAnimalSick(ctx.getSource(), false, false))
+                )
                 // kurangi / reduce
                 .then(buildReduceBranch("kurangi", false))
                 .then(buildReduceBranch("reduce", false))
@@ -180,6 +206,15 @@ public class ZooCommands {
                 .then(createStatNode("cleanliness", AnimalStat.CLEANLINESS, 10, 0, 100, true))
                 .then(createStatNode("darah", AnimalStat.HEALTH, 2, 1, 1000, true))
                 .then(createStatNode("health", AnimalStat.HEALTH, 2, 1, 1000, true))
+                .then(Commands.literal("sakit")
+                        .executes(ctx -> modifyAnimalSick(ctx.getSource(), true, true))
+                        .then(Commands.argument("status", BoolArgumentType.bool())
+                                .executes(ctx -> modifyAnimalSick(ctx.getSource(), BoolArgumentType.getBool(ctx, "status"), true))
+                        )
+                )
+                .then(Commands.literal("sembuh")
+                        .executes(ctx -> modifyAnimalSick(ctx.getSource(), false, true))
+                )
                 .then(buildReduceBranch("kurangi", true))
                 .then(buildReduceBranch("reduce", true));
     }
@@ -200,6 +235,78 @@ public class ZooCommands {
             return living;
         }
         return null;
+    }
+
+    private static int modifyAnimalSick(CommandSourceStack source, Boolean explicitSick, boolean forceAll) {
+        MinecraftServer server = source.getServer();
+        LivingEntity targetAnimal = null;
+
+        if (!forceAll && source.getEntity() instanceof ServerPlayer player) {
+            targetAnimal = getTargetedAnimal(player);
+        }
+
+        if (targetAnimal != null) {
+            if (!ZooAnimalHungerManager.isTagged(targetAnimal)) {
+                ZooAnimalHungerManager.setTagged(targetAnimal, true);
+                if (source.getEntity() instanceof ServerPlayer sp) {
+                    ZooAnimalHungerManager.setOwner(targetAnimal, sp.getUUID());
+                }
+            }
+
+            boolean nextSick = (explicitSick != null) ? explicitSick : !ZooAnimalHungerManager.isSick(targetAnimal);
+            ZooAnimalHungerManager.setSick(targetAnimal, nextSick);
+            ZooInspectionService.notifyAnimalUpdated(targetAnimal);
+
+            for (ServerPlayer sp : server.getPlayerList().getPlayers()) {
+                ZooNetworkPayloads.sendAnimalSync(sp);
+            }
+
+            String name = targetAnimal.hasCustomName()
+                    ? targetAnimal.getCustomName().getString()
+                    : targetAnimal.getType().getDescription().getString();
+            String stateKey = nextSick ? "zootycoon.command.satwa.state_sick" : "zootycoon.command.satwa.state_healthy";
+            source.sendSuccess(() -> Component.translatable("zootycoon.command.satwa.sick_set", name, Component.translatable(stateKey))
+                    .withStyle(nextSick ? ChatFormatting.RED : ChatFormatting.GREEN), false);
+            return 1;
+        }
+
+        boolean nextSick = (explicitSick != null) ? explicitSick : true;
+        int count = 0;
+        for (ServerLevel level : server.getAllLevels()) {
+            for (Entity entity : level.getAllEntities()) {
+                if (entity instanceof LivingEntity living && living.isAlive() && ZooAnimalHungerManager.isTagged(living)) {
+                    ZooAnimalHungerManager.setSick(living, nextSick);
+                    ZooInspectionService.notifyAnimalUpdated(living);
+                    count++;
+                }
+            }
+        }
+        for (ServerPlayer sp : server.getPlayerList().getPlayers()) {
+            ZooNetworkPayloads.sendAnimalSync(sp);
+        }
+
+        final int affected = count;
+        String stateKey = nextSick ? "zootycoon.command.satwa.state_sick" : "zootycoon.command.satwa.state_healthy";
+        source.sendSuccess(() -> Component.translatable("zootycoon.command.satwa.sick_all", affected, Component.translatable(stateKey))
+                .withStyle(nextSick ? ChatFormatting.RED : ChatFormatting.GREEN), true);
+        return count;
+    }
+
+    private static int executeSetCareCenter(CommandSourceStack source, int radius) {
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.translatable("zootycoon.command.player_only"));
+            return 0;
+        }
+        BlockPos center = player.blockPosition();
+        net.minecraft.world.level.levelgen.structure.BoundingBox box = new net.minecraft.world.level.levelgen.structure.BoundingBox(
+                center.getX() - radius, center.getY() - 3, center.getZ() - radius,
+                center.getX() + radius, center.getY() + 6, center.getZ() + radius
+        );
+        ZooAnimalHungerManager.registerCareCenterZone(player.serverLevel(), box);
+        source.sendSuccess(() -> Component.translatable("zootycoon.command.carecenter.set", center.getX(), center.getY(), center.getZ(), radius)
+                .withStyle(ChatFormatting.GREEN), false);
+        return 1;
     }
 
     private static int modifyAnimalStat(CommandSourceStack source, AnimalStat stat, int value, boolean isReduce, boolean forceAll) {

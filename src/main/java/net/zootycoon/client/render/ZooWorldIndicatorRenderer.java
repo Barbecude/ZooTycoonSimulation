@@ -51,6 +51,8 @@ public class ZooWorldIndicatorRenderer {
             ZooTycoonMod.id("textures/gui/icons/temp_ice.png");
     private static final ResourceLocation EXCLAMATION_TEXTURE =
             ZooTycoonMod.id("textures/gui/icons/exclamation_point.png");
+    private static final ResourceLocation SICK_TEXTURE =
+            ZooTycoonMod.id("textures/gui/icons/sick.png");
 
     private record AnimalAlert(
             ResourceLocation texture,
@@ -192,7 +194,13 @@ public class ZooWorldIndicatorRenderer {
             if (!ZooTycoonClient.clientAnimalMap.isEmpty()) {
                 ZooNetworkPayloads.AnimalSyncData syncData = ZooTycoonClient.getAnimalData(living.getId());
                 if (syncData != null) {
-                    List<AnimalAlert> alerts = new ArrayList<>(5);
+                    List<AnimalAlert> alerts = new ArrayList<>(6);
+
+                    // 2.0 Sick status: alert icon above sick animal
+                    if (syncData.isSick()) {
+                        float sickPulse = (float) (Math.sin(now / 150.0) * 0.025);
+                        alerts.add(new AnimalAlert(SICK_TEXTURE, 0.21f + sickPulse, 0.21f + sickPulse, 0.0f, 0.0f, 255, 255, 255));
+                    }
 
                     // 2a. Health: alert if <= 50%
                     float maxHp = syncData.maxHealth() > 0 ? syncData.maxHealth() : living.getMaxHealth();

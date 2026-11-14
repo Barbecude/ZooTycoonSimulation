@@ -40,6 +40,7 @@ public class AnimalGrazeNaturalBlockGoal extends MoveToBlockGoal {
     public boolean canUse() {
         if (!this.mob.isAlive()) return false;
         if (!ZooAnimalHungerManager.isTagged(this.mob)) return false;
+        if (ZooAnimalHungerManager.isSick(this.mob)) return false;
 
         if (AnimalDietRegistry.getFeedingType(this.mob) != AnimalDietRegistry.FeedingType.GRAZING) {
             return false;
@@ -62,6 +63,7 @@ public class AnimalGrazeNaturalBlockGoal extends MoveToBlockGoal {
     @Override
     public boolean canContinueToUse() {
         if (!this.mob.isAlive()) return false;
+        if (ZooAnimalHungerManager.isSick(this.mob)) return false;
         if (ZooAnimalHungerManager.getHunger(this.mob) >= ZooAnimalHungerManager.MAX_HUNGER) return false;
         if (this.tryTicks > 200) return false;
         if (this.eatTicks > 40) return false;

@@ -1047,6 +1047,7 @@ public class ZooZookeeperEntity extends PathfinderMob {
                 LivingEntity hungryTarget = null;
                 int minHunger = 75;
                 for (LivingEntity member : family) {
+                    if (ZooAnimalHungerManager.isSick(member)) continue;
                     int h = ZooAnimalHungerManager.getHunger(member);
                     if (h <= 75 && h <= minHunger) {
                         minHunger = h;
@@ -1113,6 +1114,7 @@ public class ZooZookeeperEntity extends PathfinderMob {
                 LivingEntity hungryTarget = null;
                 int minHunger = 75;
                 for (LivingEntity member : getAssignedFamily(sLevel)) {
+                    if (ZooAnimalHungerManager.isSick(member)) continue;
                     int h = ZooAnimalHungerManager.getHunger(member);
                     if (h <= 75 && h <= minHunger) {
                         minHunger = h;
