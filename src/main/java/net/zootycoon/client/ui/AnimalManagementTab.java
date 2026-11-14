@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -63,6 +64,8 @@ public class AnimalManagementTab {
     private final Map<String, LivingEntity> clientDummyCache = new HashMap<>();
 
     private EditBox modalNameInput;
+    private EditBox searchInput;
+    private String searchQuery = "";
     private ZooButton modalSaveButton;
     private ZooButton modalCancelButton;
     private ZooButton removeButton;
@@ -155,7 +158,7 @@ public class AnimalManagementTab {
 
         m.sidebarW = (width < 520) ? 125 : (width < 700 ? 145 : 165);
         m.sidebarX = m.margin;
-        m.sidebarY = m.topY;
+        m.sidebarY = m.topY + 24;
         m.sidebarH = height - m.sidebarY - m.bottomMargin;
 
         m.contentX = m.sidebarX + m.sidebarW + m.gap;
@@ -228,9 +231,27 @@ public class AnimalManagementTab {
         return m;
     }
 
+    private boolean matchesSearch(ZooNetworkPayloads.AnimalSyncData a, String queryLower) {
+        if (queryLower.isEmpty()) return true;
+        if (a.customName() != null && a.customName().toLowerCase(Locale.ROOT).contains(queryLower)) return true;
+        String speciesDisplay = formatSpecies(a.entityTypeId());
+        if (speciesDisplay.toLowerCase(Locale.ROOT).contains(queryLower)) return true;
+        return a.entityTypeId() != null && a.entityTypeId().toLowerCase(Locale.ROOT).contains(queryLower);
+    }
+
     private List<AnimalListItem> buildDisplayItems() {
         List<ZooNetworkPayloads.AnimalSyncData> all = getValidAnimals();
         List<AnimalListItem> items = new ArrayList<>();
+
+        String queryLower = searchQuery != null ? searchQuery.trim().toLowerCase(Locale.ROOT) : "";
+        if (!queryLower.isEmpty()) {
+            for (var a : all) {
+                if (matchesSearch(a, queryLower)) {
+                    items.add(new AnimalListItem(a, 0, false, false, 0));
+                }
+            }
+            return items;
+        }
 
         // Any listed animal can be a parent, so offspring that breed again nest one level deeper
         Set<String> listedUuids = new HashSet<>();
@@ -318,6 +339,16 @@ public class AnimalManagementTab {
 
         boolean hasSell = (selectedData != null && selectedData.isOffspring());
         LayoutMetrics m = computeLayout(width, height, hasSell);
+
+        searchInput = new EditBox(screen.getFont(), m.sidebarX, m.topY, m.sidebarW, 20, ZooTranslations.component("zootycoon.ui.animals.search_hint"));
+        searchInput.setMaxLength(32);
+        searchInput.setHint(ZooTranslations.component("zootycoon.ui.animals.search_hint"));
+        searchInput.setValue(searchQuery);
+        searchInput.setResponder(q -> {
+            this.searchQuery = q != null ? q : "";
+            this.scrollOffset = 0;
+        });
+        screen.addWidgetPublic(searchInput);
 
         removeButton = new ZooButton(m.removeBtnX, m.removeBtnY, m.removeBtnW, m.removeBtnH, ZooTranslations.component("zootycoon.ui.animals.btn_remove"), b -> {
             if (selectedData != null) {
@@ -492,6 +523,13 @@ public class AnimalManagementTab {
 
         boolean hasSell = (selectedData != null && selectedData.isOffspring());
         LayoutMetrics m = computeLayout(width, height, hasSell);
+
+        if (searchInput != null) {
+            searchInput.setX(m.sidebarX);
+            searchInput.setY(m.topY);
+            searchInput.setWidth(m.sidebarW);
+            searchInput.visible = !renameModalOpen;
+        }
 
         // Dynamically update action buttons position and visibility
         if (removeButton != null) {
@@ -1302,6 +1340,15 @@ public class AnimalManagementTab {
         boolean hasSell = (selectedData != null && selectedData.isOffspring());
         LayoutMetrics m = computeLayout(width, height, hasSell);
 
+        if (searchInput != null && searchInput.visible) {
+            if (searchInput.mouseClicked(mouseX, mouseY, button)) {
+                screen.setFocused(searchInput);
+                searchInput.setFocused(true);
+                return true;
+            }
+            searchInput.setFocused(false);
+        }
+
         int sidebarX = m.sidebarX;
         int sidebarW = m.sidebarW;
         int sidebarY = m.sidebarY;
@@ -1638,6 +1685,16 @@ public class AnimalManagementTab {
                 return true;
             }
             return true; // Block other inputs while modal is active
+        }
+        if (searchInput != null && searchInput.isFocused()) {
+            if (keyCode == 256) { // GLFW_KEY_ESCAPE
+                searchInput.setFocused(false);
+                screen.setFocused(null);
+                return true;
+            }
+            if (searchInput.keyPressed(keyCode, scanCode, modifiers) || searchInput.canConsumeInput()) {
+                return true;
+            }
         }
         return false;
     }

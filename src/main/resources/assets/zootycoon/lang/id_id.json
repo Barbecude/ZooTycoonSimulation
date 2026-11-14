@@ -231,6 +231,7 @@
   "zootycoon.ui.staff.wage_per_project": "Per Proyek",
   "zootycoon.ui.animals.btn_refresh": "Refresh",
   "zootycoon.ui.animals.input_hint": "Nama Satwa",
+  "zootycoon.ui.animals.search_hint": "Cari satwa...",
   "zootycoon.ui.animals.btn_save": "Simpan",
   "zootycoon.ui.animals.btn_remove": "Hapus Satwa",
   "zootycoon.ui.animals.btn_sell": "Jual Satwa",
