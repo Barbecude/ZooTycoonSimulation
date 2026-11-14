@@ -106,6 +106,40 @@ public class StaffRecruitmentTab {
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button != 0) return false;
+
+        int totalWidth = Math.min(parent.width - 30, 840);
+        int cardGap = 10;
+        int cardWidth = (totalWidth - (cardGap * 3)) / 4;
+        int cardHeight = Math.min(parent.height - 100, 240);
+        int startX = (parent.width - totalWidth) / 2;
+        int startY = 60;
+
+        int btnHeight = 20;
+        int btnGap = 4;
+        int kelolaY = startY + cardHeight - (btnHeight * 2 + btnGap) - 10;
+        int rekrutY = kelolaY + btnHeight + btnGap;
+        int btnW = cardWidth - 20;
+
+        MainManagementScreen.ViewState[] targets = {
+                MainManagementScreen.ViewState.BUILDER_MANAGE,
+                MainManagementScreen.ViewState.ZOOKEEPER_MANAGE,
+                MainManagementScreen.ViewState.SECURITY_MANAGE,
+                MainManagementScreen.ViewState.CASHIER_MANAGE
+        };
+
+        for (int i = 0; i < targets.length; i++) {
+            int cardX = startX + (cardWidth + cardGap) * i;
+            if (mouseX >= cardX && mouseX <= cardX + cardWidth && mouseY >= startY && mouseY <= startY + cardHeight) {
+                int btnX = cardX + 10;
+                if (mouseX >= btnX && mouseX <= btnX + btnW && mouseY >= kelolaY && mouseY <= rekrutY + btnHeight) {
+                    return false;
+                }
+                Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
+                parent.setView(targets[i]);
+                return true;
+            }
+        }
         return false;
     }
 
