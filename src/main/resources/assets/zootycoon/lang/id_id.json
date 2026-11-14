@@ -163,7 +163,7 @@
   "zootycoon.ui.staff.manage.cashier_role_none": "Belum Ditugaskan",
   "zootycoon.ui.staff.manage.cashier_stock": "Stok: %s item",
   "zootycoon.ui.staff.manage.cashier_stock_infinite": "Stok: Tiket Tak Terbatas",
-  "zootycoon.ui.staff.manage.cashier_btn_reposition": "Panggil / Pindah",
+  "zootycoon.ui.staff.manage.cashier_btn_reposition": "Panggil",
   "zootycoon.staff.manage.called": "Zookeeper dipanggil ke posisimu",
   "zootycoon.staff.manage.fired": "Zookeeper dipecat",
   "zootycoon.staff.manage.busy": "Zookeeper sedang bekerja",

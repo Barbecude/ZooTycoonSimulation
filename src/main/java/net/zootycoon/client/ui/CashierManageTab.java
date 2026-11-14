@@ -121,7 +121,15 @@ public class CashierManageTab {
             StaffRecruitmentTab.renderStrikeRowIcon(graphics, x + 8, y + 4);
             nameX = x + 21;
         }
-        graphics.drawString(mc.font, Component.literal(c.name() + " (" + roleStr + ")"), nameX, y + 5, 0xFFE6EDF3, false);
+        String rawName = c.name() != null ? c.name() : "";
+        boolean hasDefaultRoleName = rawName.equalsIgnoreCase("Kasir Stand Burger")
+                || rawName.equalsIgnoreCase("Kasir Stand Minuman")
+                || rawName.equalsIgnoreCase("Kasir Stand Es Krim")
+                || rawName.equalsIgnoreCase("Kasir Loket Tiket");
+        boolean alreadyHasRole = hasDefaultRoleName
+                || (!roleStr.isEmpty() && rawName.toLowerCase(java.util.Locale.ROOT).contains(roleStr.toLowerCase(java.util.Locale.ROOT)));
+        String displayName = alreadyHasRole ? rawName : (rawName + " (" + roleStr + ")");
+        graphics.drawString(mc.font, Component.literal(displayName), nameX, y + 5, 0xFFE6EDF3, false);
 
         String stockInfo;
         int stockColor;

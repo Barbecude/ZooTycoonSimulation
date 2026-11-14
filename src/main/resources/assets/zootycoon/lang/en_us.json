@@ -168,7 +168,7 @@
   "zootycoon.ui.staff.manage.cashier_role_none": "Unassigned",
   "zootycoon.ui.staff.manage.cashier_stock": "Stock: %s items",
   "zootycoon.ui.staff.manage.cashier_stock_infinite": "Stock: Unlimited Tickets",
-  "zootycoon.ui.staff.manage.cashier_btn_reposition": "Call / Move",
+  "zootycoon.ui.staff.manage.cashier_btn_reposition": "Call",
   "zootycoon.staff.manage.called": "Zookeeper called to your position",
   "zootycoon.staff.manage.fired": "Zookeeper fired",
   "zootycoon.staff.manage.busy": "Zookeeper is currently working",
